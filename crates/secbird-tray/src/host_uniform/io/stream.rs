@@ -46,12 +46,38 @@ impl StreamState {
         deadline: Instant,
         cancelled: impl FnMut() -> bool,
     ) -> Submission {
-        self.submit_with_clock(device, ticket, deadline, cancelled, Instant::now)
+        let frame =
+            PreparedOrnataFrame::new(&[ticket.color; 132]).expect("fixed physical frame geometry");
+        self.submit_frame(device, &frame, deadline, cancelled)
     }
+    #[cfg(test)]
     fn submit_with_clock(
         &mut self,
         device: &mut Device,
         ticket: FrameTicket,
+        deadline: Instant,
+        cancelled: impl FnMut() -> bool,
+        now: impl FnMut() -> Instant,
+    ) -> Submission {
+        let frame =
+            PreparedOrnataFrame::new(&[ticket.color; 132]).expect("fixed physical frame geometry");
+        self.submit_frame_with_clock(device, &frame, deadline, cancelled, now)
+    }
+    /// The caller supplies physical RGB ordering; this boundary does not choose
+    /// a layout or change the existing control sampling and cancellation policy.
+    pub(crate) fn submit_frame(
+        &mut self,
+        device: &mut Device,
+        frame: &PreparedOrnataFrame,
+        deadline: Instant,
+        cancelled: impl FnMut() -> bool,
+    ) -> Submission {
+        self.submit_frame_with_clock(device, frame, deadline, cancelled, Instant::now)
+    }
+    fn submit_frame_with_clock(
+        &mut self,
+        device: &mut Device,
+        frame: &PreparedOrnataFrame,
         deadline: Instant,
         mut cancelled: impl FnMut() -> bool,
         mut now: impl FnMut() -> Instant,
@@ -101,7 +127,6 @@ impl StreamState {
                     .expect("non-checkpoint has an observation")
                     .start
             };
-            let frame = PreparedOrnataFrame::new(&[ticket.color; 132])?;
             let mut cancellation_checks = 0usize;
             let mut stale_admission = false;
             let outcome = frame.transfer_out(device, deadline, || {
@@ -247,6 +272,51 @@ mod tests {
         );
         assert!(result.control_verified);
         assert_eq!(spy.state.lock().unwrap().effects_read, 6);
+    }
+
+    #[test]
+    fn prepared_spatial_frames_keep_pixels_and_fresh_mode_between_cached_controls() {
+        let (mut device, spy) = test_support::fixture();
+        let mut state = StreamState::default();
+        let base = Instant::now();
+        for (time, bias) in [(0, 0), (100, 77)] {
+            let pixels: Vec<_> = (0..132)
+                .map(|i| secbird_core::Rgb((i + bias) as u8, (i / 22) as u8, (i % 22) as u8))
+                .collect();
+            let frame = PreparedOrnataFrame::new(&pixels).unwrap();
+            let result = state.submit_frame_with_clock(
+                &mut device,
+                &frame,
+                Instant::now() + Duration::from_secs(2),
+                || false,
+                || base + Duration::from_millis(time),
+            );
+            assert!(result.completion.error.is_none());
+            assert_eq!(
+                (
+                    result.completion.accepted_packets,
+                    result.completion.attempted_packets
+                ),
+                (7, 7)
+            );
+            assert_eq!(result.control_verified, time == 0);
+            assert_eq!(result.observed_mode, Some(3));
+            assert_eq!(
+                spy.sim.state().matrix.as_ref().unwrap().2,
+                pixels.iter().map(|c| [c.0, c.1, c.2]).collect::<Vec<_>>()
+            );
+        }
+        let observed = spy.state.lock().unwrap();
+        assert_eq!(observed.attempts, 14);
+        assert_eq!(observed.effects_read, 2);
+        assert_eq!(
+            observed
+                .commands
+                .iter()
+                .filter(|command| **command == Command::new(0, 0x84))
+                .count(),
+            3
+        );
     }
     #[test]
     fn first_out_admission_boundary_is_exact_and_never_a_mid_batch_ttl() {

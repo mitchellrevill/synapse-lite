@@ -71,6 +71,19 @@ pub(crate) fn submit(
     device: &mut Device,
     ticket: FrameTicket,
     deadline: Instant,
+    cancelled: impl FnMut() -> bool,
+) -> Submission {
+    let frame =
+        PreparedOrnataFrame::new(&[ticket.color; 132]).expect("fixed physical frame geometry");
+    submit_prepared(device, &frame, deadline, cancelled)
+}
+
+/// Submit an already validated physical frame through the same control checks.
+/// Layout authentication, owner binding and profile persistence stay with callers.
+pub(crate) fn submit_prepared(
+    device: &mut Device,
+    frame: &PreparedOrnataFrame,
+    deadline: Instant,
     mut cancelled: impl FnMut() -> bool,
 ) -> Submission {
     let started = Instant::now();
@@ -119,8 +132,6 @@ pub(crate) fn submit(
         result.elapsed = started.elapsed();
         return result;
     }
-    let frame =
-        PreparedOrnataFrame::new(&[ticket.color; 132]).expect("fixed physical frame geometry");
     match frame.transfer_out(device, deadline, &mut cancelled) {
         Ok(outcome) => {
             result.mode_query_elapsed = outcome.mode_query_elapsed;
@@ -233,6 +244,52 @@ mod tests {
         assert!(!state
             .log
             .contains(&secbird_core::commands::MATRIX_BRIGHTNESS));
+    }
+
+    #[test]
+    fn prepared_nonuniform_frame_preserves_pixels_and_partial_failure_counts() {
+        let pixels: Vec<_> = (0..132)
+            .map(|i| secbird_core::Rgb(i as u8, (i / 22) as u8, (i % 22) as u8))
+            .collect();
+        let frame = PreparedOrnataFrame::new(&pixels).unwrap();
+        let (mut device, spy) = test_support::fixture();
+        let result = submit_prepared(
+            &mut device,
+            &frame,
+            Instant::now() + Duration::from_secs(2),
+            || false,
+        );
+        assert!(result.completion.error.is_none());
+        assert_eq!(
+            (
+                result.completion.accepted_packets,
+                result.completion.attempted_packets
+            ),
+            (7, 7)
+        );
+        assert!(result.control_verified);
+        assert_eq!(
+            spy.sim.state().matrix.as_ref().unwrap().2,
+            pixels.iter().map(|c| [c.0, c.1, c.2]).collect::<Vec<_>>()
+        );
+        let (mut device, spy) = test_support::fixture();
+        spy.state.lock().unwrap().fail_at = Some(2);
+        let failed = submit_prepared(
+            &mut device,
+            &frame,
+            Instant::now() + Duration::from_secs(2),
+            || false,
+        );
+        assert_eq!(
+            (
+                failed.completion.accepted_packets,
+                failed.completion.attempted_packets
+            ),
+            (2, 3)
+        );
+        assert!(failed.completion.error.is_some());
+        assert!(!failed.control_verified);
+        assert_eq!(spy.state.lock().unwrap().attempts, 3);
     }
     #[test]
     fn partial_out_and_changed_control_keep_counts_without_retry() {
