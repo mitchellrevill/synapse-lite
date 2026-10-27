@@ -50,6 +50,9 @@ static OPENING: AtomicBool = AtomicBool::new(false);
 #[link(name = "user32")]
 extern "system" {
     fn GetDpiForWindow(hwnd: HWND) -> u32;
+    fn GetDpiForSystem() -> u32;
+    fn GetWindowDpiAwarenessContext(hwnd: HWND) -> isize;
+    fn GetAwarenessFromDpiAwarenessContext(context: isize) -> i32;
 }
 
 fn wide(text: &str) -> Vec<u16> {
@@ -613,6 +616,7 @@ impl State {
             "width": self.width,
             "height": self.height,
             "scale": self.scale,
+            "dpi_awareness": GetAwarenessFromDpiAwarenessContext(GetWindowDpiAwarenessContext(self.hwnd)),
             "device_kind": kind,
             "tab": self.tab.title(),
             "detected_devices": self.devices().len(),
@@ -2245,6 +2249,9 @@ fn run_window(
             std::env::var("SYNAPSE_LITE_SMOKE_VIEW").unwrap_or_else(|_| "dashboard".into())
         });
         let assets = assets_dir();
+        // The manifest enables PerMonitorV2. Initial outer dimensions are DIP,
+        // like Electron's source window defaults, rather than physical pixels.
+        let initial_scale = GetDpiForSystem().max(96) as f32 / 96.0;
         let (jobs_tx, jobs_rx) = mpsc::channel();
         let (replies_tx, replies_rx) = mpsc::channel();
         let worker = std::thread::Builder::new()
@@ -2253,7 +2260,7 @@ fn run_window(
             .map_err(|e| e.to_string())?;
         let mut state = Box::new(RefCell::new(State {
             hwnd: null_mut(),
-            scale: 1.0,
+            scale: initial_scale,
             width: 1280,
             height: 720,
             state: json!({"devices":[]}),
@@ -2280,7 +2287,7 @@ fn run_window(
             smoke_view: smoke_requested.clone(),
             smoke_requested,
             smoke_reported: false,
-            fonts: Fonts::new(&assets, 1.0),
+            fonts: Fonts::new(&assets, initial_scale),
             mouse: Bitmap::load(&assets.join("mouse.bmp")),
             keyboard: Bitmap::load(&assets.join("keyboard.bmp")),
             keyboard_customize: Bitmap::load(&assets.join("keyboard-customize.bmp")),
@@ -2337,8 +2344,8 @@ fn run_window(
                 | WS_CLIPCHILDREN,
             CW_USEDEFAULT,
             CW_USEDEFAULT,
-            1280,
-            720,
+            (1280.0 * initial_scale).round() as i32,
+            (720.0 * initial_scale).round() as i32,
             null_mut(),
             null_mut(),
             instance,
@@ -2356,8 +2363,9 @@ fn run_window(
         }
         {
             let mut state = state.borrow_mut();
-            state.scale = GetDpiForWindow(hwnd).max(96) as f32 / 96.0;
-            if state.scale != 1.0 {
+            let actual_scale = GetDpiForWindow(hwnd).max(96) as f32 / 96.0;
+            if state.scale != actual_scale {
+                state.scale = actual_scale;
                 state.fonts = Fonts::new(&state.assets, state.scale);
             }
         }
