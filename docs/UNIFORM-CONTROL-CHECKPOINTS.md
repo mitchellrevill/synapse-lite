@@ -1,6 +1,6 @@
 # Uniform control sampling checkpoint 1
 
-The 9b22bba baseline physically achieved 10.84 subsequent Spectrum fps and 10.89 Breathing fps, with the original worker policy. This implementation changes control sampling; it has simulator coverage only and no new achieved-rate claim. Core frame bytes, fresh mode admission, no-ACK OUT behavior, cancellation/deadline and no-retry semantics remain intact. The worker still parks at least 8 ms; no timer or resolution setting changed.
+The 9b22bba baseline physically achieved 10.84 subsequent Spectrum fps and 10.89 Breathing fps, with the original worker policy. The 3a3a45b control-sampling checkpoint reached14.27 and14.56fps respectively in a bounded follow-up. Core frame bytes, fresh mode admission, no-ACK OUT behavior, cancellation/deadline and no-retry semantics remain intact. The worker still requests waits of at least8ms; no timer or resolution setting changed. Neither checkpoint meets the nominal25fps target.
 
 ## Source authority versus local policy
 
@@ -32,4 +32,14 @@ Suppression invalidates prepared/control state while retaining the playback inde
 
 Four pure/spy stream tests cover 250 ms refresh equality, 500 ms first-OUT equality, 501 ms zero-OUT refusal after fresh mode, no mid-batch TTL, overslow initial/postflight checks, wrong scope, cancellation, changed controls and partial counts. Controller coverage verifies full checks on resume/owner re-entry/program changes/reconnect, cached versus fresh status, source phase retention, no old-program retry and raw brightness preservation. Core independent packet/ordering tests remain unchanged; readonly timing assertions cover no-I/O and zero-OUT cases. Worker tests check diagnostic aggregation plus existing panic/poison/stop/timeout behavior.
 
-Validation: core frame 9 passed; tray 134 passed, 6 ignored. No hardware or stock-process operations were performed for this checkpoint. Repeat the reviewed bounded physical probe later to measure achieved window fps, frame counts, checkpoint costs, park behavior and unchanged readable registers.
+Validation: core226 plus doc1 passed; tray134 passed,6 ignored. The implementation agent performed no hardware operations. The root then ran the same reviewed ignored physical test with a freshly compiled executable, explicitly pinned by SHA256 rather than inferred from a directory timestamp.
+
+## Bounded physical result
+
+[Sanitized report](validation/uniform-control-checkpoint-physical.json), executable SHA256 `325CE14C99313A1596B23405D33BEC58711D7EEDA12183E02EFFEC4D65D33DD3`: Spectrum accepted30frames including the initial action over2.0326seconds (14.267 subsequentfps); fixed one-color Breathing accepted74 over5.0120seconds (14.565 subsequentfps). No fault was reported, every observed final batch accepted7/7, and the worker joined without shutdown errors. Readable mode, both effect controls and saved/live brightness matched the baseline. Stock user processes went15→0→15; services/drivers were unchanged. No tray/native window was involved, so this is not release RAM acceptance, optical output verification or input-recovery evidence.
+
+The final sampled full checkpoints took75.08/74.18ms; their fresh mode GETs took about12ms and seven OUT calls about28ms. Final requested8ms parks actually lasted16.18/16.06ms. Counters span the worker lifetime, so Breathing's totals include the preceding Spectrum phase; they are not independent phase distributions. Requested and actual wait totals differ because wakeups may return early and Windows may oversleep. These measurements identify costs, not a certified cadence or proof that timer changes alone can attain25fps.
+
+An accidental earlier rerun selected the old baseline executable (`35824F...596FB`) and was excluded from checkpoint performance results. Its hardware probe completed and stock processes restarted. The measurement wrapper now requires an explicit executable path and matching hash.
+
+`tools/Test-UniformWorker.ps1` publishes the portable equivalent: explicit `-WriteUniformFrames`, `-TestExecutable` and `-ExpectedSha256`, a fresh native config, exact ignored-test filter, bounded stock-user isolation,60second child timeout and finally stock-engine restart. It runs2second Spectrum and5second fixed Breathing and never stops services/drivers. The portable adaptation was syntax-checked; the executed wrapper used the recorded local paths. This test requires existing Driver3/Custom8 and positive brightness and does not acquire that mode or restore an unknown optical phase.
