@@ -36,6 +36,7 @@ pub mod proto;
 pub mod report;
 pub mod rzcontrol_packet;
 pub mod sim;
+pub mod source_macro;
 pub mod transport;
 pub mod uniform_lighting;
 pub mod update;
