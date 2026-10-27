@@ -14,6 +14,8 @@ mod host_static;
 #[cfg(windows)]
 mod host_uniform;
 #[cfg(windows)]
+mod host_wave;
+#[cfg(windows)]
 mod uniform_worker;
 #[cfg(windows)]
 mod lighting_status;
