@@ -452,6 +452,16 @@ impl Runtime {
         if !self.running {
             return;
         }
+        self.sample_admission();
+    }
+    /// Fresh read-only host facts for prospective admission. It does not start
+    /// runtime ownership, create a session, or invoke the device bridge.
+    pub(crate) fn sample_admission(&mut self) {
+        #[cfg(test)]
+        if let Some(environment) = &self.test_environment {
+            self.environment = environment.clone();
+            return;
+        }
         let (now, raw) = native_idle();
         self.environment.now_ms = now;
         self.environment.idle_ms = raw.and_then(|raw| self.idle_clock.sample(now, raw));
@@ -943,6 +953,28 @@ mod tests {
         assert_eq!(clock.sample(now + 180_000, future).unwrap(), 0);
         assert_eq!(clock.sample(now + 183_000, future).unwrap(), 3000);
         assert!(clock.sample(now, future).is_err());
+    }
+    #[test]
+    fn prospective_sampler_does_not_start_runtime_or_create_a_device_session() {
+        let mut runtime = Runtime::default();
+        runtime.sample_host();
+        assert_eq!(
+            runtime.environment.now_ms, 0,
+            "ordinary off-runtime sampling remains a no-op"
+        );
+        runtime.test_environment = Some(Environment {
+            now_ms: 1234,
+            idle_ms: Ok(50),
+            display_off: Some(false),
+            owner: Owner::Clear,
+        });
+        runtime.sample_admission();
+        assert_eq!(runtime.environment.now_ms, 1234);
+        assert_eq!(runtime.environment.idle_ms, Ok(50));
+        assert!(!runtime.running);
+        assert!(!runtime.stopping);
+        assert!(runtime.sessions.is_empty());
+        assert_eq!(runtime.status(), json!({}));
     }
     #[test]
     fn raw_bootstrap_scales_suppresses_retries_and_releases_without_percent_rounding() {

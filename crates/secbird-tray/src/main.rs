@@ -24,11 +24,17 @@ mod server;
 #[cfg(windows)]
 mod settings;
 #[cfg(windows)]
+mod runtime_probe;
+#[cfg(windows)]
 mod win;
 
 #[cfg(windows)]
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    if let Err(error) = runtime_probe::duration(&args) {
+        eprintln!("{error}");
+        std::process::exit(2);
+    }
     if let Some(index) = args.iter().position(|arg| arg == "--runtime-smoke") {
         if !args.get(index + 1).and_then(|s| s.parse::<u32>().ok()).is_some_and(|s| (1..=600).contains(&s)) {
             eprintln!("--runtime-smoke requires 1..600 seconds");

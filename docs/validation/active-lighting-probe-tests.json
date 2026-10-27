@@ -1,0 +1,25 @@
+{
+  "scope": "explicit active-native Lighting probe code, simulated validation only",
+  "tray_tests": {
+    "passed": 145,
+    "failed": 0,
+    "ignored": 6
+  },
+  "native_hwnd_regressions": {
+    "passed": 4,
+    "failed": 0,
+    "elapsed_seconds": 4.04
+  },
+  "covered": [
+    "flag duration and conflicting entrypoint rejection",
+    "existing opt-in and lighting-only configuration admission",
+    "GET-only exact Ornata preflight and source control prerequisites",
+    "fresh configuration change and invalid-store latch",
+    "bound worker/frame/control-checkpoint readiness with observation expiry",
+    "late post-stop error cannot be masked by earlier successful observation",
+    "ordinary native profile/Lighting/Power/overlay message regressions"
+  ],
+  "physical_active_probe_executed": false,
+  "ram_acceptance_claimed": false,
+  "pixel_identity_claimed": false
+}

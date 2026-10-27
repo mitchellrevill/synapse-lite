@@ -308,6 +308,9 @@ pub(super) fn update_runtime_only(view: &mut View, runtime: Value) -> bool {
     view.runtime = runtime;
     true
 }
+pub(super) fn runtime_snapshot(view: &View) -> &Value {
+    &view.runtime
+}
 pub(super) fn runtime_feedback_busy(view: &View) -> bool {
     view.gesture.is_some() || view.repeat.is_some() || view.focused.is_some()
 }

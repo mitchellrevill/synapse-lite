@@ -72,6 +72,7 @@ const TIMER_LIGHTS: usize = 7;
 const LIGHTS_MS: u32 = 3_000;
 /// Bounded measurement run of the real tray + native editor path.
 const TIMER_SMOKE_EXIT: usize = 8;
+const TIMER_PROBE_STATUS: usize = 9;
 
 const ID_REAPPLY: u32 = 1;
 const ID_FOLDER: u32 = 2;
@@ -100,6 +101,10 @@ struct App {
     engine: Arc<Mutex<Engine>>,
     uniform_worker: RefCell<Option<crate::uniform_worker::Worker>>,
     uniform_shutdown_blocked: Cell<bool>,
+    lighting_probe: bool,
+    probe_binding: Option<(String, String)>,
+    probe_observation: RefCell<Option<(std::time::Instant, serde_json::Value)>>,
+    probe_report_done: Cell<bool>,
     /// Menu id offset -> (device key, profile name).
     profile_items: Vec<(String, String)>,
     /// Apply to every device on the next rescan, not just newly arrived ones.
@@ -210,9 +215,25 @@ fn copy_wide(dst: &mut [u16], s: &str) {
 }
 
 pub fn run() {
+    let arguments: Vec<String> = std::env::args().skip(1).collect();
+    let probe_seconds = match crate::runtime_probe::duration(&arguments) {
+        Ok(value) => value,
+        Err(error) => { eprintln!("{error}"); return; }
+    };
+    let lighting_probe = probe_seconds.is_some();
+    let probe_view = if lighting_probe {
+        match crate::runtime_probe::presentation(&std::env::var("SYNAPSE_LITE_SMOKE_VIEW").unwrap_or_else(|_|"keyboard-lighting".into())) {
+            Ok(view) => view.to_string(),
+            Err(error) => { eprintln!("{error}"); std::process::exit(2); }
+        }
+    } else { String::new() };
     unsafe {
         let _mutex = CreateMutexW(null(), 0, wide("Local\\SynapseLite.Tray").as_ptr());
         if GetLastError() == ERROR_ALREADY_EXISTS {
+            if lighting_probe {
+                eprintln!("Active Lighting probe rejected: another tray instance is running");
+                std::process::exit(2);
+            }
             let running = FindWindowW(wide(CLASS_NAME).as_ptr(), null());
             if std::env::var_os("SECBIRD_SIM").is_some() {
                 let text = wide(
@@ -230,14 +251,41 @@ pub fn run() {
             return;
         }
 
-        let engine = match Engine::new() {
+        let mut engine = match Engine::new() {
             Ok(e) => e,
             Err(e) => {
+                if lighting_probe {
+                    eprintln!("Active Lighting probe could not start HID access: {e}");
+                    std::process::exit(2);
+                }
                 let text = wide(&format!("Could not start HID access: {e}"));
                 MessageBoxW(null_mut(), text.as_ptr(), wide(APP_NAME).as_ptr(), MB_ICONERROR);
                 return;
             }
         };
+
+        // Active measurement is a separate admitted path. Never fall back to
+        // ordinary startup/profile apply after a rejected probe configuration.
+        let probe_binding = if lighting_probe {
+            engine.rescan();
+            match engine.preflight_lighting_probe() {
+                Ok(admission) => {
+                    if probe_view == "keyboard-lighting-color-editor" && admission["source_id"] != 2 {
+                        eprintln!("Active color-editor probe requires an existing fixed Breathing profile");
+                        std::process::exit(2);
+                    }
+                    match (admission["key"].as_str(),admission["profile"].as_str()) {
+                        (Some(key),Some(profile)) => Some((key.to_string(),profile.to_string())),
+                        _ => { eprintln!("Active Lighting probe admission is missing its owner binding"); std::process::exit(2); }
+                    }
+                }
+                Err(error) => {
+                    eprintln!("{error}");
+                    log::append(&format!("Active Lighting probe rejected: {error}"));
+                    std::process::exit(2);
+                }
+            }
+        } else { None };
 
         let hinstance = GetModuleHandleW(null());
         let class = wide(CLASS_NAME);
@@ -293,6 +341,10 @@ pub fn run() {
                 engine: Arc::new(Mutex::new(engine)),
                 uniform_worker: RefCell::new(None),
                 uniform_shutdown_blocked: Cell::new(false),
+                lighting_probe,
+                probe_binding,
+                probe_observation: RefCell::new(None),
+                probe_report_done: Cell::new(false),
                 profile_items: Vec::new(),
                 apply_all_pending: true,
                 retry_step: 0,
@@ -318,10 +370,13 @@ pub fn run() {
         });
         with_app(|app| app.engine().start_lighting_runtime());
         // Smoke/serve/native-smoke runs never opt into a scheduling worker.
-        if !std::env::args().any(|arg| arg == "--runtime-smoke") {
+        if crate::runtime_probe::starts_worker(&arguments) {
             with_app(|app| match crate::uniform_worker::Worker::start(app.engine.clone()) {
                 Ok(worker) => *app.uniform_worker.borrow_mut() = Some(worker),
-                Err(error) => log::append(&error),
+                Err(error) => {
+                    log::append(&error);
+                    if lighting_probe { eprintln!("Active Lighting probe worker failed: {error}"); std::process::exit(2); }
+                },
             });
         }
         // Register only after App exists, so the initial display-state message is
@@ -329,11 +384,17 @@ pub fn run() {
         WTSRegisterSessionNotification(hwnd, NOTIFY_FOR_THIS_SESSION);
         RegisterPowerSettingNotification(hwnd, &GUID_CONSOLE_DISPLAY_STATE, DEVICE_NOTIFY_WINDOW_HANDLE);
         log::append("tray started");
-        with_app(|app| app.rescan());
-        start_retries(hwnd);
-        SetTimer(hwnd, TIMER_BATTERY, BATTERY_MS, None);
-        SetTimer(hwnd, TIMER_BUTTONS, BUTTONS_MS, None);
-        SetTimer(hwnd, TIMER_LIGHTS, LIGHTS_MS, None);
+        if lighting_probe {
+            // Same event listeners and worker as the native tray, without generic
+            // input/profile replay or background remap/laptop/reapply timers.
+            with_app(|app| app.start_listeners());
+        } else {
+            with_app(|app| app.rescan());
+            start_retries(hwnd);
+            SetTimer(hwnd, TIMER_BATTERY, BATTERY_MS, None);
+            SetTimer(hwnd, TIMER_BUTTONS, BUTTONS_MS, None);
+            SetTimer(hwnd, TIMER_LIGHTS, LIGHTS_MS, None);
+        }
         if !std::env::args().any(|a| a == "--tray") {
             with_app(|app| app.open_editor());
         }
@@ -342,6 +403,12 @@ pub fn run() {
             if let Some(seconds) = smoke_args.get(index + 1).and_then(|s| s.parse::<u32>().ok()).filter(|s| (1..=600).contains(s)) {
                 SetTimer(hwnd, TIMER_SMOKE_EXIT, seconds * 1000, None);
             }
+        }
+
+        if let Some(seconds) = probe_seconds {
+            with_app(|app| app.observe_probe());
+            SetTimer(hwnd, TIMER_PROBE_STATUS, 1000, None);
+            SetTimer(hwnd, TIMER_SMOKE_EXIT, seconds * 1000, None);
         }
 
         let mut msg: MSG = zeroed();
@@ -463,6 +530,10 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
             }
             0
         }
+        WM_TIMER if wparam == TIMER_PROBE_STATUS => {
+            with_app(|app| app.observe_probe());
+            0
+        }
         WM_TIMER if wparam == TIMER_SMOKE_EXIT => {
             KillTimer(hwnd, TIMER_SMOKE_EXIT);
             DestroyWindow(hwnd);
@@ -527,12 +598,14 @@ unsafe extern "system" fn on_foreground(_: HWINEVENTHOOK, _: u32, _: HWND, _: i3
 
 /// Rescan a few more times over the next minute (new devices get their profile).
 fn start_retries(hwnd: HWND) {
+    if std::env::args().any(|arg| arg == crate::runtime_probe::FLAG) { return; }
     with_app(|app| app.retry_step = 0);
     unsafe { SetTimer(hwnd, TIMER_RETRY, RETRY_DELAYS_MS[0], None) };
 }
 
 /// Debounce: a device arrival fires one notification per HID interface.
 fn schedule_rescan(hwnd: HWND, apply_all: bool) {
+    if std::env::args().any(|arg| arg == crate::runtime_probe::FLAG) { return; }
     with_app(|app| app.apply_all_pending |= apply_all);
     unsafe { SetTimer(hwnd, TIMER_RESCAN, SETTLE_MS, None) };
 }
@@ -543,6 +616,7 @@ impl App {
     }
 
     fn rescan(&mut self) {
+        if self.lighting_probe { return; }
         let apply_all = std::mem::take(&mut self.apply_all_pending);
         let (reports, new_names, synapse) = {
             let mut engine = self.engine();
@@ -565,31 +639,90 @@ impl App {
         }
     }
 
+    fn observe_probe(&self) {
+        let Some((key, profile)) = &self.probe_binding else {
+            return;
+        };
+        if self.probe_report_done.get() {
+            return;
+        }
+        // Observation never queues work or waits behind an in-flight USB batch.
+        if let Ok(engine) = self.engine.try_lock() {
+            let runtime = engine.lighting_runtime_status();
+            let metadata = crate::runtime_probe::readiness(&runtime[key], profile);
+            *self.probe_observation.borrow_mut() = Some((std::time::Instant::now(), metadata));
+        }
+    }
+
+    fn report_probe_stop(
+        &self,
+        stopped: bool,
+        restoration_failures: usize,
+        post_stop: Option<serde_json::Value>,
+    ) {
+        if !self.lighting_probe || self.probe_report_done.replace(true) {
+            return;
+        }
+        let observation = self.probe_observation.borrow();
+        let report = crate::runtime_probe::stop_report(
+            observation.as_ref().map(|(time,value)| (value,time.elapsed().as_millis().min(u128::from(u64::MAX)) as u64)),
+            stopped, restoration_failures, post_stop.as_ref(),
+        );
+        if let Some(path) = std::env::var_os("SYNAPSE_LITE_PROBE_REPORT") {
+            if let Err(error) = serde_json::to_vec_pretty(&report)
+                .map_err(|e| e.to_string())
+                .and_then(|bytes| std::fs::write(path, bytes).map_err(|e| e.to_string()))
+            {
+                log::append(&format!(
+                    "Could not write active Lighting probe status: {error}"
+                ));
+            }
+        }
+    }
     fn shutdown_lighting(&self) {
         // WM_ENDSESSION and WM_DESTROY can both arrive. A prior timeout must
         // not make the second callback block on the still-running worker.
         if self.uniform_shutdown_blocked.get() {
             return;
         }
+        self.observe_probe();
         // Never join while holding Engine: the worker may be finishing one batch.
         if let Some(mut worker) = self.uniform_worker.borrow_mut().take() {
             if !worker.stop(std::time::Duration::from_secs(2)) {
                 self.uniform_shutdown_blocked.set(true);
                 log::append("uniform worker did not stop cleanly within2s (timeout or panic); an in-flight HID call cannot be interrupted, lighting cleanup was not claimed");
+                self.report_probe_stop(false, 0, None);
                 return;
             }
         }
         let mut engine = self.engine();
+        // Join has completed and Signal.running is now false. Observe session
+        // errors before disabling the worker clears its ordinary session cache.
+        let mut post_stop = self.probe_binding.as_ref().map(|(key,profile)| {
+            let runtime = engine.lighting_runtime_status();
+            crate::runtime_probe::readiness(&runtime[key],profile)
+        });
         engine.set_uniform_worker(false, None, None);
-        for failure in engine.shutdown_lighting_runtime() {
+        let failures = engine.shutdown_lighting_runtime();
+        for failure in &failures {
             log::append(&format!("lighting restoration on shutdown: {failure}"));
         }
+        if let (Some((key,profile)),Some(status))=(&self.probe_binding,&mut post_stop) {
+            let runtime = engine.lighting_runtime_status();
+            let restored = crate::runtime_probe::readiness(&runtime[key],profile);
+            if restored["no_cached_error"] != true {
+                status["no_cached_error"] = serde_json::json!(false);
+            }
+        }
+        drop(engine);
+        self.report_probe_stop(true, failures.len(), post_stop);
     }
 
     /// The lights go down while the PC is locked or its screen is off, if that's set (#48),
     /// and come back after.
     fn set_away(&mut self, locked: bool, screen_off: bool) {
         (self.locked, self.screen_off) = (locked, screen_off);
+        if self.lighting_probe { return; }
         let percent = TraySettings::load().away_percent().filter(|_| locked || screen_off);
         let mut engine = self.engine();
         match percent {
@@ -646,6 +779,10 @@ impl App {
     }
 
     fn device_events(&mut self) {
+        if self.lighting_probe {
+            while self.events.try_recv().is_ok() {}
+            return;
+        }
         while let Ok(event) = self.events.try_recv() {
             match event {
                 DeviceEvent::Dpi { key, x, y } => {
@@ -665,6 +802,7 @@ impl App {
 
     /// Switch devices to the profile tied to the program now in front, or back.
     fn foreground_changed(&mut self) {
+        if self.lighting_probe { return; }
         let settings = TraySettings::load();
         if settings.auto_switch_off {
             return;
@@ -1032,6 +1170,7 @@ impl App {
     }
 
     fn handle_command(&mut self, id: u32) {
+        if self.lighting_probe && !matches!(id, ID_EDITOR | ID_EXIT) { return; }
         match id {
             ID_REAPPLY => {
                 self.apply_all_pending = true;

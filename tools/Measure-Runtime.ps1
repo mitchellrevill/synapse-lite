@@ -102,7 +102,7 @@ try {
     TimestampUtc = [DateTimeOffset]::UtcNow.ToString('o')
     LimitBytes = 100000000
     MetricNote = 'Working set high-water plus sampled private committed bytes. Peak paged memory is recorded as an additional conservative process metric. Shared resident pages may be counted per process.'
-    Scope = 'Real tray, native editor, worker/listener threads and observed descendants. Stock Synapse/services and installed kernel drivers are excluded. These read-only views do not prove full workflow, visual or hardware parity.'
+    Scope = 'Real tray, native editor, worker/listener threads and observed descendants. Uniform animation worker excluded. Stock Synapse/services and installed kernel drivers excluded. Historical read-only runs used fresh no-action configurations; --runtime-smoke alone does not prevent generic profile/policy apply from an existing configuration. Not full workflow, visual or hardware parity.'
     Runs = $results
 } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $outputPath -Encoding utf8
 $results | Select-Object Scenario,PeakWorkingSetBytes,SampledPeakPrivateBytes,PeakPagedMemoryBytes,MaxObservedProcesses,Under100MB | Format-Table

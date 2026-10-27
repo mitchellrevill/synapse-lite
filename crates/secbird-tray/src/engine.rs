@@ -7,6 +7,7 @@ use crate::lighting_runtime::{Config as LightingConfig, DeviceIo, Runtime as Lig
 use std::time::{Duration, Instant, SystemTime};
 mod source_static;
 mod source_uniform;
+mod lighting_probe;
 
 pub struct Engine {
     #[cfg(test)]
@@ -32,6 +33,7 @@ pub struct Engine {
     relight: HashMap<String, Instant>,
     lighting_runtime: RefCell<LightingRuntime>,
     uniform: source_uniform::UniformState,
+    lighting_probe: RefCell<Option<lighting_probe::Boundary>>,
     host_static_results: RefCell<HashMap<String, (String, secbird_core::Rgb, serde_json::Value)>>,
     #[cfg(test)]
     runtime_store_path: Option<std::path::PathBuf>,
@@ -99,6 +101,7 @@ impl Engine {
             relight: HashMap::new(),
             lighting_runtime: RefCell::new(LightingRuntime::default()),
             uniform: source_uniform::UniformState::default(),
+            lighting_probe: RefCell::new(None),
             host_static_results: RefCell::new(HashMap::new()),
             #[cfg(test)]
             runtime_store_path: None,
@@ -518,15 +521,21 @@ impl Engine {
     }
     pub fn refresh_lighting_runtime(&mut self) {
         self.lighting_runtime.borrow_mut().sample_host();
-        let mut store = match self.load_store() {
+        let admitted_store = self.lighting_probe_store_snapshot().and_then(|probe| {
+            match probe { Some(store) => Ok(store), None => self.load_store() }
+        });
+        let mut store = match admitted_store {
             Ok(store) => store,
             Err(error) => {
-                self.lighting_runtime
-                    .borrow_mut()
-                    .store_error(&error.to_string());
+                let error = self.latch_lighting_probe_error(&error.to_string());
+                self.lighting_runtime.borrow_mut().store_error(&error);
                 return;
             }
         };
+        if let Err(error) = self.validate_lighting_probe_store(&store) {
+            self.lighting_runtime.borrow_mut().store_error(&error.to_string());
+            return;
+        }
         let keys = self
             .devices
             .iter()
@@ -625,6 +634,15 @@ impl Engine {
             let key = dev.key();
             if status.get(&key).is_none() {
                 status[&key] = serde_json::json!({"available":false,"can_execute_policies":false,"suppressed":false,"blocked_reason":"host-runtime-not-yet-sampled","error":null});
+            }
+        }
+        if let Some(error) = self.lighting_probe_error() {
+            if let Some(devices) = status.as_object_mut() {
+                for state in devices.values_mut() {
+                    state["error"] = serde_json::json!(error);
+                    state["available"] = serde_json::json!(false);
+                    state["blocked_reason"] = serde_json::json!("lighting-probe-configuration-refused");
+                }
             }
         }
         for (key, (_, _, value)) in self.host_static_results.borrow().iter() {

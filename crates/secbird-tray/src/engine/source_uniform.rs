@@ -141,6 +141,15 @@ impl Engine {
         }
         config_dir().join("profiles.json")
     }
+    #[cfg(test)]
+    pub(super) fn seed_unchanged_uniform_cache_for_test(&mut self, approved: Store) {
+        let path = self.uniform_path();
+        let metadata = std::fs::metadata(&path).unwrap();
+        self.uniform.cache.path = Some(path);
+        self.uniform.cache.stamp = Some((metadata.modified().ok(), metadata.len()));
+        self.uniform.cache.store = Some(approved);
+        self.uniform.cache.error = None;
+    }
     pub(crate) fn set_uniform_worker(
         &mut self,
         enabled: bool,
@@ -302,7 +311,13 @@ impl Engine {
         let mut state = std::mem::take(&mut self.uniform);
         let path = self.uniform_path();
         let candidates = (|| -> std::result::Result<Vec<Candidate>, String> {
-            let store = state.cache.refresh(&path)?;
+            let probe_store = self.lighting_probe_store_snapshot()
+                .map_err(|error| error.to_string())?;
+            let store = match probe_store.as_ref() {
+                Some(store) => store,
+                None => state.cache.refresh(&path)
+                    .map_err(|error| self.latch_lighting_probe_error(&error))?,
+            };
             let mut result = Vec::new();
             for dev in self
                 .devices

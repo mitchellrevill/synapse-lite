@@ -774,6 +774,8 @@ struct State {
     jobs: mpsc::Sender<Job>,
     replies: mpsc::Receiver<WorkerReply>,
     runtime_observer: runtime_status::Observer,
+    lighting_probe: bool,
+    lighting_runtime_observed: Option<std::time::Instant>,
     runtime_feedback_waiting: bool,
     pending: usize,
     pending_jobs: VecDeque<Job>,
@@ -1239,7 +1241,10 @@ impl State {
     /// Record the actually presented read-only view, without screenshots or serials.
     /// A requested view is not considered covered merely because the process ran.
     unsafe fn record_smoke_frame(&mut self, presented: bool) {
-        if self.smoke_reported || self.smoke_view.is_some() || self.pending != 0 {
+        if (self.smoke_reported && !self.lighting_probe)
+            || self.smoke_view.is_some()
+            || self.pending != 0
+        {
             return;
         }
         let Some(requested) = &self.smoke_requested else {
@@ -1355,8 +1360,23 @@ impl State {
             }
             _ => false,
         };
-        let matched = matched && presented && IsWindowVisible(self.hwnd) != 0;
-        let report = json!({
+        let active_runtime = self.lighting_probe.then(|| {
+            let age = self
+                .lighting_runtime_observed
+                .map(|time| time.elapsed().as_millis().min(u128::from(u64::MAX)) as u64);
+            crate::runtime_probe::fresh_readiness(
+                lighting_view::runtime_snapshot(&self.lighting),
+                self.device()
+                    .and_then(|d| d["active"].as_str())
+                    .unwrap_or(""),
+                age,
+            )
+        });
+        let matched = matched
+            && presented
+            && IsWindowVisible(self.hwnd) != 0
+            && active_runtime.as_ref().is_none_or(|v| v["ready"] == true);
+        let mut report = json!({
             "requested": requested,
             "matched": matched,
             "presented": presented,
@@ -1398,6 +1418,8 @@ impl State {
             "reserved_footer_css":if self.source_viewport(){0}else{35},
             "fidelity": "partial source-derived native port; pixel identity unproven"
         });
+        report["active_native_runtime"] = active_runtime.unwrap_or(Value::Null);
+        report["uniform_worker_disabled"] = json!(!self.lighting_probe);
         match serde_json::to_vec_pretty(&report)
             .ok()
             .and_then(|bytes| std::fs::write(path, bytes).ok())
@@ -1429,6 +1451,11 @@ impl State {
         self.submit(job, true);
     }
     unsafe fn submit(&mut self, job: Job, user_operation: bool) {
+        // Probe presentation is read-only. Only cached status and the ordinary
+        // GET snapshot may reach the engine; no UI action can broaden admission.
+        if self.lighting_probe && !matches!(&job, Job::Refresh) {
+            return;
+        }
         if self.pending > 0 {
             if let Err(error) = enqueue_setting(&mut self.pending_jobs, job) {
                 self.error(error);
@@ -1519,6 +1546,7 @@ impl State {
         let change = self.runtime_observer.finish(response, binding.as_ref());
         let mut changed = false;
         if let Some(runtime) = change.runtime {
+            self.lighting_runtime_observed = Some(std::time::Instant::now());
             changed = lighting_view::update_runtime_only(&mut self.lighting, runtime.clone());
             if let Some(binding) = &binding {
                 if let Some(devices) = self.state["devices"].as_array_mut() {
@@ -1534,6 +1562,11 @@ impl State {
         // A read-only reply never touches pending user counts, status/failed,
         // notices, intent or controls. Background failures have separate dedup.
         for fault in change.faults {
+            if self.lighting_probe {
+                self.failed = true;
+                self.status = "Active Lighting probe runtime failed".into();
+                continue;
+            }
             if self.failures.record(&fault) {
                 self.runtime_feedback_waiting = true;
             }
@@ -1561,6 +1594,7 @@ impl State {
             }
             if let Some(state) = reply.state {
                 self.state = state;
+                self.lighting_runtime_observed = None;
             }
             // Smoke-only selection follows the real read-only device snapshot.
             if let Some(view) = self.smoke_view.take() {
@@ -1892,6 +1926,11 @@ impl State {
     }
 
     unsafe fn action(&mut self, action: Action) {
+        if self.lighting_probe
+            && !matches!(&action, Action::Close | Action::Minimize | Action::Maximize)
+        {
+            return;
+        }
         match action {
             Action::Close => {
                 PostMessageW(self.hwnd, WM_CLOSE, 0, 0);
@@ -2269,6 +2308,9 @@ impl State {
     fn error(&mut self, message: &str) {
         self.status = message.into();
         self.failed = true;
+        if self.lighting_probe {
+            return;
+        }
         if self.failures.record(message) {
             unsafe {
                 PostMessageW(self.hwnd, FAILURE_DIALOG, 0, 0);
@@ -3445,6 +3487,14 @@ unsafe extern "system" fn window_proc(
         }
         return DefWindowProcW(hwnd, message, wparam, lparam);
     };
+    if state.lighting_probe
+        && matches!(
+            message,
+            WM_LBUTTONDOWN | WM_MOUSEMOVE | WM_RBUTTONUP | WM_MOUSEWHEEL | WM_COMMAND | WM_KEYDOWN
+        )
+    {
+        return 0;
+    }
     if state.profile_modal.is_some() {
         match message {
             WM_LBUTTONDOWN => {
@@ -4097,9 +4147,21 @@ fn run_window(
     ready: Option<mpsc::SyncSender<Result<(), String>>>,
 ) -> Result<(), String> {
     unsafe {
-        let smoke = close_after.is_some() || std::env::args().any(|arg| arg == "--runtime-smoke");
+        let lighting_probe = std::env::args().any(|arg| arg == crate::runtime_probe::FLAG);
+        let smoke = close_after.is_some()
+            || lighting_probe
+            || std::env::args().any(|arg| arg == "--runtime-smoke");
         let smoke_requested = smoke.then(|| {
-            std::env::var("SYNAPSE_LITE_SMOKE_VIEW").unwrap_or_else(|_| "dashboard".into())
+            if lighting_probe {
+                crate::runtime_probe::presentation(
+                    &std::env::var("SYNAPSE_LITE_SMOKE_VIEW")
+                        .unwrap_or_else(|_| "keyboard-lighting".into()),
+                )
+                .unwrap_or("keyboard-lighting")
+                .to_string()
+            } else {
+                std::env::var("SYNAPSE_LITE_SMOKE_VIEW").unwrap_or_else(|_| "dashboard".into())
+            }
         });
         let assets = assets_dir();
         // The manifest enables PerMonitorV2. Initial outer dimensions are DIP,
@@ -4138,6 +4200,8 @@ fn run_window(
             jobs: jobs_tx,
             replies: replies_rx,
             runtime_observer: runtime_status::Observer::default(),
+            lighting_probe,
+            lighting_runtime_observed: None,
             runtime_feedback_waiting: false,
             pending: 0,
             pending_jobs: VecDeque::new(),
