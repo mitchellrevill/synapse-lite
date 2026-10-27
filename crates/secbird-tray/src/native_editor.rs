@@ -39,6 +39,7 @@ mod feedback;
 mod interaction_tests;
 mod lighting_layout;
 mod lighting_view;
+mod image_render;
 mod performance_layout;
 mod performance_view;
 mod power_layout;
@@ -734,10 +735,16 @@ struct Bitmap {
     handle: HBITMAP,
     width: i32,
     height: i32,
+    alpha: bool,
+    smooth: *mut windows_sys::Win32::Graphics::GdiPlus::GpBitmap,
 }
 
 impl Bitmap {
     unsafe fn load(path: &Path) -> Option<Self> {
+        let alpha_path = path.with_extension("bgra");
+        if alpha_path.exists() {
+            return Self::load_alpha(&alpha_path);
+        }
         let handle = LoadImageW(
             null_mut(),
             wide(&path.to_string_lossy()).as_ptr(),
@@ -763,13 +770,71 @@ impl Bitmap {
             handle,
             width: info.bmWidth,
             height: info.bmHeight,
+            alpha: false,
+            smooth: null_mut(),
         })
+    }
+
+    // Provisioned files contain top-down, premultiplied BGRA pixels. Keeping
+    // alpha separate from LoadImage avoids its legacy BMP alpha conversion.
+    unsafe fn load_alpha(path: &Path) -> Option<Self> {
+        use std::io::Read;
+        let mut file = std::fs::File::open(path).ok()?;
+        let mut header = [0u8; 16];
+        file.read_exact(&mut header).ok()?;
+        if &header[..8] != b"SLBGRA1\0" {
+            return None;
+        }
+        let width = u32::from_le_bytes(header[8..12].try_into().ok()?);
+        let height = u32::from_le_bytes(header[12..16].try_into().ok()?);
+        if width == 0 || height == 0 || width > 4096 || height > 4096 {
+            return None;
+        }
+        let length = width as usize * height as usize * 4;
+        if file.metadata().ok()?.len() != (16 + length) as u64 {
+            return None;
+        }
+        let mut info: BITMAPINFO = std::mem::zeroed();
+        info.bmiHeader.biSize = std::mem::size_of::<BITMAPINFOHEADER>() as u32;
+        info.bmiHeader.biWidth = width as i32;
+        info.bmiHeader.biHeight = -(height as i32);
+        info.bmiHeader.biPlanes = 1;
+        info.bmiHeader.biBitCount = 32;
+        info.bmiHeader.biCompression = BI_RGB;
+        let mut pixels = null_mut();
+        let handle = CreateDIBSection(null_mut(), &info, DIB_RGB_COLORS, &mut pixels, null_mut(), 0);
+        if handle.is_null() {
+            return None;
+        }
+        let mut bitmap = Self {
+            handle,
+            width: width as i32,
+            height: height as i32,
+            alpha: true,
+            smooth: null_mut(),
+        };
+        let buffer = std::slice::from_raw_parts_mut(pixels.cast::<u8>(), length);
+        file.read_exact(buffer).ok()?;
+        // Refuse straight-alpha or malformed generated data rather than
+        // producing bright fringes around semitransparent edges.
+        if buffer
+            .chunks_exact(4)
+            .any(|p| p[..3].iter().any(|c| *c > p[3]))
+        {
+            return None;
+        }
+        bitmap.smooth = image_render::from_pixels(width as i32, height as i32, buffer.as_ptr());
+        if bitmap.smooth.is_null() {
+            return None;
+        }
+        Some(bitmap)
     }
 }
 
 impl Drop for Bitmap {
     fn drop(&mut self) {
         unsafe {
+            image_render::dispose(self.smooth);
             DeleteObject(self.handle);
         }
     }
@@ -2528,6 +2593,16 @@ impl Painter<'_> {
         let ratio = (width as f32 / image.width as f32).min(height as f32 / image.height as f32);
         let w = (image.width as f32 * ratio).round() as i32;
         let h = (image.height as f32 * ratio).round() as i32;
+        if image.alpha {
+            image_render::draw(
+                self.dc,
+                image.smooth,
+                self.rect(x + (width - w) / 2, y + (height - h) / 2, w, h),
+                image.width,
+                image.height,
+            );
+            return;
+        }
         let dc = CreateCompatibleDC(self.dc);
         let old = SelectObject(dc, image.handle);
         SetStretchBltMode(self.dc, HALFTONE as i32);
@@ -2629,7 +2704,13 @@ unsafe fn paint(state: &mut State, dc: HDC) {
             _ => "close",
         };
         if let Some(image) = state.icons.get(icon) {
-            p.image(Some(image), x, 5, 48, 32);
+            // Minimize/maximize SVGs include their 48x32 transparent cell;
+            // close/restore contain only the roughly 13px glyph itself.
+            if matches!(icon, "close" | "restore") {
+                p.image(Some(image), x + 17, 15, 13, 13);
+            } else {
+                p.image(Some(image), x, 5, 48, 32);
+            }
         } else {
             p.text(label, x, 0, 48, 42, p.fonts.product, MUTED, DT_CENTER);
         }
@@ -3294,6 +3375,10 @@ unsafe extern "system" fn window_proc(
     // Win32 calls can synchronously reenter a window procedure. Never create
     // overlapping mutable references to its state during those callbacks.
     match message {
+        // The entire window is our client surface. DefWindowProc otherwise
+        // paints a light sizing frame when this custom frame loses focus.
+        WM_NCPAINT => return 0,
+        WM_NCACTIVATE => return DefWindowProcW(hwnd, message, wparam, -1),
         WM_NCCALCSIZE => {
             window_frame::calculate(hwnd, wparam, lparam);
             return 0;
@@ -4372,6 +4457,7 @@ fn run_window(
             }
         });
         let assets = assets_dir();
+        let _image_runtime = image_render::Runtime::start()?;
         // The manifest enables PerMonitorV2. Initial outer dimensions are DIP,
         // like Electron's source window defaults, rather than physical pixels.
         let initial_scale = GetDpiForSystem().max(96) as f32 / 96.0;
@@ -4606,6 +4692,7 @@ fn run_window(
             }
             return Err(error);
         }
+        window_frame::suppress_system_border(hwnd);
         {
             let mut state = state.borrow_mut();
             let actual_scale = GetDpiForWindow(hwnd).max(96) as f32 / 96.0;

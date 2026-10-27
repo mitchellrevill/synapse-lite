@@ -4,6 +4,19 @@
 //! synchronous resize callbacks. They perform no device or profile operations.
 use super::*;
 
+pub(super) unsafe fn suppress_system_border(hwnd: HWND) {
+    use windows_sys::Win32::Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_BORDER_COLOR};
+    // Windows 11's explicit "no border" color; older versions may reject it.
+    // Custom WM_NCPAINT/WM_NCACTIVATE handling also suppresses classic painting.
+    let color: u32 = 0xffff_fffe;
+    DwmSetWindowAttribute(
+        hwnd,
+        DWMWA_BORDER_COLOR as u32,
+        (&color as *const u32).cast(),
+        std::mem::size_of_val(&color) as u32,
+    );
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) struct Bounds {
     pub left: i32,

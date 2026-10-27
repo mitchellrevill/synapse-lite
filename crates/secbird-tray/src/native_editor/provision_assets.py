@@ -13,6 +13,7 @@ import hashlib
 import json
 import pathlib
 import shutil
+import struct
 
 from PIL import Image
 
@@ -26,6 +27,20 @@ def unique(directory, pattern):
     if len(matches) != 1:
         raise ValueError(f"Expected exactly one {pattern} in {directory}; found {len(matches)}")
     return matches[0]
+
+
+def save_alpha(image, target):
+    """Write top-down premultiplied BGRA for Win32 AC_SRC_ALPHA."""
+    pixels = bytearray(image.width * image.height * 4)
+    for index, (red, green, blue, alpha) in enumerate(image.getdata()):
+        offset = index * 4
+        pixels[offset:offset + 4] = bytes((
+            (blue * alpha + 127) // 255,
+            (green * alpha + 127) // 255,
+            (red * alpha + 127) // 255,
+            alpha,
+        ))
+    target.write_bytes(b"SLBGRA1\0" + struct.pack("<II", image.width, image.height) + pixels)
 
 
 def main():
@@ -62,6 +77,11 @@ def main():
         manifest["assets"].append({"file": name, "sha256": sha256(target),
                                    "source_sha256": sha256(source), "source_name": source.name,
                                    "width": image.width, "height": image.height, "kind": "artwork"})
+        alpha_target = target.with_suffix(".bgra")
+        save_alpha(image, alpha_target)
+        manifest["assets"].append({"file": alpha_target.name, "sha256": sha256(alpha_target),
+                                   "source_sha256": sha256(source), "kind": "premultiplied-bgra",
+                                   "width": image.width, "height": image.height})
     observation = evidence / 'physical-layout-observation.json'
     geometry = evidence / 'ornata-key-regions.json'
     if observation.is_file() and geometry.is_file():
@@ -83,11 +103,16 @@ def main():
                 manifest['assets'].append({'file': target.name, 'sha256': sha256(target),
                                            'source_sha256': sha256(source), 'kind': 'layout-artwork',
                                            'width': image.width, 'height': image.height})
+                alpha_target = target.with_suffix('.bgra')
+                save_alpha(image, alpha_target)
+                manifest['assets'].append({'file': alpha_target.name, 'sha256': sha256(alpha_target),
+                                           'source_sha256': sha256(source), 'kind': 'premultiplied-bgra',
+                                           'width': image.width, 'height': image.height})
     if args.icons_from:
         icon_dir = args.icons_from.resolve(strict=True)
         for source in icon_dir.iterdir():
             if source.is_file() and (source.name == 'icon-provenance.json'
-                                    or source.name.startswith('icon-') and source.suffix in ('.bmp', '.svg')):
+                                    or source.name.startswith('icon-') and source.suffix in ('.bmp', '.svg', '.bgra')):
                 target = output / source.name
                 if source.resolve() != target.resolve():
                     shutil.copyfile(source, target)
