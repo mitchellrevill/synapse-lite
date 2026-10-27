@@ -18,6 +18,8 @@ Native edit windows use the measured Arial 14 input font and clipped regions so 
 
 Spinner input now treats temporary empty/minus text as zero before clamping to 100, rather than falling back to the previous model DPI. Increment and decrement intentionally use arithmetic: the shipped integer increment handler uses JavaScript `+` on controlled text, which can concatenate typed `800` and step `50` into `80050` and then clamp to 26000. This defect is not reproduced. A focused regression checks transient text, both step directions, upward normalization and both bounds. All 16 native tests pass; the two changed Rust files pass formatting checks. Workspace-wide formatting still differs in existing unrelated code.
 
+The native slider now follows the recovered layer order: grid (`z-index:auto`), translucent track (1), green fill (2), range thumb (3). The CSS track is `#44d62c4d`; its color is composited against the current normal/hover row background, including the grid overlap, before disabled-row opacity is applied. Previously ticks crossed the fill/thumb and the track kept its normal-row color on hover. This is a source-based composition correction, not evidence of complete native/browser rasterization parity. Existing memory evidence refers to the binary hashes recorded in its individual reports.
+
 ## Evidence and remaining gates
 
 Source artifacts are product 196 `main.bbc961f9.js` and `main.116d273e.css`; focused retained REA parent `ev_a9d0d7d76b9f77b61854bcb159c64edb962a3363ffbb41355d8f6c6443aa5f23`. Source projections and inert DOM/CSS replay establish formulas, rectangles, media conditions and state transitions. They do not establish full runtime equivalence. Vendor JavaScript, CSS and raw artwork are not embedded in the public source.

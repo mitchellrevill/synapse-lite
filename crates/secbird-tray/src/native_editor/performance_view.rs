@@ -285,30 +285,26 @@ unsafe fn slider(
         PANEL
     };
     let percent = performance_layout::dpi_to_percent(u32::from(value)).unwrap_or(0.0);
+    let track_alpha = 77.0 / 255.0; // CSS #44d62c4d
     fill(
         p,
         at(r.x, r.y + 7.0, r.width, 6.0),
-        faded(0x204c19, background, alpha),
+        faded(faded(GREEN, background, track_alpha), background, alpha),
     );
-    fill(
-        p,
-        at(
-            r.x,
-            r.y + 7.0,
-            performance_layout::source_fill_width(percent, r.width),
-            6.0,
-        ),
-        faded(GREEN, background, alpha),
-    );
-    // The range input's small thumb is12px; source fill retains its16px formula.
-    let center = 6.0 + percent / 100.0 * (r.width - 12.0);
-    rounded(
-        p,
-        at(r.x + center - 6.0, r.y + 4.0, 12.0, 12.0),
-        faded(GREEN, background, alpha),
-        faded(GREEN, background, alpha),
-        6.0,
-    );
+    let tick = |p: &Painter<'_>, x: f64| {
+        fill(
+            p,
+            at(x - 0.5, r.y + 2.0, 1.0, 16.0),
+            faded(0x204c19, background, alpha),
+        );
+        // The track is translucent over the grid. Flatten that overlap before
+        // applying the whole disabled row's opacity against its background.
+        fill(
+            p,
+            at(x - 0.5, r.y + 7.0, 1.0, 6.0),
+            faded(faded(GREEN, 0x204c19, track_alpha), background, alpha),
+        );
+    };
     let anchors = [
         (0.0, "100"),
         (25.0, "400"),
@@ -319,11 +315,7 @@ unsafe fn slider(
     ];
     for (percent, label) in anchors {
         let x = r.x + r.width * percent / 100.0;
-        fill(
-            p,
-            at(x - 0.5, r.y + 2.0, 1.0, 16.0),
-            faded(0x204c19, background, alpha),
-        );
+        tick(p, x);
         let (left, width, align) = if percent == 0.0 {
             (x, 44.0, DT_LEFT)
         } else if percent == 100.0 {
@@ -343,12 +335,29 @@ unsafe fn slider(
     for percent in [
         62.5, 65.0, 67.5, 70.0, 72.5, 77.5, 80.0, 82.5, 85.0, 87.5, 90.0, 92.5, 95.0, 97.5,
     ] {
-        fill(
-            p,
-            at(r.x + r.width * percent / 100.0 - 0.5, r.y + 2.0, 1.0, 16.0),
-            faded(0x204c19, background, alpha),
-        );
+        tick(p, r.x + r.width * percent / 100.0);
     }
+    // Source range-item has z-index:auto. Track/fill/range are1/2/3, so
+    // these layers must cover the grid rather than being crossed by its ticks.
+    fill(
+        p,
+        at(
+            r.x,
+            r.y + 7.0,
+            performance_layout::source_fill_width(percent, r.width),
+            6.0,
+        ),
+        faded(GREEN, background, alpha),
+    );
+    // The range input's small thumb is12px; source fill retains its16px formula.
+    let center = 6.0 + percent / 100.0 * (r.width - 12.0);
+    rounded(
+        p,
+        at(r.x + center - 6.0, r.y + 4.0, 12.0, 12.0),
+        faded(GREEN, background, alpha),
+        faded(GREEN, background, alpha),
+        6.0,
+    );
     if independent {
         text(
             p,
