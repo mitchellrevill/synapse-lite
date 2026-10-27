@@ -185,6 +185,30 @@ impl Device {
         self.transact(command.get(), size, args)
     }
 
+    /// The inspected Ornata GET0F82 sends80 bytes but can return only its
+    /// six-byte effect header. This exception does not alter other commands.
+    pub(crate) fn get_lighting_effect_register(&self, profile: u8, region: u8) -> Result<Report> {
+        if self.pid != 0x025d || self.interface != 2 {
+            return Err(Error::Unsupported(
+                "effect readback is verified only for Ornata V2 interface2".into(),
+            ));
+        }
+        if profile > 1 || region != 0 {
+            return Err(Error::InvalidArg(
+                "effect readback requires profile0/1 and region0".into(),
+            ));
+        }
+        transact_with_response_minimum(
+            self.transport.as_ref(),
+            self.txid,
+            Command::new(0x0f, 0x82),
+            80,
+            &[profile, region],
+            READ_RETRIES,
+            6,
+        )
+    }
+
     /// Stable identity of this physical device: `PID:SERIAL`, or just `PID` when the
     /// device has no usable serial. Profiles are stored under this key, so two
     /// identical mice keep separate settings.
@@ -258,6 +282,26 @@ fn transact(
     args: &[u8],
     retries: u32,
 ) -> Result<Report> {
+    transact_with_response_minimum(hid, txid, command, size, args, retries, size)
+}
+
+/// Request capacity and minimum successful reply size are separate for the
+/// observed variable-length lighting getter. Callers of transact retain the
+/// original request-sized minimum; all framing/correlation checks remain shared.
+fn transact_with_response_minimum(
+    hid: &dyn Transport,
+    txid: u8,
+    command: Command,
+    size: u8,
+    args: &[u8],
+    retries: u32,
+    minimum_success_args: u8,
+) -> Result<Report> {
+    if minimum_success_args > size {
+        return Err(Error::InvalidArg(
+            "reply minimum exceeds request capacity".into(),
+        ));
+    }
     let req = Report::checked_request(txid, command, size, args)?;
     let mut buf = [0u8; REPORT_LEN + 1]; // byte 0 is the HID report id (0)
     buf[1..].copy_from_slice(&req.0);
@@ -276,7 +320,7 @@ fn transact(
         // Match the complete frame before trusting status or feature values.
         // No transaction alias has been verified for the attached devices.
         let minimum_args = if rep.status() == Status::Success {
-            size
+            minimum_success_args
         } else {
             0
         };
@@ -445,6 +489,7 @@ mod tests {
         replies: Mutex<VecDeque<Vec<u8>>>,
         writes: AtomicUsize,
         reads: AtomicUsize,
+        requests: Mutex<Vec<Vec<u8>>>,
     }
 
     impl QueuedTransport {
@@ -453,13 +498,15 @@ mod tests {
                 replies: Mutex::new(replies.into()),
                 writes: AtomicUsize::new(0),
                 reads: AtomicUsize::new(0),
+                requests: Mutex::new(Vec::new()),
             }
         }
     }
 
     impl Transport for QueuedTransport {
-        fn send_feature_report(&self, _: &[u8]) -> crate::Result<()> {
+        fn send_feature_report(&self, data: &[u8]) -> crate::Result<()> {
             self.writes.fetch_add(1, Ordering::Relaxed);
+            self.requests.lock().unwrap().push(data.to_vec());
             Ok(())
         }
 
@@ -494,6 +541,62 @@ mod tests {
         assert_eq!(reply.args()[2], 128);
         assert_eq!(pipe.reads.load(Ordering::Relaxed), 2);
         assert_eq!(pipe.writes.load(Ordering::Relaxed), 1);
+    }
+
+    #[test]
+    fn effect_header_reply_uses_explicit_minimum_without_shrinking_request() {
+        let command = Command::new(0x0f, 0x82);
+        let packet = wire(0x1f, command, &[1, 0, 8, 0, 0, 0]);
+        let ordinary = QueuedTransport::new(vec![packet.clone()]);
+        assert!(matches!(
+            super::transact(&ordinary, 0x1f, command, 80, &[1, 0], 1),
+            Err(Error::NoReply(_))
+        ));
+        let getter = QueuedTransport::new(vec![packet]);
+        let reply =
+            super::transact_with_response_minimum(&getter, 0x1f, command, 80, &[1, 0], 1, 6)
+                .unwrap();
+        assert_eq!(reply.0[5], 6);
+        let requests = getter.requests.lock().unwrap();
+        assert_eq!(requests[0].len(), 91);
+        assert_eq!(requests[0][6], 80);
+        assert_eq!(&requests[0][7..11], &[0x0f, 0x82, 1, 0]);
+    }
+
+    #[test]
+    fn shorter_effect_reply_still_rejects_bad_frames_and_insufficient_headers() {
+        let command = Command::new(0x0f, 0x82);
+        let mut corrupt = wire(0x1f, command, &[1, 0, 8, 0, 0, 0]);
+        corrupt[9] ^= 1;
+        let pipe = QueuedTransport::new(vec![
+            wire(0x3f, command, &[1, 0, 8, 0, 0, 0]),
+            corrupt,
+            wire(0x1f, command, &[1, 0, 8, 0, 0]),
+            wire(0x1f, command, &[1, 0, 8, 0, 0, 0]),
+        ]);
+        let reply =
+            super::transact_with_response_minimum(&pipe, 0x1f, command, 80, &[1, 0], 4, 6).unwrap();
+        assert_eq!(reply.args()[2], 8);
+        assert_eq!(pipe.reads.load(Ordering::Relaxed), 4);
+        assert_eq!(pipe.writes.load(Ordering::Relaxed), 1);
+    }
+
+    #[test]
+    fn invalid_reply_minimum_is_rejected_before_transport() {
+        let pipe = QueuedTransport::new(vec![]);
+        assert!(matches!(
+            super::transact_with_response_minimum(
+                &pipe,
+                0x1f,
+                Command::new(0x0f, 0x82),
+                6,
+                &[1, 0],
+                1,
+                7
+            ),
+            Err(Error::InvalidArg(_))
+        ));
+        assert_eq!(pipe.writes.load(Ordering::Relaxed), 0);
     }
 
     #[test]

@@ -1,0 +1,118 @@
+{
+  "timestamp_utc": "2026-10-27T05:33:22.0729698+00:00",
+  "example_sha256": "42b6311eb60fcc9a375d419a17f77383618aec604f9f35060e4d7715ce813ff5",
+  "example_source_sha256": "9effb7c3537719b6790b9d9a47424d37766c61b31022c21169ab095ebb5f2d0b",
+  "product_id": "025D",
+  "interface": 2,
+  "scope": "Read-only firmware registers after temporarily closing stock user processes; not the state of a running host animation. No effect, brightness or mode SET sent by this probe.",
+  "initial_failure_headers": {
+    "headers": [
+      {
+        "count": 30,
+        "header": {
+          "bytes_read": 91,
+          "checksum_computed": 137,
+          "checksum_stored": 137,
+          "checksum_valid": true,
+          "command_class": 15,
+          "command_id": 130,
+          "command_matches": true,
+          "declared_size": 6,
+          "disposition": "rejected_by_current_transport",
+          "hid_report_id": 0,
+          "meets_current_success_minimum": false,
+          "passes_current_frame_checks": false,
+          "protocol_type": 0,
+          "remaining_packets_bytes": [
+            0,
+            0
+          ],
+          "requested_transaction": 31,
+          "reserved": 0,
+          "returned_transaction": 31,
+          "status": 2,
+          "status_name": "Success",
+          "transaction_matches": true
+        }
+      }
+    ],
+    "max_distinct_headers": 64,
+    "omitted_reads_at_capacity": 0,
+    "scope": "response headers while GET0F82 is active only; no argument payloads",
+    "total_reads": 30
+  },
+  "effect": {
+    "status": "success",
+    "declared_size": 6,
+    "effect_id": 3,
+    "flags": 0,
+    "rate": 0,
+    "color_count": 0,
+    "colors": [],
+    "requested_profile": 1,
+    "returned_profile": 1,
+    "requested_region": 0,
+    "returned_region": 0,
+    "selectors_match": true,
+    "custom_frame": false
+  },
+  "brightness": {
+    "raw_args_3": [
+      1,
+      0,
+      255
+    ],
+    "raw_brightness": 255,
+    "requested_profile": 1,
+    "requested_region": 0,
+    "returned_profile": 1,
+    "returned_region": 0,
+    "selectors_match": true,
+    "status": "success"
+  },
+  "corrected_headers": {
+    "headers": [
+      {
+        "count": 1,
+        "header": {
+          "bytes_read": 91,
+          "checksum_computed": 137,
+          "checksum_stored": 137,
+          "checksum_valid": true,
+          "command_class": 15,
+          "command_id": 130,
+          "command_matches": true,
+          "declared_size": 6,
+          "disposition": "accepted_success",
+          "hid_report_id": 0,
+          "meets_current_success_minimum": true,
+          "passes_current_frame_checks": true,
+          "protocol_type": 0,
+          "remaining_packets_bytes": [
+            0,
+            0
+          ],
+          "request_declared_size": 80,
+          "requested_transaction": 31,
+          "required_success_minimum": 6,
+          "reserved": 0,
+          "returned_transaction": 31,
+          "status": 2,
+          "status_name": "Success",
+          "transaction_matches": true
+        }
+      }
+    ],
+    "max_distinct_headers": 64,
+    "omitted_reads_at_capacity": 0,
+    "scope": "response headers while GET0F82 is active only; no argument payloads",
+    "total_reads": 1
+  },
+  "stock_was_running": true,
+  "stock_processes_observed_after_3_seconds": 12,
+  "services_and_drivers_changed": false,
+  "host_animation_captured": false,
+  "device_mode_captured": false,
+  "owner_verified": false,
+  "restoration_proven": false
+}
