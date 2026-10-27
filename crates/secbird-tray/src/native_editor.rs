@@ -805,6 +805,7 @@ struct State {
     replies: mpsc::Receiver<WorkerReply>,
     runtime_observer: runtime_status::Observer,
     lighting_probe: bool,
+    probe_kind: Option<crate::runtime_probe::ProbeKind>,
     read_only_smoke: bool,
     restricted_actions: bool,
     lighting_runtime_observed: Option<std::time::Instant>,
@@ -1396,7 +1397,8 @@ impl State {
             let age = self
                 .lighting_runtime_observed
                 .map(|time| time.elapsed().as_millis().min(u128::from(u64::MAX)) as u64);
-            crate::runtime_probe::fresh_readiness(
+            crate::runtime_probe::fresh_readiness_for(
+                self.probe_kind.unwrap_or(crate::runtime_probe::ProbeKind::Uniform),
                 lighting_view::runtime_snapshot(&self.lighting),
                 self.device()
                     .and_then(|d| d["active"].as_str())
@@ -4352,13 +4354,14 @@ fn run_window(
     unsafe {
         let arguments: Vec<String> = std::env::args().skip(1).collect();
         let policy = crate::runtime_probe::Policy::from_args(&arguments);
-        let lighting_probe = std::env::args().any(|arg| arg == crate::runtime_probe::FLAG);
+        let lighting_probe = policy.active_probe().is_some();
         let smoke = close_after.is_some()
             || lighting_probe
             || std::env::args().any(|arg| arg == "--runtime-smoke");
         let smoke_requested = smoke.then(|| {
             if lighting_probe {
-                crate::runtime_probe::presentation(
+                crate::runtime_probe::presentation_for(
+                    policy.active_probe().unwrap(),
                     &std::env::var("SYNAPSE_LITE_SMOKE_VIEW")
                         .unwrap_or_else(|_| "keyboard-lighting".into()),
                 )
@@ -4408,6 +4411,7 @@ fn run_window(
             replies: replies_rx,
             runtime_observer: runtime_status::Observer::default(),
             lighting_probe,
+            probe_kind: policy.active_probe(),
             read_only_smoke: policy.read_only(),
             restricted_actions: policy.restricted_actions(),
             lighting_runtime_observed: None,

@@ -218,17 +218,26 @@ fn copy_wide(dst: &mut [u16], s: &str) {
 
 pub fn run() {
     let arguments: Vec<String> = std::env::args().skip(1).collect();
-    let probe_seconds = match crate::runtime_probe::duration(&arguments) {
+    let uniform_probe_seconds = match crate::runtime_probe::duration(&arguments) {
         Ok(value) => value,
         Err(error) => { eprintln!("{error}"); return; }
     };
+    let wave_probe_seconds = match crate::runtime_probe::wave_duration(&arguments) {
+        Ok(value) => value,
+        Err(error) => { eprintln!("{error}"); return; }
+    };
+    let probe_seconds = uniform_probe_seconds.or(wave_probe_seconds);
     let policy = crate::runtime_probe::Policy::from_args(&arguments);
     if let Err(error) = crate::runtime_probe::read_only_duration(&arguments) {
         eprintln!("{error}"); return;
     }
     let lighting_probe = probe_seconds.is_some();
     let probe_view = if lighting_probe {
-        match crate::runtime_probe::presentation(&std::env::var("SYNAPSE_LITE_SMOKE_VIEW").unwrap_or_else(|_|"keyboard-lighting".into())) {
+        match crate::runtime_probe::presentation_for(
+            policy.active_probe().unwrap(),
+            &std::env::var("SYNAPSE_LITE_SMOKE_VIEW")
+                .unwrap_or_else(|_| "keyboard-lighting".into()),
+        ) {
             Ok(view) => view.to_string(),
             Err(error) => { eprintln!("{error}"); std::process::exit(2); }
         }
@@ -280,7 +289,11 @@ pub fn run() {
         // ordinary startup/profile apply after a rejected probe configuration.
         let probe_binding = if lighting_probe {
             engine.rescan();
-            match engine.preflight_lighting_probe() {
+            let admission = match policy.active_probe().unwrap() {
+                crate::runtime_probe::ProbeKind::Uniform => engine.preflight_lighting_probe(),
+                crate::runtime_probe::ProbeKind::Wave => engine.preflight_wave_probe(),
+            };
+            match admission {
                 Ok(admission) => {
                     if probe_view == "keyboard-lighting-color-editor" && admission["source_id"] != 2 {
                         eprintln!("Active color-editor probe requires an existing fixed Breathing profile");
@@ -673,7 +686,9 @@ impl App {
         // This cache has its own tiny lock. A long HID batch cannot starve
         // observation, and consuming a sample never gives it a new timestamp.
         if let Some(snapshot) = self.lighting_status.read_device(key) {
-            let metadata = crate::runtime_probe::readiness(&snapshot.value, profile);
+            let metadata = crate::runtime_probe::readiness_for(
+                self.policy.active_probe().unwrap(), &snapshot.value, profile,
+            );
             *self.probe_observation.borrow_mut() = Some((snapshot.observed_at, metadata));
         }
     }
@@ -729,7 +744,9 @@ impl App {
         // errors before disabling the worker clears its ordinary session cache.
         let mut post_stop = self.probe_binding.as_ref().map(|(key,profile)| {
             let runtime = engine.lighting_runtime_status();
-            crate::runtime_probe::readiness(&runtime[key],profile)
+            crate::runtime_probe::readiness_for(
+                self.policy.active_probe().unwrap(), &runtime[key], profile,
+            )
         });
         engine.set_uniform_worker(false, None, None);
         let failures = engine.shutdown_lighting_runtime();
@@ -738,7 +755,9 @@ impl App {
         }
         if let (Some((key,profile)),Some(status))=(&self.probe_binding,&mut post_stop) {
             let runtime = engine.lighting_runtime_status();
-            let restored = crate::runtime_probe::readiness(&runtime[key],profile);
+            let restored = crate::runtime_probe::readiness_for(
+                self.policy.active_probe().unwrap(), &runtime[key], profile,
+            );
             if restored["no_cached_error"] != true {
                 status["no_cached_error"] = serde_json::json!(false);
             }

@@ -43,6 +43,10 @@ fn main() {
         eprintln!("{error}");
         std::process::exit(2);
     }
+    if let Err(error) = runtime_probe::wave_duration(&args) {
+        eprintln!("{error}");
+        std::process::exit(2);
+    }
     if let Some(index) = args.iter().position(|arg| arg == "--native-smoke") {
         let seconds = args.get(index + 1).and_then(|s| s.parse::<u64>().ok()).filter(|s| (1..=600).contains(s));
         let Some(seconds) = seconds else {

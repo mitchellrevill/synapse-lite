@@ -8,11 +8,19 @@ pub(crate) enum Policy {
     Normal,
     ReadOnlySmoke,
     ActiveLightingProbe,
+    ActiveWaveProbe,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum ProbeKind {
+    Uniform,
+    Wave,
 }
 impl Policy {
     pub(crate) fn from_args(args: &[String]) -> Self {
         if args.iter().any(|arg| arg == "--runtime-smoke") {
             Self::ReadOnlySmoke
+        } else if args.iter().any(|arg| arg == WAVE_FLAG) {
+            Self::ActiveWaveProbe
         } else if args.iter().any(|arg| arg == FLAG) {
             Self::ActiveLightingProbe
         } else {
@@ -21,6 +29,13 @@ impl Policy {
     }
     pub(crate) fn read_only(self) -> bool {
         self == Self::ReadOnlySmoke
+    }
+    pub(crate) fn active_probe(self) -> Option<ProbeKind> {
+        match self {
+            Self::ActiveLightingProbe => Some(ProbeKind::Uniform),
+            Self::ActiveWaveProbe => Some(ProbeKind::Wave),
+            _ => None,
+        }
     }
     pub(crate) fn restricted_actions(self) -> bool {
         self != Self::Normal
@@ -51,12 +66,19 @@ pub(crate) fn read_only_duration(args: &[String]) -> std::result::Result<Option<
 }
 
 pub(crate) const FLAG: &str = "--runtime-lighting-probe";
+pub(crate) const WAVE_FLAG: &str = "--runtime-wave-probe";
 
 pub(crate) fn duration(args: &[String]) -> std::result::Result<Option<u32>, String> {
+    duration_for(args, FLAG)
+}
+pub(crate) fn wave_duration(args: &[String]) -> std::result::Result<Option<u32>, String> {
+    duration_for(args, WAVE_FLAG)
+}
+fn duration_for(args: &[String], flag: &str) -> std::result::Result<Option<u32>, String> {
     let positions: Vec<_> = args
         .iter()
         .enumerate()
-        .filter(|(_, a)| a.as_str() == FLAG)
+        .filter(|(_, a)| a.as_str() == flag)
         .map(|(i, _)| i)
         .collect();
     if positions.is_empty() {
@@ -72,7 +94,7 @@ pub(crate) fn duration(args: &[String]) -> std::result::Result<Option<u32>, Stri
             )
         })
     {
-        return Err(format!("{FLAG} must be used alone with one duration"));
+        return Err(format!("{flag} must be used alone with one duration"));
     }
     let seconds = args
         .get(positions[0] + 1)
@@ -80,7 +102,7 @@ pub(crate) fn duration(args: &[String]) -> std::result::Result<Option<u32>, Stri
         .filter(|s| (1..=600).contains(s));
     seconds
         .map(Some)
-        .ok_or_else(|| format!("{FLAG} requires 1..600 seconds"))
+        .ok_or_else(|| format!("{flag} requires 1..600 seconds"))
 }
 
 /// Probe presentation stays on the admitted Lighting owner. Spectrum has no
@@ -92,6 +114,20 @@ pub(crate) fn presentation(requested: &str) -> std::result::Result<&str, String>
         _ => Err("Active Lighting probe supports only keyboard-lighting or keyboard-lighting-color-editor".into()),
     }
 }
+pub(crate) fn presentation_for(
+    kind: ProbeKind,
+    requested: &str,
+) -> std::result::Result<&str, String> {
+    if kind == ProbeKind::Wave {
+        if requested == "keyboard-lighting" {
+            Ok("keyboard-lighting")
+        } else {
+            Err("Active Wave probe supports only keyboard-lighting".into())
+        }
+    } else {
+        presentation(requested)
+    }
+}
 
 fn reject(reason: &str) -> Error {
     Error::InvalidArg(format!("Lighting probe rejected: {reason}"))
@@ -100,6 +136,12 @@ fn reject(reason: &str) -> Error {
 /// Conservative probe-only admission. Normal stores and all import/export paths
 /// retain their existing, more general semantics.
 pub(crate) fn validate_store(store: &Store) -> Result<(String, String)> {
+    validate_store_for(store, ProbeKind::Uniform)
+}
+pub(crate) fn validate_wave_store(store: &Store) -> Result<(String, String)> {
+    validate_store_for(store, ProbeKind::Wave)
+}
+fn validate_store_for(store: &Store, kind: ProbeKind) -> Result<(String, String)> {
     if !store.extra.is_empty() || store.devices.len() != 1 {
         return Err(reject(
             "exactly one configured device and no root extensions are required",
@@ -144,10 +186,12 @@ pub(crate) fn validate_store(store: &Store) -> Result<(String, String)> {
         .as_object()
         .ok_or_else(|| reject("source metadata must be an object"))?;
     if metadata.keys().any(|k| {
-        !matches!(
-            k.as_str(),
-            "entry" | "decoded" | "uniformHostIntent" | "brightnessBaseline"
-        )
+        !matches!(k.as_str(), "entry" | "decoded" | "brightnessBaseline")
+            && k != if kind == ProbeKind::Wave {
+                "waveHostIntent"
+            } else {
+                "uniformHostIntent"
+            }
     }) {
         return Err(reject("unrecognized source metadata is present"));
     }
@@ -205,6 +249,13 @@ pub(crate) fn validate_store(store: &Store) -> Result<(String, String)> {
     }
     let program = crate::host_uniform::Program::from_profile(profile, 605)?
         .ok_or_else(|| reject("source Spectrum or fixed Breathing intent is required"))?;
+    if matches!(program, crate::host_uniform::Program::Wave(_)) != (kind == ProbeKind::Wave) {
+        return Err(reject(if kind == ProbeKind::Wave {
+            "only an exact source Wave program is admitted"
+        } else {
+            "the uniform probe does not admit Wave"
+        }));
+    }
     if !program.opted_in(profile) {
         return Err(reject(
             "existing explicit native uniform opt-in is required",
@@ -231,6 +282,9 @@ pub(crate) fn validate_store(store: &Store) -> Result<(String, String)> {
 
 /// Uses cached state only. No identity, profile name or source payload is emitted.
 pub(crate) fn readiness(runtime: &Value, expected_profile: &str) -> Value {
+    readiness_for(ProbeKind::Uniform, runtime, expected_profile)
+}
+pub(crate) fn readiness_for(kind: ProbeKind, runtime: &Value, expected_profile: &str) -> Value {
     let uniform = &runtime["uniform_host"];
     let owner_matches = runtime["profile"].as_str() == Some(expected_profile)
         && uniform["profile"].as_str() == Some(expected_profile);
@@ -252,7 +306,39 @@ pub(crate) fn readiness(runtime: &Value, expected_profile: &str) -> Value {
         && checkpoint_age.is_some_and(|n| n <= 500_000)
         && uniform["mode_before"] == 3;
     let streaming = uniform["streaming"] == true && uniform["state"] == "playing";
-    let supported = matches!(uniform["source_id"].as_u64(), Some(2 | 3));
+    let preparation = &uniform["wave_preparation"];
+    let authenticated = preparation["authenticated_manifest_sha256"]
+        == secbird_core::ornata_spatial::SOURCE_MANIFEST_SHA256
+        && preparation["source_byte_len"] == 2_895_966_u64
+        && preparation["physical_rows"] == 6
+        && preparation["physical_cols"] == 22
+        && preparation["logical_rows"] == 7
+        && preparation["logical_cols"] == 23
+        && preparation["edition_id"] == 0
+        && preparation["layout_id"].as_u64().is_some_and(|value| {
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15, 16, 17, 18, 20].contains(&value)
+        })
+        && preparation["identity_declared_size"]
+            .as_u64()
+            .is_some_and(|value| (2..=80).contains(&value))
+        && preparation["identity_query_completed_by_observation"] == true
+        && if preparation["identity_declared_size"] == 2 {
+            preparation["firmware_id"].is_null()
+        } else {
+            preparation["firmware_id"]
+                .as_u64()
+                .is_some_and(|value| value <= 255)
+        }
+        && preparation["identity_observation_age_us"]
+            .as_u64()
+            .zip(preparation["identity_query_span_us"].as_u64())
+            .is_some_and(|(age, span)| age >= span)
+        && matches!(preparation["source_direction"].as_u64(), Some(1 | 2));
+    let supported = if kind == ProbeKind::Wave {
+        uniform["source_id"] == 4 && uniform["native_id"] == 2 && authenticated
+    } else {
+        matches!(uniform["source_id"].as_u64(), Some(2 | 3))
+    };
     let ready = owner_matches
         && worker_alive
         && accepted_frames >= 3
@@ -260,7 +346,7 @@ pub(crate) fn readiness(runtime: &Value, expected_profile: &str) -> Value {
         && controls
         && streaming
         && supported;
-    json!({"ready":ready,"owner_matches":owner_matches,"worker_alive":worker_alive,"streaming":streaming,
+    let mut result = json!({"ready":ready,"owner_matches":owner_matches,"worker_alive":worker_alive,"streaming":streaming,
         "worker_liveness_sampled_separately":runtime["worker_liveness_sampled_separately"]==true,
         "worker_liveness_scope":if runtime["worker_liveness_sampled_separately"]==true {"live-signal-at-cache-read"}else{"engine-status-snapshot"},
         "accepted_frames":accepted_frames,"controls_checkpoint_ready":controls,
@@ -270,12 +356,55 @@ pub(crate) fn readiness(runtime: &Value, expected_profile: &str) -> Value {
         "control_parameter_known":uniform["parameter_before"].is_number(),
         "per_frame_controls_verified":uniform["custom_frame_control_verified"]==true,"source_id":uniform.get("source_id"),
         "native_id":uniform.get("native_id"),"no_cached_error":no_error,"active_lighting_probe":true,
-        "read_only_smoke":false,"final_ram_acceptance":false})
+        "read_only_smoke":false,"final_ram_acceptance":false});
+    if kind == ProbeKind::Wave {
+        result["active_wave_probe"] = json!(true);
+        result["authenticated_layout_ready_at_observation"] = json!(authenticated);
+        result["identity_age_at_producer_us"] =
+            json!(preparation["identity_observation_age_us"].as_u64());
+        result["current_identity_verified"] = json!(false);
+        result["identity_age_scope"] = json!("at-producer-observation; not a lease");
+        let mut safe = serde_json::Map::new();
+        for key in [
+            "layout_id",
+            "edition_id",
+            "firmware_id",
+            "identity_declared_size",
+            "identity_observation_age_us",
+            "identity_query_span_us",
+            "source_byte_len",
+            "source_direction",
+            "physical_rows",
+            "physical_cols",
+            "logical_rows",
+            "logical_cols",
+        ] {
+            safe.insert(key.into(), json!(preparation[key].as_u64()));
+        }
+        safe.insert(
+            "authenticated_manifest_sha256".into(),
+            json!(preparation["authenticated_manifest_sha256"]
+                .as_str()
+                .filter(
+                    |value| value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
+                )),
+        );
+        result["wave_preparation"] = Value::Object(safe);
+    }
+    result
 }
 
 /// A previously valid cached frame is insufficient after observation stalls.
 pub(crate) fn fresh_readiness(runtime: &Value, profile: &str, age_ms: Option<u64>) -> Value {
-    let mut status = readiness(runtime, profile);
+    fresh_readiness_for(ProbeKind::Uniform, runtime, profile, age_ms)
+}
+pub(crate) fn fresh_readiness_for(
+    kind: ProbeKind,
+    runtime: &Value,
+    profile: &str,
+    age_ms: Option<u64>,
+) -> Value {
+    let mut status = readiness_for(kind, runtime, profile);
     annotate_age(&mut status, age_ms);
     status["ready"] = json!(status["ready"] == true && age_ms.is_some_and(|age| age <= 2500));
     status
@@ -293,6 +422,14 @@ fn annotate_age(status: &mut Value, age_ms: Option<u64>) {
             .saturating_add(1)));
     // This is a bounded cached observation, never a new control GET at draw time.
     status["current_controls_verified"] = json!(false);
+    if status.get("identity_age_at_producer_us").is_some() {
+        status["conservative_identity_age_now_us"] = json!(status["identity_age_at_producer_us"]
+            .as_u64()
+            .zip(age_ms)
+            .map(|(identity, elapsed)| identity
+                .saturating_add(elapsed.saturating_add(1).saturating_mul(1000))
+                .saturating_add(1)));
+    }
 }
 
 /// Keep pre-stop activity evidence distinct from errors observed after joining
@@ -334,12 +471,13 @@ pub(crate) fn stop_report(
 /// Central startup rule: existing measurement/editor-only modes never schedule
 /// uniform output. The explicit active probe is separately admitted first.
 pub(crate) fn starts_worker(args: &[String]) -> bool {
-    Policy::from_args(args).starts_worker() && !args.iter().any(|arg| {
-        matches!(
-            arg.as_str(),
-            "--runtime-smoke" | "--native-smoke" | "--serve"
-        )
-    })
+    Policy::from_args(args).starts_worker()
+        && !args.iter().any(|arg| {
+            matches!(
+                arg.as_str(),
+                "--runtime-smoke" | "--native-smoke" | "--serve"
+            )
+        })
 }
 
 #[cfg(test)]
@@ -495,6 +633,215 @@ mod tests {
     fn playing() -> Value {
         json!({"profile":"Fixture","uniform_host":{"profile":"Fixture","worker_enabled":true,"streaming":true,"state":"playing","source_id":3,"native_id":4,"accepted_frames":3,"error":null,
             "mode_before":3,"parameter_before":null,"custom_frame_control_verified":false,"control_observation":{"completed_control_checkpoints":1,"last_control_check_age_us":100000}}})
+    }
+    fn wave_fixture() -> Store {
+        let mut store = fixture();
+        let profile = store.devices.values_mut().next().unwrap().active_mut();
+        crate::host_uniform::Program::clear_opt_in(profile);
+        secbird_core::profile_compat::set_source_quick_effect(
+            profile,
+            605,
+            "Default",
+            4,
+            &json!({"direction":1}),
+        )
+        .unwrap();
+        profile.lighting.get_mut("backlight").unwrap().effect =
+            Some(crate::host_wave::Program::Left.native_projection());
+        crate::host_uniform::Program::Wave(crate::host_wave::Program::Left)
+            .opt_in(profile)
+            .unwrap();
+        store
+    }
+    fn wave_playing() -> Value {
+        let mut runtime = playing();
+        runtime["uniform_host"]["source_id"] = json!(4);
+        runtime["uniform_host"]["native_id"] = json!(2);
+        runtime["uniform_host"]["wave_preparation"] = json!({
+            "authenticated_manifest_sha256":secbird_core::ornata_spatial::SOURCE_MANIFEST_SHA256,
+            "source_byte_len":2_895_966,"layout_id":6,"edition_id":0,"firmware_id":null,
+            "identity_declared_size":2,"physical_rows":6,"physical_cols":22,"logical_rows":7,"logical_cols":23,
+            "identity_query_completed_by_observation":true,"identity_observation_age_us":10_000,"identity_query_span_us":8_000,"source_direction":1
+        });
+        runtime
+    }
+    #[test]
+    fn wave_flag_is_separate_strict_and_has_only_a_real_wave_presentation() {
+        let valid = args(&[WAVE_FLAG, "12"]);
+        assert_eq!(wave_duration(&valid).unwrap(), Some(12));
+        assert_eq!(duration(&valid).unwrap(), None);
+        let policy = Policy::from_args(&valid);
+        assert_eq!(policy, Policy::ActiveWaveProbe);
+        assert!(policy.restricted_actions());
+        assert!(!policy.generic_apply());
+        assert!(!policy.read_only());
+        assert!(policy.starts_worker() && policy.starts_policies());
+        assert_eq!(policy.active_probe(), Some(ProbeKind::Wave));
+        for bad in [
+            vec![WAVE_FLAG],
+            vec![WAVE_FLAG, "0"],
+            vec![WAVE_FLAG, "601"],
+            vec![WAVE_FLAG, "nan"],
+            vec![WAVE_FLAG, "12", FLAG, "12"],
+            vec![FLAG, "12", WAVE_FLAG, "12"],
+            vec![WAVE_FLAG, "12", "--serve"],
+            vec![WAVE_FLAG, "12", "--runtime-smoke", "12"],
+            vec![WAVE_FLAG, "12", "--native-smoke", "12"],
+            vec![WAVE_FLAG, "12", WAVE_FLAG, "12"],
+        ] {
+            assert!(wave_duration(&args(&bad)).is_err(), "{bad:?}");
+        }
+        assert_eq!(
+            presentation_for(ProbeKind::Wave, "keyboard-lighting").unwrap(),
+            "keyboard-lighting"
+        );
+        assert!(presentation_for(ProbeKind::Wave, "keyboard-lighting-color-editor").is_err());
+        assert!(presentation_for(ProbeKind::Uniform, "keyboard-lighting-color-editor").is_ok());
+    }
+    #[test]
+    fn wave_store_admission_is_exact_and_does_not_broaden_the_uniform_contract() {
+        let wave = wave_fixture();
+        let before = serde_json::to_value(&wave).unwrap();
+        assert!(validate_wave_store(&wave).is_ok());
+        assert!(validate_store(&wave).is_err());
+        assert!(validate_wave_store(&fixture()).is_err());
+        assert_eq!(serde_json::to_value(&wave).unwrap(), before);
+        for reason in [
+            "speed",
+            "direction",
+            "marker",
+            "macro",
+            "apps",
+            "sleep",
+            "brightness",
+            "extra",
+        ] {
+            let mut changed = wave.clone();
+            let profile = changed.devices.values_mut().next().unwrap().active_mut();
+            match reason {
+                "speed" => {
+                    profile.lighting.get_mut("backlight").unwrap().effect =
+                        Some(secbird_core::effects::Effect::Wave {
+                            reverse: false,
+                            speed: 2,
+                        })
+                }
+                "direction" => {
+                    profile.extra.get_mut("_synapseLiteSynapse4").unwrap()["decoded"]
+                        ["quickEffects"]["selectedEffectSetting"]["direction"] = json!(2)
+                }
+                "marker" => crate::host_uniform::Program::clear_opt_in(profile),
+                "macro" => {
+                    profile.extra.get_mut("_synapseLiteSynapse4").unwrap()["decoded"]["macro"] =
+                        json!({"action":[1]})
+                }
+                "apps" => profile.apps.push("game.exe".into()),
+                "sleep" => profile.sleep_minutes = Some(1),
+                "brightness" => {
+                    profile
+                        .lighting_settings
+                        .as_mut()
+                        .unwrap()
+                        .brightness
+                        .as_mut()
+                        .unwrap()
+                        .enabled = false
+                }
+                _ => {
+                    profile.extra.get_mut("_synapseLiteSynapse4").unwrap()["uniformHostIntent"] =
+                        json!({"source_id":3})
+                }
+            }
+            assert!(validate_wave_store(&changed).is_err(), "{reason}");
+        }
+    }
+    #[test]
+    fn wave_readiness_needs_authenticated_worker_preparation_not_only_an_old_ready_flag() {
+        let wave = wave_playing();
+        let ready = readiness_for(ProbeKind::Wave, &wave, "Fixture");
+        assert_eq!(ready["ready"], true);
+        assert_eq!(ready["authenticated_layout_ready_at_observation"], true);
+        assert_eq!(readiness(&wave, "Fixture")["ready"], false);
+        assert_eq!(
+            readiness_for(ProbeKind::Wave, &playing(), "Fixture")["ready"],
+            false
+        );
+        for (field, value) in [
+            ("authenticated_manifest_sha256", json!("0".repeat(64))),
+            ("source_byte_len", json!(1)),
+            ("layout_id", json!(13)),
+            ("identity_declared_size", json!(1)),
+            ("firmware_id", json!(9)),
+            ("identity_query_completed_by_observation", json!(false)),
+            ("identity_observation_age_us", Value::Null),
+            ("identity_observation_age_us", json!(7_999)),
+            ("identity_query_span_us", json!(10_001)),
+            ("identity_query_span_us", json!("8000")),
+            ("identity_observation_age_us", json!(-1)),
+            ("source_direction", json!(5)),
+        ] {
+            let mut wrong = wave.clone();
+            wrong["uniform_host"]["wave_preparation"][field] = value;
+            assert_eq!(
+                readiness_for(ProbeKind::Wave, &wrong, "Fixture")["ready"],
+                false,
+                "{field}"
+            );
+        }
+        let fresh = fresh_readiness_for(ProbeKind::Wave, &wave, "Fixture", Some(1200));
+        assert_eq!(fresh["conservative_identity_age_now_us"], 1_211_001);
+        assert_eq!(fresh["current_identity_verified"], false);
+        assert_eq!(
+            fresh_readiness_for(ProbeKind::Wave, &wave, "Fixture", Some(2501))["ready"],
+            false
+        );
+        assert_eq!(
+            fresh_readiness_for(ProbeKind::Wave, &wave, "Fixture", None)["ready"],
+            false
+        );
+        let mut three = wave.clone();
+        three["uniform_host"]["wave_preparation"]["identity_declared_size"] = json!(3);
+        assert_eq!(
+            readiness_for(ProbeKind::Wave, &three, "Fixture")["ready"],
+            false
+        );
+        three["uniform_host"]["wave_preparation"]["firmware_id"] = json!(255);
+        assert_eq!(
+            readiness_for(ProbeKind::Wave, &three, "Fixture")["ready"],
+            true
+        );
+        let mut private = wave.clone();
+        private["uniform_host"]["wave_preparation"]["private_path"] = json!("private fixture path");
+        private["uniform_host"]["wave_preparation"]["raw_json"] = json!({"private":"data"});
+        let public = readiness_for(ProbeKind::Wave, &private, "Fixture");
+        assert_eq!(public["wave_preparation"].as_object().unwrap().len(), 13);
+        assert!(public["wave_preparation"].get("private_path").is_none());
+        assert!(public["wave_preparation"].get("raw_json").is_none());
+        let mut stopped = ready.clone();
+        stopped["worker_alive"] = json!(false);
+        let stopped = stop_report(Some((&ready, 100)), true, 0, Some(&stopped));
+        assert_eq!(stopped["clean_stop"], true);
+        assert_eq!(stopped["ready_before_stop"], true);
+        assert_eq!(stopped["source_id"], 4);
+        assert_eq!(stopped["native_id"], 2);
+        assert_eq!(stopped["authenticated_layout_ready_at_observation"], true);
+    }
+    #[test]
+    #[ignore = "requires explicit SECBIRD_WAVE_PROBE_SEED_DIR with private synthetic derivative seeds; no hardware"]
+    fn explicitly_selected_private_synthetic_wave_seeds_admit_without_printing_identity() {
+        let folder = std::env::var_os("SECBIRD_WAVE_PROBE_SEED_DIR")
+            .expect("explicit synthetic seed directory");
+        for name in ["left", "right"] {
+            let store = Store::load(&std::path::Path::new(&folder).join(format!("{name}.json")))
+                .expect("synthetic seed loads");
+            if let Err(error) = validate_wave_store(&store) {
+                panic!("Synthetic derivative {name} failed: {error}");
+            }
+            assert!(validate_store(&store).is_err());
+            println!(
+                "Synthetic derivative {name}: Wave admission passed; uniform admission refused"
+            );
+        }
     }
     #[test]
     fn readiness_requires_actual_bound_worker_frames_and_recent_control_checkpoint() {

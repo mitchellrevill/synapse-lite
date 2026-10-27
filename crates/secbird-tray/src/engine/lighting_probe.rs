@@ -56,11 +56,26 @@ impl Engine {
     /// GET-only: no generic apply, initialization, migration, save or opt-in.
     /// Admission is prospective; it does not start the brightness runtime.
     pub(crate) fn preflight_lighting_probe(&self) -> Result<Value> {
+        self.preflight_probe(crate::runtime_probe::ProbeKind::Uniform)
+    }
+    /// Separate Wave-only admission. The worker will independently prepare its
+    /// current layout again; this read-only observation never renews a lease.
+    pub(crate) fn preflight_wave_probe(&self) -> Result<Value> {
+        self.preflight_probe(crate::runtime_probe::ProbeKind::Wave)
+    }
+    fn preflight_probe(&self, kind: crate::runtime_probe::ProbeKind) -> Result<Value> {
         if self.lighting_probe.borrow().is_some() {
             return Err(Error::InvalidArg("Lighting probe was already admitted; restart rather than replacing its configuration pin".into()));
         }
         let store = self.read_probe_store()?;
-        let (key, name) = crate::runtime_probe::validate_store(&store)?;
+        let (key, name) = match kind {
+            crate::runtime_probe::ProbeKind::Uniform => {
+                crate::runtime_probe::validate_store(&store)?
+            }
+            crate::runtime_probe::ProbeKind::Wave => {
+                crate::runtime_probe::validate_wave_store(&store)?
+            }
+        };
         let candidates: Vec<_> = self.devices.iter().filter(|dev| dev.pid == 605).collect();
         if candidates.len() != 1 {
             return Err(Error::Unsupported(
@@ -123,6 +138,12 @@ impl Engine {
         {
             return Err(Error::Unsupported("Lighting probe requires nonzero LIVE brightness already matching existing configured intent; no bootstrap/brightness edit is performed".into()));
         }
+        let wave_preparation = if let crate::host_uniform::Program::Wave(choice) = program {
+            let path = crate::native_editor::assets_dir().join("DeviceManifest_605_0.json");
+            Some(crate::host_wave::preparation::prepare(dev, choice, &path)?)
+        } else {
+            None
+        };
         // Recheck the known process gate after the control queries. This is not
         // an interprocess lease; the worker continues its ordinary fresh gates.
         self.lighting_runtime.borrow_mut().sample_owner();
@@ -137,12 +158,18 @@ impl Engine {
             approved_store,
             error: None,
         });
-        Ok(json!({
+        let mut admission = json!({
             "key":key,"profile":name,"source_id":program.source_id(),"native_id":program.native_id(),
             "mode":mode.mode(),"mode_parameter":mode.param(),"effect":effect.effect_id(),
             "live_raw":live.raw_brightness(),"saved_raw":saved.raw_brightness(),
             "configuration_pinned":true,"initialization_performed":false,"get_only":true
-        }))
+        });
+        if let Some(prepared) = wave_preparation {
+            admission["active_wave_probe"] = json!(true);
+            admission["preflight_wave_preparation"] = prepared.metadata_at(Instant::now());
+            admission["worker_prepares_independently"] = json!(true);
+        }
+        Ok(admission)
     }
 
     /// The first refusal is sticky. Returning the file to its old contents or
@@ -206,6 +233,24 @@ mod tests {
         key: String,
     }
     impl Fixture {
+        fn use_wave(&self) {
+            let mut store = Store::load(&self.path).unwrap();
+            let profile = store.devices.get_mut(&self.key).unwrap().active_mut();
+            secbird_core::profile_compat::set_source_quick_effect(
+                profile,
+                605,
+                "Probe",
+                4,
+                &json!({"direction": 1}),
+            )
+            .unwrap();
+            crate::host_uniform::Program::clear_opt_in(profile);
+            profile.lighting.get_mut("backlight").unwrap().effect =
+                Some(crate::host_wave::Program::Left.native_projection());
+            crate::host_wave::Program::Left.opt_in(profile).unwrap();
+            crate::runtime_probe::validate_wave_store(&store).unwrap();
+            store.save().unwrap();
+        }
         fn new() -> Self {
             HidApi::disable_device_discovery();
             let mut engine = Engine::from_api(HidApi::new().unwrap());
@@ -276,6 +321,164 @@ mod tests {
     impl Drop for Fixture {
         fn drop(&mut self) {
             std::fs::remove_dir_all(self.path.parent().unwrap()).unwrap();
+        }
+    }
+    #[test]
+    fn wave_admission_refuses_wrong_scope_owner_and_unavailable_identity_without_set() {
+        for scenario in ["scope", "owner", "mode", "identity"] {
+            let mut f = Fixture::new();
+            f.use_wave();
+            let before = std::fs::read(&f.path).unwrap();
+            match scenario {
+                "scope" => f.engine.devices[0].interface = 1,
+                "owner" => {
+                    f.engine
+                        .lighting_runtime
+                        .borrow_mut()
+                        .test_environment
+                        .as_mut()
+                        .unwrap()
+                        .owner = Owner::Competing(vec!["synthetic competing owner".into()])
+                }
+                "mode" => f.spy.state.lock().unwrap().mode = 0,
+                "identity" => (), // Mock device has no identity response unless explicitly configured.
+                _ => unreachable!(),
+            }
+            assert!(f.engine.preflight_wave_probe().is_err(), "{scenario}");
+            assert_eq!(std::fs::read(&f.path).unwrap(), before);
+            assert!(f.engine.lighting_probe.borrow().is_none());
+            assert!(!f.engine.lighting_runtime.borrow().running);
+            let spy = f.spy.state.lock().unwrap();
+            assert_eq!(spy.attempts, 0);
+            assert!(spy.commands.iter().all(|command| command.id & 0x80 != 0));
+        }
+    }
+
+    #[test]
+    #[ignore = "requires explicit SECBIRD_ORNATA_MANIFEST_TEST_PATH; mock transport only, never opens hardware"]
+    fn wave_preflight_authenticates_the_explicit_asset_without_starting_or_writing() {
+        let path = std::path::PathBuf::from(
+            std::env::var_os("SECBIRD_ORNATA_MANIFEST_TEST_PATH")
+                .expect("explicit pinned manifest path"),
+        );
+        assert_eq!(path.file_name().unwrap(), "DeviceManifest_605_0.json");
+        let old = std::env::var_os("SYNAPSE_LITE_ASSETS");
+        std::env::set_var("SYNAPSE_LITE_ASSETS", path.parent().unwrap());
+        let f = Fixture::new();
+        f.use_wave();
+        f.spy.sim.state().ornata_layout_edition = Some([6, 0]);
+        let before = std::fs::read(&f.path).unwrap();
+        let admission = f.engine.preflight_wave_probe().unwrap();
+        match old {
+            Some(value) => std::env::set_var("SYNAPSE_LITE_ASSETS", value),
+            None => std::env::remove_var("SYNAPSE_LITE_ASSETS"),
+        }
+        assert_eq!(admission["source_id"], 4);
+        assert_eq!(admission["native_id"], 2);
+        assert_eq!(admission["worker_prepares_independently"], true);
+        assert_eq!(admission["preflight_wave_preparation"]["layout_id"], 6);
+        assert!(admission["preflight_wave_preparation"]["firmware_id"].is_null());
+        assert_eq!(
+            admission["preflight_wave_preparation"]["authenticated_manifest_sha256"],
+            secbird_core::ornata_spatial::SOURCE_MANIFEST_SHA256
+        );
+        assert_eq!(std::fs::read(&f.path).unwrap(), before);
+        assert!(f.engine.lighting_probe.borrow().is_some());
+        assert!(!f.engine.lighting_runtime.borrow().running);
+        assert!(!f.engine.uniform_is_enabled());
+        let spy = f.spy.state.lock().unwrap();
+        assert_eq!(spy.attempts, 0);
+        assert_eq!(
+            spy.commands
+                .iter()
+                .filter(|command| command.class == 0 && command.id == 0x86)
+                .count(),
+            1
+        );
+        assert!(spy.commands.iter().all(|command| command.id & 0x80 != 0));
+    }
+
+    #[test]
+    #[ignore = "requires explicit SECBIRD_ORNATA_MANIFEST_TEST_PATH; real worker with mock transport only"]
+    fn admitted_wave_uses_the_ordinary_worker_and_reports_authenticated_clean_stop() {
+        let path = std::path::PathBuf::from(
+            std::env::var_os("SECBIRD_ORNATA_MANIFEST_TEST_PATH")
+                .expect("explicit pinned manifest path"),
+        );
+        assert_eq!(path.file_name().unwrap(), "DeviceManifest_605_0.json");
+        // Run this explicit test alone: assets_dir is a process-wide setting.
+        let old = std::env::var_os("SYNAPSE_LITE_ASSETS");
+        std::env::set_var("SYNAPSE_LITE_ASSETS", path.parent().unwrap());
+        let mut f = Fixture::new();
+        f.use_wave();
+        f.spy.sim.state().ornata_layout_edition = Some([6, 0]);
+        let before = std::fs::read(&f.path).unwrap();
+        f.engine.preflight_wave_probe().unwrap();
+        let replacement = Engine::from_api(HidApi::new().unwrap());
+        let engine = std::sync::Arc::new(std::sync::Mutex::new(std::mem::replace(
+            &mut f.engine,
+            replacement,
+        )));
+        engine.lock().unwrap().start_lighting_runtime();
+        let mut worker = crate::uniform_worker::Worker::start(engine.clone()).unwrap();
+        let deadline = Instant::now() + Duration::from_secs(3);
+        let observed = loop {
+            if let Ok(engine) = engine.try_lock() {
+                let runtime = engine.lighting_runtime_status();
+                let status = crate::runtime_probe::readiness_for(
+                    crate::runtime_probe::ProbeKind::Wave,
+                    &runtime[&f.key],
+                    "Probe",
+                );
+                if status["ready"] == true {
+                    break status;
+                }
+            }
+            if Instant::now() >= deadline {
+                assert!(worker.stop(Duration::from_secs(2)));
+                panic!("Mock Wave worker did not produce authenticated readiness");
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        };
+        assert!(worker.stop(Duration::from_secs(2)));
+        let mut engine = engine.lock().unwrap();
+        let runtime = engine.lighting_runtime_status();
+        let stopped = crate::runtime_probe::readiness_for(
+            crate::runtime_probe::ProbeKind::Wave,
+            &runtime[&f.key],
+            "Probe",
+        );
+        let report =
+            crate::runtime_probe::stop_report(Some((&observed, 0)), true, 0, Some(&stopped));
+        assert_eq!(report["clean_stop"], true);
+        assert_eq!(report["authenticated_layout_ready_at_observation"], true);
+        assert_eq!(report["source_id"], 4);
+        assert_eq!(report["native_id"], 2);
+        engine.set_uniform_worker(false, None, None);
+        assert!(engine.shutdown_lighting_runtime().is_empty());
+        assert_eq!(std::fs::read(&f.path).unwrap(), before);
+        let spy = f.spy.state.lock().unwrap();
+        assert!(spy.attempts >= 21);
+        assert_eq!(spy.attempts % 7, 0);
+        assert_eq!(
+            spy.commands
+                .iter()
+                .filter(|command| command.class == 0 && command.id == 0x86)
+                .count(),
+            2,
+            "Preflight and the independent worker preparation each query identity once"
+        );
+        // Unlike GET-only admission, the ordinary worker may reconcile the
+        // configured LIVE brightness after a completed frame. It stays 255;
+        // no saved brightness, mode, input or firmware effect path is invoked.
+        assert!(spy.commands.iter().all(|command| command.id & 0x80 != 0
+            || command.class == 15 && matches!(command.id, 2 | 3 | 4)));
+        assert_eq!(f.spy.sim.state().live_brightness[&5], 255);
+        assert_eq!(f.spy.sim.state().brightness[&5], 255);
+        drop(spy);
+        match old {
+            Some(value) => std::env::set_var("SYNAPSE_LITE_ASSETS", value),
+            None => std::env::remove_var("SYNAPSE_LITE_ASSETS"),
         }
     }
     #[test]
