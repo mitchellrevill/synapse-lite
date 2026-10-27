@@ -1,0 +1,25 @@
+[package.metadata.wdk.driver-model]
+driver-type = "WDM"
+
+[lib]
+crate-type = ["cdylib"]
+
+[build-dependencies]
+wdk-build = "0.6.0"
+
+[dependencies]
+wdk = "0.5.0"
+wdk-alloc = "0.4.2"
+wdk-panic = "0.5.0"
+wdk-sys = "0.5.2"
+
+[features]
+default = []
+nightly = ["wdk/nightly", "wdk-sys/nightly"]
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+lto = true

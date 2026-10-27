@@ -1,0 +1,21 @@
+[package]
+categories = ["hardware-support", "no-std"]
+description = "Default panic handler implementations for programs built with WDK"
+edition.workspace = true
+keywords = ["panic", "panic-handler", "panic-impl", "wdk", "windows"]
+license.workspace = true
+name = "wdk-panic"
+readme.workspace = true
+repository.workspace = true
+version = "0.5.0"
+
+[lints]
+workspace = true
+
+[dependencies]
+wdk.workspace = true
+
+[build-dependencies]
+tracing.workspace = true
+tracing-subscriber = { features = ["env-filter"], workspace = true }
+wdk-build.workspace = true

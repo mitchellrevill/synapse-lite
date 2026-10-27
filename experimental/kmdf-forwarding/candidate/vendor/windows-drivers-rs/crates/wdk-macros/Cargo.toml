@@ -1,0 +1,70 @@
+[package]
+categories = [
+  "development-tools::ffi",
+  "external-ffi-bindings",
+  "os",
+  "os::windows-apis",
+]
+description = "A collection of macros that help make it easier to interact with wdk-sys's direct bindings. This should not be directly consumed, and should be instead consumed via the wdk-sys crate."
+edition.workspace = true
+keywords = ["ffi", "wdf", "wdk", "wdm", "windows"]
+license.workspace = true
+name = "wdk-macros"
+readme.workspace = true
+repository.workspace = true
+version = "0.5.2"
+
+[lib]
+proc-macro = true
+
+[features]
+default = []
+nightly = []
+
+[dependencies]
+cfg-if.workspace = true
+fs4.workspace = true
+itertools.workspace = true
+proc-macro2.workspace = true
+quote.workspace = true
+scratch.workspace = true
+serde = { features = ["derive"], workspace = true }
+serde_json.workspace = true
+syn = { features = ["extra-traits", "full"], workspace = true }
+
+[dev-dependencies]
+pretty_assertions.workspace = true
+syn.workspace = true
+
+# Cannot inherit workspace lints since overriding them is not supported yet: https://github.com/rust-lang/cargo/issues/13157
+# [lints]
+# workspace = true
+# 
+# Differences from the workspace lints have comments explaining why they are different
+
+[lints.rust]
+missing_docs = "warn"
+unsafe_op_in_unsafe_fn = "forbid"
+
+[lints.clippy]
+# Lint Groups
+all = "deny"
+cargo = "warn"
+nursery = "warn"
+pedantic = "warn"
+# Individual Lints
+multiple_unsafe_ops_per_block = "forbid"
+undocumented_unsafe_blocks = "forbid"
+# unnecessary_safety_doc = "forbid"
+unnecessary_safety_doc = "deny" # This is lowered to deny to allow overriding it for proc_macros: https://github.com/rust-lang/rust-clippy/issues/12583
+
+[lints.rustdoc]
+bare_urls = "warn"
+broken_intra_doc_links = "warn"
+invalid_codeblock_attributes = "warn"
+invalid_html_tags = "warn"
+invalid_rust_codeblocks = "warn"
+missing_crate_level_docs = "warn"
+private_intra_doc_links = "warn"
+redundant_explicit_links = "warn"
+unescaped_backticks = "warn"

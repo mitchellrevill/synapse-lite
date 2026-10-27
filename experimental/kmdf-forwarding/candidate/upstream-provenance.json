@@ -1,0 +1,567 @@
+{
+  "repository": "https://github.com/microsoft/windows-drivers-rs",
+  "commit": "04523040779d80125f280c4f9421f54a6059f470",
+  "scope": "Unmodified build-required source subset, root manifest/readme/licenses and crates; no tools/cache/generated binding outputs",
+  "files": [
+    {
+      "file": "vendor/windows-drivers-rs/Cargo.toml",
+      "sha256": "e1835ebd3316dafbda17e8822d4b481fdbeec9c76fb12125058279373750f66b"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/Cargo.toml",
+      "sha256": "e5db053142f5d3da1434964dc3b56894cdce5a1a8f3c21950f386beaaeacedca"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/CHANGELOG.md",
+      "sha256": "1095eacfa4b8e751f412c1561abc54c0dbaf86c330dda13756a0a7f238566e7b"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/README.md",
+      "sha256": "b6933da464502d2e64cabef9dfcff0a3fcfc4743d251add913e931aedbd9f1cd"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/src/actions/build/build_task.rs",
+      "sha256": "35b6968aabfe12f3404afe84768be26d791b2ed8d229f4d459a58d7a7bfe0190"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/src/actions/build/error.rs",
+      "sha256": "469bdcd7381aa95b016adf1a3226440be981a1924972290a051cc5f3f638286e"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/src/actions/build/mod.rs",
+      "sha256": "27146073e834e3058f4b0d361a89ecd18c93d2d59810f74b466c391dea415018"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/src/actions/build/package_task.rs",
+      "sha256": "70ee588dc9f72cc826b7a961b765ae1de955aafab05438c03383047417df6eb0"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/src/actions/build/tests.rs",
+      "sha256": "44d329454f9609ee4c613586db900af8dc103343028593f698a05ef6b4d2c052"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/src/actions/cargo.rs",
+      "sha256": "4149ebad2c15a07fe83fd52b059114f39d9ea9b01fcbd736f2d9bbe13b1c5099"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/src/actions/clean/error.rs",
+      "sha256": "8f87f7dba6e3c7ffd83f93b0756b2b88b6dc972af151cc4b1b9bbf759ad57114"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/src/actions/clean/mod.rs",
+      "sha256": "2963aac4cc497ceb0cf4aa40083dac64c03ec3e0c6afa371056fa2462b9d7914"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/src/actions/mod.rs",
+      "sha256": "3d43eed4724f18c954ffd80dc176f38d70dc4e152dec7f29dfd2eba23604e65d"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/src/actions/new/error.rs",
+      "sha256": "56939b957ebc411dca0ff4d37733434b0055b3a435b0b095d7d36b752168bd9e"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/src/actions/new/mod.rs",
+      "sha256": "b40bd7eeee29f0c1bededf48c0c8487efd2bf81dab5121d2c6ceff1197d523c8"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/src/cli.rs",
+      "sha256": "71b8cba0208d7865c3eeda6ef9ab5b4d0eee55ad38bdae8ce253bc4137cffc7b"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/src/main.rs",
+      "sha256": "50ad364ff66889b1c38ebf209a5e8d4c7dffc4eb30f30be49ab85b7d9d511759"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/src/providers/exec.rs",
+      "sha256": "ad4e7801f462a8a7aeaffcd0b5a101a223c6c1f02d4befaef1436ef2c9314458"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/src/providers/fs.rs",
+      "sha256": "e9c7d7f4ed46055025671dd662272751595cd6a16420a5bf41d3980d2617594c"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/src/providers/metadata.rs",
+      "sha256": "b809f654c53f9fe8da22b75b785d0e891b14ac9a8d47e8409ba81b0828416a6b"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/src/providers/mod.rs",
+      "sha256": "2bc7e63286022e6e2bc131da9b4beaa45f080bf8f4b76bbeb69f8526a07a0168"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/src/providers/wdk_build.rs",
+      "sha256": "73f9137c2e7bc0e87c1d14b91ec263f7e3baf6eb90661a5696da60150c803f76"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/src/test_utils.rs",
+      "sha256": "05d9bd0c7aedf7e38c8f4482dd192cda148eea61e5d99b288645e179e46f90fa"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/src/trace.rs",
+      "sha256": "08599584928ce38a8432dfb173ccfefb0a16055b4cbfd3e3bbefe156cb93f846"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/templates/build.rs.tmp",
+      "sha256": "f78d69611b359ac86237544c4ed5b19400d678e4de501d223765d9fb1f060e7c"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/templates/config.toml.tmp",
+      "sha256": "27af1e2be75cc768652d2452c44fd14520f63d2817fe13347e5c450905cc838d"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/templates/kmdf/Cargo.toml.tmp",
+      "sha256": "7cb59868bc378cf738bcf6aee3e071678b95c2094503e45940f9d106791fa189"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/templates/kmdf/driver_name.inx.tmp",
+      "sha256": "656d75a0c6b17ff82f68f00b336e90f0177035a318f5589030c4227cea31bf73"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/templates/kmdf/lib.rs.tmp",
+      "sha256": "297aa53b4a0c7f221c2c4bdd8aa766262cf3d90c55807b0e12ceb5f847121ed0"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/templates/umdf/Cargo.toml.tmp",
+      "sha256": "8b0b1059b8e229aa3e572079db5b460684505c6360ce46384ad50f4de743aefd"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/templates/umdf/driver_name.inx.tmp",
+      "sha256": "028ad5f864fc4a4bd957cd6b9f2eff4126e883f78daa5994ccbe951102a537d1"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/templates/umdf/lib.rs.tmp",
+      "sha256": "80d5fe500ddd1b1014f230f8f3ce71ccee1ae290895566662ce249239dca15d6"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/templates/wdm/Cargo.toml.tmp",
+      "sha256": "5de8ab5ddede5ef018dd8f23a0de87453f23be7bb54e22bb5e9f924378de241a"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/templates/wdm/driver_name.inx.tmp",
+      "sha256": "d54589f2fa4e07c7f782dbe750d76177ce27f53e0750f00b9628ab2c57165eda"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/templates/wdm/lib.rs.tmp",
+      "sha256": "297aa53b4a0c7f221c2c4bdd8aa766262cf3d90c55807b0e12ceb5f847121ed0"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/build_command_test.rs",
+      "sha256": "ea03f9eb832d23d8e37d6fe04777ab96a5880cedb4fd118a37dfe0858fff8a4c"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/emulated-workspace/random-file.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/emulated-workspace/rust-project/Cargo.lock",
+      "sha256": "afca3e0b1d1fff3373d0872e746763437542c6be581dcef5fc40324e6b383ee3"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/emulated-workspace/rust-project/Cargo.toml",
+      "sha256": "aa67a01c44d36612de0786c31733eefa4f1dd0a44576fd400e0c008c9594379a"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/emulated-workspace/rust-project/src/main.rs",
+      "sha256": "c8e0583694bb1e0188dbe28fe0d65ac1130723c55f968b6262b906c147f72549"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/emulated-workspace/umdf-driver-workspace/Cargo.lock",
+      "sha256": "7b140562760ce9970f7950abba37067c6e1f6556b82d3d7ae2b6cd53a0031975"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/emulated-workspace/umdf-driver-workspace/Cargo.toml",
+      "sha256": "234970270a0d267b30e04e68356453f8788c004c7511cb4472f161135cfbf4c1"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/emulated-workspace/umdf-driver-workspace/crates/driver_1/build.rs",
+      "sha256": "d81027555e78dd1dfd6ed4419573cad3f9cb85ab4e9751ce41bd3018db177c1c"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/emulated-workspace/umdf-driver-workspace/crates/driver_1/Cargo.toml",
+      "sha256": "5beb59b41fc78936a4ccf4cde0bebdd772a1f02cb4b27722b6c655029b5de191"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/emulated-workspace/umdf-driver-workspace/crates/driver_1/driver_1.inx",
+      "sha256": "7ca6da66faa8fc2740dbce21fc35e8f03f226165fb2ff0a8e78c20d098c3d3cb"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/emulated-workspace/umdf-driver-workspace/crates/driver_1/src/lib.rs",
+      "sha256": "d080ab43e1d46b131ca655d9dc4cb2b208784d0a99bf9d2436dcd5eb2c6690bc"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/emulated-workspace/umdf-driver-workspace/crates/driver_2/build.rs",
+      "sha256": "d81027555e78dd1dfd6ed4419573cad3f9cb85ab4e9751ce41bd3018db177c1c"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/emulated-workspace/umdf-driver-workspace/crates/driver_2/Cargo.toml",
+      "sha256": "f5c066f02034939b1b59bb846234edc5eb194e53aa1e5261d62e2727504efc5e"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/emulated-workspace/umdf-driver-workspace/crates/driver_2/driver_2.inx",
+      "sha256": "577a0bdf3caa779614671d8dbe0c9085592676ecbb197605a63de317f4dc4880"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/emulated-workspace/umdf-driver-workspace/crates/driver_2/src/lib.rs",
+      "sha256": "d080ab43e1d46b131ca655d9dc4cb2b208784d0a99bf9d2436dcd5eb2c6690bc"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/kmdf-driver/.cargo/config.toml",
+      "sha256": "2a4b42c8f45dd84d8c3c5fa3b843338b3c3907e38d663cdb19bdd9885268bb82"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/kmdf-driver/build.rs",
+      "sha256": "f78d69611b359ac86237544c4ed5b19400d678e4de501d223765d9fb1f060e7c"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/kmdf-driver/Cargo.lock",
+      "sha256": "fe960e6924fa8576c14379612be357a29f1d2d48f5d3c0a33639e5224371999c"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/kmdf-driver/Cargo.toml",
+      "sha256": "34bb6c12b6cf1fea73f74dc7d6b75e821d7f31c03858aa0e46363ffc35d9a47f"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/kmdf-driver/kmdf_driver.inx",
+      "sha256": "e0c2e3549b0a84c43752b076a99ebf90f7e9afe8a17132901984cae1053a7873"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/kmdf-driver/src/lib.rs",
+      "sha256": "297aa53b4a0c7f221c2c4bdd8aa766262cf3d90c55807b0e12ceb5f847121ed0"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/kmdf-driver-with-target-override/.cargo/config.toml",
+      "sha256": "b434134fadeed0786d0d4bc82505a6429522967837f074003900e7b2841ffc6b"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/kmdf-driver-with-target-override/build.rs",
+      "sha256": "f78d69611b359ac86237544c4ed5b19400d678e4de501d223765d9fb1f060e7c"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/kmdf-driver-with-target-override/Cargo.lock",
+      "sha256": "1824c25c1f88c4aa92f9ed64e09ac750c385b7140be3cd18504c5628a411ba92"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/kmdf-driver-with-target-override/Cargo.toml",
+      "sha256": "0c02e382c1e38f546747aed73d83838b137056d0f1e22a4fdf12276e88267c16"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/kmdf-driver-with-target-override/kmdf_driver_with_target_override.inx",
+      "sha256": "bae74f074e17b73f126fca2b207d524bfd775caf13d73a765157b5b7588b5854"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/kmdf-driver-with-target-override/src/lib.rs",
+      "sha256": "e54b9780434a9a1833037fbcb1facac0e283792dfac8a3d51a485760e516431a"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/mixed-package-kmdf-workspace/Cargo.lock",
+      "sha256": "5c036acdb59dc55212c2e33b58b6bdbb52ee6c0e28bc1f9a90f814ddda8b80ad"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/mixed-package-kmdf-workspace/Cargo.toml",
+      "sha256": "16e87372bb4ce3a9156ae73cbe5c253ccbaae107ae3e7f4e5d4999c273f0dcad"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/mixed-package-kmdf-workspace/crates/driver/build.rs",
+      "sha256": "e8b557b65226a63e1ac716662918e9901e90513f98fa23b753c501795cebce23"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/mixed-package-kmdf-workspace/crates/driver/Cargo.toml",
+      "sha256": "1c74c25f74b748b5adcc7b104b8f4499c589ff27fc2c87c290561488c231396f"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/mixed-package-kmdf-workspace/crates/driver/driver.inx",
+      "sha256": "55cc3f1a2ab62fe70f4b22b939f4876677ccf66b3526c2eecbc63eef5311df19"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/mixed-package-kmdf-workspace/crates/driver/src/lib.rs",
+      "sha256": "bbb564e0ae3436f033d242d63c78c4eabc56767000b7207f7f3d18e64925aa48"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/mixed-package-kmdf-workspace/crates/non_driver_crate/Cargo.toml",
+      "sha256": "bcb4fa90a632506b014c53e656068a49fb51530b7db143d6b90645cd8124fe6d"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/mixed-package-kmdf-workspace/crates/non_driver_crate/src/lib.rs",
+      "sha256": "5ed463d06faa8a2ddbe5fda3538a50739b256cd4d75e42432da9c39397f985e0"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/new_command_test.rs",
+      "sha256": "c6e5febd0c4fe33d9790256ba0402b07b1e43fdc9309d16072f7866934a2eb7f"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/test_utils/mod.rs",
+      "sha256": "16f5f06fd8f028362d20b1ca6169fd13d978ec0c749709bae2068cf30cefa76b"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/umdf-driver/build.rs",
+      "sha256": "d81027555e78dd1dfd6ed4419573cad3f9cb85ab4e9751ce41bd3018db177c1c"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/umdf-driver/Cargo.lock",
+      "sha256": "0c1575d8fedfaefc03d7e1909989635ea6c40eca5a025453aa53a46f7b42fa6d"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/umdf-driver/Cargo.toml",
+      "sha256": "c7aa8921c3b2e41dd27b18a10b845f17f5a6c69cfdf503226a0a3f3744c91d44"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/umdf-driver/src/lib.rs",
+      "sha256": "d080ab43e1d46b131ca655d9dc4cb2b208784d0a99bf9d2436dcd5eb2c6690bc"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/umdf-driver/umdf_driver.inx",
+      "sha256": "3bb844d7728247792262e6aca4932b087efcd8b0c5a1858b58fc9fcc6860ac65"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/wdm-driver/.cargo/config.toml",
+      "sha256": "2a4b42c8f45dd84d8c3c5fa3b843338b3c3907e38d663cdb19bdd9885268bb82"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/wdm-driver/build.rs",
+      "sha256": "f78d69611b359ac86237544c4ed5b19400d678e4de501d223765d9fb1f060e7c"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/wdm-driver/Cargo.lock",
+      "sha256": "8b935d979713d58b35fac0323c906ef59e9a4bd5b4c69b3110d78c0d2587bbf5"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/wdm-driver/Cargo.toml",
+      "sha256": "59e9ab57d19cd95d87a280068c568f77fff3f77ac993aec0a6d309e6703704a1"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/wdm-driver/src/lib.rs",
+      "sha256": "297aa53b4a0c7f221c2c4bdd8aa766262cf3d90c55807b0e12ceb5f847121ed0"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/wdm-driver/wdm_driver copy.inx",
+      "sha256": "92802f284bc9f26a26c76dd8e6922991f020bb464af03ba4aec460f8977b7103"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/cargo-wdk/tests/wdm-driver/wdm_driver.inx",
+      "sha256": "b20eeb055a2aee36ac354b3f68a10acd09ac038e2777ed6ac46a3064d6c97e15"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk/build.rs",
+      "sha256": "05e81d4d5c18a7da4ed831f5bde60483c56216e600ebae93c414e5e39fb04516"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk/Cargo.toml",
+      "sha256": "ab0f2b81235f13ede867147ebf55e72a60cbafaaec0a355d1c9bc1a580883a69"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk/CHANGELOG.md",
+      "sha256": "7396364f7e41f065ead2fc5d64dc8619d8ec419ceff4113acafd23b218be9208"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk/src/fmt.rs",
+      "sha256": "f0d0a61a85c965812bbb89d6bb2dd71b452b02661ee3f03aa7f43bc61e4a48c7"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk/src/lib.rs",
+      "sha256": "6e48a32bef849efcc0534bdf426ce00f707e714b655b749f7722623b74575295"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk/src/print.rs",
+      "sha256": "3ec43a75ec84287e7e61f2383aed6fb15b2885edd83aa33698bb6cdb4ef4b495"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk/src/wdf/mod.rs",
+      "sha256": "2c17c3ef2e6d6afa36d908bae910a40329cd3ef81eb2e02a9108293a1b7166ef"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk/src/wdf/spinlock.rs",
+      "sha256": "3d9c675b53437a6f05e495b97687e59d02290f18711df20fc5f1770ce8ad616c"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk/src/wdf/timer.rs",
+      "sha256": "239754bfcf66f237ef53b3a25daebf644d358e3c61f970a78d05d1df4ab86c6d"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-alloc/build.rs",
+      "sha256": "a8fe51c5e419cb78ba0a2dbe1eeb458889067f9693f01a11f44d9bd616c668ca"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-alloc/Cargo.toml",
+      "sha256": "4e0867c7495a4c6e676d75c8274eae2d846ff14d01572cda9b149f28a07b06cb"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-alloc/CHANGELOG.md",
+      "sha256": "1dce8d74488e0171e11f316ee9d972d1b6fea79af18b1fb8e4ecd4756f68ec01"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-alloc/src/lib.rs",
+      "sha256": "e5c0bb6517157e5791d33073a2fff337c18452a9779e74b24ebed33dc5793225"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-build/build.rs",
+      "sha256": "ebaed71ec90c5b9dd70a579f7425a0f8558df93b64d1b4d6f72de0c1959a231c"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-build/Cargo.toml",
+      "sha256": "f4fc63497082f5505e3317d54bd4ef34f7f4e1a13f1af7022434f4ece37fbd19"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-build/CHANGELOG.md",
+      "sha256": "fb6c6fa3f99ddf3b72a50f5c205088e874f3b5f1e23428748068da21cd113bb1"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-build/rust-driver-makefile.toml",
+      "sha256": "1b2f18ecf685b43a3d50a90480840e073307c2d48c05f8c6f79adfec6e81c1b2"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-build/rust-driver-sample-makefile.toml",
+      "sha256": "48e7580a2b57ca25b8da5bcbcf4308354ae9e5994e172df4fbaf15e1f9d904f0"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-build/src/bindgen.rs",
+      "sha256": "657f6703d5855fac89275df7dd464497ebbfdc8953af181d72844cc8c74c7652"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-build/src/cargo_make.rs",
+      "sha256": "7458def17572608c4bd47ae7496aa5d116ab3c8abfe8148043893c106137fea8"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-build/src/lib.rs",
+      "sha256": "ae2f893520c1e061e92efa9e2d954c96001218f1f3df9f32432058f5a0a5abfd"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-build/src/metadata/error.rs",
+      "sha256": "11445d60d0092cce6d9861229c12147edecb958b5751b5e5c0f3c9282dd7dfd2"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-build/src/metadata/map.rs",
+      "sha256": "0949b2242bec04c76c5f2aa0615bb29880cc8606471928489aa2f7c2306b6c7a"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-build/src/metadata/mod.rs",
+      "sha256": "2e5032af0c078d0760c34adbd28a3c95d0946661d28c4016255e9f9577798f88"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-build/src/metadata/ser.rs",
+      "sha256": "42b4e644393d4330c10543cb344c6e000d06624b0e1436d2194721098549d07b"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-build/src/utils.rs",
+      "sha256": "23e3574a472915f0f73743ff5aab09f237d14417e36f61779a1605f97927132a"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-macros/Cargo.toml",
+      "sha256": "174f45f76cd74aa7f7757d922f7808d4d8ddaf7d277bcbd0036cf53a724e7e63"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-macros/CHANGELOG.md",
+      "sha256": "6e333df527e98ecff55d3619fd8fd6b611492b4fd8e784fbd11cefea7e88febc"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-macros/src/lib.rs",
+      "sha256": "3f6faaa5c91a6b899d06db5b7f900c4cecfd1831eec1a8b6b3330f78c572af28"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-macros/tests/unit-tests-input/generated-types.rs",
+      "sha256": "27876d920c87177d285b44124b79da24bd94bc4657afab4caeb3fd9311e1bb1e"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-macros/tests/unit-tests-input/missing-wdf-func-enum-contents.rs",
+      "sha256": "25ba4dacd26022ec55a1470f8fc5c9a3d3184d3d5fd4864fa9f9331363b33cea"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-macros/tests/unit-tests-input/missing-wdf-func-enum.rs",
+      "sha256": "365156fb40569022832789c77be39cd9dcef49ec060848cd40d7103aa19b244a"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-panic/build.rs",
+      "sha256": "d0cd92a7b9e1942211ff288d3080a07ce75c02805d5f6061966f68bc7dd01e5f"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-panic/Cargo.toml",
+      "sha256": "d92a81748a4c51f0b49b8a6609c5583ae6291939bdc82ae37f7b45b7e2df6bb1"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-panic/CHANGELOG.md",
+      "sha256": "378ed9da37b73cd15d30e40c51d25df04cc1e680ae1ca65070ce481e8daddde5"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-panic/src/lib.rs",
+      "sha256": "a02cf7d832d40f61e12fa52405c9d2f1ddb0e0a41c179f0c08ee40feb6ef0189"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-sys/build.rs",
+      "sha256": "289b98a207982e3371c886cccecc7f42ad92a44c35a14be73d01ea2aca9b903d"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-sys/Cargo.toml",
+      "sha256": "a31bcf38acaeb2cd5dd5328c4116b7a749c3432ccf9b517e7e187f5a6d22cacb"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-sys/CHANGELOG.md",
+      "sha256": "e7b3d6a8a6fa4a00838850095f3a22e07025a399e85b8b5c6184876b37e9f730"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-sys/src/constants.rs",
+      "sha256": "2ba24d1be185282757237492edab766684c26f1f904262d73465d12112be3d8b"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-sys/src/gpio.rs",
+      "sha256": "dbd91b96696ff143daa5af7a31993a8ee1b88ec63e7511bde67e1a7d93020024"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-sys/src/hid.rs",
+      "sha256": "bf042c8053a96cda48f6646fe304860d4f537eabd1fec5b31deb4bcd563fb1fb"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-sys/src/lib.rs",
+      "sha256": "45c69349f10e3a000e5c4a7c4ee691350b8f21d148221dab65c2a9742aa29dfd"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-sys/src/macros.rs",
+      "sha256": "b7eecc061a923d071df55838de62510276c10f855b096cee55e9f6254ee36f5e"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-sys/src/ntddk.rs",
+      "sha256": "54a2839aaffa414a2625ab1cfa1fc34cbb47661979ccdf36bc74480ef23de7c3"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-sys/src/parallel_ports.rs",
+      "sha256": "10bff39bdc3d85947afa6d44a0ccbacaac657152643682a45c3c723594cdb071"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-sys/src/spb.rs",
+      "sha256": "3649d7a4d3edafe3f703f919677609f867aafac199fc8f8d28bb0af77f4d6e29"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-sys/src/storage.rs",
+      "sha256": "820c3f56d419efd759f57f70c70d36ecaec672eeb51aebfd201d8aa6763d246e"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-sys/src/test_stubs.rs",
+      "sha256": "854fb7289ac45db9ea59a7839fd64476cc3ad7e30a233ede64166415fd00d436"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-sys/src/types.rs",
+      "sha256": "04aa565a477e7b1ed4144839e7fa639984b0580c607d56c140befdc35dab5831"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-sys/src/usb.rs",
+      "sha256": "2593d7a67b04a6b59b6bc52deeac859fcd8ff2d0123c68ebe3d7fb3928c2507c"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-sys/src/wdf.rs",
+      "sha256": "11d43f3660ba1d05efa2a5cd1e3267109a9ea02b87fbd5ab4f55ab92f04f84bd"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/crates/wdk-sys/src/windows.rs",
+      "sha256": "f70809b02d7625fe44c664fcd55cd53b4bf07da8258ee76e5250c0730a58383d"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/LICENSE-APACHE",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/LICENSE-MIT",
+      "sha256": "d9a1b1e30d633d5732ea18e3cba9538d293ebc53e1a9e4e96ab739e0c5c4f1cb"
+    },
+    {
+      "file": "vendor/windows-drivers-rs/README.md",
+      "sha256": "f96b7c09f7a9a258a099865f9fe4c6c0300cdbb187fffde63ab1ba2c2d315870"
+    }
+  ]
+}

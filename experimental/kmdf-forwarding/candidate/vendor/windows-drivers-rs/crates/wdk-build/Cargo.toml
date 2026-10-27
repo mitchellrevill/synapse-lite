@@ -1,0 +1,86 @@
+[package]
+categories = ["development-tools::build-utils", "development-tools::ffi"]
+description = "A library to configure a Cargo build script for binding generation and downstream linking of the WDK (Windows Driver Kit)"
+edition.workspace = true
+keywords = ["build-dependencies", "wdk", "windows"]
+license.workspace = true
+name = "wdk-build"
+readme.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version = "0.6.0"
+
+[package.metadata.cargo-machete]
+ignored = [
+  "regex", # Used for enabling "unicode-case" feature which lets us use case-insensitive regex patterns in bindgen
+]
+
+[features]
+nightly = []
+
+[dependencies]
+anyhow.workspace = true
+bindgen.workspace = true
+camino.workspace = true
+cargo_metadata.workspace = true
+cfg-if.workspace = true
+clap = { features = ["derive"], workspace = true }
+clap-cargo.workspace = true
+paste.workspace = true
+regex = { features = ["unicode-case"], workspace = true }
+rustversion.workspace = true
+semver.workspace = true
+serde = { features = ["derive"], workspace = true }
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+windows = { features = [
+  "Win32_Foundation",
+  "Win32_System_Registry",
+], workspace = true }
+
+[build-dependencies]
+rustversion.workspace = true
+
+[dev-dependencies]
+assert_fs.workspace = true
+windows = { features = ["Win32_UI_Shell"], workspace = true }
+
+# Cannot inherit workspace lints since overriding them is not supported yet: https://github.com/rust-lang/cargo/issues/13157
+# [lints]
+# workspace = true
+# 
+# Differences from the workspace lints have comments explaining why they are different
+
+[lints.rust]
+missing_docs = "warn"
+unsafe_op_in_unsafe_fn = "forbid"
+
+[lints.rust.unexpected_cfgs]
+check-cfg = ["cfg(skip_umdf_static_crt_check)", "cfg(wdk_build_unstable)"]
+level = "warn"
+
+[lints.clippy]
+# Lint Groups
+all = "deny"
+cargo = "warn"
+nursery = "warn"
+pedantic = "warn"
+# Individual Lints
+# multiple_unsafe_ops_per_block = "forbid"
+multiple_unsafe_ops_per_block = "deny" # This is lowered to deny since clap generates allow(clippy::restriction) in its Parser and Args derive macros
+# undocumented_unsafe_blocks = "forbid"
+undocumented_unsafe_blocks = "deny" # This is lowered to deny since clap generates allow(clippy::restriction) in its Parser and Args derive macros
+# unnecessary_safety_doc = "forbid"
+unnecessary_safety_doc = "deny" # This is lowered to deny since clap generates allow(clippy::restriction) in its Parser and Args derive macros
+
+[lints.rustdoc]
+bare_urls = "warn"
+broken_intra_doc_links = "warn"
+invalid_codeblock_attributes = "warn"
+invalid_html_tags = "warn"
+invalid_rust_codeblocks = "warn"
+missing_crate_level_docs = "warn"
+private_intra_doc_links = "warn"
+redundant_explicit_links = "warn"
+unescaped_backticks = "warn"

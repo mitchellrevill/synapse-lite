@@ -1,0 +1,22 @@
+[package]
+edition = "2024"
+name = "umdf-driver"
+publish = false
+version = "0.0.0"
+
+[package.metadata.wdk.driver-model]
+driver-type = "UMDF"
+target-umdf-version-minor = 33
+umdf-version-major = 2
+
+[lib]
+crate-type = ["cdylib"]
+
+[build-dependencies]
+wdk-build = { path = "../../../../crates/wdk-build" }
+
+[dependencies]
+wdk = { path = "../../../../crates/wdk" }
+wdk-sys = { path = "../../../../crates/wdk-sys" }
+
+[workspace]

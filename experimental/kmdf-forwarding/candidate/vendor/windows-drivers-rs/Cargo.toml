@@ -1,0 +1,123 @@
+[workspace]
+members = ["crates/*"]
+# Examples and tests must be excluded from the workspace since only one WDK configuration per build graph is supported.
+exclude = [
+  # Each example and test must be explicitly listed since glob is not currently supported for workspace.exclude: https://github.com/rust-lang/cargo/issues/6009
+  "examples/sample-kmdf-driver",
+  "examples/sample-umdf-driver",
+  "examples/sample-wdm-driver",
+  "tests/config-kmdf",
+  "tests/config-umdf",
+  "tests/config-wdm",
+  "tests/wdk-macros-tests",
+  "tests/wdk-sys-tests",
+]
+resolver = "3"
+
+[workspace.package]
+edition = "2024"
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/microsoft/windows-drivers-rs"
+rust-version = "1.91.0"
+
+[workspace.dependencies]
+# Workspace Crates
+wdk = { path = "crates/wdk", version = "0.5.0" }
+wdk-alloc = { path = "crates/wdk-alloc", version = "0.4.2" }
+wdk-build = { path = "crates/wdk-build", version = "0.6.0" }
+# Exact version (=) kept in lockstep with wdk-sys. These crates must be versioned together because:
+# (1) wdk-macros is a proc-macro crate consumed only through wdk-sys re-exports, and
+# (2) the two crates form a tightly coupled API surface.
+# Enforced by .github/workflows/version-checks.yaml (check-version-consistency job, lockstep step).
+wdk-macros = { path = "crates/wdk-macros", version = "=0.5.2" }
+wdk-panic = { path = "crates/wdk-panic", version = "0.5.0" }
+wdk-sys = { path = "crates/wdk-sys", version = "0.5.2" }
+
+# External Crates
+anyhow = "1.0.103"
+assert_cmd = "2.0.17"
+assert_fs = "1.1.3"
+bindgen = "0.73.2"
+camino = "1.1.9"
+cargo_metadata = "0.23.1"
+cc = "1.2.39"
+cfg-if = "1.0.3"
+clap = "4.5.40"
+clap-cargo = "0.19.0"
+clap-verbosity-flag = "3.0.2"
+fs4 = "1.1.0"
+include_dir = "0.7.4"
+itertools = "0.15.0"
+mockall = "0.15.0"
+mockall_double = "0.3.1"
+paste = "1.0.15"
+predicates = "3.1.0"
+pretty_assertions = "1.4.1"
+proc-macro2 = "1.0.101"
+quote = "1.0.40"
+regex = "1.12.2"
+rustversion = "1.0.20"
+scratch = "1.0"
+semver = "1.0.27"
+serde = "1.0"
+serde_json = "1.0"
+sha2 = "0.11.0"
+syn = "2.0.106"
+thiserror = "2.0.12"
+tracing = "0.1.40"
+tracing-subscriber = "0.3.20"
+windows = "0.62.2"
+
+# The following workspace.metadata.wdk sections can be uncommented to configure the workspace for a specific WDK configuration (ex. for rust-analyzer to resolve things for a specific configuration)
+
+# Uncomment the section below for KMDF
+# [workspace.metadata.wdk.driver-model]
+# driver-type = "KMDF"
+# kmdf-version-major = 1
+# target-kmdf-version-minor = 33
+
+# Uncomment the section below for UMDF
+# [workspace.metadata.wdk.driver-model]
+# driver-type = "UMDF"
+# umdf-version-major = 2
+# target-umdf-version-minor = 33
+
+# Uncomment the section below for WDM
+# [workspace.metadata.wdk.driver-model]
+# driver-type = "WDM"
+
+# Until https://github.com/rust-lang/cargo/issues/12208 is resolved, each package in the workspace needs to explictly
+# add the following block to its Cargo manifest in order to enable these global lint configurations:
+#
+# [lints]
+# workspace = true
+
+[workspace.lints.rust]
+missing_docs = "warn"
+unsafe_op_in_unsafe_fn = "forbid"
+
+[workspace.lints.clippy]
+# Lint Groups
+all = { level = "deny", priority = -1 }
+cargo = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+# Individual Lints
+multiple_unsafe_ops_per_block = "forbid"
+undocumented_unsafe_blocks = "forbid"
+unnecessary_safety_doc = "forbid"
+
+[workspace.lints.rustdoc]
+bare_urls = "warn"
+broken_intra_doc_links = "warn"
+invalid_codeblock_attributes = "warn"
+invalid_html_tags = "warn"
+invalid_rust_codeblocks = "warn"
+missing_crate_level_docs = "warn"
+private_intra_doc_links = "warn"
+redundant_explicit_links = "warn"
+unescaped_backticks = "warn"
+
+[profile.release]
+lto = true

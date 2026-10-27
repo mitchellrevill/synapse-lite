@@ -1,0 +1,56 @@
+{
+  "artifact": "rz_passthrough_candidate.unsigned.sys (private compile artifact; not committed)",
+  "sha256": "39692b54a89ccd2f707f495fd76494a425ce2e74068e59cd9089717c44ae47e3",
+  "file_bytes": 13824,
+  "machine": "0x8664",
+  "subsystem": "Native",
+  "entry_point_rva": "0x22f0",
+  "certificate_directory": [
+    0,
+    0
+  ],
+  "imports": {
+    "ntoskrnl.exe": [
+      "RtlCopyUnicodeString",
+      "KeBugCheckEx",
+      "DbgPrintEx"
+    ],
+    "WDFLDR.SYS": [
+      "WdfVersionUnbindClass",
+      "WdfVersionBindClass",
+      "WdfVersionUnbind",
+      "WdfVersionBind",
+      "WdfLdrQueryInterface"
+    ]
+  },
+  "exports": {
+    "DriverEntry": "0x1cb0",
+    "__CxxFrameHandler3": "0x2230",
+    "__CxxFrameHandler4": "0x2240",
+    "__GSHandlerCheck_EH4": "0x2250",
+    "_fltused": "0x34b8"
+  },
+  "validated": [
+    "x64 PE32+ native subsystem",
+    "nonzero WDF entrypoint",
+    "DriverEntry exported",
+    "only ntoskrnl and WDFLDR imports",
+    "empty certificate directory",
+    "all five x64 WDF structure compile-time size assertions passed"
+  ],
+  "not_validated": [
+    "driver load/installation",
+    "runtime request forwarding/cleanup",
+    "PnP/power/rundown",
+    "input safety",
+    "Razer feature parity",
+    "runtime RAM"
+  ],
+  "source_hashes": {
+    "candidate\\src\\lib.rs": "83ddb5980b3633a059d42483c4471673734ccc778cbe775924276520d3caa038",
+    "candidate\\Cargo.toml": "ff996010fd921d1764a4eea2ee7f0ea5d34504ecd09fd8235cb9aecfbfb40986",
+    "candidate\\Cargo.lock": "ee0afe7617f3ea25849632f26900188ce94d7e5ca90f4955f9a414ac2de32995",
+    "candidate\\build.rs": "4ba502d204dc53c6528578768db3696bb6883687d265f21d5af9c4bbd39b1029",
+    "candidate\\.cargo\\config.toml": "214508892a9b2e0fa45e88dbe5d069dd814a285210388ae68e05f152b7218ffc"
+  }
+}

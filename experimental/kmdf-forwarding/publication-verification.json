@@ -1,0 +1,15 @@
+{
+  "upstream_files_verified": 140,
+  "candidate_files_identical_to_staged": [
+    "src/lib.rs",
+    "Cargo.toml",
+    "Cargo.lock",
+    "build.rs",
+    ".cargo/config.toml",
+    "build.py"
+  ],
+  "readme_changed": "Repository-relative evidence links only",
+  "metadata": "--offline --locked full graph, 96 packages, 1 workspace member",
+  "rebuilt_after_relocation": false,
+  "installed_or_loaded": false
+}

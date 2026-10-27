@@ -1,0 +1,13 @@
+# Rust kernel build checkpoint
+
+An independent unsigned Rust KMDF forwarding candidate compiled and linked successfully. [Source and compile instructions](../experimental/kmdf-forwarding/candidate/README.md) are separate from the application workspace; ordinary app builds do not compile or load it.
+
+The executed candidate marks itself as a filter, creates typed per-device context and a parallel default request queue, and forwards current requests to the lower target with SEND_AND_FORGET. A successful send transfers request ownership; failed sends complete with the WDF-reported status. Cleanup records closing state. It changes no keyboard/mouse CONNECT_DATA, implements no RZCONTROL routing or injection, and provides no lighting operation.
+
+The original build used Rust1.91.0, LLVM20.1.8, existing MSVC14.44.35207 and official Microsoft WDK/SDK NuGet10.0.26100.6584 contents. KMDF1.33 is the build baseline, not a claim to reproduce the stock KMDF1.15 filters. The first successful two-job build took59.39seconds; a candidate-only rebuild took0.50seconds. Tools, SDK payloads and dependency caches stayed in the workspace. No global toolchain, registry, certificate, driver service or boot configuration changed.
+
+[Static verification](../experimental/kmdf-forwarding/static-verification.json) records a13824-byte x64 Native PE, FxDriverEntry at RVA22F0, exported DriverEntry and imports only from ntoskrnl.exe/WDFLDR.SYS. SHA256 is `39692b54a89ccd2f707f495fd76494a425ce2e74068e59cd9089717c44ae47e3`. Five generated x64 WDF structure-size assertions compiled. Its certificate directory is empty and Authenticode reported NotSigned. File size does not establish runtime RAM.
+
+The published source/lock/build/config match that executed candidate. Relative dependency paths and nested-workspace exclusion relocate an unmodified140-file Microsoft source subset pinned at commit04523040779d80125f280c4f9421f54a6059f470, with its licenses and per-file hashes. Full offline locked Cargo metadata resolved96packages after relocation. The relocated source was not rebuilt; the helper script was syntax-checked. This evidence does not claim a second build or byte reproducibility after relocation.
+
+The candidate has never been installed, loaded or attached to hardware. There is no INF, catalog, signing or installation flow. Ordinary-input preservation, callback rundown, PnP/power/removal, HVCI/HLK behavior, Razer feature parity and runtime memory remain unverified. The compiled candidate is a development seam, not a replacement driver. The included upstream build sources retain their original packaging helpers; the candidate's own build.py runs only cargo build and does not invoke them.

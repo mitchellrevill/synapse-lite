@@ -1,0 +1,37 @@
+[package]
+edition.workspace = true
+name = "wdk"
+version = "0.5.0"
+# This crate doesn't actually directly link to any native libraries, but its set to wdk-sys in order to pass metadata to consumers of this crates
+categories = [
+  "api-bindings",
+  "development-tools::build-utils",
+  "development-tools::ffi",
+  "os",
+]
+description = "Safe idiomatic bindings to APIs available in the Windows Development Kit (WDK)"
+keywords = ["ffi", "wdf", "wdk", "wdm", "windows"]
+license.workspace = true
+links = "wdk-sys"
+readme.workspace = true
+repository.workspace = true
+
+[features]
+# Deprecated: no longer required. Kept as a no-op for backward compatibility.
+alloc = []
+nightly = ["wdk-sys/nightly"]
+
+[dependencies]
+cfg-if.workspace = true
+wdk-sys.workspace = true
+
+[build-dependencies]
+tracing.workspace = true
+tracing-subscriber = { features = ["env-filter"], workspace = true }
+wdk-build.workspace = true
+
+[dev-dependencies]
+wdk-sys = { features = ["test-stubs"], workspace = true }
+
+[lints]
+workspace = true

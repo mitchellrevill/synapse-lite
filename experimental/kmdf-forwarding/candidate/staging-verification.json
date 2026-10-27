@@ -1,0 +1,30 @@
+{
+  "executed_workspace": "work/kernel-build/candidate",
+  "staged_workspace": "outputs/kernel-build-experiment/source",
+  "staged_rebuilt": false,
+  "staged_cargo_metadata": "--offline --locked; full dependency graph succeeded",
+  "resolved_packages": 96,
+  "upstream_files_verified": 140,
+  "unchanged_files": [
+    "src/lib.rs",
+    "Cargo.lock",
+    "build.rs",
+    ".cargo/config.toml"
+  ],
+  "manifest_changes": [
+    "relative path relocation to bundled source",
+    "exclude nested upstream workspace from candidate membership"
+  ],
+  "portable_build_script": "syntax-checked; staged script not executed to rebuild",
+  "source_hashes": {
+    ".gitignore": "39ae7ef396375dce07c03701463d0820f3bb2460b41decc2533946b62ff54bbe",
+    "build.py": "3219faf4a0360b2a5c62bf9afd37681add2594980bd4d90effbe35a1bb843d81",
+    "build.rs": "4ba502d204dc53c6528578768db3696bb6883687d265f21d5af9c4bbd39b1029",
+    "Cargo.lock": "ee0afe7617f3ea25849632f26900188ce94d7e5ca90f4955f9a414ac2de32995",
+    "Cargo.toml": "0a49cc4a87ef27d38fe3d88f5093e7aea4497282c73ed75ac54be3a0d83fce40",
+    "README.md": "f3e01b7c450cf12abaa2cd74892bef92c6d387e9cfd65949a83c963997a6cc79",
+    "upstream-provenance.json": "43d54f30bc8e0a48b394efbc788d11450d44f4c39f530a01d2cf24f2570a4bd2",
+    ".cargo/config.toml": "214508892a9b2e0fa45e88dbe5d069dd814a285210388ae68e05f152b7218ffc",
+    "src/lib.rs": "83ddb5980b3633a059d42483c4471673734ccc778cbe775924276520d3caa038"
+  }
+}

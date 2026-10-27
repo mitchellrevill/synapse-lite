@@ -1,0 +1,34 @@
+[package]
+name = "rz-passthrough-candidate"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.91"
+publish = false
+description = "Build-only unsigned KMDF request-forwarding candidate; no installation package"
+
+[workspace]
+exclude = ["vendor/windows-drivers-rs"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wdk-sys = { path = "vendor/windows-drivers-rs/crates/wdk-sys" }
+wdk-panic = { path = "vendor/windows-drivers-rs/crates/wdk-panic" }
+
+[build-dependencies]
+wdk-build = { path = "vendor/windows-drivers-rs/crates/wdk-build" }
+
+[package.metadata.wdk.driver-model]
+driver-type = "KMDF"
+kmdf-version-major = 1
+target-kmdf-version-minor = 33
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = "thin"
+
