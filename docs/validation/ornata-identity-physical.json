@@ -1,0 +1,54 @@
+{
+  "scope": "One guarded read-only Ornata layout observation; no spatial rendering or hardware settings change",
+  "source_commit": "749f3ae",
+  "observed_utc": "2026-10-27T16:09:26.2236957+00:00",
+  "probe_binary_sha256": "AD6FA14CB3FDBDC82056143D522B4007E5A0C096E00CB720C5AE9FCBF64199AF",
+  "device_scope": {"vendor_id": 5426, "product_id": 605, "interface": 2},
+  "identity": {
+    "layout_id": 6,
+    "edition_id": 0,
+    "firmware_id": null,
+    "declared_size": 2,
+    "declared_args": [6, 0],
+    "spatial_map_resolved_by_probe": false
+  },
+  "correlated_edition_response": {
+    "carrier_bytes": 91,
+    "status": 2,
+    "transaction": 31,
+    "command_class": 0,
+    "command_id": 134,
+    "declared_size": 2,
+    "checksum_stored": 130,
+    "checksum_computed": 130,
+    "passes_current_frame_checks": true
+  },
+  "counts": {
+    "serial_get_forward_attempts": 1,
+    "edition_get_forward_attempts": 1,
+    "successful_usb_out_returns": 2,
+    "read_count": 2,
+    "forwarded_set_commands": 0,
+    "denied_requests": 0
+  },
+  "stock": {
+    "before": 11,
+    "isolation_rounds": [11, 0, 0],
+    "isolated_user_processes": 0,
+    "after_configured_hidden_restart": 15,
+    "services_changed": false,
+    "drivers_changed": false
+  },
+  "query_only_device_handle": true,
+  "serial_arguments_and_device_paths_published": false,
+  "profile_or_input_changes": false,
+  "prior_strict_three_byte_attempt": {
+    "probe_binary_sha256": "E88F981E50E2C53849C0600F1825A78CB74A7437DCD3D794C931776E78AC90AF",
+    "edition_out_attempts": 1,
+    "rejected_correlated_two_byte_response_reads": 30,
+    "raw_identity_accepted": false,
+    "forwarded_set_commands": 0,
+    "stock_user_processes_restored": true
+  },
+  "limitations": "A point-in-time read is not a persistent ownership lease, reconnect guarantee, optical test or complete Wave runtime acceptance"
+}
