@@ -16,6 +16,7 @@ use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
+mod lighting;
 
 const PAGE: &str = include_str!("editor.html");
 const LOGO_PNG: &[u8] = include_bytes!("../../../assets/logo-64.png");
@@ -239,7 +240,13 @@ pub(crate) fn dispatch(engine: &mut Engine, method: &str, path: &str, body: &[u8
         ("GET", "/api/settings") => Ok(settings_json(engine)),
         ("GET", "/api/export") => Store::load(&config_dir().join("profiles.json"))
             .and_then(|s| serde_json::to_value(&s).map_err(|e| Error::Db(e.to_string()))),
-        ("POST", path) => post(engine, path, body),
+        ("POST", path) => {
+            let result=post(engine,path,body);
+            if result.is_ok() && (path.starts_with("/api/lighting") || path.starts_with("/api/source-") || path.starts_with("/api/profile") || matches!(path,"/api/color"|"/api/effect"|"/api/off"|"/api/keys"|"/api/import")) {
+                engine.request_lighting_refresh();
+            }
+            result
+        },
         _ => Err(Error::NotFound(path.to_string())),
     }
 }
@@ -312,6 +319,14 @@ struct Body {
     expected_device: Option<String>,
     #[serde(default)]
     critical_threshold_percent: Option<u8>,
+    #[serde(default)]
+    lighting_settings: Option<secbird_core::lighting::LightingSettings>,
+    #[serde(default)]
+    source_effect_id: Option<u8>,
+    #[serde(default)]
+    source_effect_setting: Option<Value>,
+    #[serde(default)]
+    custom_colors: Option<Vec<Value>>,
     /// Sleep timer in minutes (0 = leave it), and the auto-sleep switch.
     #[serde(default)]
     minutes: u16,
@@ -449,6 +464,10 @@ fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
                 actions::set_color(dev, &mut store, &b.zone, b.color.parse::<Rgb>()?).map(|_| json!({}))
             }
             "/api/brightness" => actions::set_brightness(dev, &mut store, &b.zone, b.value).map(|_| json!({})),
+            "/api/lighting-settings" => lighting::intent(dev,&mut store,&b,false),
+            "/api/lighting-policy" => lighting::intent(dev,&mut store,&b,true),
+            "/api/source-effect" => lighting::effect(dev,&mut store,&b),
+            "/api/source-custom-colors" => lighting::custom_colors(dev,&mut store,&b),
             "/api/off" => actions::lights_off(dev, &mut store, &b.zone).map(|_| json!({})),
             "/api/effect" => actions::set_effect(dev, &mut store, &b.zone, b.effect.parse()?).map(|_| json!({})),
             "/api/keys" => {
@@ -736,9 +755,14 @@ pub(crate) fn export_profile_document(synapse_device: Option<&str>) -> Result<se
 }
 
 fn state(engine: &Engine) -> Value {
+    let runtime=engine.lighting_runtime_status();
     json!({
         "version": env!("CARGO_PKG_VERSION"),
-        "devices": engine.devices().iter().map(device_json).collect::<Vec<_>>(),
+        "devices": engine.devices().iter().map(|dev|{
+            let mut device=device_json(dev);
+            device["lighting_runtime"]=runtime.get(&dev.key()).cloned().unwrap_or(Value::Null);
+            device
+        }).collect::<Vec<_>>(),
         "unsupported": engine.unsupported().iter().map(|u| json!({
             "pid": format!("{:04X}", u.pid), "name": u.name, "reason": u.reason,
         })).collect::<Vec<_>>(),
@@ -849,6 +873,8 @@ fn device_json(dev: &Device) -> Value {
     let profile = all.as_ref().and_then(|p| serde_json::to_value(p.active()).ok()).unwrap_or(Value::Null);
     let lighting_control = all.as_ref().is_some_and(|p| !p.lighting_off);
     let power_settings = all.as_ref().and_then(|p| p.power.as_ref()).and_then(|p| serde_json::to_value(p).ok());
+    let (lighting_settings,lighting_readback,lighting_origin)=lighting::snapshot(dev,all.as_ref().map(|profiles|profiles.active()));
+    let source_quick_effects=all.as_ref().and_then(|profiles|secbird_core::profile_compat::source_quick_effects(profiles.active())).cloned();
     // Every profile's settings, so the editor can show them side by side.
     let profiles_data = all.and_then(|p| serde_json::to_value(p.profiles).ok()).unwrap_or(Value::Null);
     let dpi_range = spec.and_then(|s| s.dpi.as_ref());
@@ -905,6 +931,10 @@ fn device_json(dev: &Device) -> Value {
         "device_sleep": device_sleep_json(dev),
         "critical_threshold": critical_threshold_json(dev),
         "power_settings": power_settings,
+        "lighting_settings":lighting_settings,
+        "lighting_readback":lighting_readback,
+        "lighting_settings_origin":lighting_origin,
+        "source_quick_effects":source_quick_effects,
         "dimming": dev.dimming().ok().flatten().map(|d| d.to_string()),
         // Only keyboards that answer the read get the Gaming section.
         "game_mode": dev.game_mode().ok().flatten().map(|g| g.to_string()),
