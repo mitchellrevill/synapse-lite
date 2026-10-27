@@ -1,0 +1,32 @@
+{
+  "scope": "Actual local Synapse profile payloads through current CLI; source-contract envelope construction and independent JavaScript reader/hash validation; not live Synapse import acceptance",
+  "cli_sha256": "0D3AD6AD2C7F6B30F1444AFD299BE77A71E45F21DE6FB8E062F5EAEEEFDEC5BC",
+  "records": [
+    {
+      "product_id": 196,
+      "profile_count": 1,
+      "envelope_identity_preserved": true,
+      "profiles": [
+        {
+          "hash_valid": true,
+          "name_preserved": true,
+          "changed_paths": []
+        }
+      ],
+      "macros_preserved": true
+    },
+    {
+      "product_id": 605,
+      "profile_count": 1,
+      "envelope_identity_preserved": true,
+      "profiles": [
+        {
+          "hash_valid": true,
+          "name_preserved": true,
+          "changed_paths": []
+        }
+      ],
+      "macros_preserved": true
+    }
+  ]
+}
