@@ -128,6 +128,7 @@ pub(super) struct View {
     pub intent: LightingSettings,
     pub scroll: f64,
     known: bool,
+    smoke_effect_override: bool,
     runtime: Value,
     selected: Option<u8>,
     setting: Value,
@@ -157,6 +158,7 @@ impl Default for View {
             intent: LightingSettings::default(),
             scroll: 0.0,
             known: false,
+            smoke_effect_override: false,
             runtime: Value::Null,
             selected: None,
             setting: json!({}),
@@ -414,6 +416,71 @@ fn open_editor(state: &mut State, requested: usize) -> Update {
     state.lighting.editor = Some(editor);
     state.lighting.context_slot = None;
     Update::rebuild()
+}
+
+/// Smoke-only presentation entry. The owner comes from the actual snapshot;
+/// no action command, intent update, persistence or hardware submission occurs.
+/// A source Static presentation is allowed when the current effect has no color
+/// control. That override is explicitly reported and never applied to a profile.
+pub(super) unsafe fn open_read_only_smoke_editor(state: &mut State) -> bool {
+    if state.smoke_requested.as_deref() != Some("keyboard-lighting-color-editor")
+        || !active(state)
+        || state.lighting.owner.is_none()
+    {
+        return false;
+    }
+    let needs_color = state.lighting.advanced
+        || state.lighting.setting["isRandom"] == true
+        || geometry(state).is_none_or(|g| g.colors.is_empty());
+    if needs_color {
+        state.lighting.selected = Some(1);
+        state.lighting.setting = defaults(1);
+        state.lighting.advanced = false;
+        state.lighting.smoke_effect_override = true;
+    }
+    let slot = state.lighting.slots.iter().position(|s| {
+        s["color"] == "#111"
+            || s["color"].as_str().is_some_and(|v| {
+                let text = v.trim_start_matches('#');
+                text.len() == 6 && text.bytes().all(|b| b.is_ascii_hexdigit())
+            })
+    });
+    let Some(slot) = slot else {
+        return false;
+    };
+    state.lighting.scroll = 0.0;
+    if let Some(g) = geometry(state) {
+        state.lighting.scroll = viewport::card_scroll_max(
+            g.effects_panel.y + g.effects_panel.height,
+            state.content_bottom_css(),
+        );
+    }
+    let palette = action(state, Control::ColorMenu(0));
+    debug_assert!(palette.commands.is_empty());
+    if state.lighting.palette.is_none() {
+        return false;
+    }
+    let editor = open_editor(state, slot);
+    debug_assert!(editor.commands.is_empty());
+    state.lighting.editor.is_some()
+}
+
+/// Only state/counts are exported; no color values, profile names or identities.
+pub(super) fn smoke_metadata(state: &State) -> Value {
+    let v = &state.lighting;
+    let anchor = palette_geometry(state).is_some();
+    json!({
+        "palette_open":v.palette.is_some(),
+        "source_anchor_available":anchor,
+        "color_editor_open":v.editor.is_some(),
+        "color_editor_exact_canvas_assets":v.editor.as_ref().is_some_and(|e|e.exact_assets),
+        "color_editor_inputs":state.fields.keys().filter(|id|(HEX..BLUE+1).contains(id)).count(),
+        "custom_slot_count":v.slots.len(),
+        "presentation_only_effect_override":v.smoke_effect_override,
+        "scroll_css":v.scroll,
+        "ready":active(state)&&v.owner.is_some()&&anchor&&v.editor.as_ref().is_some_and(|e|e.exact_assets)
+            && state.fields.keys().filter(|id|(HEX..BLUE+1).contains(id)).count()==4
+    })
 }
 
 pub(super) unsafe fn action(state: &mut State, control: Control) -> Update {

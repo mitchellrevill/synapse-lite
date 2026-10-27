@@ -1041,3 +1041,147 @@ fn native_profile_modal_preview_selection_commit_and_full_backup() {
         directory.display()
     );
 }
+
+#[test]
+#[ignore = "opens four bounded native smoke overlays; isolated simulator and local assets only"]
+fn native_read_only_overlay_smokes_present_ready_without_saving_or_set_commands() {
+    use secbird_core::profile_compat as compat;
+    let assets = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/native-assets");
+    assert!(
+        assets.join("lighting-value.lut").is_file(),
+        "Provision local source assets before this opt-in test"
+    );
+    for scenario in [
+        "keyboard-lighting-color-editor",
+        "keyboard-profile-import",
+        "keyboard-profile-export",
+        "keyboard-profile-cloud",
+    ] {
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let directory = std::env::temp_dir().join(format!(
+            "synapse-native-overlay-{}-{unique}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&directory).unwrap();
+        let frame = directory.join("frame.json");
+        let _environment = Environment::set(&[
+            ("SYNAPSE_LITE_CONFIG_DIR", &directory),
+            ("SYNAPSE_LITE_SMOKE_REPORT", &frame),
+            ("SYNAPSE_LITE_SMOKE_VIEW", Path::new(scenario)),
+            ("SYNAPSE_LITE_ASSETS", &assets),
+        ]);
+        let sim = Sim::keyboard();
+        let mut engine =
+            Engine::with_simulated_keyboard(&sim, directory.join("profiles.json")).unwrap();
+        let key = engine.devices()[0].key();
+        let mut profile = compat::new_native_profile(605, "OverlayFixture").unwrap();
+        // The simulator deliberately starts with a source effect without a color
+        // control, proving that the editor override is presentation-only.
+        compat::set_source_quick_effect(&mut profile, 605, "OverlayFixture", 3, &json!({}))
+            .unwrap();
+        let mut store = Store::load(&directory.join("profiles.json")).unwrap();
+        let d = store.for_device(&engine.devices()[0]);
+        d.profiles.clear();
+        d.profiles.insert("OverlayFixture".into(), profile);
+        d.active = "OverlayFixture".into();
+        store.save().unwrap();
+        let before = std::fs::read(directory.join("profiles.json")).unwrap();
+        assert!(engine.rescan().is_empty());
+        assert!(engine.event_paths().is_empty());
+        let sets = sim
+            .state()
+            .log
+            .iter()
+            .filter(|command| command.id & 0x80 == 0)
+            .count();
+        let controller_frame = frame.clone();
+        let controller_key = key.clone();
+        let controller = std::thread::spawn(move || -> Result<Value, String> {
+            wait_for(
+                || {
+                    std::fs::read(&controller_frame)
+                        .ok()
+                        .and_then(|b| serde_json::from_slice::<Value>(&b).ok())
+                        .is_some_and(|f| {
+                            f["requested"] == scenario
+                                && f["matched"] == true
+                                && f["presented"] == true
+                        })
+                },
+                "Read-only overlay readiness",
+            )?;
+            let result: Value =
+                serde_json::from_slice(&std::fs::read(&controller_frame).unwrap()).unwrap();
+            let text = result.to_string();
+            if text.contains("OverlayFixture") || text.contains(&controller_key) {
+                return Err("Smoke report leaked profile/device identity".into());
+            }
+            if scenario == "keyboard-lighting-color-editor" {
+                if result["lighting_overlay"]["color_editor_inputs"] != 4
+                    || result["lighting_overlay"]["color_editor_exact_canvas_assets"] != true
+                    || result["presentation_only_override"] != true
+                {
+                    return Err(format!("Incomplete color editor smoke: {result}"));
+                }
+            } else {
+                let modal = &result["profile_overlay"];
+                if modal["loading"] != false
+                    || modal["owner_matches_current_snapshot"] != true
+                    || modal["has_browsed_file"] != false
+                    || result["profile_source_icons"] != 5
+                {
+                    return Err(format!("Incomplete modal smoke: {result}"));
+                }
+                if scenario == "keyboard-profile-export"
+                    && (modal["profile_rows"] != 1 || modal["selected_profiles"] != 1)
+                {
+                    return Err("Export did not use actual fixture snapshot".into());
+                }
+                if scenario != "keyboard-profile-export"
+                    && (modal["profile_rows"] != 0 || modal["commit_enabled"] != false)
+                {
+                    return Err("Empty import/cloud unexpectedly became committable".into());
+                }
+            }
+            unsafe {
+                let hwnd = WINDOW.load(Ordering::Acquire) as HWND;
+                PostMessageW(hwnd, WM_CLOSE, 0, 0);
+                wait_for(|| IsWindow(hwnd) == 0, "Read-only overlay close")?;
+            }
+            Ok(result)
+        });
+        let window = run_window(
+            Arc::new(Mutex::new(engine)),
+            Some(Duration::from_secs(8)),
+            None,
+        );
+        let result = controller
+            .join()
+            .expect("Overlay controller panic")
+            .unwrap_or_else(|error| panic!("{scenario}: {error}; frame {}", frame.display()));
+        window.unwrap();
+        assert_eq!(
+            std::fs::read(directory.join("profiles.json")).unwrap(),
+            before,
+            "{scenario} changed saved profiles"
+        );
+        assert_eq!(
+            sim.state()
+                .log
+                .iter()
+                .filter(|command| command.id & 0x80 == 0)
+                .count(),
+            sets,
+            "{scenario} sent a SET command"
+        );
+        std::fs::write(
+            directory.join("interaction.json"),
+            serde_json::to_vec_pretty(&result).unwrap(),
+        )
+        .unwrap();
+        eprintln!("Read-only overlay {scenario}: {}", directory.display());
+    }
+}

@@ -764,6 +764,7 @@ struct State {
     smoke_view: Option<String>,
     smoke_requested: Option<String>,
     smoke_reported: bool,
+    smoke_overlay_started: bool,
     assets: PathBuf,
     fonts: Fonts,
     mouse: Option<Bitmap>,
@@ -1146,6 +1147,66 @@ impl State {
         InvalidateRect(self.hwnd, null(), 0);
     }
 
+    /// Open only read-only presentation paths once, after the real device reply.
+    /// Export previews use the normal worker; no file path/commit is generated.
+    unsafe fn prepare_smoke_overlay(&mut self) {
+        if self.smoke_overlay_started || self.smoke_reported {
+            return;
+        }
+        let Some(requested) = self.smoke_requested.clone() else {
+            return;
+        };
+        if !matches!(
+            requested.as_str(),
+            "keyboard-lighting-color-editor"
+                | "keyboard-profile-import"
+                | "keyboard-profile-export"
+                | "keyboard-profile-cloud"
+        ) {
+            return;
+        }
+        self.smoke_overlay_started = true;
+        if !self
+            .device()
+            .is_some_and(|d| d["pid"] == "025D" && d["active"].as_str().is_some())
+        {
+            return;
+        }
+        match requested.as_str() {
+            "keyboard-lighting-color-editor" => {
+                lighting_view::open_read_only_smoke_editor(self);
+            }
+            "keyboard-profile-export" => self.open_profile_modal(profile_modal_model::Mode::Export),
+            "keyboard-profile-import" | "keyboard-profile-cloud" => {
+                self.open_profile_modal(profile_modal_model::Mode::Import);
+                if requested == "keyboard-profile-cloud" {
+                    self.profile_modal_action(profile_modal_model::Control::Cloud(true));
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn profile_smoke_metadata(&self) -> Value {
+        let Some(v) = self.profile_modal.as_ref() else {
+            return json!({"open":false,"ready":false});
+        };
+        let owner_matches = self.device().is_some_and(|d| {
+            d["id"].as_str() == Some(v.owner.device.as_str())
+                && d["active"].as_str() == Some(v.owner.profile.as_str())
+        });
+        let rows = v.data.as_ref().map(|d| d.rows.len()).unwrap_or(0);
+        let data_ready = v.mode == profile_modal_model::Mode::Import || v.data.is_some();
+        json!({"open":true,"mode":if v.mode==profile_modal_model::Mode::Import{"import"}else{"export"},
+            "cloud":v.cloud,"loading":v.loading,"has_error":!v.error.is_empty(),"warning":v.warning,
+            "owner_matches_current_snapshot":owner_matches,"profile_rows":rows,
+            "selected_profiles":v.choices.iter().filter(|c|c.selected).count(),
+            "macro_rows":v.data.as_ref().map(|d|d.rows.iter().map(|r|r.macros.len()).sum::<usize>()).unwrap_or(0),
+            "selected_macro_references":v.choices.iter().map(|c|c.macros.len()).sum::<usize>(),
+            "has_browsed_file":!v.filename.is_empty(),"commit_enabled":v.enabled(),
+            "ready":owner_matches&&!v.loading&&v.error.is_empty()&&data_ready})
+    }
+
     /// Record the actually presented read-only view, without screenshots or serials.
     /// A requested view is not considered covered merely because the process ran.
     unsafe fn record_smoke_frame(&mut self, presented: bool) {
@@ -1158,7 +1219,22 @@ impl State {
         let Some(path) = std::env::var_os("SYNAPSE_LITE_SMOKE_REPORT") else {
             return;
         };
+        if self.profile_modal.as_ref().is_some_and(|v| v.loading) {
+            return;
+        }
         let kind = self.device().and_then(|d| d["kind"].as_str());
+        let color_editor = lighting_view::smoke_metadata(self);
+        let profile_modal = self.profile_smoke_metadata();
+        let modal_icons = [
+            "profile-close",
+            "profile-folder",
+            "profile-macro",
+            "profile-cone",
+            "profile-warning",
+        ]
+        .iter()
+        .filter(|name| self.icons.contains_key(**name))
+        .count();
         let matched = match requested.as_str() {
             "dashboard" => self.selected.is_none(),
             "mouse-performance-hidden" => {
@@ -1202,6 +1278,38 @@ impl State {
                         == 17
                     && self.fonts.loaded.len() == 3
             }
+            "keyboard-lighting-color-editor" => {
+                kind == Some("keyboard")
+                    && self.tab == Tab::Lighting
+                    && color_editor["ready"] == true
+                    && self.fonts.loaded.len() == 3
+                    && self
+                        .icons
+                        .keys()
+                        .filter(|name| name.starts_with("lighting-"))
+                        .count()
+                        == 17
+            }
+            "keyboard-profile-import" | "keyboard-profile-export" | "keyboard-profile-cloud" => {
+                let expected_mode = if requested == "keyboard-profile-export" {
+                    "export"
+                } else {
+                    "import"
+                };
+                kind == Some("keyboard")
+                    && self.device().is_some_and(|d| d["pid"] == "025D")
+                    && profile_modal["ready"] == true
+                    && profile_modal["mode"] == expected_mode
+                    && profile_modal["cloud"] == json!(requested == "keyboard-profile-cloud")
+                    && profile_modal["has_browsed_file"] == false
+                    && (requested != "keyboard-profile-export"
+                        || profile_modal["selected_profiles"]
+                            .as_u64()
+                            .is_some_and(|n| n > 0))
+                    && modal_icons == 5
+                    && self.icons.contains_key("expand")
+                    && self.fonts.loaded.len() == 3
+            }
             "mouse-power" => {
                 kind == Some("mouse")
                     && power_view::layout(self).is_some()
@@ -1218,6 +1326,7 @@ impl State {
             }
             _ => false,
         };
+        let matched = matched && presented && IsWindowVisible(self.hwnd) != 0;
         let report = json!({
             "requested": requested,
             "matched": matched,
@@ -1243,6 +1352,10 @@ impl State {
             "lighting_brightness_readback": self.device().map(|d|d["lighting_readback"].clone()),
             "lighting_intent_origin": self.device().map(|d|d["lighting_settings_origin"].clone()),
             "lighting_source_icons": self.icons.keys().filter(|name|name.starts_with("lighting-")).count(),
+            "lighting_overlay":color_editor,
+            "profile_overlay":profile_modal,
+            "profile_source_icons":modal_icons,
+            "smoke_overlay_started":self.smoke_overlay_started,
             "power_sleep_available": self.device().map(|d|d["device_sleep"]["available"].clone()),
             "power_threshold_available": self.device().map(|d|d["critical_threshold"]["available"].clone()),
             "performance_configured_rows": self.performance.as_ref().map(|p|p.stages.len()),
@@ -1250,7 +1363,7 @@ impl State {
             "performance_independent_rows": self.performance.as_ref().map(|p|p.stages.iter().filter(|r|r.independent).count()),
             "performance_inputs": self.fields.keys().filter(|id|(PERFORMANCE_INPUT..PERFORMANCE_INPUT+10).contains(id)).count(),
             "performance_scroll_css": self.performance_scroll,
-            "presentation_only_override": matches!(requested.as_str(),"mouse-performance-independent"|"mouse-performance-hidden"),
+            "presentation_only_override": matches!(requested.as_str(),"mouse-performance-independent"|"mouse-performance-hidden") || color_editor["presentation_only_effect_override"]==true,
             "failed": self.failed,
             "source_viewport":self.source_viewport(),
             "reserved_footer_css":if self.source_viewport(){0}else{35},
@@ -1327,7 +1440,12 @@ impl State {
                     | "mouse-performance-polling"
                     | "mouse-performance-independent"
                     | "mouse-performance-hidden" => Some(("mouse", Tab::Performance)),
-                    "keyboard-lighting" => Some(("keyboard", Tab::Lighting)),
+                    "keyboard-lighting" | "keyboard-lighting-color-editor" => {
+                        Some(("keyboard", Tab::Lighting))
+                    }
+                    "keyboard-profile-import"
+                    | "keyboard-profile-export"
+                    | "keyboard-profile-cloud" => Some(("keyboard", Tab::Customize)),
                     "mouse-power" => Some(("mouse", Tab::Power)),
                     "keyboard-customize" => Some(("keyboard", Tab::Customize)),
                     _ => None,
@@ -1336,7 +1454,16 @@ impl State {
                     if let Some(id) = self
                         .devices()
                         .iter()
-                        .find(|d| d["kind"].as_str() == Some(kind))
+                        .find(|d| {
+                            d["kind"].as_str() == Some(kind)
+                                && (!matches!(
+                                    view.as_str(),
+                                    "keyboard-lighting-color-editor"
+                                        | "keyboard-profile-import"
+                                        | "keyboard-profile-export"
+                                        | "keyboard-profile-cloud"
+                                ) || d["pid"] == "025D")
+                        })
                         .and_then(|d| d["id"].as_str())
                         .map(str::to_string)
                     {
@@ -1412,6 +1539,7 @@ impl State {
                     }
                 }
             }
+            self.prepare_smoke_overlay();
             self.rebuild_fields();
             InvalidateRect(self.hwnd, null(), 0);
         }
@@ -3838,6 +3966,7 @@ fn run_window(
             smoke_view: smoke_requested.clone(),
             smoke_requested,
             smoke_reported: false,
+            smoke_overlay_started: false,
             fonts: Fonts::new(&assets, initial_scale),
             mouse: Bitmap::load(&assets.join("mouse.bmp")),
             keyboard: Bitmap::load(&assets.join("keyboard.bmp")),
