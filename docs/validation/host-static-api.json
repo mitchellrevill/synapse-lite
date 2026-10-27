@@ -1,0 +1,190 @@
+{
+  "after_refresh": {
+    "brightness": [
+      {
+        "profile": 0,
+        "raw": 255
+      },
+      {
+        "profile": 1,
+        "raw": 255
+      }
+    ],
+    "effects": [
+      {
+        "declared_args": [
+          0,
+          0,
+          8,
+          0,
+          0,
+          0
+        ],
+        "declared_size": 6,
+        "profile": 0
+      },
+      {
+        "declared_args": [
+          1,
+          0,
+          3,
+          0,
+          0,
+          0
+        ],
+        "declared_size": 6,
+        "profile": 1
+      }
+    ],
+    "mode": 3,
+    "mode_declared_size": 1,
+    "mode_parameter": null
+  },
+  "after_shutdown": {
+    "brightness": [
+      {
+        "profile": 0,
+        "raw": 255
+      },
+      {
+        "profile": 1,
+        "raw": 255
+      }
+    ],
+    "effects": [
+      {
+        "declared_args": [
+          0,
+          0,
+          8,
+          0,
+          0,
+          0
+        ],
+        "declared_size": 6,
+        "profile": 0
+      },
+      {
+        "declared_args": [
+          1,
+          0,
+          3,
+          0,
+          0,
+          0
+        ],
+        "declared_size": 6,
+        "profile": 1
+      }
+    ],
+    "mode": 3,
+    "mode_declared_size": 1,
+    "mode_parameter": null
+  },
+  "baseline_retained_intent_known": false,
+  "before": {
+    "brightness": [
+      {
+        "profile": 0,
+        "raw": 255
+      },
+      {
+        "profile": 1,
+        "raw": 255
+      }
+    ],
+    "effects": [
+      {
+        "declared_args": [
+          0,
+          0,
+          8,
+          0,
+          0,
+          0
+        ],
+        "declared_size": 6,
+        "profile": 0
+      },
+      {
+        "declared_args": [
+          1,
+          0,
+          3,
+          0,
+          0,
+          0
+        ],
+        "declared_size": 6,
+        "profile": 1
+      }
+    ],
+    "mode": 3,
+    "mode_declared_size": 1,
+    "mode_parameter": null
+  },
+  "input_recovery_verified": false,
+  "optically_verified": false,
+  "refresh_registers_unchanged": true,
+  "requested_color": [
+    16,
+    32,
+    48
+  ],
+  "response": {
+    "accepted_packets": 7,
+    "attempted_packets": 7,
+    "brightness_baseline_initialized": true,
+    "control_state_verified": true,
+    "deferred": false,
+    "effect": 8,
+    "execution": "host-static",
+    "frame_submitted": true,
+    "host_animation_parity": false,
+    "live_hardware_unchanged": true,
+    "live_policy_reconcile_pending": false,
+    "mode": 3,
+    "mode_after": {
+      "declared_size": 1,
+      "parameter": null,
+      "value": 3
+    },
+    "mode_before": {
+      "declared_size": 1,
+      "parameter": null,
+      "value": 3
+    },
+    "mode_parameter": null,
+    "mode_parameter_unchanged": null,
+    "optically_verified": false,
+    "profile": 0,
+    "region": 0,
+    "retained_brightness_intent_known": false,
+    "saved": true,
+    "saved_hardware_unchanged": true,
+    "source_effect_id": 1,
+    "usb_out_complete": true
+  },
+  "saved_native_color": true,
+  "scope": "one physical source Static API action, fresh native profile, one policy refresh and shutdown",
+  "shutdown_errors": [],
+  "shutdown_registers_unchanged": true,
+  "stock_restore": {
+    "processes_before": 15,
+    "processes_isolated": 0,
+    "processes_after_5_seconds": 15,
+    "observed_engine_processes_later": 10,
+    "services_changed": false,
+    "read_only_query_with_restored_owner": {
+      "exit_code": 1,
+      "report_produced": false,
+      "diagnostic": "The sole Ornata transport did not answer the read-only discovery query",
+      "retried": false
+    },
+    "optical_or_input_recovery_proven": false
+  },
+  "probe_binary_sha256": "B65DA320F6251D20AE762C08C22AA0CCD381ED794F3B3660B25408720CC0A57C",
+  "probe_source_sha256": "565d613bca882aa4e5566af831763d32e73b399800068c0c74987cb345483685",
+  "source_checkpoint": "b746eda plus cfg(test) physical probe",
+  "probe_elapsed_seconds": 0.76
+}

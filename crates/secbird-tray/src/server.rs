@@ -17,6 +17,8 @@ use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 mod lighting;
+#[cfg(test)]
+mod physical_static_probe;
 
 const PAGE: &str = include_str!("editor.html");
 const LOGO_PNG: &[u8] = include_bytes!("../../../assets/logo-64.png");
