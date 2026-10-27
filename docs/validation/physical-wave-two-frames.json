@@ -1,0 +1,335 @@
+{
+  "schema": 1,
+  "scope": "two explicit source Left Wave frames at indices0 and1; no worker, Store or product startup",
+  "source_parent_commit": "b8b2ed6",
+  "source_index_tree": "bf4e855739bc6ada409b8beedfcd794cca774e5d",
+  "snapshot_probe_source_sha256": "A9B0CC36EF442CBE508F0D7A3297FE5FD8DF08776217FD1F6DB81B3B6B6BAE12",
+  "test_executable_sha256": "0B7C8C4D5F98E4CCCC59D3EBBB811197E5E8F50D949D802824ACA627BB4F575E",
+  "wrapper_sha256": "FEE447268C07719EE13468F0B5CC174D51D21A0571E8DF235C4BA3359032650D",
+  "started_utc": "2026-10-27T17:47:56.9612077+00:00",
+  "finished_utc": "2026-10-27T17:48:04.5253779+00:00",
+  "regular_tray_tests": {
+    "passed": 195,
+    "failed": 0,
+    "ignored": 15
+  },
+  "pure_probe_guard_tests": {
+    "passed": 3,
+    "failed": 0
+  },
+  "physical_test": {
+    "passed": 1,
+    "failed": 0
+  },
+  "preparation": {
+    "authenticated_manifest_sha256": "3595e11f1d8778180d1dd6edd2463c8b3b8e446542c5020dc1fa038c67937a93",
+    "edition_id": 0,
+    "firmware_id": null,
+    "identity_declared_size": 2,
+    "identity_is_ownership_lease": false,
+    "identity_observation_age_us": 26209,
+    "identity_query_completed_by_observation": true,
+    "identity_query_span_us": 11935,
+    "layout_id": 6,
+    "logical_cols": 23,
+    "logical_rows": 7,
+    "physical_cols": 22,
+    "physical_rows": 6,
+    "preparation_performed_device_output": false,
+    "source": "scoped GET00:86 followed by authenticated exact source manifest selection",
+    "source_byte_len": 2895966,
+    "source_direction": 1
+  },
+  "before": {
+    "brightness": [
+      {
+        "profile": 0,
+        "raw": 255
+      },
+      {
+        "profile": 1,
+        "raw": 255
+      }
+    ],
+    "effects": [
+      {
+        "declared_args": [
+          0,
+          0,
+          8,
+          0,
+          0,
+          0
+        ],
+        "declared_size": 6,
+        "profile": 0
+      },
+      {
+        "declared_args": [
+          1,
+          0,
+          3,
+          0,
+          0,
+          0
+        ],
+        "declared_size": 6,
+        "profile": 1
+      }
+    ],
+    "mode": 3,
+    "mode_declared_size": 1,
+    "mode_parameter": null,
+    "mode_parameter_known": false
+  },
+  "after_final": {
+    "brightness": [
+      {
+        "profile": 0,
+        "raw": 255
+      },
+      {
+        "profile": 1,
+        "raw": 255
+      }
+    ],
+    "effects": [
+      {
+        "declared_args": [
+          0,
+          0,
+          8,
+          0,
+          0,
+          0
+        ],
+        "declared_size": 6,
+        "profile": 0
+      },
+      {
+        "declared_args": [
+          1,
+          0,
+          3,
+          0,
+          0,
+          0
+        ],
+        "declared_size": 6,
+        "profile": 1
+      }
+    ],
+    "mode": 3,
+    "mode_declared_size": 1,
+    "mode_parameter": null,
+    "mode_parameter_known": false
+  },
+  "frames": [
+    {
+      "accepted_packets": 7,
+      "after_registers": {
+        "brightness": [
+          {
+            "profile": 0,
+            "raw": 255
+          },
+          {
+            "profile": 1,
+            "raw": 255
+          }
+        ],
+        "effects": [
+          {
+            "declared_args": [
+              0,
+              0,
+              8,
+              0,
+              0,
+              0
+            ],
+            "declared_size": 6,
+            "profile": 0
+          },
+          {
+            "declared_args": [
+              1,
+              0,
+              3,
+              0,
+              0,
+              0
+            ],
+            "declared_size": 6,
+            "profile": 1
+          }
+        ],
+        "mode": 3,
+        "mode_declared_size": 1,
+        "mode_parameter": null,
+        "mode_parameter_known": false
+      },
+      "attempted_packets": 7,
+      "control_state_verified": true,
+      "elapsed_us": 75957,
+      "fresh_mode_get_us": 11986,
+      "index": 0,
+      "mode_after": 3,
+      "mode_before": 3,
+      "parameter_after": null,
+      "parameter_before": null,
+      "since_previous_start_us": null,
+      "start_offset_us": 66482,
+      "submission_failed": false,
+      "usb_out_us": 27961
+    },
+    {
+      "accepted_packets": 7,
+      "after_registers": {
+        "brightness": [
+          {
+            "profile": 0,
+            "raw": 255
+          },
+          {
+            "profile": 1,
+            "raw": 255
+          }
+        ],
+        "effects": [
+          {
+            "declared_args": [
+              0,
+              0,
+              8,
+              0,
+              0,
+              0
+            ],
+            "declared_size": 6,
+            "profile": 0
+          },
+          {
+            "declared_args": [
+              1,
+              0,
+              3,
+              0,
+              0,
+              0
+            ],
+            "declared_size": 6,
+            "profile": 1
+          }
+        ],
+        "mode": 3,
+        "mode_declared_size": 1,
+        "mode_parameter": null,
+        "mode_parameter_known": false
+      },
+      "attempted_packets": 7,
+      "control_state_verified": true,
+      "elapsed_us": 75964,
+      "fresh_mode_get_us": 12004,
+      "index": 1,
+      "mode_after": 3,
+      "mode_before": 3,
+      "parameter_after": null,
+      "parameter_before": null,
+      "since_previous_start_us": 200979,
+      "start_offset_us": 267461,
+      "submission_failed": false,
+      "usb_out_us": 27968
+    }
+  ],
+  "trace": {
+    "allowlist_installed_before_device_open": true,
+    "denied_requests": 0,
+    "failed_frame_out_latched": false,
+    "forwarded_frame_packets_matched_exact_armed_bytes": true,
+    "frame_out_accepted_returns": 14,
+    "frame_out_attempts": 14,
+    "frame_out_limit": 14,
+    "frames_armed": 2,
+    "get_out_accepted_returns": 40,
+    "get_out_attempts": 40,
+    "get_out_limit": 48,
+    "header_limit": 64,
+    "omitted_headers": 0,
+    "partial_batch_aborted_for_cleanup": false,
+    "read_calls": 40,
+    "serial_arguments_or_paths_retained": false,
+    "serial_get_attempts": 1
+  },
+  "response_header_histogram": [
+    {
+      "command_class": 0,
+      "command_id": 130,
+      "declared_size": 22,
+      "status": 2,
+      "count": 1
+    },
+    {
+      "command_class": 0,
+      "command_id": 132,
+      "declared_size": 1,
+      "status": 2,
+      "count": 10
+    },
+    {
+      "command_class": 0,
+      "command_id": 134,
+      "declared_size": 2,
+      "status": 2,
+      "count": 1
+    },
+    {
+      "command_class": 15,
+      "command_id": 130,
+      "declared_size": 6,
+      "status": 2,
+      "count": 16
+    },
+    {
+      "command_class": 15,
+      "command_id": 132,
+      "declared_size": 3,
+      "status": 2,
+      "count": 12
+    }
+  ],
+  "stock": {
+    "stock_before": 11,
+    "isolation_rounds": [
+      11,
+      0,
+      0
+    ],
+    "stock_isolated": true,
+    "stock_after": 8,
+    "services_changed": false,
+    "drivers_changed": false
+  },
+  "stock_desktop_follow_up": {
+    "checked_utc": "2026-10-27T17:48:31.2110218+00:00",
+    "processes": 15,
+    "RazerAppEngine": 14,
+    "razerwdl": 1
+  },
+  "readable_controls_unchanged": true,
+  "mode_parameter_verified": false,
+  "saved_profile_or_brightness_setters_called": false,
+  "optically_verified": false,
+  "cadence_certified": false,
+  "rgb_or_animation_phase_restored": false,
+  "input_recovery_verified": false,
+  "active_worker_or_native_ui_exercised": false,
+  "release_memory_measured": false,
+  "limits": [
+    "Mode GET declares only one byte; optional mode parameter remains unknown",
+    "Two source Left indices only; not a complete cycle, right direction or continuous worker",
+    "Extra register reads make this diagnostic slower than the product worker",
+    "Accepted HID output is not an optical placement or animation observation",
+    "Stock restart is process recovery, not demonstrated RGB or animation-phase restoration"
+  ]
+}

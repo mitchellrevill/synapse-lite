@@ -21,6 +21,8 @@ mod lighting;
 mod physical_static_probe;
 #[cfg(test)]
 mod physical_uniform_probe;
+#[cfg(test)]
+mod physical_wave_probe;
 
 const PAGE: &str = include_str!("editor.html");
 const LOGO_PNG: &[u8] = include_bytes!("../../../assets/logo-64.png");
