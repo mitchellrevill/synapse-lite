@@ -1,0 +1,235 @@
+{
+  "schema_version": 1,
+  "purpose": "Read-only installed Ornata mode query; no mode/effect SET requested by probe",
+  "observation_started_utc": "2026-10-27T06:54:24.3382511Z",
+  "observation_finished_utc": "2026-10-27T06:54:28.4554180Z",
+  "probe_binary_sha256": "fbf24735ac44a1fe5cbe7a93e08636a58b7aeb8c0e6f8df75994404d7a8fbbc4",
+  "probe_exit_code": 0,
+  "probe_timed_out": false,
+  "private_capture_sha256": "0371b76b647ee2be96fb6f433149ad11c3849d74cea4108aded6ebc4328c29f9",
+  "result": {
+    "brightness": {
+      "status": "not_requested"
+    },
+    "device_mode": {
+      "declared_args": [
+        3
+      ],
+      "declared_size": 1,
+      "exclusive_ownership_proven": false,
+      "mode": 3,
+      "param": null,
+      "parameter_present": false,
+      "raw_args_80": [
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "source_name": "Driver_Mode",
+      "status": "success"
+    },
+    "effect": {
+      "status": "not_requested"
+    },
+    "effect_transport_headers": {
+      "headers": [],
+      "max_distinct_headers": 64,
+      "omitted_reads_at_capacity": 0,
+      "scope": "response headers while GET0F82 is active only; no argument payloads",
+      "total_reads": 0
+    },
+    "host_animation_captured": false,
+    "interface": 2,
+    "limitation": "Firmware CustomFrame8 does not capture host animation, phase, frames or ownership. No restoration operation is provided.",
+    "mode_only": true,
+    "mode_transport_headers": {
+      "headers": [
+        {
+          "count": 1,
+          "header": {
+            "bytes_read": 91,
+            "checksum_computed": 134,
+            "checksum_stored": 134,
+            "checksum_valid": true,
+            "command_class": 0,
+            "command_id": 132,
+            "command_matches": true,
+            "declared_size": 1,
+            "disposition": "accepted_success",
+            "hid_report_id": 0,
+            "meets_current_success_minimum": true,
+            "passes_current_frame_checks": true,
+            "protocol_type": 0,
+            "remaining_packets_bytes": [
+              0,
+              0
+            ],
+            "request_declared_size": 2,
+            "requested_transaction": 31,
+            "required_success_minimum": 1,
+            "reserved": 0,
+            "returned_transaction": 31,
+            "status": 2,
+            "status_name": "Success",
+            "transaction_matches": true
+          }
+        }
+      ],
+      "max_distinct_headers": 64,
+      "omitted_reads_at_capacity": 0,
+      "scope": "response headers while GET0084 is active only; no argument payloads",
+      "total_reads": 1
+    },
+    "owner": "unknown",
+    "pid": "025D",
+    "read_only": true,
+    "real_transport": true
+  },
+  "previous_minimum2_rejection": {
+    "headers": [
+      {
+        "count": 30,
+        "header": {
+          "bytes_read": 91,
+          "checksum_computed": 134,
+          "checksum_stored": 134,
+          "checksum_valid": true,
+          "command_class": 0,
+          "command_id": 132,
+          "command_matches": true,
+          "declared_size": 1,
+          "disposition": "rejected_by_current_transport",
+          "hid_report_id": 0,
+          "meets_current_success_minimum": false,
+          "passes_current_frame_checks": false,
+          "protocol_type": 0,
+          "remaining_packets_bytes": [
+            0,
+            0
+          ],
+          "request_declared_size": 2,
+          "requested_transaction": 31,
+          "required_success_minimum": 2,
+          "reserved": 0,
+          "returned_transaction": 31,
+          "status": 2,
+          "status_name": "Success",
+          "transaction_matches": true
+        }
+      }
+    ],
+    "max_distinct_headers": 64,
+    "omitted_reads_at_capacity": 0,
+    "scope": "response headers while GET0084 is active only; no argument payloads",
+    "total_reads": 30
+  },
+  "isolation": {
+    "names": [
+      "RazerAppEngine",
+      "razerwdl"
+    ],
+    "before_count": 11,
+    "isolated_count": 0,
+    "after_3seconds_count": 10,
+    "restoration_verified_utc": "2026-10-27T06:54:36.8434341Z",
+    "restoration_verified_counts": [
+      {
+        "Name": "RazerAppEngine",
+        "Count": 14
+      },
+      {
+        "Name": "razerwdl",
+        "Count": 1
+      }
+    ],
+    "services_changed_by_script": false
+  },
+  "validation": {
+    "core_library_passed": 184,
+    "core_library_ignored": 5,
+    "example_tests_passed": 4
+  },
+  "firmware_effect_test_gate": {
+    "satisfied": false,
+    "reason": "Observed Driver_Mode3, not Normal_Mode0; parameter absent and exclusive writer ownership unresolved",
+    "effect_write_attempted": false
+  },
+  "scope": "Only PID025D/interface2 GET0084 response minimum changed to1. Source request remains2; general transaction minima unchanged. Serial discovery data excluded."
+}

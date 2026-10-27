@@ -185,6 +185,25 @@ impl Device {
         self.transact(command.get(), size, args)
     }
 
+    /// The installed Ornata returns one mode byte to the source's two-byte
+    /// GET00:84 request. Keep this measured exception local to that interface.
+    pub(crate) fn get_ornata_mode_register(&self) -> Result<Report> {
+        if self.pid != 0x025d || self.interface != 2 {
+            return Err(Error::Unsupported(
+                "mode readback is verified only for Ornata V2 interface2".into(),
+            ));
+        }
+        transact_with_response_minimum(
+            self.transport.as_ref(),
+            self.txid,
+            Command::new(0, 0x84),
+            2,
+            &[],
+            READ_RETRIES,
+            1,
+        )
+    }
+
     /// The inspected Ornata GET0F82 sends80 bytes but can return only its
     /// six-byte effect header. This exception does not alter other commands.
     pub(crate) fn get_lighting_effect_register(&self, profile: u8, region: u8) -> Result<Report> {
@@ -561,6 +580,43 @@ mod tests {
         assert_eq!(requests[0].len(), 91);
         assert_eq!(requests[0][6], 80);
         assert_eq!(&requests[0][7..11], &[0x0f, 0x82, 1, 0]);
+    }
+
+    #[test]
+    fn one_byte_mode_reply_keeps_two_byte_request_and_other_limits() {
+        let command = Command::new(0, 0x84);
+        let packet = wire(0x1f, command, &[3]);
+        let ordinary = QueuedTransport::new(vec![packet.clone()]);
+        assert!(matches!(
+            super::transact(&ordinary, 0x1f, command, 2, &[], 1),
+            Err(Error::NoReply(_))
+        ));
+        let getter = QueuedTransport::new(vec![packet]);
+        let reply =
+            super::transact_with_response_minimum(&getter, 0x1f, command, 2, &[], 1, 1).unwrap();
+        assert_eq!(reply.0[5], 1);
+        assert_eq!(reply.args()[0], 3);
+        let requests = getter.requests.lock().unwrap();
+        assert_eq!(requests[0].len(), 91);
+        assert_eq!(&requests[0][6..11], &[2, 0, 0x84, 0, 0]);
+    }
+
+    #[test]
+    fn one_byte_mode_reply_still_rejects_stale_corrupt_and_empty_frames() {
+        let command = Command::new(0, 0x84);
+        let mut corrupt = wire(0x1f, command, &[3]);
+        corrupt[9] ^= 1;
+        let pipe = QueuedTransport::new(vec![
+            wire(0x3f, command, &[3]),
+            corrupt,
+            wire(0x1f, command, &[]),
+            wire(0x1f, command, &[3]),
+        ]);
+        let reply =
+            super::transact_with_response_minimum(&pipe, 0x1f, command, 2, &[], 4, 1).unwrap();
+        assert_eq!(reply.args()[0], 3);
+        assert_eq!(pipe.reads.load(Ordering::Relaxed), 4);
+        assert_eq!(pipe.writes.load(Ordering::Relaxed), 1);
     }
 
     #[test]

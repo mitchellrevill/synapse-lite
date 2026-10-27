@@ -11,6 +11,7 @@ use crate::{Device, Error, Result};
 const ORNATA_V2: u16 = 0x025d;
 const GET_EFFECT: Command = Command::new(0x0f, 0x82);
 const GET_BRIGHTNESS: Command = Command::new(0x0f, 0x84);
+const GET_MODE: Command = Command::new(0x00, 0x84);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct LightingSelector {
@@ -150,7 +151,68 @@ impl BrightnessReadback {
     }
 }
 
+/// Device mode from protocol25 GET00:84. Normal0 and Driver3 are source-backed
+/// names; a normal-mode reply does not establish exclusive lighting ownership.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DeviceModeReadback {
+    raw_args: [u8; MAX_ARGS],
+    declared_size: u8,
+}
+
+impl DeviceModeReadback {
+    pub fn from_reply(txid: u8, reply: &Report) -> Result<Self> {
+        validate_reply(reply, txid, GET_MODE, 1)?;
+        if !(1..=2).contains(&reply.0[5]) {
+            return Err(Error::InvalidArg(
+                "Device mode reply must declare 1 or 2 bytes".into(),
+            ));
+        }
+        Ok(Self {
+            raw_args: reply.args().try_into().expect("fixed report argument size"),
+            declared_size: reply.0[5],
+        })
+    }
+    pub fn raw_args(&self) -> &[u8; MAX_ARGS] {
+        &self.raw_args
+    }
+    pub fn declared_size(&self) -> u8 {
+        self.declared_size
+    }
+    pub fn declared_args(&self) -> &[u8] {
+        &self.raw_args[..usize::from(self.declared_size)]
+    }
+    pub fn mode(&self) -> u8 {
+        self.raw_args[0]
+    }
+    /// A one-byte response does not supply a parameter, even when padding is0.
+    pub fn param(&self) -> Option<u8> {
+        (self.declared_size == 2).then_some(self.raw_args[1])
+    }
+    pub fn source_name(&self) -> &'static str {
+        match self.mode() {
+            0 => "Normal_Mode",
+            1 => "Bootloader_Mode",
+            2 => "Testing_Mode",
+            3 => "Driver_Mode",
+            4 => "Download_Mode",
+            5 => "Pairing_Mode",
+            6 => "Standby_Mode",
+            8 => "RF_Test_Mode",
+            9 => "Retail_Mode",
+            _ => "Unknown",
+        }
+    }
+}
+
 impl Device {
+    /// Issue only GET00:84, size2, with no arguments. The returned parameter is
+    /// retained without assuming a meaning or changing device mode.
+    pub fn ornata_mode_readback(&self) -> Result<DeviceModeReadback> {
+        self.check_ornata_lighting_query(0, 0)?;
+        let reply = self.get_ornata_mode_register()?;
+        DeviceModeReadback::from_reply(self.txid, &reply)
+    }
+
     /// Issue only GET 0F:82. Profiles 0/1 and region 0 are the bounded inspected
     /// selectors; their relationship to current rendering remains unverified.
     /// The command-specific transport sends 80 argument bytes and accepts at
@@ -288,6 +350,45 @@ mod tests {
         }
     }
 
+    #[test]
+    fn device_mode_preserves_parameter_and_unknown_values() {
+        for (mode, name) in [(0, "Normal_Mode"), (3, "Driver_Mode"), (255, "Unknown")] {
+            let snapshot =
+                DeviceModeReadback::from_reply(0x1f, &reply(GET_MODE, 2, &[mode, 7])).unwrap();
+            assert_eq!(snapshot.declared_args(), &[mode, 7]);
+            assert_eq!(snapshot.declared_size(), 2);
+            assert_eq!(snapshot.mode(), mode);
+            assert_eq!(snapshot.param(), Some(7));
+            assert_eq!(snapshot.source_name(), name);
+        }
+    }
+
+    #[test]
+    fn device_mode_rejects_wrong_size_identity_and_status() {
+        for size in [0, 3, 80] {
+            assert!(DeviceModeReadback::from_reply(0x1f, &reply(GET_MODE, size, &[0, 0])).is_err());
+        }
+        assert!(DeviceModeReadback::from_reply(0x3f, &reply(GET_MODE, 2, &[0, 0])).is_err());
+        assert!(
+            DeviceModeReadback::from_reply(0x1f, &reply(GET_BRIGHTNESS, 3, &[0, 0, 0])).is_err()
+        );
+        let mut failed = reply(GET_MODE, 2, &[0, 0]);
+        failed.0[0] = 5;
+        assert!(DeviceModeReadback::from_reply(0x1f, &failed).is_err());
+    }
+
+    #[test]
+    fn one_byte_mode_preserves_padding_without_inventing_parameter() {
+        let mut args = [0xa5; MAX_ARGS];
+        args[0] = 3;
+        let snapshot = DeviceModeReadback::from_reply(0x1f, &reply(GET_MODE, 1, &args)).unwrap();
+        assert_eq!(snapshot.raw_args(), &args);
+        assert_eq!(snapshot.declared_args(), &[3]);
+        assert_eq!(snapshot.declared_size(), 1);
+        assert_eq!(snapshot.param(), None);
+        assert_eq!(snapshot.source_name(), "Driver_Mode");
+    }
+
     struct ProbeOnly(Arc<AtomicUsize>);
     impl crate::Transport for ProbeOnly {
         fn send_feature_report(&self, data: &[u8]) -> Result<()> {
@@ -333,6 +434,7 @@ mod tests {
     fn unsupported_device_and_selectors_send_nothing() {
         for pid in [0x00c4, 0x00c5, 0xfff3] {
             let (device, sends) = test_device(pid);
+            assert!(device.ornata_mode_readback().is_err());
             assert!(device.ornata_effect_readback(1, 0).is_err());
             assert!(device.ornata_brightness_readback(1, 0).is_err());
             assert_eq!(sends.load(Ordering::Relaxed), 0);
@@ -348,6 +450,10 @@ mod tests {
             device.interface = interface;
             assert!(device.ornata_effect_readback(1, 0).is_err());
             assert!(device.ornata_brightness_readback(1, 0).is_err());
+            assert_eq!(sends.load(Ordering::Relaxed), 0);
+            let (mut wrong_interface, sends) = test_device(ORNATA_V2);
+            wrong_interface.interface = 0;
+            assert!(wrong_interface.ornata_mode_readback().is_err());
             assert_eq!(sends.load(Ordering::Relaxed), 0);
         }
     }
