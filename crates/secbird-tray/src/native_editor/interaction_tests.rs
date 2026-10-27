@@ -1827,3 +1827,5 @@ fn native_assignment_mouse_labels_and_drawer_have_source_hit_targets() {
     .unwrap();
     eprintln!("Native mouse assignment evidence: {}", directory.display());
 }
+#[path="frame_interaction_tests.rs"]
+mod frame;

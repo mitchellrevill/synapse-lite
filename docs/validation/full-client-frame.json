@@ -1,0 +1,182 @@
+{
+  "schema": "synapse-lite-full-client-frame-validation-v1",
+  "scope": "Windows11 build26200 at125%; simulated native windows only",
+  "source_reference": "customize-ancestor-fonts.json",
+  "source_host_tab_common_sha256": "7262ee43326e3960b0159547909282434421aba1cb000c01a6a96fda068f0532",
+  "source_host_version_common_sha256": "b7bfa2eec3da3d20e33add539e6606338c27aa6484bf0c7097a13959a3374dce",
+  "before": {
+    "scale": 1.25,
+    "outer_pixels": [
+      1600,
+      900
+    ],
+    "client_pixels": [
+      1584,
+      884
+    ],
+    "inset_pixels": [
+      8,
+      8
+    ]
+  },
+  "after": {
+    "all_eight_resize_targets": true,
+    "cached_layout_tracks_client": true,
+    "header_drag_and_close_control": true,
+    "host_offset_css": 42,
+    "maximize_restore_buttons_work": true,
+    "minimum_track_size_css": [
+      1000,
+      650
+    ],
+    "observations": [
+      {
+        "bounds": {
+          "client": [
+            1600,
+            900
+          ],
+          "inset": [
+            0,
+            0
+          ],
+          "maximized": false,
+          "outer": [
+            1600,
+            900
+          ]
+        },
+        "mode": "normal"
+      },
+      {
+        "bounds": {
+          "client": [
+            1250,
+            813
+          ],
+          "inset": [
+            0,
+            0
+          ],
+          "maximized": false,
+          "outer": [
+            1250,
+            813
+          ]
+        },
+        "mode": "minimum"
+      },
+      {
+        "bounds": {
+          "client": [
+            1325,
+            875
+          ],
+          "inset": [
+            0,
+            0
+          ],
+          "maximized": false,
+          "outer": [
+            1325,
+            875
+          ]
+        },
+        "mode": "narrow"
+      },
+      {
+        "bounds": {
+          "client": [
+            1600,
+            900
+          ],
+          "inset": [
+            0,
+            0
+          ],
+          "maximized": false,
+          "outer": [
+            1600,
+            900
+          ]
+        },
+        "mode": "normal-restored"
+      },
+      {
+        "bounds": {
+          "client": [
+            2560,
+            1380
+          ],
+          "inset": [
+            0,
+            0
+          ],
+          "maximized": true,
+          "outer": [
+            2560,
+            1380
+          ]
+        },
+        "mode": "maximized"
+      },
+      {
+        "bounds": {
+          "client": [
+            1600,
+            900
+          ],
+          "inset": [
+            0,
+            0
+          ],
+          "maximized": false,
+          "outer": [
+            1600,
+            900
+          ]
+        },
+        "mode": "restore"
+      }
+    ],
+    "observed_host_boundary_px": 53,
+    "physical_discovery_disabled": true,
+    "profile_bytes_unchanged": true,
+    "restore_position_unchanged": true,
+    "scale": 1.25,
+    "sim_commands_added": 0
+  },
+  "pure_frame_tests": {
+    "passed": 3,
+    "failed": 0
+  },
+  "native_hwnd_regressions": {
+    "passed": 7,
+    "failed": 0,
+    "seconds": 5.8,
+    "includes_existing_flows": 6
+  },
+  "native_source_sha256": {
+    "crates/secbird-tray/src/native_editor.rs": "46115a5440137cce532c26e19b918f321e0e7938fdccfce66ef38e3f4b4c4856",
+    "crates/secbird-tray/src/native_editor/window_frame.rs": "f89323c0218f306e7fb6d8ea9211bf870d8235661d83d482683cfa2711751867",
+    "crates/secbird-tray/src/native_editor/frame_interaction_tests.rs": "b0bcdaba87e7fc5caf13460f5f731d0bca7113f83e3c9bd852996eb096155871",
+    "crates/secbird-tray/src/native_editor/interaction_tests.rs": "51e7c3ce716531ac9f28c57b373a3f95bfa1e6a72e0809217d431d247579f011"
+  },
+  "physical_devices": false,
+  "stock_gui_launched": false,
+  "screenshots": false,
+  "new_ram_measurement": false,
+  "full_pixel_parity_proven": false,
+  "unverified": [
+    "physical multi-monitor moves",
+    "DPI transitions",
+    "auto-hide taskbar behavior",
+    "Windows10 product-view inset"
+  ],
+  "regular_tray_tests": {
+    "passed": 190,
+    "failed": 0,
+    "ignored": 13,
+    "scope": "combined working tree including independent Wave integration work"
+  }
+}

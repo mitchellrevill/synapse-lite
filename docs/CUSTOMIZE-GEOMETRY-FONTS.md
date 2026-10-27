@@ -56,7 +56,7 @@ Glyph advances still differ: for example, the measured RazerF5 heading is 161 ph
 
 ## Separate outer/client gap
 
-On the simulated native window at 125%, outer bounds were 1600x900 physical pixels, client bounds 1584x884 and the client origin was inset 8px per side. The requested logical outer size was 1280x720. AppEngine's recovered bounds function instead uses `BrowserWindow.getSize()` with product bounds `{x:0,y:42,width:size[0],height:size[1]-42}` on the current Windows11 branch. Its version helper classifies build 26200 as Windows11 using the 22000 build threshold. A separate full-client/non-client resize correction is planned; no `WM_NCCALCSIZE` behavior changes in this unit.
+On the simulated native window at 125%, outer bounds were 1600x900 physical pixels, client bounds 1584x884 and the client origin was inset 8px per side. The requested logical outer size was 1280x720. AppEngine's recovered bounds function instead uses `BrowserWindow.getSize()` with product bounds `{x:0,y:42,width:size[0],height:size[1]-42}` on the current Windows11 branch. Its version helper classifies build 26200 as Windows11 using the 22000 build threshold. Those values describe the pre-correction window. The follow-up [full-client frame change](FULL-CLIENT-FRAME.md) addresses that inset; the ancestor/font unit itself did not change `WM_NCCALCSIZE`.
 
 ## Evidence and validation
 

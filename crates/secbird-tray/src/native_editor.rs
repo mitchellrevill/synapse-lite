@@ -52,6 +52,7 @@ mod profile_modal_view;
 mod runtime_status;
 mod source_layout;
 mod viewport;
+mod window_frame;
 
 const CLASS: &str = "SynapseLiteNativeEditor";
 const RESPONSE_TIMER: usize = 71;
@@ -106,6 +107,7 @@ static OPENING: AtomicBool = AtomicBool::new(false);
 extern "system" {
     fn GetDpiForWindow(hwnd: HWND) -> u32;
     fn GetDpiForSystem() -> u32;
+    fn GetSystemMetricsForDpi(index: i32, dpi: u32) -> i32;
     fn GetWindowDpiAwarenessContext(hwnd: HWND) -> isize;
     fn GetAwarenessFromDpiAwarenessContext(context: isize) -> i32;
 }
@@ -3288,6 +3290,38 @@ unsafe extern "system" fn window_proc(
     // Win32 calls can synchronously reenter a window procedure. Never create
     // overlapping mutable references to its state during those callbacks.
     match message {
+        WM_NCCALCSIZE => {
+            window_frame::calculate(hwnd, wparam, lparam);
+            return 0;
+        }
+        WM_GETMINMAXINFO => {
+            if lparam != 0 {
+                window_frame::limits(hwnd, &mut *(lparam as *mut MINMAXINFO));
+            }
+            return 0;
+        }
+        WM_NCHITTEST => {
+            if let Some(hit) = window_frame::border_hit(hwnd, lparam) {
+                return hit;
+            }
+            let mut point = POINT {
+                x: (lparam as u32 & 0xffff) as i16 as i32,
+                y: ((lparam as u32 >> 16) & 0xffff) as i16 as i32,
+            };
+            ScreenToClient(hwnd, &mut point);
+            let pointer = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut RefCell<State>;
+            if !pointer.is_null() {
+                if let Ok(state) = (*pointer).try_borrow() {
+                    let over_hit = state.hits.iter().any(|hit| PtInRect(&hit.rect, point) != 0);
+                    let host_height =
+                        (42.0 * GetDpiForWindow(hwnd).max(96) as f64 / 96.0).round() as i32;
+                    if point.y >= 0 && point.y < host_height && !over_hit {
+                        return HTCAPTION as LRESULT;
+                    }
+                }
+            }
+            return HTCLIENT as LRESULT;
+        }
         WM_WINDOWPOSCHANGED => {
             // DefWindowProc synchronously delivers WM_SIZE/WM_MOVE. Forward
             // before borrowing State so the new layout is actually retained.
@@ -3498,6 +3532,10 @@ unsafe extern "system" fn window_proc(
         if let Ok(mut state) = (*pointer).try_borrow_mut() {
             if wparam == 2 {
                 *(lparam as *mut Value) = assignment_view::font_diagnostics(&state);
+                return 0;
+            }
+            if wparam == 3 {
+                *(lparam as *mut Value) = json!({"width":state.width,"height":state.height});
                 return 0;
             }
             if wparam == 1 {
@@ -3776,14 +3814,6 @@ unsafe extern "system" fn window_proc(
             state.hits.clear();
             state.rebuild_fields();
             InvalidateRect(hwnd, null(), 0);
-            0
-        }
-        WM_GETMINMAXINFO => {
-            let info = &mut *(lparam as *mut MINMAXINFO);
-            info.ptMinTrackSize = POINT {
-                x: state.px(1000),
-                y: state.px(650),
-            };
             0
         }
         WM_ERASEBKGND => 1,
@@ -4289,23 +4319,6 @@ unsafe extern "system" fn window_proc(
             state.rebuild_fields();
             InvalidateRect(hwnd, null(), 0);
             0
-        }
-        WM_NCHITTEST => {
-            let result = DefWindowProcW(hwnd, message, wparam, lparam);
-            if result != HTCLIENT as isize {
-                return result;
-            }
-            let mut point = POINT {
-                x: (lparam as u32 & 0xffff) as i16 as i32,
-                y: ((lparam as u32 >> 16) & 0xffff) as i16 as i32,
-            };
-            ScreenToClient(hwnd, &mut point);
-            let over_hit = state.hits.iter().any(|h| PtInRect(&h.rect, point) != 0);
-            if point.y < state.px(42) && !over_hit {
-                HTCAPTION as isize
-            } else {
-                result
-            }
         }
         _ => DefWindowProcW(hwnd, message, wparam, lparam),
     }
