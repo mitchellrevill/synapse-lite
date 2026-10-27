@@ -59,6 +59,9 @@ pub struct Profile {
     /// Lighting zone name (or numeric id) -> state.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub lighting: BTreeMap<String, Zone>,
+    /// Source brightness enable/value and retained host switch-off policy flags.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lighting_settings: Option<crate::lighting::LightingSettings>,
     /// Per-key colors, row-major over the device's matrix. Empty when unused.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub keys: Vec<Rgb>,
@@ -527,6 +530,14 @@ impl Profile {
         if let Some(g) = &self.game_mode {
             push(format!("gaming mode: {g}"), g.parse().and_then(|g| dev.set_game_mode(g)));
         }
+        if lighting {
+            if let Some(settings) = &self.lighting_settings {
+                push("source brightness".into(), settings.apply_brightness(dev).map(|_| ()));
+                if settings.needs_runtime() {
+                    push("source idle/display lighting policy".into(), Err(Error::Unsupported("idle/display lighting policies are retained but their host runtime is not implemented".into())));
+                }
+            }
+        }
         for (name, zone) in self.lighting.iter().filter(|_| lighting) {
             let led = match dev.led_id(name) {
                 Ok(led) => led,
@@ -535,8 +546,10 @@ impl Profile {
                     continue;
                 }
             };
-            if let Some(pct) = zone.brightness {
-                push(format!("{name} brightness {pct}%"), dev.set_brightness(led, pct));
+            if name != "backlight" || self.lighting_settings.is_none() {
+                if let Some(pct) = zone.brightness {
+                    push(format!("{name} brightness {pct}%"), dev.set_brightness(led, pct));
+                }
             }
             if zone.off {
                 push(format!("{name} off"), dev.lights_off(led));

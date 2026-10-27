@@ -33,6 +33,91 @@ pub(super) fn import_mouse(
     Ok(())
 }
 
+pub(super) fn import_keyboard_lighting(
+    source: &Value,
+    profile: &mut Profile,
+    name: &str,
+    warnings: &mut Vec<String>,
+) -> Result<()> {
+    let mut settings = crate::lighting::LightingSettings::default();
+    if let Some(value) = source.get("brightness") {
+        settings.brightness = Some(
+            serde_json::from_value(value.clone())
+                .map_err(|e| invalid(format!("invalid brightness: {e}")))?,
+        );
+    }
+    if let Some(value) = source.get("switchOffLighting") {
+        settings.switch_off = Some(
+            serde_json::from_value(value.clone())
+                .map_err(|e| invalid(format!("invalid switchOffLighting: {e}")))?,
+        );
+    }
+    if settings.brightness.is_some() || settings.switch_off.is_some() {
+        settings.validate()?;
+        if settings.needs_runtime() {
+            warnings.push(format!("{name}: idle/display switch-off settings are retained; their host runtime is not implemented"));
+        }
+        settings.store_in_profile(profile)?;
+    }
+    Ok(())
+}
+
+/// Return true when typed source intent owns brightness and policy export.
+/// Old native profiles without the typed field retain their previous overlay rules.
+pub(super) fn export_keyboard_lighting(
+    profile: &Profile,
+    decoded: &mut Map<String, Value>,
+    preserve_defaults: bool,
+) -> Result<bool> {
+    let Some(settings) = &profile.lighting_settings else {
+        return Ok(false);
+    };
+    settings.validate()?;
+    if !settings.extra.is_empty() {
+        return Err(crate::Error::Unsupported(
+            "unknown native lighting-settings extensions require a native JSON backup".into(),
+        ));
+    }
+    let mut settings = settings.clone();
+    if let Some(zone) = profile.lighting.get("backlight") {
+        let projected = settings
+            .brightness
+            .as_ref()
+            .map(crate::lighting::Brightness::projected);
+        if zone.brightness != projected {
+            // Preserve legacy direct zone edits without dropping retained source
+            // metadata; supported editors should use store_in_profile to sync.
+            if let Some(value) = zone.brightness {
+                let brightness = settings.brightness.get_or_insert_with(Default::default);
+                brightness.set_value(value)?;
+            } else {
+                settings.brightness = None;
+            }
+        }
+    }
+    match settings.brightness {
+        Some(value) => merge_object(
+            decoded.entry("brightness").or_insert(json!({})),
+            serde_json::to_value(value).map_err(|e| invalid(e.to_string()))?,
+        )?,
+        None if !preserve_defaults => {
+            decoded.remove("brightness");
+        }
+        None => {}
+    }
+    match settings.switch_off {
+        Some(value) => merge_object(
+            decoded.entry("switchOffLighting").or_insert(json!({})),
+            serde_json::to_value(value).map_err(|e| invalid(e.to_string()))?,
+        )?,
+        None if !preserve_defaults => {
+            decoded.remove("switchOffLighting");
+        }
+        None => {}
+    }
+    Ok(true)
+}
+
 pub(super) fn import_game_mode(
     source: &Value,
     profile: &mut Profile,

@@ -230,15 +230,8 @@ fn translate_profile(
     mappings::import(source, &mut profile, pid, name, warnings)?;
     if pid == 605 {
         settings::import_game_mode(source, &mut profile, name, warnings)?;
+        settings::import_keyboard_lighting(source, &mut profile, name, warnings)?;
         let zone = profile.lighting.entry("backlight".into()).or_default();
-        if let Some(brightness) = source.get("brightness") {
-            zone.brightness =
-                Some(integer(brightness.get("value"), 0, 100, "brightness.value")? as u8);
-            zone.off = !brightness
-                .get("isEnabled")
-                .and_then(Value::as_bool)
-                .ok_or_else(|| invalid("brightness.isEnabled must be boolean"))?;
-        }
         if let Some(quick) = source.get("quickEffects") {
             let id = integer(quick.get("selectedEffectId"), 0, 255, "selectedEffectId")?;
             let setting = quick
@@ -290,7 +283,7 @@ fn translate_profile(
         .contains(&key.as_str())
             || (matches!(pid, 196 | 197)
                 && ["dpiStages", "powerSavingValue"].contains(&key.as_str()))
-            || (pid == 605 && ["brightness", "quickEffects", "gamingMode"].contains(&key.as_str()))
+            || (pid == 605 && ["brightness", "quickEffects", "gamingMode", "switchOffLighting"].contains(&key.as_str()))
         {
             continue;
         }
@@ -428,6 +421,7 @@ pub fn export_synapse4(store: &Store, device_key: &str) -> Result<ExportReport> 
         if matches!(pid, 196 | 197) {
             settings::export_mouse(profile, decoded_object, source.is_none())?;
             if !profile.lighting.is_empty()
+                || profile.lighting_settings.is_some()
                 || !profile.keys.is_empty()
                 || profile.game_mode.is_some()
             {
@@ -437,6 +431,7 @@ pub fn export_synapse4(store: &Store, device_key: &str) -> Result<ExportReport> 
         mappings::export(profile, decoded_object, pid)?;
         if pid == 605 {
             settings::export_game_mode(profile, decoded_object)?;
+            let source_lighting = settings::export_keyboard_lighting(profile, decoded_object, source.is_none())?;
             if profile.dpi.is_some()
                 || profile.polling.is_some()
                 || profile.dpi_stages.is_some()
@@ -448,9 +443,9 @@ pub fn export_synapse4(store: &Store, device_key: &str) -> Result<ExportReport> 
                 )));
             }
             if let Some(zone) = profile.lighting.get("backlight") {
-                if zone.brightness.is_some()
+                if !source_lighting && (zone.brightness.is_some()
                     || zone.off
-                    || decoded_object.get("brightness").is_some()
+                    || decoded_object.get("brightness").is_some())
                 {
                     let brightness = decoded_object.entry("brightness").or_insert(json!({}));
                     let object = brightness
@@ -470,7 +465,11 @@ pub fn export_synapse4(store: &Store, device_key: &str) -> Result<ExportReport> 
                 let quick_object = quick
                     .as_object_mut()
                     .ok_or_else(|| invalid("quickEffects must be an object"))?;
-                if let Some((id, settings)) = export_effect(zone.color, zone.effect.as_ref())? {
+                if source_lighting && zone.off {
+                    // Source brightness-off is a zero brightness projection;
+                    // Zone.off is reserved for an explicitly disabled effect.
+                    quick_object.insert("selectedEffectId".into(),json!(0));
+                } else if let Some((id, settings)) = export_effect(zone.color, zone.effect.as_ref())? {
                     quick_object.insert("selectedEffectId".into(), json!(id));
                     if let Some(settings) = settings {
                         let original = quick_object
@@ -480,7 +479,7 @@ pub fn export_synapse4(store: &Store, device_key: &str) -> Result<ExportReport> 
                     }
                 }
             } else if source.is_some() {
-                decoded_object.remove("brightness");
+                if !source_lighting { decoded_object.remove("brightness"); }
                 decoded_object.remove("quickEffects");
             }
             if profile.lighting.keys().any(|key| key != "backlight") || !profile.keys.is_empty() {
@@ -531,7 +530,9 @@ pub fn export_synapse4(store: &Store, device_key: &str) -> Result<ExportReport> 
         );
         records.push(entry);
         for key in ["macro", "switchOffLighting"] {
-            if decoded.get(key).is_some_and(|v| !is_empty(v)) {
+            if decoded.get(key).is_some_and(|v| !is_empty(v))
+                && (key != "switchOffLighting" || profile.lighting_settings.is_none())
+            {
                 warnings.push(format!(
                     "{name}: original Synapse '{key}' retained without translation"
                 ));

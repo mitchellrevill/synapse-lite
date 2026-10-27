@@ -22,6 +22,7 @@ pub mod effects;
 pub mod error;
 pub mod firmware;
 pub mod features;
+pub mod lighting;
 pub mod lighting_readback;
 pub mod log;
 pub mod macros;

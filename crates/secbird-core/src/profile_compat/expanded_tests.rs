@@ -638,3 +638,89 @@ fn explicit_legacy_sleep_override_and_old_source_deletion_are_unchanged() {
         "older no-flag known-field deletion remains deletion"
     );
 }
+
+#[test]
+fn source_lighting_retains_disabled_value_policy_flags_and_unknown_fields() {
+    let source = json!({"guid":"lighting-intent","name":"Fixture","mappings":[],
+        "brightness":{"isEnabled":false,"value":73,"futureBrightness":{"keep":true}},
+        "switchOffLighting":{"isDisplayOn":false,"isIdleEnabled":false,"idleMinutes":7,"futurePolicy":[1,2]},
+        "quickEffects":{"selectedEffectId":3}});
+    let mut report = import_document(&document(source.clone(), 605)).unwrap();
+    assert!(report.warnings.is_empty());
+    let profile = &report.store.devices["025D"].profiles["Fixture"];
+    let intent = profile.lighting_settings.as_ref().unwrap();
+    assert_eq!(intent.brightness.as_ref().unwrap().value, 73);
+    assert!(!intent.brightness.as_ref().unwrap().enabled);
+    assert_eq!(profile.lighting["backlight"].brightness, Some(0));
+    assert!(
+        !profile.lighting["backlight"].off,
+        "brightness switch must not disable an effect"
+    );
+    assert_eq!(payload(&report.store, "025D", "Fixture"), source);
+    let mut intent = intent.clone();
+    intent.brightness.as_mut().unwrap().set_enabled(true);
+    intent.switch_off.as_mut().unwrap().idle_enabled = true;
+    let p = report
+        .store
+        .devices
+        .get_mut("025D")
+        .unwrap()
+        .profiles
+        .get_mut("Fixture")
+        .unwrap();
+    intent.store_in_profile(p).unwrap();
+    let out = payload(&report.store, "025D", "Fixture");
+    assert_eq!(out["brightness"]["value"], 73);
+    assert_eq!(out["brightness"]["isEnabled"], true);
+    assert_eq!(
+        out["brightness"]["futureBrightness"],
+        source["brightness"]["futureBrightness"]
+    );
+    assert_eq!(out["switchOffLighting"]["idleMinutes"], 7);
+    assert_eq!(
+        out["switchOffLighting"]["futurePolicy"],
+        source["switchOffLighting"]["futurePolicy"]
+    );
+    let native = import_document(&serde_json::to_vec(&report.store).unwrap()).unwrap();
+    assert_eq!(
+        native.store.devices["025D"].profiles["Fixture"].lighting_settings,
+        Some(intent)
+    );
+    let again = import_document(&export_synapse4(&native.store, "025D").unwrap().bytes).unwrap();
+    assert!(again.warnings.iter().any(|w| w.contains("host runtime")));
+    assert_eq!(payload(&again.store, "025D", "Fixture"), out);
+}
+
+#[test]
+fn effect_off_is_independent_from_brightness_and_typed_deletion_is_not_resurrected() {
+    let source = json!({"guid":"lighting-off","name":"Fixture","mappings":[],
+        "brightness":{"isEnabled":true,"value":73},
+        "switchOffLighting":{"isDisplayOn":false,"isIdleEnabled":false,"idleMinutes":7},
+        "quickEffects":{"selectedEffectId":0}});
+    let mut report = import_document(&document(source.clone(), 605)).unwrap();
+    assert!(report.store.devices["025D"].profiles["Fixture"].lighting["backlight"].off);
+    assert_eq!(
+        payload(&report.store, "025D", "Fixture")["brightness"],
+        source["brightness"]
+    );
+    assert_eq!(
+        payload(&report.store, "025D", "Fixture")["quickEffects"]["selectedEffectId"],
+        0
+    );
+    let p = report
+        .store
+        .devices
+        .get_mut("025D")
+        .unwrap()
+        .profiles
+        .get_mut("Fixture")
+        .unwrap();
+    let mut intent = p.lighting_settings.clone().unwrap();
+    intent.brightness = None;
+    intent.switch_off = None;
+    intent.store_in_profile(p).unwrap();
+    let out = payload(&report.store, "025D", "Fixture");
+    assert!(out.get("brightness").is_none());
+    assert!(out.get("switchOffLighting").is_none());
+    assert_eq!(out["quickEffects"]["selectedEffectId"], 0);
+}

@@ -198,10 +198,145 @@ pub fn set_effect(dev: &Device, store: &mut Store, zone_name: &str, effect: crat
     store.save()
 }
 
+/// Persist source-profile lighting intent and explicitly reapply its brightness.
+/// Even unchanged intent is written/read back, so callers can repair hardware drift.
+/// Use set_lighting_policy for policy-only edits that must issue no HID request.
+pub fn set_lighting_settings(
+    dev: &Device,
+    store: &mut Store,
+    expected_device: &str,
+    expected_profile: &str,
+    want: &crate::lighting::LightingSettings,
+) -> Result<crate::lighting::LightingSettings> {
+    change_lighting_settings(
+        dev,
+        store,
+        expected_device,
+        expected_profile,
+        want,
+        LightingChange::Brightness,
+    )
+}
+
+/// Persist only host-policy intent. A concurrent brightness edit is rejected,
+/// rather than silently saving brightness that was never sent to the hardware.
+pub fn set_lighting_policy(
+    dev: &Device,
+    store: &mut Store,
+    expected_device: &str,
+    expected_profile: &str,
+    want: &crate::lighting::LightingSettings,
+) -> Result<crate::lighting::LightingSettings> {
+    change_lighting_settings(
+        dev,
+        store,
+        expected_device,
+        expected_profile,
+        want,
+        LightingChange::Policy,
+    )
+}
+
+#[derive(Clone, Copy, PartialEq)]
+enum LightingChange {
+    Brightness,
+    Policy,
+}
+
+fn change_lighting_settings(
+    dev: &Device,
+    store: &mut Store,
+    expected_device: &str,
+    expected_profile: &str,
+    want: &crate::lighting::LightingSettings,
+    change: LightingChange,
+) -> Result<crate::lighting::LightingSettings> {
+    if expected_device != dev.key() {
+        return Err(crate::Error::InvalidArg(
+            "The selected device changed; refresh before changing Lighting settings".into(),
+        ));
+    }
+    if dev.pid != 605 {
+        return Err(crate::Error::Unsupported(
+            "source lighting intent is verified only for Ornata V2".into(),
+        ));
+    }
+    want.validate()?;
+    let previous_keys: Vec<String> = store.devices.keys().cloned().collect();
+    let mut previous_profile = None;
+    let preflight = (|| -> Result<()> {
+        let profiles = store.for_device(dev);
+        if profiles.active != expected_profile {
+            return Err(crate::Error::InvalidArg(
+                "The active profile changed; refresh before changing Lighting settings".into(),
+            ));
+        }
+        if profiles.lighting_off {
+            return Err(crate::Error::InvalidArg(
+                "lighting control is disabled for this device".into(),
+            ));
+        }
+        if change == LightingChange::Policy {
+            let current = crate::lighting::LightingSettings::from_profile(profiles.active())?;
+            if current.and_then(|s| s.brightness) != want.brightness {
+                return Err(crate::Error::InvalidArg(
+                    "A policy-only action cannot change brightness; use the brightness action"
+                        .into(),
+                ));
+            }
+        }
+        previous_profile = Some(profiles.active().clone());
+        want.store_in_profile(profiles.active_mut())?;
+        crate::profile_compat::validate_store_budget(store)
+    })();
+    // All exits from preflight pass through this restoration. Even an early
+    // stale-profile/ownership refusal can have resolved a legacy device key.
+    if let Some(previous) = previous_profile {
+        *store.for_device(dev).active_mut() = previous;
+    }
+    let key = dev.key();
+    if !previous_keys.contains(&key) {
+        if let Some(resolved) = store.devices.remove(&key) {
+            if let Some(original_key) = previous_keys
+                .iter()
+                .find(|k| !store.devices.contains_key(*k))
+            {
+                store.devices.insert(original_key.clone(), resolved);
+            }
+        }
+    }
+    preflight?;
+    if change == LightingChange::Brightness {
+        want.apply_brightness(dev)?;
+    }
+    want.store_in_profile(store.for_device(dev).active_mut())?;
+    store.save()?;
+    Ok(want.clone())
+}
+
 /// Brightness in percent, clamped to 0-100.
 pub fn set_brightness(dev: &Device, store: &mut Store, zone_name: &str, percent: u8) -> Result<()> {
-    check_lighting(dev, store)?;
     let percent = percent.min(100);
+    if dev.pid == 605 && dev.led_id(zone_name)? == 5 {
+        // Read the source profile without migrating keys before the guarded action.
+        // Ornata has one PID; its only upstream fallback is the bare legacy PID key.
+        let profiles = store
+            .devices
+            .get(&dev.key())
+            .or_else(|| store.devices.get("025D"));
+        if let Some(profiles) = profiles {
+            if let Some(mut settings) = profiles.active().lighting_settings.clone() {
+                let active = profiles.active.clone();
+                settings
+                    .brightness
+                    .get_or_insert_with(Default::default)
+                    .set_value(percent)?;
+                return set_lighting_settings(dev, store, &dev.key(), &active, &settings)
+                    .map(|_| ());
+            }
+        }
+    }
+    check_lighting(dev, store)?;
     dev.set_brightness(dev.led_id(zone_name)?, percent)?;
     zone(store, dev, zone_name).brightness = Some(percent);
     store.save()
@@ -653,5 +788,272 @@ mod power_tests {
         let value = serde_json::to_value(&store).unwrap();
         let restored: Store = serde_json::from_value(value.clone()).unwrap();
         assert_eq!(serde_json::to_value(restored).unwrap(), value);
+    }
+}
+
+#[cfg(test)]
+mod lighting_intent_tests {
+    use super::*;
+    use crate::{
+        lighting::{Brightness, LightingSettings, SwitchOffLighting},
+        sim::Sim,
+    };
+    use std::{
+        collections::BTreeMap,
+        sync::atomic::{AtomicUsize, Ordering},
+    };
+    static SEQUENCE: AtomicUsize = AtomicUsize::new(0);
+    fn setup() -> (Sim, Device, Store, std::path::PathBuf) {
+        let sim = Sim::keyboard();
+        let dev = sim
+            .open(605, Sim::spec_for(crate::sim::KEYBOARD_PID))
+            .unwrap();
+        let folder = std::env::temp_dir().join(format!(
+            "synapse-lighting-actions-{}-{}",
+            std::process::id(),
+            SEQUENCE.fetch_add(1, Ordering::Relaxed)
+        ));
+        let mut store = Store::load(&folder.join("profiles.json")).unwrap();
+        *store.for_device(&dev).active_mut() =
+            crate::profile_compat::new_native_profile(605, "Default").unwrap();
+        (sim, dev, store, folder)
+    }
+    #[test]
+    fn off_on_retains_value_effect_and_policy_and_policy_only_edit_has_no_hid_write() {
+        let (sim, dev, mut store, folder) = setup();
+        let mut want = LightingSettings::from_profile(store.for_device(&dev).active())
+            .unwrap()
+            .unwrap();
+        want.brightness.as_mut().unwrap().set_value(73).unwrap();
+        want.brightness
+            .as_mut()
+            .unwrap()
+            .extra
+            .insert("future".into(), serde_json::json!(42));
+        want.brightness.as_mut().unwrap().set_enabled(false);
+        want.switch_off.as_mut().unwrap().idle_minutes = 7;
+        set_lighting_settings(&dev, &mut store, &dev.key(), "Default", &want).unwrap();
+        assert_eq!(dev.brightness(5).unwrap(), 0);
+        assert!(!store.for_device(&dev).active().lighting["backlight"].off);
+        assert_eq!(
+            store.for_device(&dev).active().lighting["backlight"].effect,
+            Some(crate::effects::Effect::Spectrum)
+        );
+        assert!(!sim.state().log.contains(&crate::commands::MATRIX_EFFECT));
+        want.brightness.as_mut().unwrap().set_enabled(true);
+        set_lighting_settings(&dev, &mut store, &dev.key(), "Default", &want).unwrap();
+        assert_eq!(dev.brightness(5).unwrap(), 73);
+        let before = sim.state().log.len();
+        want.switch_off.as_mut().unwrap().display_off = true;
+        set_lighting_policy(&dev, &mut store, &dev.key(), "Default", &want).unwrap();
+        assert_eq!(
+            sim.state().log.len(),
+            before,
+            "host policy editing must not send an unrelated HID timer/effect"
+        );
+        let mut disk = Store::load(&folder.join("profiles.json")).unwrap();
+        assert_eq!(
+            disk.for_device(&dev).active().lighting_settings,
+            Some(want.clone())
+        );
+        set_brightness(&dev, &mut store, "backlight", 20).unwrap();
+        let settings = store
+            .for_device(&dev)
+            .active()
+            .lighting_settings
+            .as_ref()
+            .unwrap();
+        assert_eq!(settings.brightness.as_ref().unwrap().value, 20);
+        assert_eq!(settings.brightness.as_ref().unwrap().extra["future"], 42);
+        assert!(settings.switch_off.as_ref().unwrap().display_off);
+        let outcomes = store.for_device(&dev).active().apply(&dev);
+        assert!(outcomes
+            .iter()
+            .any(|r| r.setting.contains("idle/display") && r.result.is_err()));
+        assert!(!sim.state().log.contains(&crate::commands::IDLE_TIME));
+        std::fs::remove_file(folder.join("profiles.json")).unwrap();
+        std::fs::remove_dir(folder).unwrap();
+    }
+    #[test]
+    fn invalid_identity_profile_ownership_values_and_budget_refuse_before_hardware() {
+        let (sim, dev, mut store, folder) = setup();
+        let mut want = LightingSettings {
+            brightness: Some(Brightness::default()),
+            switch_off: Some(SwitchOffLighting::default()),
+            extra: BTreeMap::new(),
+        };
+        let before = sim.state().log.len();
+        assert!(set_lighting_settings(&dev, &mut store, "stale-device", "Default", &want).is_err());
+        assert!(
+            set_lighting_settings(&dev, &mut store, &dev.key(), "stale-profile", &want).is_err()
+        );
+        store.for_device(&dev).lighting_off = true;
+        assert!(set_lighting_settings(&dev, &mut store, &dev.key(), "Default", &want).is_err());
+        store.for_device(&dev).lighting_off = false;
+        want.brightness.as_mut().unwrap().value = 101;
+        assert!(set_lighting_settings(&dev, &mut store, &dev.key(), "Default", &want).is_err());
+        want.brightness.as_mut().unwrap().value = 50;
+        want.brightness.as_mut().unwrap().extra.insert(
+            "huge".into(),
+            serde_json::json!("x".repeat(2 * 1024 * 1024)),
+        );
+        let native_before = serde_json::to_value(&store).unwrap();
+        assert!(set_lighting_settings(&dev, &mut store, &dev.key(), "Default", &want).is_err());
+        assert_eq!(serde_json::to_value(&store).unwrap(), native_before);
+        assert_eq!(sim.state().log.len(), before);
+        assert!(!folder.exists());
+    }
+    #[test]
+    fn explicit_same_brightness_repairs_hardware_drift_but_policy_edit_sends_nothing() {
+        let (sim, dev, mut store, folder) = setup();
+        let mut want = LightingSettings::from_profile(store.for_device(&dev).active())
+            .unwrap()
+            .unwrap();
+        want.brightness.as_mut().unwrap().set_value(73).unwrap();
+        set_lighting_settings(&dev, &mut store, &dev.key(), "Default", &want).unwrap();
+        dev.set_brightness(5, 30).unwrap();
+        assert_eq!(dev.brightness(5).unwrap(), 30);
+        let before = sim.state().log.len();
+        set_brightness(&dev, &mut store, "backlight", 73).unwrap();
+        assert!(sim.state().log[before..].contains(&crate::commands::MATRIX_BRIGHTNESS));
+        assert_eq!(dev.brightness(5).unwrap(), 73);
+        dev.set_brightness(5, 30).unwrap();
+        want.switch_off.as_mut().unwrap().display_off = true;
+        let before = sim.state().log.len();
+        set_lighting_policy(&dev, &mut store, &dev.key(), "Default", &want).unwrap();
+        assert_eq!(sim.state().log.len(), before);
+        assert_eq!(
+            dev.brightness(5).unwrap(),
+            30,
+            "policy persistence must not covertly resync brightness"
+        );
+        let mut changed_brightness = want.clone();
+        changed_brightness
+            .brightness
+            .as_mut()
+            .unwrap()
+            .set_value(74)
+            .unwrap();
+        let native_before = serde_json::to_value(&store).unwrap();
+        let before = sim.state().log.len();
+        assert!(
+            set_lighting_policy(&dev, &mut store, &dev.key(), "Default", &changed_brightness)
+                .is_err()
+        );
+        assert_eq!(sim.state().log.len(), before);
+        assert_eq!(serde_json::to_value(&store).unwrap(), native_before);
+        set_lighting_settings(&dev, &mut store, &dev.key(), "Default", &want).unwrap();
+        assert_eq!(
+            dev.brightness(5).unwrap(),
+            73,
+            "full explicit brightness action must also resync an unchanged desired value"
+        );
+        std::fs::remove_file(folder.join("profiles.json")).unwrap();
+        std::fs::remove_dir(folder).unwrap();
+    }
+
+    #[test]
+    fn all_preflight_refusals_restore_legacy_key_resolution_and_default_creation() {
+        // Ornata has no alternate receiver PID. Its relevant connection identity
+        // migration is the upstream bare-PID key becoming a serial-qualified key.
+        for policy_only in [false, true] {
+            for refusal in ["profile", "ownership", "budget"] {
+                let (sim, dev, mut store, folder) = setup();
+                let profiles = store.devices.remove(&dev.key()).unwrap();
+                store.devices.insert("025D".into(), profiles);
+                let mut want = LightingSettings::from_profile(store.devices["025D"].active())
+                    .unwrap()
+                    .unwrap();
+                let expected = if refusal == "profile" {
+                    "stale-profile"
+                } else {
+                    "Default"
+                };
+                if refusal == "ownership" {
+                    store.devices.get_mut("025D").unwrap().lighting_off = true;
+                }
+                if refusal == "budget" {
+                    want.extra.insert(
+                        "huge".into(),
+                        serde_json::json!("x".repeat(2 * 1024 * 1024)),
+                    );
+                }
+                let native_before = serde_json::to_value(&store).unwrap();
+                let before = sim.state().log.len();
+                let result = if policy_only {
+                    set_lighting_policy(&dev, &mut store, &dev.key(), expected, &want)
+                } else {
+                    set_lighting_settings(&dev, &mut store, &dev.key(), expected, &want)
+                };
+                assert!(result.is_err());
+                assert_eq!(
+                    serde_json::to_value(&store).unwrap(),
+                    native_before,
+                    "refusal {refusal} must not migrate device keys"
+                );
+                assert_eq!(sim.state().log.len(), before);
+                assert!(!folder.exists());
+                if refusal == "ownership" {
+                    assert!(set_brightness(&dev, &mut store, "backlight", 73).is_err());
+                    assert_eq!(serde_json::to_value(&store).unwrap(),native_before,"legacy explicit brightness wrapper must not migrate a refused typed profile");
+                    assert_eq!(sim.state().log.len(), before);
+                }
+            }
+        }
+        let (sim, dev, mut store, folder) = setup();
+        store.devices.clear();
+        let want = LightingSettings {
+            brightness: Some(Brightness::default()),
+            ..Default::default()
+        };
+        let native_before = serde_json::to_value(&store).unwrap();
+        let before = sim.state().log.len();
+        assert!(
+            set_lighting_settings(&dev, &mut store, &dev.key(), "stale-profile", &want).is_err()
+        );
+        assert_eq!(
+            serde_json::to_value(&store).unwrap(),
+            native_before,
+            "stale request must not create a default device entry"
+        );
+        assert_eq!(sim.state().log.len(), before);
+        assert!(!folder.exists());
+    }
+
+    #[test]
+    fn unsupported_register_does_not_commit_profile_or_create_backup() {
+        let (sim, dev, mut store, folder) = setup();
+        sim.state().leds.clear();
+        let mut want = LightingSettings::from_profile(store.for_device(&dev).active())
+            .unwrap()
+            .unwrap();
+        want.brightness.as_mut().unwrap().set_value(37).unwrap();
+        let before = serde_json::to_value(&store).unwrap();
+        assert!(set_lighting_settings(&dev, &mut store, &dev.key(), "Default", &want).is_err());
+        assert_eq!(serde_json::to_value(&store).unwrap(), before);
+        assert!(!folder.exists());
+    }
+
+    #[test]
+    fn legacy_profile_application_and_serialization_remain_unchanged() {
+        let sim = Sim::keyboard();
+        let dev = sim
+            .open(605, Sim::spec_for(crate::sim::KEYBOARD_PID))
+            .unwrap();
+        let mut profile = crate::Profile::default();
+        profile
+            .lighting
+            .entry("backlight".into())
+            .or_default()
+            .brightness = Some(37);
+        assert!(serde_json::to_value(&profile)
+            .unwrap()
+            .get("lighting_settings")
+            .is_none());
+        assert!(profile.apply(&dev).iter().all(|r| r.result.is_ok()));
+        assert_eq!(dev.brightness(5).unwrap(), 37);
+        profile.lighting.get_mut("backlight").unwrap().off = true;
+        assert!(profile.apply(&dev).iter().all(|r| r.result.is_ok()));
+        assert!(sim.state().log.contains(&crate::commands::MATRIX_EFFECT));
     }
 }
