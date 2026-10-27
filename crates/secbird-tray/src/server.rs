@@ -790,6 +790,46 @@ pub(crate) fn import_profile_document(engine: &mut Engine, bytes: &[u8], target:
     Ok(json!({ "added": added, "warnings": incoming.warnings, "state": state(engine) }))
 }
 
+/// Resolve storage only in the local candidate. Store::for_device recognizes an
+/// exact identity, the same nonempty serial across196/197, and its own legacy PID.
+/// Refused candidates are dropped, so no migration is saved before validation.
+fn bound_import_candidate(
+    mut store: Store,
+    dev: &Device,
+    expected_active: &str,
+) -> Result<Store, Error> {
+    if store.for_device(dev).active != expected_active {
+        return Err(Error::InvalidArg(
+            "The active profile changed; reopen profile import".into(),
+        ));
+    }
+    Ok(store)
+}
+
+/// GUI import binding is independent of lighting/layout ownership. Only an
+/// exact connected physical device can receive the validated local candidate.
+pub(crate) fn import_profile_document_bound(
+    engine: &mut Engine,
+    bytes: &[u8],
+    expected_device: &str,
+    expected_active: &str,
+) -> Result<Value, Error> {
+    let dev = engine
+        .devices()
+        .iter()
+        .find(|dev| dev.key() == expected_device)
+        .ok_or_else(|| Error::NotFound(format!("device {expected_device}; refresh profiles")))?;
+    let store = Store::load(&config_dir().join("profiles.json"))?;
+    let mut store=bound_import_candidate(store,dev,expected_active)?;
+    let incoming = secbird_core::profile_compat::import_document(bytes)?;
+    let connected = vec![expected_device.to_string()];
+    incoming.store.validate_import_targets(&connected)?;
+    let added = store.import_for(incoming.store, &connected);
+    secbird_core::profile_compat::validate_store_budget(&store)?;
+    store.save()?;
+    Ok(json!({"added":added,"warnings":incoming.warnings,"state":state(engine)}))
+}
+
 /// Snapshot an export while the caller holds the shared engine lock. File I/O
 /// can then finish outside that lock, without delaying tray/device events.
 pub(crate) fn export_profile_document(synapse_device: Option<&str>) -> Result<secbird_core::profile_compat::ExportReport, Error> {
@@ -1014,6 +1054,64 @@ mod tests {
         if high {spec.polling=Some(secbird_core::db::Polling::High);sim.state().polling_hs=Some(secbird_core::commands::polling_hs_code(2000).unwrap());}
         let dev=sim.open(196,Some(spec)).unwrap();
         (sim,dev)
+    }
+    #[test]
+    fn bound_import_resolves_same_serial_connection_alias_and_legacy_without_hid() {
+        for (stored, pid) in [
+            ("00C4:unit", 0x00c5),
+            ("00C5:unit", 0x00c4),
+            ("00C5", 0x00c5),
+            ("025D", 0x025d),
+            ("00C5:unit", 0x00c5),
+        ] {
+            let sim = Sim::mouse();
+            let mut dev = sim.open(pid, None).unwrap();
+            dev.serial = "unit".into();
+            sim.state().log.clear();
+            let mut store = Store::default();
+            let mut profiles = secbird_core::profile::DeviceProfiles::default();
+            profiles.create("Work").unwrap();
+            profiles.switch("Work").unwrap();
+            store.devices.insert(stored.into(), profiles);
+            let candidate = bound_import_candidate(store, &dev, "Work").unwrap();
+            assert_eq!(candidate.devices[&dev.key()].active, "Work");
+            assert!(candidate.devices[&dev.key()].profiles.contains_key("Work"));
+            if stored != dev.key() {
+                assert!(!candidate.devices.contains_key(stored));
+            }
+            assert!(sim.state().log.is_empty());
+        }
+    }
+    #[test]
+    fn bound_import_refuses_different_serial_and_stale_active_without_disk_migration() {
+        let sim = Sim::mouse();
+        let mut dev = sim.open(0x00c5, None).unwrap();
+        dev.serial = "unit".into();
+        sim.state().log.clear();
+        for (stored, expected) in [
+            ("00C4:other", "Work"),
+            ("00C4:unit", "Stale"),
+            ("00C5", "Stale"),
+        ] {
+            let folder = std::env::temp_dir().join(format!(
+                "bound-import-{}-{}",
+                std::process::id(),
+                SEQUENCE.fetch_add(1, Ordering::Relaxed)
+            ));
+            let path = folder.join("profiles.json");
+            let mut store = Store::load(&path).unwrap();
+            let mut profiles = secbird_core::profile::DeviceProfiles::default();
+            profiles.create("Work").unwrap();
+            profiles.switch("Work").unwrap();
+            store.devices.insert(stored.into(), profiles);
+            store.save().unwrap();
+            let before = std::fs::read(&path).unwrap();
+            assert!(bound_import_candidate(Store::load(&path).unwrap(), &dev, expected).is_err());
+            assert_eq!(std::fs::read(&path).unwrap(), before);
+            assert!(sim.state().log.is_empty());
+            std::fs::remove_file(path).unwrap();
+            std::fs::remove_dir(folder).unwrap();
+        }
     }
     #[test]
     fn power_request_types_identity_and_snapshot_errors_are_explicit() {

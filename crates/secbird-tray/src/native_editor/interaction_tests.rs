@@ -613,3 +613,431 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
         directory.display()
     );
 }
+
+unsafe fn modal_snapshot(hwnd: HWND) -> Value {
+    let mut value = Value::Null;
+    SendMessageW(
+        hwnd,
+        PROFILE_MODAL_TEST_QUERY,
+        0,
+        &mut value as *mut Value as isize,
+    );
+    value
+}
+
+#[test]
+#[ignore = "opens a bounded native profile modal; simulated transport only, run alone"]
+fn native_profile_modal_preview_selection_commit_and_full_backup() {
+    use secbird_core::profile_compat as compat;
+    let unique = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let directory = std::env::temp_dir().join(format!(
+        "synapse-native-profiles-{}-{unique}",
+        std::process::id()
+    ));
+    std::fs::create_dir_all(&directory).unwrap();
+    let frame = directory.join("frame.json");
+    let _environment = Environment::set(&[
+        ("SYNAPSE_LITE_CONFIG_DIR", &directory),
+        ("SYNAPSE_LITE_SMOKE_REPORT", &frame),
+        ("SYNAPSE_LITE_SMOKE_VIEW", Path::new("keyboard-lighting")),
+    ]);
+    let sim = Sim::keyboard();
+    let mut engine =
+        Engine::with_simulated_keyboard(&sim, directory.join("profiles.json")).unwrap();
+    let key = engine.devices()[0].key();
+    let mut store = Store::load(&directory.join("profiles.json")).unwrap();
+    let d = store.for_device(&engine.devices()[0]);
+    d.profiles.clear();
+    d.active = "Work".into();
+    for name in ["Work", "Other"] {
+        let mut profile = compat::new_native_profile(605, name).unwrap();
+        profile.extra.get_mut("_synapseLiteSynapse4").unwrap()["decoded"]["mappings"] = json!([{"inputID":"DKM_F1","outputType":"future-macro","macroGroup":{"guid":"macro-fixture","name":"Macro"}}]);
+        d.profiles.insert(name.into(), profile);
+    }
+    let macro_value = json!({"guid":"macro-fixture","macroEvents":[],"macroPlaybackOption":1});
+    let mut envelope: Value =
+        serde_json::from_slice(&compat::export_synapse4(&store, &key).unwrap().bytes).unwrap();
+    envelope["macros"] = json!([{"name":"Macro","hash":compat::synapse_hash(&macro_value).unwrap(),"payload":"eyJndWlkIjoibWFjcm8tZml4dHVyZSIsIm1hY3JvRXZlbnRzIjpbXSwibWFjcm9QbGF5YmFja09wdGlvbiI6MX0="}]);
+    store
+        .devices
+        .get_mut(&key)
+        .unwrap()
+        .extra
+        .insert("_synapseLiteSynapse4".into(), envelope);
+    let incoming = directory.join("incoming.synapse4");
+    std::fs::write(
+        &incoming,
+        compat::export_synapse4(&store, &key).unwrap().bytes,
+    )
+    .unwrap();
+    let mut damaged: Value = serde_json::from_slice(&std::fs::read(&incoming).unwrap()).unwrap();
+    // Lexical export order is Other,Work; preserve the good first record.
+    damaged["profiles"][1]["hash"] = json!("bad-hash");
+    damaged["macros"][0]["hash"] = json!("bad-hash");
+    let partial_incoming = directory.join("partial.synapse4");
+    std::fs::write(&partial_incoming, serde_json::to_vec(&damaged).unwrap()).unwrap();
+    damaged["profiles"][0]["hash"] = json!("bad-hash");
+    let invalid_incoming = directory.join("all-invalid.synapse4");
+    std::fs::write(&invalid_incoming, serde_json::to_vec(&damaged).unwrap()).unwrap();
+    let long_incoming = directory.join("long-incoming.synapse4");
+    let mut long: Store = serde_json::from_value(serde_json::to_value(&store).unwrap()).unwrap();
+    for i in 0..20 {
+        let name = format!("Long {i:02}");
+        long.devices.get_mut(&key).unwrap().profiles.insert(
+            name.clone(),
+            compat::new_native_profile(605, &name).unwrap(),
+        );
+    }
+    std::fs::write(
+        &long_incoming,
+        compat::export_synapse4(&long, &key).unwrap().bytes,
+    )
+    .unwrap();
+    // The existing profile stays selected; imported copies must remain inactive.
+    store
+        .devices
+        .get_mut(&key)
+        .unwrap()
+        .profiles
+        .remove("Other");
+    store
+        .extra
+        .insert("opaque-global".into(), json!({"retain":[1,2]}));
+    let foreign:secbird_core::profile::DeviceProfiles=serde_json::from_value(json!({"active":"Foreign","profiles":{"Foreign":{"future":{"retain":true}}},"device-future":17})).unwrap();
+    store.devices.insert("FFFF:foreign".into(), foreign);
+    store.save().unwrap();
+    assert!(engine.rescan().is_empty());
+    assert!(engine.event_paths().is_empty());
+    let engine = Arc::new(Mutex::new(engine));
+    let controller_directory = directory.clone();
+    let controller_key = key.clone();
+    let controller_sim = sim.clone();
+    let controller = std::thread::spawn(move || -> Result<Value, String> {
+        wait_for(
+            || {
+                std::fs::read(&frame)
+                    .ok()
+                    .and_then(|b| serde_json::from_slice::<Value>(&b).ok())
+                    .is_some_and(|f| f["presented"] == true && f["device_kind"] == "keyboard")
+            },
+            "Profile fixture frame",
+        )?;
+        unsafe {
+            let hwnd = WINDOW.load(Ordering::Acquire) as HWND;
+            let scale = f64::from(GetDpiForWindow(hwnd).max(96)) / 96.0;
+            SetWindowPos(
+                hwnd,
+                null_mut(),
+                0,
+                0,
+                (1320.0 * scale) as i32,
+                (900.0 * scale) as i32,
+                SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE,
+            );
+            redraw(hwnd);
+            let mut client: RECT = std::mem::zeroed();
+            GetClientRect(hwnd, &mut client);
+            let width = f64::from(client.right) / scale;
+            let initial = std::fs::read(controller_directory.join("profiles.json"))
+                .map_err(|e| e.to_string())?;
+            let before = brightness_write_count(&controller_sim);
+            let writes_before = controller_sim
+                .state()
+                .log
+                .iter()
+                .filter(|c| c.id & 0x80 == 0)
+                .count();
+            let browse = || {
+                SendMessageW(hwnd, PROFILE_MODAL_TEST_OPEN, 0, 0);
+                SendMessageW(
+                    hwnd,
+                    PROFILE_MODAL_TEST_BROWSE,
+                    0,
+                    &incoming as *const PathBuf as isize,
+                );
+            };
+            SendMessageW(hwnd, PROFILE_MODAL_TEST_OPEN, 0, 0);
+            SendMessageW(
+                hwnd,
+                PROFILE_MODAL_TEST_BROWSE,
+                0,
+                &long_incoming as *const PathBuf as isize,
+            );
+            wait_for(
+                || modal_snapshot(hwnd)["enabled"] == true,
+                "Long import preview",
+            )?;
+            redraw(hwnd);
+            let g = profile_modal_layout::geometry(width, true, false, true);
+            let snap = modal_snapshot(hwnd);
+            let expanded: Vec<_> = snap["rows"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|r| (r["selected"] == true, r["macros"].as_array().unwrap().len()))
+                .collect();
+            let bar = profile_modal_layout::scrollbar(&g, &expanded, 0.0)
+                .ok_or("Missing long-list source scrollbar")?;
+            let x = bar.thumb.x + 4.0;
+            let y = bar.thumb.y + bar.thumb.height / 2.0;
+            SendMessageW(hwnd, WM_LBUTTONDOWN, 1, position(x, y, scale));
+            SendMessageW(
+                hwnd,
+                WM_MOUSEMOVE,
+                1,
+                position(x, bar.track.y + bar.track.height - 4.0, scale),
+            );
+            SendMessageW(
+                hwnd,
+                WM_LBUTTONUP,
+                0,
+                position(x, bar.track.y + bar.track.height - 4.0, scale),
+            );
+            if modal_snapshot(hwnd)["scroll"].as_f64().unwrap_or(0.0) < bar.maximum * 0.9 {
+                return Err(format!(
+                    "Source thumb drag did not scroll: {}",
+                    modal_snapshot(hwnd)
+                ));
+            }
+
+            if std::fs::read(controller_directory.join("profiles.json")).unwrap() != initial {
+                return Err("Browse changed saved profiles".into());
+            }
+            let g = profile_modal_layout::geometry(width, true, false, true);
+            lighting_click(hwnd, g.cancel.x + 20.0, g.cancel.y + 13.0, scale);
+            if modal_snapshot(hwnd)["open"] != false {
+                return Err("Cancel did not close modal".into());
+            }
+            if std::fs::read(controller_directory.join("profiles.json")).unwrap() != initial {
+                return Err("Cancel changed saved profiles".into());
+            }
+            for (path, count) in [(&partial_incoming, 1usize), (&invalid_incoming, 0usize)] {
+                SendMessageW(hwnd, PROFILE_MODAL_TEST_OPEN, 0, 0);
+                SendMessageW(
+                    hwnd,
+                    PROFILE_MODAL_TEST_BROWSE,
+                    0,
+                    path as *const PathBuf as isize,
+                );
+                wait_for(
+                    || {
+                        let s = modal_snapshot(hwnd);
+                        s["open"] == true && s["loading"] == false
+                    },
+                    "Damaged-record preview",
+                )?;
+                let snap = modal_snapshot(hwnd);
+                if snap["warning"] != true
+                    || snap["rows"].as_array().is_none_or(|a| a.len() != count)
+                    || snap["enabled"] != json!(count > 0)
+                {
+                    return Err(format!(
+                        "Partial/all-invalid source preview mismatch: {snap}"
+                    ));
+                }
+                if std::fs::read(controller_directory.join("profiles.json")).unwrap() != initial {
+                    return Err("Damaged-record preview saved profiles".into());
+                }
+                redraw(hwnd);
+                lighting_click(hwnd, g.cancel.x + 20.0, g.cancel.y + 13.0, scale);
+            }
+            browse();
+            wait_for(
+                || modal_snapshot(hwnd)["enabled"] == true,
+                "Second import preview",
+            )?;
+            redraw(hwnd);
+            let snapshot = modal_snapshot(hwnd);
+            let rows = snapshot["rows"].as_array().ok_or("Missing preview rows")?;
+            let other = rows
+                .iter()
+                .position(|r| r["name"] == "Other")
+                .ok_or("Missing Other row")?;
+            let work = rows
+                .iter()
+                .position(|r| r["name"] == "Work")
+                .ok_or("Missing Work row")?;
+            let expanded: Vec<_> = rows
+                .iter()
+                .map(|r| (r["selected"] == true, r["macros"].as_array().unwrap().len()))
+                .collect();
+            let (layout, _) = profile_modal_layout::rows(&g, &expanded, 0.0);
+            let r = layout[other].check;
+            lighting_click(hwnd, r.x + 10.0, r.y + 10.0, scale);
+            redraw(hwnd);
+            let snapshot = modal_snapshot(hwnd);
+            let expanded: Vec<_> = snapshot["rows"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|r| (r["selected"] == true, r["macros"].as_array().unwrap().len()))
+                .collect();
+            let (layout, _) = profile_modal_layout::rows(&g, &expanded, 0.0);
+            let r = layout[work].macros[0];
+            lighting_click(hwnd, r.x + 10.0, r.y + 10.0, scale);
+            // Reproduce the shipped component quirk: select-all changes parent
+            // props/visible marks, but does not reset isMacroSelected action data.
+            redraw(hwnd);
+            lighting_click(hwnd, g.all.x + 30.0, g.all.y + 20.0, scale);
+            redraw(hwnd);
+            lighting_click(hwnd, g.all.x + 30.0, g.all.y + 20.0, scale);
+            let snap = modal_snapshot(hwnd);
+            if snap["rows"][work]["macros"][0]["mark"] != true
+                || snap["rows"][work]["macros"][0]["selected"] != false
+            {
+                return Err(format!("Source visual/data checkbox quirk lost: {snap}"));
+            }
+            let expanded: Vec<_> = snap["rows"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|r| (r["selected"] == true, r["macros"].as_array().unwrap().len()))
+                .collect();
+            let (layout, _) = profile_modal_layout::rows(&g, &expanded, 0.0);
+            let r = layout[other].check;
+            redraw(hwnd);
+            lighting_click(hwnd, r.x + 10.0, r.y + 10.0, scale);
+            let snap = modal_snapshot(hwnd);
+            if snap["rows"][other]["selected"] != false
+                || snap["rows"][work]["macros"][0]["selected"] != false
+            {
+                return Err(format!("Checkbox events missed: {snap}"));
+            }
+            redraw(hwnd);
+            lighting_click(hwnd, g.commit.x + 20.0, g.commit.y + 13.0, scale);
+            wait_for(
+                || {
+                    Store::load(&controller_directory.join("profiles.json"))
+                        .ok()
+                        .is_some_and(|s| {
+                            s.devices[&controller_key].profiles.contains_key("Work (1)")
+                        })
+                },
+                "Selected inactive import persisted",
+            )?;
+            let saved = Store::load(&controller_directory.join("profiles.json")).unwrap();
+            let d = &saved.devices[&controller_key];
+            if d.active != "Work"
+                || d.profiles.contains_key("Other")
+                || d.profiles["Work (1)"].extra["_synapseLiteSynapse4"]["decoded"]["guid"]
+                    == d.profiles["Work"].extra["_synapseLiteSynapse4"]["decoded"]["guid"]
+            {
+                return Err("Import identity/selection/activation contract failed".into());
+            }
+            if d.profiles["Work (1)"].extra["_synapseLiteSynapse4"]["decoded"]["mappings"]
+                .as_array()
+                .is_none_or(|a| !a.is_empty())
+            {
+                return Err("Deselected macro binding was retained".into());
+            }
+            let export = |path: &PathBuf, format: usize| -> Result<(), String> {
+                SendMessageW(hwnd, PROFILE_MODAL_TEST_OPEN, 1, 0);
+                wait_for(|| modal_snapshot(hwnd)["enabled"] == true, "Export preview")?;
+                let s = modal_snapshot(hwnd);
+                let selected = s["rows"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .filter(|r| r["selected"] == true)
+                    .count();
+                if selected != 1 {
+                    return Err(format!("Export must initially select active only: {s}"));
+                }
+                redraw(hwnd);
+                let g = profile_modal_layout::geometry(width, false, false, false);
+                lighting_click(hwnd, g.commit.x + 20.0, g.commit.y + 13.0, scale);
+                wait_for(
+                    || modal_snapshot(hwnd)["export_plan"] == true,
+                    "Save picker request",
+                )?;
+                SendMessageW(
+                    hwnd,
+                    PROFILE_MODAL_TEST_SAVE,
+                    format,
+                    path as *const PathBuf as isize,
+                );
+                wait_for(|| path.exists(), "Export output")
+            };
+            let selected = controller_directory.join("selected.synapse4");
+            export(&selected, 1)?;
+            let output: Value = serde_json::from_slice(&std::fs::read(&selected).unwrap()).unwrap();
+            if output["profiles"].as_array().unwrap().len() != 1
+                || output["profiles"][0]["name"] != "Work"
+            {
+                return Err("Synapse export did not honor selection".into());
+            }
+            let full = controller_directory.join("backup.json");
+            export(&full, 2)?;
+            let full: Value = serde_json::from_slice(&std::fs::read(full).unwrap()).unwrap();
+            if full["devices"]["FFFF:foreign"]["device-future"] != 17
+                || full["opaque-global"]["retain"] != json!([1, 2])
+                || full["devices"][&controller_key]["profiles"]["Work (1)"].is_null()
+            {
+                return Err("Full backup dropped unselected or opaque data".into());
+            }
+            // A fresh-store owner change after preview must fail rather than import
+            // into whichever profile happens to be active by commit time.
+            browse();
+            wait_for(
+                || modal_snapshot(hwnd)["enabled"] == true,
+                "Stale-owner preview",
+            )?;
+            let mut changed = Store::load(&controller_directory.join("profiles.json")).unwrap();
+            changed.devices.get_mut(&controller_key).unwrap().active = "Work (1)".into();
+            changed.save().unwrap();
+            let changed_bytes = std::fs::read(controller_directory.join("profiles.json")).unwrap();
+            redraw(hwnd);
+            let g = profile_modal_layout::geometry(width, true, false, true);
+            lighting_click(hwnd, g.commit.x + 20.0, g.commit.y + 13.0, scale);
+            wait_for(
+                || acknowledge_owned_failure(hwnd),
+                "Stale owner acknowledged failure",
+            )?;
+            if std::fs::read(controller_directory.join("profiles.json")).unwrap() != changed_bytes {
+                return Err("Stale preview changed saved profiles".into());
+            }
+            if controller_sim
+                .state()
+                .log
+                .iter()
+                .filter(|c| c.id & 0x80 == 0)
+                .count()
+                != writes_before
+            {
+                return Err("Profile flow sent a simulated SET command".into());
+            }
+            if brightness_write_count(&controller_sim) != before {
+                return Err("Profile flow wrote simulated hardware brightness".into());
+            }
+            PostMessageW(hwnd, WM_CLOSE, 0, 0);
+            wait_for(
+                || {
+                    acknowledge_owned_failure(hwnd);
+                    IsWindow(hwnd) == 0
+                },
+                "Profile editor closed",
+            )?;
+            Ok(
+                json!({"browse_cancel_read_only":true,"partial_record_warning_and_empty_disabled_preview":true,"source_checkbox_events":true,"source_macro_visual_data_quirk":true,"source_scrollbar_drag":true,"fresh_guid_inactive_import":true,"macro_binding_removed":true,"selected_export":true,"full_backup_retains_foreign_and_opaque":true,"stale_owner_refused":true,"no_simulated_set_commands":true,"sim_only":true}),
+            )
+        }
+    });
+    let window = run_window(engine, Some(Duration::from_secs(25)), None);
+    let result = controller
+        .join()
+        .expect("Profile controller panic")
+        .expect("Profile modal interaction failed");
+    window.unwrap();
+    std::fs::write(
+        directory.join("interaction.json"),
+        serde_json::to_vec_pretty(&result).unwrap(),
+    )
+    .unwrap();
+    eprintln!(
+        "Native simulated profile modal evidence: {}",
+        directory.display()
+    );
+}

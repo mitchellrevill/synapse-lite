@@ -12,6 +12,7 @@ use base64::Engine;
 use serde_json::{json, Map, Value};
 use std::collections::BTreeMap;
 
+pub mod gui;
 mod mappings;
 mod settings;
 

@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "scope": "synthetic Ornata native profile modal; actual HWND messages and worker paths",
+  "physical_discovery_disabled": true,
+  "physical_hardware_tested": false,
+  "os_picker_test_seam": "synchronous local test path messages; profile controls use actual mouse messages",
+  "suite": {
+    "tests": [
+      "native Lighting interaction",
+      "native Power interaction",
+      "native profile modal interaction"
+    ],
+    "passed": 3,
+    "failed": 0,
+    "elapsed_seconds": 2.04,
+    "after_asset_correction": true
+  },
+  "checks": {
+    "browse_cancel_read_only": true,
+    "fresh_guid_inactive_import": true,
+    "full_backup_retains_foreign_and_opaque": true,
+    "macro_binding_removed": true,
+    "no_simulated_set_commands": true,
+    "partial_record_warning_and_empty_disabled_preview": true,
+    "selected_export": true,
+    "sim_only": true,
+    "source_checkbox_events": true,
+    "source_macro_visual_data_quirk": true,
+    "source_scrollbar_drag": true,
+    "stale_owner_refused": true
+  },
+  "asset_validation": {
+    "engine": "Chromium SVG Image decode and Canvas2D sRGB",
+    "browser_version": "156.0.4314.42",
+    "scale": 1.25,
+    "default_scale1_also_verified": true,
+    "all_saved_bmp_rgb_equal_browser_canvas": true,
+    "maximum_straight_alpha_rounding_error": 1,
+    "records": [
+      {
+        "key": "profile-close",
+        "source_sha256": "53b67d2c7d30aa84869391d651541e981b2f9ac508a2c0c04d37f5f4a8faef11",
+        "output_sha256": "58cbce36207c3175422962d8aa93b1cad88a295369c1ed57927f054e0883a22c",
+        "logical_size": 20,
+        "physical_size": 25,
+        "background": "#222222",
+        "transparent_pixels": 471,
+        "opaque_pixels": 78,
+        "partial_alpha_pixels": 76
+      },
+      {
+        "key": "profile-folder",
+        "source_sha256": "5a167dae37b5df1c54cffe5fe45431e881c83e01a306f6945629ffea3b66aa6f",
+        "output_sha256": "e3e6dedff22c8f03711a896b878e7df159e89e0c2017d6ed1e79933c22369474",
+        "logical_size": 20,
+        "physical_size": 25,
+        "background": "#111111",
+        "transparent_pixels": 142,
+        "opaque_pixels": 438,
+        "partial_alpha_pixels": 45,
+        "opaque_source_gray_112_pixels": 438
+      },
+      {
+        "key": "profile-macro",
+        "source_sha256": "56b3831edbfe07f4c41e93920e1d3276b9455625b73ac956f2572e57f53e117c",
+        "output_sha256": "b191c4f260db3167e9b8cc295cc9962a7caff15d62f782a278e31d917eeb85e0",
+        "logical_size": 20,
+        "physical_size": 25,
+        "background": "#111111",
+        "transparent_pixels": 110,
+        "opaque_pixels": 367,
+        "partial_alpha_pixels": 148
+      },
+      {
+        "key": "profile-cone",
+        "source_sha256": "63a494b66617e37e640171cf63ccbe43d578be35d0ca75dcc7d0f49e1eb2b6e7",
+        "output_sha256": "179ca6867981164745b3ce583eca754670310958b121afc6999b5a89dbbb5c7b",
+        "logical_size": 40,
+        "physical_size": 50,
+        "background": "#111111",
+        "transparent_pixels": 1280,
+        "opaque_pixels": 1083,
+        "partial_alpha_pixels": 137,
+        "opaque_source_orange_253_134_17_pixels": 121
+      },
+      {
+        "key": "profile-warning",
+        "source_sha256": "863d6b3c0cb80e81929ab6e647c5aa12a460372dc0602e3a062770d6f46a4c0f",
+        "output_sha256": "6f100a1d6780dadba85136c0df0584dca85efc05d39e860a92d3ced11cdcb41d",
+        "logical_size": 20,
+        "physical_size": 25,
+        "background": "#222222",
+        "transparent_pixels": 303,
+        "opaque_pixels": 232,
+        "partial_alpha_pixels": 90
+      }
+    ]
+  },
+  "not_proven": [
+    "stock Synapse re-import acceptance",
+    "physical device writes or activation",
+    "whole modal or application pixel parity",
+    "final combined memory acceptance",
+    "CSS animation/shadow/GDI font raster parity",
+    "held-track scrollbar repeat or snap-back"
+  ],
+  "private_paths_names_serials_included": false
+}

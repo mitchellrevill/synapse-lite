@@ -39,6 +39,11 @@ mod performance_view;
 mod power_layout;
 mod power_view;
 mod profile_files;
+mod profile_modal_backend;
+mod profile_modal_files;
+mod profile_modal_layout;
+mod profile_modal_model;
+mod profile_modal_view;
 mod source_layout;
 mod viewport;
 
@@ -47,6 +52,16 @@ const RESPONSE_TIMER: usize = 71;
 const SMOKE_TIMER: usize = 72;
 const PROFILE_DIALOG: u32 = WM_APP + 91;
 const PROFILE_RENAME: u32 = WM_APP + 92;
+const PROFILE_MODAL_BROWSE: u32 = WM_APP + 94;
+const PROFILE_MODAL_SAVE: u32 = WM_APP + 95;
+#[cfg(test)]
+const PROFILE_MODAL_TEST_BROWSE: u32 = WM_APP + 96;
+#[cfg(test)]
+const PROFILE_MODAL_TEST_SAVE: u32 = WM_APP + 97;
+#[cfg(test)]
+const PROFILE_MODAL_TEST_OPEN: u32 = WM_APP + 98;
+#[cfg(test)]
+const PROFILE_MODAL_TEST_QUERY: u32 = WM_APP + 99;
 const FAILURE_DIALOG: u32 = WM_APP + 93;
 const FAILURE_TITLE: &str = "Synapse Lite - Action failed";
 const PERFORMANCE_REPEAT: usize = 73;
@@ -328,6 +343,7 @@ enum Action {
     CreateProfile,
     DuplicateProfile,
     RenameProfile,
+    ProfileModal(profile_modal_model::Control),
     ImportProfile,
     ExportProfile,
     Dpi,
@@ -384,6 +400,7 @@ struct Hit {
 }
 
 enum Job {
+    Profiles(profile_modal_model::Request),
     Refresh,
     Rescan,
     Action(&'static str, Value),
@@ -433,6 +450,7 @@ fn enqueue_setting(queue: &mut VecDeque<Job>, job: Job) -> Result<(), &'static s
 }
 
 struct Reply {
+    profile_modal: Option<profile_modal_model::Message>,
     state: Option<Value>,
     buttons: Option<Value>,
     status: String,
@@ -444,6 +462,14 @@ struct Reply {
 /// The UI thread never holds that lock and no browser or HTTP listener is started.
 fn worker(engine: Arc<Mutex<Engine>>, jobs: mpsc::Receiver<Job>, replies: mpsc::Sender<Reply>) {
     for job in jobs {
+        let job = match job {
+            Job::Profiles(request) => {
+                let reply = profile_modal_backend::run(request, &engine);
+                let _ = replies.send(reply);
+                continue;
+            }
+            other => other,
+        };
         let result = (|| -> Result<Reply, String> {
             if let Job::ImportFile { path, target } = job {
                 let bytes = profile_files::read(&path)?;
@@ -454,6 +480,7 @@ fn worker(engine: Arc<Mutex<Engine>>, jobs: mpsc::Receiver<Job>, replies: mpsc::
                     server::import_profile_document(&mut engine, &bytes, target.as_deref())
                         .map_err(|e| e.to_string())?;
                 return Ok(Reply {
+                    profile_modal: None,
                     state: answer.get("state").cloned(),
                     buttons: None,
                     status: format!(
@@ -482,6 +509,7 @@ fn worker(engine: Arc<Mutex<Engine>>, jobs: mpsc::Receiver<Job>, replies: mpsc::
                 };
                 profile_files::write(&path, &report.bytes)?;
                 return Ok(Reply {
+                    profile_modal: None,
                     state: None,
                     buttons: None,
                     status: "Profile export saved".into(),
@@ -544,12 +572,13 @@ fn worker(engine: Arc<Mutex<Engine>>, jobs: mpsc::Receiver<Job>, replies: mpsc::
                     }
                     server::dispatch(&mut engine, "GET", "/api/state", &[])
                 }
-                Job::ImportFile { .. } | Job::ExportFile { .. } => {
+                Job::Profiles(_) | Job::ImportFile { .. } | Job::ExportFile { .. } => {
                     return Err("File operation was not routed".into())
                 }
             }
             .map_err(|e| e.to_string())?;
             Ok(Reply {
+                profile_modal: None,
                 state: Some(state),
                 buttons,
                 status,
@@ -558,6 +587,7 @@ fn worker(engine: Arc<Mutex<Engine>>, jobs: mpsc::Receiver<Job>, replies: mpsc::
             })
         })();
         let reply = result.unwrap_or_else(|error| Reply {
+            profile_modal: None,
             state: None,
             buttons: None,
             status: error,
@@ -701,6 +731,8 @@ struct State {
     profile_open: bool,
     profile_offset: usize,
     profile_actions: bool,
+    profile_modal: Option<profile_modal_model::View>,
+    profile_export: Option<profile_modal_model::ExportPlan>,
     renaming: Option<String>,
     notices: Vec<String>,
     selected_button: String,
@@ -1280,6 +1312,11 @@ impl State {
     unsafe fn collect(&mut self) {
         while let Ok(reply) = self.replies.try_recv() {
             self.pending = self.pending.saturating_sub(1);
+            if let Some(message) = reply.profile_modal {
+                if let Some(view) = &mut self.profile_modal {
+                    view.apply(message);
+                }
+            }
             if let Some(state) = reply.state {
                 self.state = state;
             }
@@ -1328,6 +1365,16 @@ impl State {
             if self.selected.is_some() && self.device().is_none() {
                 self.selected = None;
                 self.buttons.clear();
+            }
+            if self.profile_modal.as_ref().is_some_and(|view| {
+                self.device().is_none_or(|d| {
+                    d["id"].as_str() != Some(view.owner.device.as_str())
+                        || d["active"].as_str() != Some(view.owner.profile.as_str())
+                })
+            }) {
+                self.profile_modal = None;
+                ReleaseCapture();
+                self.error("The selected device/profile changed; reopen the profile dialog");
             }
             self.sync_performance(false);
             if let Some(device) = self.device().cloned() {
@@ -1463,6 +1510,10 @@ impl State {
             });
         for (_, hwnd) in self.fields.drain() {
             DestroyWindow(hwnd);
+        }
+        if self.profile_modal.is_some() {
+            self.focus = 0;
+            return;
         }
         let Some(device) = self.device().cloned() else {
             return;
@@ -1677,14 +1728,26 @@ impl State {
                     SendMessageW(*hwnd, EM_SETSEL, 0, -1);
                 }
             }
+            Action::ProfileModal(control) => self.profile_modal_action(control),
             Action::ImportProfile | Action::ExportProfile => {
                 self.profile_actions = false;
-                PostMessageW(
-                    self.hwnd,
-                    PROFILE_DIALOG,
-                    usize::from(matches!(action, Action::ExportProfile)),
-                    0,
-                );
+                if self
+                    .device()
+                    .is_some_and(|d| matches!(d["pid"].as_str(), Some("025D" | "00C4" | "00C5")))
+                {
+                    self.open_profile_modal(if matches!(action, Action::ImportProfile) {
+                        profile_modal_model::Mode::Import
+                    } else {
+                        profile_modal_model::Mode::Export
+                    });
+                } else {
+                    PostMessageW(
+                        self.hwnd,
+                        PROFILE_DIALOG,
+                        usize::from(matches!(action, Action::ExportProfile)),
+                        0,
+                    );
+                }
             }
             Action::Dpi => {
                 let values = (
@@ -1837,6 +1900,113 @@ impl State {
             .unwrap_or("backlight")
     }
 
+    unsafe fn open_profile_modal(&mut self, mode: profile_modal_model::Mode) {
+        let Some(d) = self.device() else {
+            self.error("Select a device first");
+            return;
+        };
+        let owner = profile_modal_model::Owner {
+            device: d["id"].as_str().unwrap_or_default().into(),
+            profile: d["active"].as_str().unwrap_or("Default").into(),
+        };
+        let name = d["name"].as_str().unwrap_or("Razer device").to_string();
+        let view = profile_modal_model::View::new(owner.clone(), mode, name);
+        let token = view.token;
+        let update = lighting_view::cancel(self);
+        self.lighting_update(update);
+        self.performance_gesture = None;
+        self.power_gesture = None;
+        KillTimer(self.hwnd, PERFORMANCE_REPEAT);
+        ReleaseCapture();
+        self.profile_modal = Some(view);
+        self.profile_open = false;
+        self.profile_actions = false;
+        self.renaming = None;
+        self.focus = 0;
+        self.rebuild_fields();
+        if mode == profile_modal_model::Mode::Export {
+            self.queue(Job::Profiles(profile_modal_model::Request::PreviewExport {
+                token,
+                owner,
+            }));
+        }
+    }
+    unsafe fn profile_preview_path(
+        &mut self,
+        token: u64,
+        owner: profile_modal_model::Owner,
+        path: PathBuf,
+    ) {
+        if let Some(view) = self
+            .profile_modal
+            .as_mut()
+            .filter(|v| v.token == token && v.owner == owner)
+        {
+            view.filename = path
+                .file_name()
+                .map(|s| s.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            view.loading = true;
+            view.error.clear();
+            view.data = None;
+            view.choices.clear();
+            self.queue(Job::Profiles(profile_modal_model::Request::PreviewImport {
+                token,
+                owner,
+                path,
+            }));
+            InvalidateRect(self.hwnd, null(), 0);
+        }
+    }
+    unsafe fn profile_modal_action(&mut self, control: profile_modal_model::Control) {
+        use profile_modal_model::{Control, Mode, Request};
+        match control {
+            Control::Close => {
+                self.profile_modal = None;
+                ReleaseCapture();
+                self.rebuild_fields();
+            }
+            Control::Browse => {
+                PostMessageW(self.hwnd, PROFILE_MODAL_BROWSE, 0, 0);
+            }
+            Control::Commit => {
+                let Some(view) = self.profile_modal.take() else {
+                    return;
+                };
+                if !view.enabled() {
+                    self.profile_modal = Some(view);
+                    return;
+                }
+                let Some(data) = view.data else { return };
+                if view.mode == Mode::Import {
+                    self.queue(Job::Profiles(Request::Import {
+                        owner: view.owner,
+                        data,
+                        choices: view.choices,
+                    }));
+                } else {
+                    self.profile_export = Some(profile_modal_model::ExportPlan {
+                        owner: view.owner,
+                        data,
+                        choices: view.choices,
+                    });
+                    #[cfg(not(test))]
+                    PostMessageW(self.hwnd, PROFILE_MODAL_SAVE, 0, 0);
+                    #[cfg(test)]
+                    if !self.smoke_requested.is_some() {
+                        PostMessageW(self.hwnd, PROFILE_MODAL_SAVE, 0, 0);
+                    }
+                }
+                self.rebuild_fields();
+            }
+            other => {
+                if let Some(view) = &mut self.profile_modal {
+                    view.toggle(&other);
+                }
+            }
+        }
+        InvalidateRect(self.hwnd, null(), 0);
+    }
     fn error(&mut self, message: &str) {
         self.status = message.into();
         self.failed = true;
@@ -2724,6 +2894,7 @@ unsafe fn paint(state: &mut State, dc: HDC) {
             DT_LEFT,
         );
     }
+    profile_modal_view::paint(state, &mut p);
     if state.focus > 0 {
         if let Some(hit) = p.hits.get(state.focus - 1) {
             DrawFocusRect(dc, &hit.rect);
@@ -2834,6 +3005,101 @@ unsafe extern "system" fn window_proc(
         }
         return 0;
     }
+    if message == PROFILE_MODAL_BROWSE {
+        let pending = (*pointer).try_borrow().ok().and_then(|state| {
+            state
+                .profile_modal
+                .as_ref()
+                .map(|view| (view.token, view.owner.clone()))
+        });
+        if let Some((token, owner)) = pending {
+            let result = profile_modal_files::browse(hwnd);
+            if let Ok(mut state) = (*pointer).try_borrow_mut() {
+                match result {
+                    Ok(Some(path)) => state.profile_preview_path(token, owner, path),
+                    Ok(None) => {}
+                    Err(error) => state.error(&error),
+                }
+            }
+        }
+        return 0;
+    }
+    if message == PROFILE_MODAL_SAVE {
+        let plan = (*pointer)
+            .try_borrow_mut()
+            .ok()
+            .and_then(|mut state| state.profile_export.take());
+        if let Some(plan) = plan {
+            let result = profile_modal_files::save(hwnd);
+            if let Ok(mut state) = (*pointer).try_borrow_mut() {
+                match result {
+                    Ok(Some((path, format))) => {
+                        state.queue(Job::Profiles(profile_modal_model::Request::Export {
+                            plan,
+                            path,
+                            format,
+                        }))
+                    }
+                    Ok(None) => {}
+                    Err(error) => state.error(&error),
+                }
+            }
+        }
+        return 0;
+    }
+    #[cfg(test)]
+    if message == PROFILE_MODAL_TEST_BROWSE {
+        let path = (*(lparam as *const PathBuf)).clone();
+        if let Ok(mut state) = (*pointer).try_borrow_mut() {
+            if let Some(v) = &state.profile_modal {
+                let (token, owner) = (v.token, v.owner.clone());
+                state.profile_preview_path(token, owner, path);
+            }
+        }
+        return 0;
+    }
+    #[cfg(test)]
+    if message == PROFILE_MODAL_TEST_SAVE {
+        let path = (*(lparam as *const PathBuf)).clone();
+        if let Ok(mut state) = (*pointer).try_borrow_mut() {
+            if let Some(plan) = state.profile_export.take() {
+                let format = if wparam == 2 {
+                    profile_files::Format::Native
+                } else {
+                    profile_files::Format::Synapse4
+                };
+                state.queue(Job::Profiles(profile_modal_model::Request::Export {
+                    plan,
+                    path,
+                    format,
+                }));
+            }
+        }
+        return 0;
+    }
+    #[cfg(test)]
+    if message == PROFILE_MODAL_TEST_OPEN {
+        if let Ok(mut state) = (*pointer).try_borrow_mut() {
+            state.open_profile_modal(if wparam == 1 {
+                profile_modal_model::Mode::Export
+            } else {
+                profile_modal_model::Mode::Import
+            });
+        }
+        return 0;
+    }
+    #[cfg(test)]
+    if message == PROFILE_MODAL_TEST_QUERY {
+        if let Ok(state) = (*pointer).try_borrow() {
+            let value = if let Some(v) = &state.profile_modal {
+                json!({"open":true,"loading":v.loading,"enabled":v.enabled(),"native":v.native(),"cloud":v.cloud,"warning":v.warning,"error":v.error,"scroll":v.scroll,"mode":if v.mode==profile_modal_model::Mode::Import{"import"}else{"export"},"rows":v.data.as_ref().map(|d|d.rows.iter().zip(&v.choices).map(|(r,c)|json!({"name":r.name,"device":r.device_key,"selected":c.selected,"macros":r.macros.iter().map(|m|json!({"guid":m.guid,"selected":c.macros.contains(&m.guid),"mark":v.macro_marks.get(d.rows.iter().position(|other|std::ptr::eq(other,r)).unwrap()).is_some_and(|marks|marks.contains(&m.guid))})).collect::<Vec<_>>()})).collect::<Vec<_>>()).unwrap_or_default()})
+            } else {
+                json!({"open":false,"export_plan":state.profile_export.is_some()})
+            };
+            *(lparam as *mut Value) = value;
+        }
+        return 0;
+    }
     if message == PROFILE_DIALOG {
         // Common dialogs pump this window's messages. Release the state borrow
         // before opening one so paints, device replies and resize remain safe.
@@ -2871,6 +3137,105 @@ unsafe extern "system" fn window_proc(
         }
         return DefWindowProcW(hwnd, message, wparam, lparam);
     };
+    if state.profile_modal.is_some() {
+        match message {
+            WM_LBUTTONDOWN => {
+                SetFocus(hwnd);
+                let x = f64::from((lparam as u32 & 0xffff) as i16) / f64::from(state.scale);
+                let y = f64::from(((lparam as u32 >> 16) & 0xffff) as i16) / f64::from(state.scale);
+                let g = profile_modal_view::geometry(&state, state.profile_modal.as_ref().unwrap());
+                let v = state.profile_modal.as_mut().unwrap();
+                if !v.cloud {
+                    if let Some(bar) = profile_modal_layout::scrollbar(&g, &v.expanded(), v.scroll)
+                    {
+                        if bar.contains(x, y) {
+                            if bar.thumb_contains(y) {
+                                v.scroll_grab = Some(y - bar.thumb.y);
+                                SetCapture(hwnd);
+                            } else {
+                                v.scroll = bar.page(v.scroll, y);
+                            }
+                            InvalidateRect(hwnd, null(), 0);
+                        }
+                    }
+                }
+                return 0;
+            }
+            WM_LBUTTONUP => {
+                if state
+                    .profile_modal
+                    .as_mut()
+                    .unwrap()
+                    .scroll_grab
+                    .take()
+                    .is_some()
+                {
+                    ReleaseCapture();
+                    InvalidateRect(hwnd, null(), 0);
+                    return 0;
+                }
+                let point = POINT {
+                    x: (lparam as u32 & 0xffff) as i16 as i32,
+                    y: ((lparam as u32 >> 16) & 0xffff) as i16 as i32,
+                };
+                let action = state
+                    .hits
+                    .iter()
+                    .rev()
+                    .find(|h| PtInRect(&h.rect, point) != 0)
+                    .map(|h| h.action.clone());
+                if let Some(Action::ProfileModal(control)) = action {
+                    state.profile_modal_action(control);
+                }
+                return 0;
+            }
+            WM_MOUSEWHEEL => {
+                let modal_width = f64::from(state.width) / f64::from(state.scale);
+                if let Some(v) = &mut state.profile_modal {
+                    let g = profile_modal_layout::geometry(
+                        modal_width,
+                        v.mode == profile_modal_model::Mode::Import,
+                        v.native(),
+                        v.warning,
+                    );
+                    let (_, max) = profile_modal_layout::rows(&g, &v.expanded(), 0.0);
+                    v.scroll = (v.scroll
+                        - if (wparam >> 16) as u16 as i16 > 0 {
+                            40.0
+                        } else {
+                            -40.0
+                        })
+                    .clamp(0.0, max);
+                }
+                InvalidateRect(hwnd, null(), 0);
+                return 0;
+            }
+            WM_MOUSEMOVE => {
+                let y = f64::from(((lparam as u32 >> 16) & 0xffff) as i16) / f64::from(state.scale);
+                let g = profile_modal_view::geometry(&state, state.profile_modal.as_ref().unwrap());
+                let v = state.profile_modal.as_mut().unwrap();
+                if let Some(grab) = v.scroll_grab {
+                    if let Some(bar) = profile_modal_layout::scrollbar(&g, &v.expanded(), v.scroll)
+                    {
+                        v.scroll = bar.drag(y, grab);
+                    }
+                }
+                InvalidateRect(hwnd, null(), 0);
+                return 0;
+            }
+            WM_CANCELMODE | WM_CAPTURECHANGED => {
+                state.profile_modal.as_mut().unwrap().scroll_grab = None;
+                if message == WM_CANCELMODE {
+                    ReleaseCapture();
+                }
+                InvalidateRect(hwnd, null(), 0);
+                return 0;
+            }
+            WM_KEYDOWN if wparam == 27 => return 0,
+            WM_RBUTTONUP => return 0,
+            _ => {}
+        }
+    }
     match message {
         WM_COMMAND
             if (lighting_view::HEX..=lighting_view::BOOST)
@@ -3440,6 +3805,8 @@ fn run_window(
             profile_open: false,
             profile_offset: 0,
             profile_actions: false,
+            profile_modal: None,
+            profile_export: None,
             renaming: None,
             notices: Vec::new(),
             selected_button: String::new(),
@@ -3495,6 +3862,11 @@ fn run_window(
                 "refresh",
                 "expand",
                 "profile-default",
+                "profile-close",
+                "profile-folder",
+                "profile-macro",
+                "profile-cone",
+                "profile-warning",
                 "more",
                 "dpi-xy",
                 "dpi-xy-active",
