@@ -80,6 +80,11 @@ pub const DPI_STAGES: Command = Command::new(0x04, 0x06);
 pub const DPI_STAGES_SIZE: u8 = 0x26;
 pub const MAX_DPI_STAGES: usize = 5;
 
+/// DeathAdder V3 HyperSpeed low-power threshold, a raw 0..255 battery fraction.
+/// Source middleware uses GET 07:81, SET 07:01, one argument byte.
+pub const CRITICAL_LEVEL: Command = Command::new(0x07, 0x01);
+pub const CRITICAL_LEVEL_SIZE: u8 = 0x01;
+
 /// Seconds idle before a wireless device sleeps: `[hi, lo]`. GET seen in user reports.
 pub const IDLE_TIME: Command = Command::new(0x07, 0x03);
 pub const IDLE_TIME_SIZE: u8 = 0x02;

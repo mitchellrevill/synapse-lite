@@ -69,6 +69,8 @@ pub struct SimState {
     pub dpi_stages: Option<(u8, Vec<(u16, u16)>)>,
     /// Sleep timer in seconds (`07:83`), and the auto-sleep switch where there is one.
     pub idle_seconds: Option<u16>,
+    /// Raw low-power threshold byte (07:81/01), when explicitly configured.
+    pub critical_threshold: Option<u8>,
     /// Laptops: Smart Dimming as (enabled, level), level 0 half, 1 quarter, 2 dark.
     pub smart_dimming: Option<(u8, u8)>,
     /// Keyboards: gaming mode bits (`00:08`); `None` where the device has none.
@@ -130,6 +132,7 @@ impl SimState {
             macros: None,
             macro_recyclable: 0,
             idle_seconds: None,
+            critical_threshold: None,
             smart_dimming: None,
             game_mode: None,
             auto_sleep: None,
@@ -378,6 +381,19 @@ impl SimState {
                     }
                 }
             }
+            c if c == cmd::CRITICAL_LEVEL.get() => match (self.critical_threshold, size) {
+                (Some(raw), 1) => ok(vec![raw]),
+                (None, _) => (NotSupported, vec![]),
+                _ => (Failed, vec![]),
+            },
+            cmd::CRITICAL_LEVEL => match (self.critical_threshold, size) {
+                (Some(_), 1) => {
+                    self.critical_threshold = Some(a[0]);
+                    ok(vec![a[0]])
+                }
+                (None, _) => (NotSupported, vec![]),
+                _ => (Failed, vec![]),
+            },
             c if c == cmd::IDLE_TIME.get() => match self.idle_seconds {
                 Some(secs) => ok(secs.to_be_bytes().to_vec()),
                 None => (NotSupported, vec![]),

@@ -1,0 +1,15 @@
+# DeathAdder V3 HyperSpeed power controls
+
+The source Power page has two separate settings: idle sleep in whole minutes and the battery percentage at which low-power mode begins. The core now implements the threshold register for the verified wired/wireless product IDs 196/197 (00C4/00C5). This is an API checkpoint; the full source-derived native Power page and its device-configuration persistence remain unfinished.
+
+The threshold is one byte: GET `07:81`, SET `07:01`. The source displays `floor(raw * 100 / 255)` and encodes a displayed value with `ceil(percent * 255 / 100)`. Its rendered range is 5–100%, in steps of five. The raw and displayed APIs are separate because conversion loses information: raw 78 displays as 30%, but encoding 30% gives raw 77. Backups and temporary changes must retain the raw byte. Setters verify exact raw readback.
+
+This setting belongs to root device configuration in the recovered application, rather than a selected profile. Product 196 also sets `alwaysReadPowerSavingFromDevice`; its sleep workflow reads hardware instead of persisting the generic local `powerSavingValue`. The threshold must not be silently added to profile interchange. The source disables its control above an effective polling rate of 1000 Hz, using the applicable connection mode's polling value. The threshold register is separate from the command that reports whether the device is currently in low-power mode.
+
+Four core tests cover all twenty displayed values on both scoped product IDs, exact restoration of all 256 raw bytes, invalid values rejected before transport, and unsupported models/registers. Two hardware-harness tests cover restoration encoding for stage slot IDs and the raw threshold. These simulator checks do not prove real wireless operation.
+
+The physical wired mouse passed eight setting checks, including a threshold change to 25% (raw 64), followed by byte-for-byte restoration of every captured register. The harness snapshots and saves the original raw threshold before any mutation; failure to capture it prevents the roundtrip. Stock user processes were temporarily closed, then restored, with ten processes observed after three seconds. Services, drivers, input mappings, macros and profile files were unchanged. See [the scoped hardware result](validation/power-hardware.json).
+
+This verifies command/readback/restoration on the installed wired mouse. Actual battery-triggered mode transitions, battery drain, sleep/wake, wireless behavior, editor event routing and the complete Power workflow remain unverified.
+
+Source provenance: cached product 196 UI `main.bbc961f9.js` SHA-256 `f99b1f88ca9496a77cab258d05814a312b876873cb5c586841c28a732db78c42`, middleware `6120.c553d3491acbb7a4bf09.js` SHA-256 `df8334aa3021d129893918cecb3c1d14b3727f476c42981bac3fb02f6736b633`. Focused REA parent evidence `ev_0f022e21e2163646817fe08fbfc7529c7d1521cd50c8c2484b260f69cf908503` covers an inert Power UI slice with no parse errors and 128 unresolved framework relationships. Narrow original-source reads establish the middleware joins; this does not imply complete runtime equivalence or execute vendor JavaScript.

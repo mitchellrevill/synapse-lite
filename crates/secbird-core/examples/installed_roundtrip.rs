@@ -3,7 +3,7 @@
 //! Usage: installed_roundtrip <00C4|025D> <report.json> [--roundtrip [--fail-after-dpi]]
 //! Close competing configuration clients before running. Default mode only reads.
 //! The report is written before any settings change and contains no serials.
-//! Only DPI, polling, sleep and brightness are exercised; no input maps/macros,
+//! Only DPI, polling, sleep, low-power threshold and brightness are exercised; no input maps/macros,
 //! device modes, services, drivers, effects or profile files are changed.
 
 use secbird_core::{commands as cmd, discover, hidapi::HidApi, proto::Command, Db, Device};
@@ -226,6 +226,14 @@ fn run() -> Result<(), String> {
         )?);
         registers.push(Register::capture(
             device,
+            "critical-threshold-raw",
+            cmd::CRITICAL_LEVEL,
+            cmd::CRITICAL_LEVEL_SIZE,
+            &[],
+            true,
+        )?);
+        registers.push(Register::capture(
+            device,
             "dpi-stages",
             cmd::DPI_STAGES,
             cmd::DPI_STAGES_SIZE,
@@ -328,6 +336,20 @@ fn run() -> Result<(), String> {
             if actual != target {
                 return Err("Sleep readback differs".into());
             }
+            let before = device
+                .critical_threshold_percent()
+                .map_err(|e| e.to_string())?;
+            let target = if before == 30 { 25 } else { 30 };
+            let actual = device
+                .set_critical_threshold_percent(target)
+                .map_err(|e| e.to_string())?;
+            let raw = device.critical_threshold_raw().map_err(|e| e.to_string())?;
+            let encoded =
+                secbird_core::power::critical_raw_for_percent(target).map_err(|e| e.to_string())?;
+            steps.push(json!({"setting":"critical-threshold","requested_percent":target,"actual_percent":actual,"actual_raw":raw,"passed":actual==target && raw==encoded}));
+            if actual != target || raw != encoded {
+                return Err("Low-power threshold readback differs".into());
+            }
             let mut target = device.dpi_stages().map_err(|e| e.to_string())?;
             let stage = target.stages.first_mut().ok_or("No DPI stages")?;
             stage.0 = if stage.0 == 650 { 700 } else { 650 };
@@ -411,6 +433,23 @@ fn run() -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn threshold_restore_replays_raw_byte_without_lossy_percent_conversion() {
+        let register = Register {
+            name: "critical-threshold-raw",
+            command: cmd::CRITICAL_LEVEL,
+            size: 1,
+            query: vec![],
+            original: vec![78],
+            restore: true,
+        };
+        assert_eq!(register.restore_packet().unwrap(), (1, vec![78]));
+        assert_ne!(
+            secbird_core::power::critical_raw_for_percent(30).unwrap(),
+            78
+        );
+    }
 
     #[test]
     fn stage_restore_converts_slot_ids_and_preserves_extra_axis_bytes() {

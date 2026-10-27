@@ -26,6 +26,7 @@ pub mod log;
 pub mod macros;
 pub mod net;
 pub mod performance;
+pub mod power;
 pub mod profile;
 pub mod profile_compat;
 pub mod proto;

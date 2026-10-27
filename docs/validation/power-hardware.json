@@ -1,0 +1,145 @@
+{
+  "timestamp_utc": "2026-10-27T04:52:54.8406787+00:00",
+  "harness_sha256": "d50aab7a97b68746383afb54fed3c2c8e82d7ae87e3247df59fef30d59cb1889",
+  "harness_source_sha256": "316a2b870423bb186e106a6e2476c7d2366a05de97afdf003ed571637058d521",
+  "product_id": "00C4",
+  "scope": "Physical wired mouse. Low-power threshold plus prior DPI/polling/sleep/stage/projection/activation checks. Does not establish low-power entry, battery drain, wireless behavior, native input routing or full Power UI.",
+  "stock_was_running": true,
+  "stock_processes_observed_after_3_seconds": 10,
+  "services_and_drivers_changed": false,
+  "checks": [
+    {
+      "actual": [
+        800,
+        600
+      ],
+      "passed": true,
+      "requested": [
+        800,
+        600
+      ],
+      "setting": "dpi",
+      "stage_register_unchanged_after_dpi": true
+    },
+    {
+      "actual": 500,
+      "passed": true,
+      "requested": 500,
+      "setting": "polling"
+    },
+    {
+      "actual": 6,
+      "passed": true,
+      "requested": 6,
+      "setting": "sleep-minutes"
+    },
+    {
+      "actual_percent": 25,
+      "actual_raw": 64,
+      "passed": true,
+      "requested_percent": 25,
+      "setting": "critical-threshold"
+    },
+    {
+      "actual": {
+        "active": 1,
+        "stages": [
+          [
+            650,
+            600
+          ],
+          [
+            800,
+            800
+          ],
+          [
+            1600,
+            1600
+          ],
+          [
+            3200,
+            3200
+          ],
+          [
+            6400,
+            6400
+          ]
+        ]
+      },
+      "passed": true,
+      "requested": {
+        "active": 1,
+        "stages": [
+          [
+            650,
+            600
+          ],
+          [
+            800,
+            800
+          ],
+          [
+            1600,
+            1600
+          ],
+          [
+            3200,
+            3200
+          ],
+          [
+            6400,
+            6400
+          ]
+        ]
+      },
+      "setting": "dpi-stages"
+    },
+    {
+      "active_hardware_stage": 1,
+      "hardware_stage_count": 1,
+      "passed": true,
+      "retained_row_count": 5,
+      "setting": "performance-disabled"
+    },
+    {
+      "active_hardware_stage": 3,
+      "hardware_stage_count": 4,
+      "passed": true,
+      "retained_row_count": 5,
+      "setting": "performance-hidden-rows"
+    },
+    {
+      "passed": true,
+      "setting": "performance-profile-activation"
+    }
+  ],
+  "captured_registers": [
+    {
+      "name": "dpi-saved",
+      "bytes": 7
+    },
+    {
+      "name": "dpi-live",
+      "bytes": 7
+    },
+    {
+      "name": "polling",
+      "bytes": 1
+    },
+    {
+      "name": "idle-seconds",
+      "bytes": 2
+    },
+    {
+      "name": "critical-threshold-raw",
+      "bytes": 1
+    },
+    {
+      "name": "dpi-stages",
+      "bytes": 38
+    }
+  ],
+  "restore_verified_byte_for_byte": true,
+  "restore_errors": [],
+  "exercise_error": null
+}
