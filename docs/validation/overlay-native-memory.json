@@ -1,0 +1,4020 @@
+{
+  "BinarySha256": "006A4D9C331BDD5B834BAB4ABB0F120812F4226DD2AE01C746FA320842FCF64B",
+  "TimestampUtc": "2026-10-27T11:03:24.7086756+00:00",
+  "LimitBytes": 100000000,
+  "MetricNote": "Working set high-water plus sampled private committed bytes. Peak paged memory is recorded as an additional conservative process metric. Shared resident pages may be counted per process.",
+  "Scope": "Real tray, native editor, worker/listener threads and observed descendants. Stock Synapse/services and installed kernel drivers are excluded. These read-only views do not prove full workflow, visual or hardware parity. Three passes of four read-only overlay states; imported macro-heavy lists, active host animations and final-build acceptance are not covered.",
+  "Runs": [
+    {
+      "Scenario": "keyboard-lighting-color-editor",
+      "PresentedFrame": {
+        "detected_devices": 2,
+        "device_kind": "keyboard",
+        "dpi_awareness": 2,
+        "failed": false,
+        "fidelity": "partial source-derived native port; pixel identity unproven",
+        "height": 884,
+        "keyboard_artwork": true,
+        "keyboard_customize_artwork": true,
+        "keyboard_named_source_inputs": 112,
+        "keyboard_source_assignment_options": 1647,
+        "keyboard_source_inputs": 112,
+        "lighting_brightness_readback": {
+          "available": true,
+          "error": null,
+          "percent": 100,
+          "raw": 255,
+          "selectors_match": true
+        },
+        "lighting_intent_origin": {
+          "brightness_baseline": null,
+          "retained_value_known": false,
+          "source": "hardware-brightness-with-default-policy",
+          "synapse_profile_state_read": false
+        },
+        "lighting_overlay": {
+          "color_editor_exact_canvas_assets": true,
+          "color_editor_inputs": 4,
+          "color_editor_open": true,
+          "custom_slot_count": 16,
+          "palette_open": true,
+          "presentation_only_effect_override": true,
+          "ready": true,
+          "scroll_css": 208.79999999999995,
+          "source_anchor_available": true
+        },
+        "lighting_source_icons": 17,
+        "loaded_source_fonts": 3,
+        "matched": true,
+        "mouse_artwork": true,
+        "performance_configured_rows": null,
+        "performance_independent_rows": null,
+        "performance_inputs": 0,
+        "performance_scroll_css": 0.0,
+        "performance_visible_rows": null,
+        "power_sleep_available": false,
+        "power_threshold_available": false,
+        "presentation_only_override": true,
+        "presented": true,
+        "profile_overlay": {
+          "open": false,
+          "ready": false
+        },
+        "profile_source_icons": 5,
+        "requested": "keyboard-lighting-color-editor",
+        "reserved_footer_css": 0,
+        "scale": 1.25,
+        "smoke_overlay_started": true,
+        "source_lighting_view": true,
+        "source_performance_view": false,
+        "source_power_view": false,
+        "source_viewport": true,
+        "tab": "LIGHTING",
+        "visible": true,
+        "width": 1584
+      },
+      "PeakWorkingSetBytes": 25538560,
+      "SampledPeakWorkingSetBytes": 24051712.0,
+      "SampledPeakPrivateBytes": 10194944.0,
+      "PeakPagedMemoryBytes": 11251712,
+      "MaxObservedProcesses": 1.0,
+      "ObservedTcpConnections": [],
+      "Under100MB": true,
+      "Samples": [
+        {
+          "ElapsedSeconds": 0.1759379,
+          "WorkingSetBytes": 13492224.0,
+          "PrivateBytes": 3178496.0,
+          "Processes": 1,
+          "CpuSeconds": 0.0625
+        },
+        {
+          "ElapsedSeconds": 0.3910191,
+          "WorkingSetBytes": 14835712.0,
+          "PrivateBytes": 3444736.0,
+          "Processes": 1,
+          "CpuSeconds": 0.09375
+        },
+        {
+          "ElapsedSeconds": 0.6042168,
+          "WorkingSetBytes": 21745664.0,
+          "PrivateBytes": 8589312.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 0.8162466,
+          "WorkingSetBytes": 23977984.0,
+          "PrivateBytes": 10194944.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 1.0280912,
+          "WorkingSetBytes": 23990272.0,
+          "PrivateBytes": 10194944.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 1.342652,
+          "WorkingSetBytes": 23990272.0,
+          "PrivateBytes": 10194944.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 1.5558371,
+          "WorkingSetBytes": 23990272.0,
+          "PrivateBytes": 10194944.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 1.7657723,
+          "WorkingSetBytes": 23990272.0,
+          "PrivateBytes": 10194944.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 1.9775898,
+          "WorkingSetBytes": 23990272.0,
+          "PrivateBytes": 10194944.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 2.1889155,
+          "WorkingSetBytes": 23990272.0,
+          "PrivateBytes": 10194944.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 2.5042141,
+          "WorkingSetBytes": 23990272.0,
+          "PrivateBytes": 10194944.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 2.7238424,
+          "WorkingSetBytes": 23990272.0,
+          "PrivateBytes": 10194944.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 2.9385352,
+          "WorkingSetBytes": 23990272.0,
+          "PrivateBytes": 10194944.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 3.1495551,
+          "WorkingSetBytes": 23990272.0,
+          "PrivateBytes": 10194944.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 3.3623263,
+          "WorkingSetBytes": 23990272.0,
+          "PrivateBytes": 10194944.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 3.6658215,
+          "WorkingSetBytes": 23990272.0,
+          "PrivateBytes": 10194944.0,
+          "Processes": 1,
+          "CpuSeconds": 0.1875
+        },
+        {
+          "ElapsedSeconds": 3.876991,
+          "WorkingSetBytes": 23990272.0,
+          "PrivateBytes": 10194944.0,
+          "Processes": 1,
+          "CpuSeconds": 0.1875
+        },
+        {
+          "ElapsedSeconds": 4.09074,
+          "WorkingSetBytes": 23990272.0,
+          "PrivateBytes": 10194944.0,
+          "Processes": 1,
+          "CpuSeconds": 0.1875
+        },
+        {
+          "ElapsedSeconds": 5.2173636,
+          "WorkingSetBytes": 24051712.0,
+          "PrivateBytes": 9920512.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 5.6755653,
+          "WorkingSetBytes": 24051712.0,
+          "PrivateBytes": 9920512.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 6.143319,
+          "WorkingSetBytes": 24051712.0,
+          "PrivateBytes": 9920512.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 6.6871466,
+          "WorkingSetBytes": 24051712.0,
+          "PrivateBytes": 9920512.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 7.1422199,
+          "WorkingSetBytes": 24051712.0,
+          "PrivateBytes": 9920512.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 7.6432453,
+          "WorkingSetBytes": 24051712.0,
+          "PrivateBytes": 9920512.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 8.202794,
+          "WorkingSetBytes": 24051712.0,
+          "PrivateBytes": 9920512.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 8.6753492,
+          "WorkingSetBytes": 24051712.0,
+          "PrivateBytes": 9920512.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 9.131232,
+          "WorkingSetBytes": 24051712.0,
+          "PrivateBytes": 9920512.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 9.679738,
+          "WorkingSetBytes": 24051712.0,
+          "PrivateBytes": 9920512.0,
+          "Processes": 1,
+          "CpuSeconds": 0.25
+        },
+        {
+          "ElapsedSeconds": 10.1509028,
+          "WorkingSetBytes": 24051712.0,
+          "PrivateBytes": 9920512.0,
+          "Processes": 1,
+          "CpuSeconds": 0.25
+        },
+        {
+          "ElapsedSeconds": 10.6041421,
+          "WorkingSetBytes": 24051712.0,
+          "PrivateBytes": 9920512.0,
+          "Processes": 1,
+          "CpuSeconds": 0.25
+        },
+        {
+          "ElapsedSeconds": 11.1513189,
+          "WorkingSetBytes": 24051712.0,
+          "PrivateBytes": 9920512.0,
+          "Processes": 1,
+          "CpuSeconds": 0.25
+        },
+        {
+          "ElapsedSeconds": 11.6009242,
+          "WorkingSetBytes": 24051712.0,
+          "PrivateBytes": 9920512.0,
+          "Processes": 1,
+          "CpuSeconds": 0.25
+        },
+        {
+          "ElapsedSeconds": 12.0534153,
+          "WorkingSetBytes": 24051712.0,
+          "PrivateBytes": 9920512.0,
+          "Processes": 1,
+          "CpuSeconds": 0.25
+        }
+      ]
+    },
+    {
+      "Scenario": "keyboard-profile-import",
+      "PresentedFrame": {
+        "detected_devices": 2,
+        "device_kind": "keyboard",
+        "dpi_awareness": 2,
+        "failed": false,
+        "fidelity": "partial source-derived native port; pixel identity unproven",
+        "height": 884,
+        "keyboard_artwork": true,
+        "keyboard_customize_artwork": true,
+        "keyboard_named_source_inputs": 112,
+        "keyboard_source_assignment_options": 1647,
+        "keyboard_source_inputs": 112,
+        "lighting_brightness_readback": {
+          "available": true,
+          "error": null,
+          "percent": 100,
+          "raw": 255,
+          "selectors_match": true
+        },
+        "lighting_intent_origin": {
+          "brightness_baseline": null,
+          "retained_value_known": false,
+          "source": "hardware-brightness-with-default-policy",
+          "synapse_profile_state_read": false
+        },
+        "lighting_overlay": {
+          "color_editor_exact_canvas_assets": false,
+          "color_editor_inputs": 0,
+          "color_editor_open": false,
+          "custom_slot_count": 16,
+          "palette_open": false,
+          "presentation_only_effect_override": false,
+          "ready": false,
+          "scroll_css": 0.0,
+          "source_anchor_available": false
+        },
+        "lighting_source_icons": 17,
+        "loaded_source_fonts": 3,
+        "matched": true,
+        "mouse_artwork": true,
+        "performance_configured_rows": null,
+        "performance_independent_rows": null,
+        "performance_inputs": 0,
+        "performance_scroll_css": 0.0,
+        "performance_visible_rows": null,
+        "power_sleep_available": false,
+        "power_threshold_available": false,
+        "presentation_only_override": false,
+        "presented": true,
+        "profile_overlay": {
+          "cloud": false,
+          "commit_enabled": false,
+          "has_browsed_file": false,
+          "has_error": false,
+          "loading": false,
+          "macro_rows": 0,
+          "mode": "import",
+          "open": true,
+          "owner_matches_current_snapshot": true,
+          "profile_rows": 0,
+          "ready": true,
+          "selected_macro_references": 0,
+          "selected_profiles": 0,
+          "warning": false
+        },
+        "profile_source_icons": 5,
+        "requested": "keyboard-profile-import",
+        "reserved_footer_css": 0,
+        "scale": 1.25,
+        "smoke_overlay_started": true,
+        "source_lighting_view": false,
+        "source_performance_view": false,
+        "source_power_view": false,
+        "source_viewport": true,
+        "tab": "CUSTOMIZE",
+        "visible": true,
+        "width": 1584
+      },
+      "PeakWorkingSetBytes": 23588864,
+      "SampledPeakWorkingSetBytes": 22114304.0,
+      "SampledPeakPrivateBytes": 8601600.0,
+      "PeakPagedMemoryBytes": 9662464,
+      "MaxObservedProcesses": 1.0,
+      "ObservedTcpConnections": [],
+      "Under100MB": true,
+      "Samples": [
+        {
+          "ElapsedSeconds": 0.1194271,
+          "WorkingSetBytes": 9031680.0,
+          "PrivateBytes": 1765376.0,
+          "Processes": 1,
+          "CpuSeconds": 0.0
+        },
+        {
+          "ElapsedSeconds": 0.3260733,
+          "WorkingSetBytes": 13774848.0,
+          "PrivateBytes": 2400256.0,
+          "Processes": 1,
+          "CpuSeconds": 0.0
+        },
+        {
+          "ElapsedSeconds": 0.5383167,
+          "WorkingSetBytes": 21766144.0,
+          "PrivateBytes": 8601600.0,
+          "Processes": 1,
+          "CpuSeconds": 0.078125
+        },
+        {
+          "ElapsedSeconds": 0.7482976,
+          "WorkingSetBytes": 22020096.0,
+          "PrivateBytes": 8601600.0,
+          "Processes": 1,
+          "CpuSeconds": 0.109375
+        },
+        {
+          "ElapsedSeconds": 0.9600998,
+          "WorkingSetBytes": 22024192.0,
+          "PrivateBytes": 8601600.0,
+          "Processes": 1,
+          "CpuSeconds": 0.109375
+        },
+        {
+          "ElapsedSeconds": 1.2650469,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8601600.0,
+          "Processes": 1,
+          "CpuSeconds": 0.109375
+        },
+        {
+          "ElapsedSeconds": 1.4745561,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8601600.0,
+          "Processes": 1,
+          "CpuSeconds": 0.109375
+        },
+        {
+          "ElapsedSeconds": 1.6870272,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8601600.0,
+          "Processes": 1,
+          "CpuSeconds": 0.109375
+        },
+        {
+          "ElapsedSeconds": 1.9002051,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8601600.0,
+          "Processes": 1,
+          "CpuSeconds": 0.109375
+        },
+        {
+          "ElapsedSeconds": 2.1119006,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8601600.0,
+          "Processes": 1,
+          "CpuSeconds": 0.109375
+        },
+        {
+          "ElapsedSeconds": 2.4193555,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8601600.0,
+          "Processes": 1,
+          "CpuSeconds": 0.109375
+        },
+        {
+          "ElapsedSeconds": 2.6289663,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8601600.0,
+          "Processes": 1,
+          "CpuSeconds": 0.109375
+        },
+        {
+          "ElapsedSeconds": 2.8426654,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8601600.0,
+          "Processes": 1,
+          "CpuSeconds": 0.109375
+        },
+        {
+          "ElapsedSeconds": 3.0529527,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8601600.0,
+          "Processes": 1,
+          "CpuSeconds": 0.109375
+        },
+        {
+          "ElapsedSeconds": 3.2651349,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8601600.0,
+          "Processes": 1,
+          "CpuSeconds": 0.109375
+        },
+        {
+          "ElapsedSeconds": 3.573846,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8601600.0,
+          "Processes": 1,
+          "CpuSeconds": 0.125
+        },
+        {
+          "ElapsedSeconds": 3.7806808,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8601600.0,
+          "Processes": 1,
+          "CpuSeconds": 0.125
+        },
+        {
+          "ElapsedSeconds": 3.9911462,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8601600.0,
+          "Processes": 1,
+          "CpuSeconds": 0.125
+        },
+        {
+          "ElapsedSeconds": 4.2028771,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8601600.0,
+          "Processes": 1,
+          "CpuSeconds": 0.125
+        },
+        {
+          "ElapsedSeconds": 4.7546163,
+          "WorkingSetBytes": 22114304.0,
+          "PrivateBytes": 8335360.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 5.2218294,
+          "WorkingSetBytes": 22114304.0,
+          "PrivateBytes": 8335360.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 5.6747939,
+          "WorkingSetBytes": 22114304.0,
+          "PrivateBytes": 8335360.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 6.2086619,
+          "WorkingSetBytes": 22114304.0,
+          "PrivateBytes": 8335360.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 6.6607015,
+          "WorkingSetBytes": 22114304.0,
+          "PrivateBytes": 8335360.0,
+          "Processes": 1,
+          "CpuSeconds": 0.1875
+        },
+        {
+          "ElapsedSeconds": 7.1179976,
+          "WorkingSetBytes": 22114304.0,
+          "PrivateBytes": 8335360.0,
+          "Processes": 1,
+          "CpuSeconds": 0.1875
+        },
+        {
+          "ElapsedSeconds": 7.6630596,
+          "WorkingSetBytes": 22114304.0,
+          "PrivateBytes": 8335360.0,
+          "Processes": 1,
+          "CpuSeconds": 0.1875
+        },
+        {
+          "ElapsedSeconds": 8.1152825,
+          "WorkingSetBytes": 22114304.0,
+          "PrivateBytes": 8335360.0,
+          "Processes": 1,
+          "CpuSeconds": 0.1875
+        },
+        {
+          "ElapsedSeconds": 8.5696463,
+          "WorkingSetBytes": 22114304.0,
+          "PrivateBytes": 8335360.0,
+          "Processes": 1,
+          "CpuSeconds": 0.1875
+        },
+        {
+          "ElapsedSeconds": 9.1096967,
+          "WorkingSetBytes": 22114304.0,
+          "PrivateBytes": 8335360.0,
+          "Processes": 1,
+          "CpuSeconds": 0.1875
+        },
+        {
+          "ElapsedSeconds": 9.553455,
+          "WorkingSetBytes": 22114304.0,
+          "PrivateBytes": 8335360.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 10.0097441,
+          "WorkingSetBytes": 22114304.0,
+          "PrivateBytes": 8335360.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 10.5550555,
+          "WorkingSetBytes": 22114304.0,
+          "PrivateBytes": 8335360.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 10.9942643,
+          "WorkingSetBytes": 22114304.0,
+          "PrivateBytes": 8335360.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 11.4474134,
+          "WorkingSetBytes": 22114304.0,
+          "PrivateBytes": 8335360.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 11.9930974,
+          "WorkingSetBytes": 22114304.0,
+          "PrivateBytes": 8335360.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 12.4464092,
+          "WorkingSetBytes": 22114304.0,
+          "PrivateBytes": 8335360.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        }
+      ]
+    },
+    {
+      "Scenario": "keyboard-profile-export",
+      "PresentedFrame": {
+        "detected_devices": 2,
+        "device_kind": "keyboard",
+        "dpi_awareness": 2,
+        "failed": false,
+        "fidelity": "partial source-derived native port; pixel identity unproven",
+        "height": 884,
+        "keyboard_artwork": true,
+        "keyboard_customize_artwork": true,
+        "keyboard_named_source_inputs": 112,
+        "keyboard_source_assignment_options": 1647,
+        "keyboard_source_inputs": 112,
+        "lighting_brightness_readback": {
+          "available": true,
+          "error": null,
+          "percent": 100,
+          "raw": 255,
+          "selectors_match": true
+        },
+        "lighting_intent_origin": {
+          "brightness_baseline": null,
+          "retained_value_known": false,
+          "source": "hardware-brightness-with-default-policy",
+          "synapse_profile_state_read": false
+        },
+        "lighting_overlay": {
+          "color_editor_exact_canvas_assets": false,
+          "color_editor_inputs": 0,
+          "color_editor_open": false,
+          "custom_slot_count": 16,
+          "palette_open": false,
+          "presentation_only_effect_override": false,
+          "ready": false,
+          "scroll_css": 0.0,
+          "source_anchor_available": false
+        },
+        "lighting_source_icons": 17,
+        "loaded_source_fonts": 3,
+        "matched": true,
+        "mouse_artwork": true,
+        "performance_configured_rows": null,
+        "performance_independent_rows": null,
+        "performance_inputs": 0,
+        "performance_scroll_css": 0.0,
+        "performance_visible_rows": null,
+        "power_sleep_available": false,
+        "power_threshold_available": false,
+        "presentation_only_override": false,
+        "presented": true,
+        "profile_overlay": {
+          "cloud": false,
+          "commit_enabled": true,
+          "has_browsed_file": false,
+          "has_error": false,
+          "loading": false,
+          "macro_rows": 0,
+          "mode": "export",
+          "open": true,
+          "owner_matches_current_snapshot": true,
+          "profile_rows": 1,
+          "ready": true,
+          "selected_macro_references": 0,
+          "selected_profiles": 1,
+          "warning": false
+        },
+        "profile_source_icons": 5,
+        "requested": "keyboard-profile-export",
+        "reserved_footer_css": 0,
+        "scale": 1.25,
+        "smoke_overlay_started": true,
+        "source_lighting_view": false,
+        "source_performance_view": false,
+        "source_power_view": false,
+        "source_viewport": true,
+        "tab": "CUSTOMIZE",
+        "visible": true,
+        "width": 1584
+      },
+      "PeakWorkingSetBytes": 23670784,
+      "SampledPeakWorkingSetBytes": 22253568.0,
+      "SampledPeakPrivateBytes": 8593408.0,
+      "PeakPagedMemoryBytes": 9650176,
+      "MaxObservedProcesses": 1.0,
+      "ObservedTcpConnections": [],
+      "Under100MB": true,
+      "Samples": [
+        {
+          "ElapsedSeconds": 0.1013408,
+          "WorkingSetBytes": 9035776.0,
+          "PrivateBytes": 1781760.0,
+          "Processes": 1,
+          "CpuSeconds": 0.015625
+        },
+        {
+          "ElapsedSeconds": 0.3140404,
+          "WorkingSetBytes": 13766656.0,
+          "PrivateBytes": 2408448.0,
+          "Processes": 1,
+          "CpuSeconds": 0.03125
+        },
+        {
+          "ElapsedSeconds": 0.530904,
+          "WorkingSetBytes": 21762048.0,
+          "PrivateBytes": 8593408.0,
+          "Processes": 1,
+          "CpuSeconds": 0.09375
+        },
+        {
+          "ElapsedSeconds": 0.7470574,
+          "WorkingSetBytes": 22106112.0,
+          "PrivateBytes": 8593408.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 0.9582923,
+          "WorkingSetBytes": 22110208.0,
+          "PrivateBytes": 8593408.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 1.2668553,
+          "WorkingSetBytes": 22122496.0,
+          "PrivateBytes": 8593408.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 1.4885888,
+          "WorkingSetBytes": 22122496.0,
+          "PrivateBytes": 8593408.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 1.700237,
+          "WorkingSetBytes": 22122496.0,
+          "PrivateBytes": 8593408.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 1.9134611,
+          "WorkingSetBytes": 22122496.0,
+          "PrivateBytes": 8593408.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 2.1246736,
+          "WorkingSetBytes": 22122496.0,
+          "PrivateBytes": 8593408.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 2.427842,
+          "WorkingSetBytes": 22122496.0,
+          "PrivateBytes": 8593408.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 2.6395704,
+          "WorkingSetBytes": 22122496.0,
+          "PrivateBytes": 8593408.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 2.8548772,
+          "WorkingSetBytes": 22122496.0,
+          "PrivateBytes": 8593408.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 3.0651073,
+          "WorkingSetBytes": 22122496.0,
+          "PrivateBytes": 8593408.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 3.2763473,
+          "WorkingSetBytes": 22122496.0,
+          "PrivateBytes": 8593408.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 3.5754426,
+          "WorkingSetBytes": 22126592.0,
+          "PrivateBytes": 8593408.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 3.7909037,
+          "WorkingSetBytes": 22126592.0,
+          "PrivateBytes": 8593408.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 4.0048153,
+          "WorkingSetBytes": 22126592.0,
+          "PrivateBytes": 8593408.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 4.4559451,
+          "WorkingSetBytes": 22126592.0,
+          "PrivateBytes": 8593408.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 5.0016188,
+          "WorkingSetBytes": 22253568.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 5.4566752,
+          "WorkingSetBytes": 22253568.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 5.9139302,
+          "WorkingSetBytes": 22253568.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 6.4480382,
+          "WorkingSetBytes": 22253568.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 6.8962521,
+          "WorkingSetBytes": 22253568.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 7.3362704,
+          "WorkingSetBytes": 22253568.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 7.8867903,
+          "WorkingSetBytes": 22253568.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 8.3379903,
+          "WorkingSetBytes": 22253568.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 8.7760248,
+          "WorkingSetBytes": 22253568.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 9.3094923,
+          "WorkingSetBytes": 22253568.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 9.7608572,
+          "WorkingSetBytes": 22253568.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 10.1981066,
+          "WorkingSetBytes": 22253568.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 10.7399135,
+          "WorkingSetBytes": 22253568.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 11.1865231,
+          "WorkingSetBytes": 22253568.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 11.6408047,
+          "WorkingSetBytes": 22253568.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 12.177313,
+          "WorkingSetBytes": 22253568.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        }
+      ]
+    },
+    {
+      "Scenario": "keyboard-profile-cloud",
+      "PresentedFrame": {
+        "detected_devices": 2,
+        "device_kind": "keyboard",
+        "dpi_awareness": 2,
+        "failed": false,
+        "fidelity": "partial source-derived native port; pixel identity unproven",
+        "height": 884,
+        "keyboard_artwork": true,
+        "keyboard_customize_artwork": true,
+        "keyboard_named_source_inputs": 112,
+        "keyboard_source_assignment_options": 1647,
+        "keyboard_source_inputs": 112,
+        "lighting_brightness_readback": {
+          "available": true,
+          "error": null,
+          "percent": 100,
+          "raw": 255,
+          "selectors_match": true
+        },
+        "lighting_intent_origin": {
+          "brightness_baseline": null,
+          "retained_value_known": false,
+          "source": "hardware-brightness-with-default-policy",
+          "synapse_profile_state_read": false
+        },
+        "lighting_overlay": {
+          "color_editor_exact_canvas_assets": false,
+          "color_editor_inputs": 0,
+          "color_editor_open": false,
+          "custom_slot_count": 16,
+          "palette_open": false,
+          "presentation_only_effect_override": false,
+          "ready": false,
+          "scroll_css": 0.0,
+          "source_anchor_available": false
+        },
+        "lighting_source_icons": 17,
+        "loaded_source_fonts": 3,
+        "matched": true,
+        "mouse_artwork": true,
+        "performance_configured_rows": null,
+        "performance_independent_rows": null,
+        "performance_inputs": 0,
+        "performance_scroll_css": 0.0,
+        "performance_visible_rows": null,
+        "power_sleep_available": false,
+        "power_threshold_available": false,
+        "presentation_only_override": false,
+        "presented": true,
+        "profile_overlay": {
+          "cloud": true,
+          "commit_enabled": false,
+          "has_browsed_file": false,
+          "has_error": false,
+          "loading": false,
+          "macro_rows": 0,
+          "mode": "import",
+          "open": true,
+          "owner_matches_current_snapshot": true,
+          "profile_rows": 0,
+          "ready": true,
+          "selected_macro_references": 0,
+          "selected_profiles": 0,
+          "warning": false
+        },
+        "profile_source_icons": 5,
+        "requested": "keyboard-profile-cloud",
+        "reserved_footer_css": 0,
+        "scale": 1.25,
+        "smoke_overlay_started": true,
+        "source_lighting_view": false,
+        "source_performance_view": false,
+        "source_power_view": false,
+        "source_viewport": true,
+        "tab": "CUSTOMIZE",
+        "visible": true,
+        "width": 1584
+      },
+      "PeakWorkingSetBytes": 23433216,
+      "SampledPeakWorkingSetBytes": 22011904.0,
+      "SampledPeakPrivateBytes": 8581120.0,
+      "PeakPagedMemoryBytes": 9641984,
+      "MaxObservedProcesses": 1.0,
+      "ObservedTcpConnections": [],
+      "Under100MB": true,
+      "Samples": [
+        {
+          "ElapsedSeconds": 0.0949126,
+          "WorkingSetBytes": 9023488.0,
+          "PrivateBytes": 1765376.0,
+          "Processes": 1,
+          "CpuSeconds": 0.03125
+        },
+        {
+          "ElapsedSeconds": 0.3153575,
+          "WorkingSetBytes": 13746176.0,
+          "PrivateBytes": 2383872.0,
+          "Processes": 1,
+          "CpuSeconds": 0.078125
+        },
+        {
+          "ElapsedSeconds": 0.5300127,
+          "WorkingSetBytes": 21725184.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 0.7384801,
+          "WorkingSetBytes": 21995520.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 0.9511296,
+          "WorkingSetBytes": 21999616.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 1.2556082,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 1.4644645,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 1.6768752,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 1.8891595,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 2.1011749,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 2.4090661,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 2.6121622,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 2.825001,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 3.0354269,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 3.2466309,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 3.5496714,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.1875
+        },
+        {
+          "ElapsedSeconds": 3.7615203,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.1875
+        },
+        {
+          "ElapsedSeconds": 3.9727377,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.1875
+        },
+        {
+          "ElapsedSeconds": 4.1839573,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.1875
+        },
+        {
+          "ElapsedSeconds": 4.7396551,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8228864.0,
+          "Processes": 1,
+          "CpuSeconds": 0.25
+        },
+        {
+          "ElapsedSeconds": 5.2013589,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8228864.0,
+          "Processes": 1,
+          "CpuSeconds": 0.25
+        },
+        {
+          "ElapsedSeconds": 5.6547774,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8228864.0,
+          "Processes": 1,
+          "CpuSeconds": 0.25
+        },
+        {
+          "ElapsedSeconds": 6.1849813,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8228864.0,
+          "Processes": 1,
+          "CpuSeconds": 0.25
+        },
+        {
+          "ElapsedSeconds": 6.6373827,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8228864.0,
+          "Processes": 1,
+          "CpuSeconds": 0.265625
+        },
+        {
+          "ElapsedSeconds": 7.0941277,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8228864.0,
+          "Processes": 1,
+          "CpuSeconds": 0.265625
+        },
+        {
+          "ElapsedSeconds": 7.6382663,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8228864.0,
+          "Processes": 1,
+          "CpuSeconds": 0.265625
+        },
+        {
+          "ElapsedSeconds": 8.0911416,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8228864.0,
+          "Processes": 1,
+          "CpuSeconds": 0.265625
+        },
+        {
+          "ElapsedSeconds": 8.5406867,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8228864.0,
+          "Processes": 1,
+          "CpuSeconds": 0.265625
+        },
+        {
+          "ElapsedSeconds": 9.0784201,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8228864.0,
+          "Processes": 1,
+          "CpuSeconds": 0.265625
+        },
+        {
+          "ElapsedSeconds": 9.5305087,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8228864.0,
+          "Processes": 1,
+          "CpuSeconds": 0.28125
+        },
+        {
+          "ElapsedSeconds": 9.9723006,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8228864.0,
+          "Processes": 1,
+          "CpuSeconds": 0.28125
+        },
+        {
+          "ElapsedSeconds": 10.5097287,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8228864.0,
+          "Processes": 1,
+          "CpuSeconds": 0.28125
+        },
+        {
+          "ElapsedSeconds": 10.9584959,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8228864.0,
+          "Processes": 1,
+          "CpuSeconds": 0.28125
+        },
+        {
+          "ElapsedSeconds": 11.4126016,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8228864.0,
+          "Processes": 1,
+          "CpuSeconds": 0.28125
+        },
+        {
+          "ElapsedSeconds": 11.9477654,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8228864.0,
+          "Processes": 1,
+          "CpuSeconds": 0.28125
+        },
+        {
+          "ElapsedSeconds": 12.3974142,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8228864.0,
+          "Processes": 1,
+          "CpuSeconds": 0.28125
+        }
+      ]
+    },
+    {
+      "Scenario": "keyboard-lighting-color-editor",
+      "PresentedFrame": {
+        "detected_devices": 2,
+        "device_kind": "keyboard",
+        "dpi_awareness": 2,
+        "failed": false,
+        "fidelity": "partial source-derived native port; pixel identity unproven",
+        "height": 884,
+        "keyboard_artwork": true,
+        "keyboard_customize_artwork": true,
+        "keyboard_named_source_inputs": 112,
+        "keyboard_source_assignment_options": 1647,
+        "keyboard_source_inputs": 112,
+        "lighting_brightness_readback": {
+          "available": true,
+          "error": null,
+          "percent": 100,
+          "raw": 255,
+          "selectors_match": true
+        },
+        "lighting_intent_origin": {
+          "brightness_baseline": null,
+          "retained_value_known": false,
+          "source": "hardware-brightness-with-default-policy",
+          "synapse_profile_state_read": false
+        },
+        "lighting_overlay": {
+          "color_editor_exact_canvas_assets": true,
+          "color_editor_inputs": 4,
+          "color_editor_open": true,
+          "custom_slot_count": 16,
+          "palette_open": true,
+          "presentation_only_effect_override": true,
+          "ready": true,
+          "scroll_css": 208.79999999999995,
+          "source_anchor_available": true
+        },
+        "lighting_source_icons": 17,
+        "loaded_source_fonts": 3,
+        "matched": true,
+        "mouse_artwork": true,
+        "performance_configured_rows": null,
+        "performance_independent_rows": null,
+        "performance_inputs": 0,
+        "performance_scroll_css": 0.0,
+        "performance_visible_rows": null,
+        "power_sleep_available": false,
+        "power_threshold_available": false,
+        "presentation_only_override": true,
+        "presented": true,
+        "profile_overlay": {
+          "open": false,
+          "ready": false
+        },
+        "profile_source_icons": 5,
+        "requested": "keyboard-lighting-color-editor",
+        "reserved_footer_css": 0,
+        "scale": 1.25,
+        "smoke_overlay_started": true,
+        "source_lighting_view": true,
+        "source_performance_view": false,
+        "source_power_view": false,
+        "source_viewport": true,
+        "tab": "LIGHTING",
+        "visible": true,
+        "width": 1584
+      },
+      "PeakWorkingSetBytes": 25509888,
+      "SampledPeakWorkingSetBytes": 24092672.0,
+      "SampledPeakPrivateBytes": 10178560.0,
+      "PeakPagedMemoryBytes": 11247616,
+      "MaxObservedProcesses": 1.0,
+      "ObservedTcpConnections": [],
+      "Under100MB": true,
+      "Samples": [
+        {
+          "ElapsedSeconds": 0.0961408,
+          "WorkingSetBytes": 9023488.0,
+          "PrivateBytes": 1761280.0,
+          "Processes": 1,
+          "CpuSeconds": 0.015625
+        },
+        {
+          "ElapsedSeconds": 0.3146796,
+          "WorkingSetBytes": 13742080.0,
+          "PrivateBytes": 2367488.0,
+          "Processes": 1,
+          "CpuSeconds": 0.0625
+        },
+        {
+          "ElapsedSeconds": 0.5292117,
+          "WorkingSetBytes": 22204416.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.125
+        },
+        {
+          "ElapsedSeconds": 0.7393798,
+          "WorkingSetBytes": 23953408.0,
+          "PrivateBytes": 10178560.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 0.9514118,
+          "WorkingSetBytes": 23957504.0,
+          "PrivateBytes": 10178560.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 1.2583075,
+          "WorkingSetBytes": 23969792.0,
+          "PrivateBytes": 10178560.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 1.4657828,
+          "WorkingSetBytes": 23969792.0,
+          "PrivateBytes": 10178560.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 1.6792309,
+          "WorkingSetBytes": 23969792.0,
+          "PrivateBytes": 10178560.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 1.8893991,
+          "WorkingSetBytes": 23969792.0,
+          "PrivateBytes": 10178560.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 2.0991062,
+          "WorkingSetBytes": 23969792.0,
+          "PrivateBytes": 10178560.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 2.4109928,
+          "WorkingSetBytes": 23969792.0,
+          "PrivateBytes": 10178560.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 2.6299956,
+          "WorkingSetBytes": 23969792.0,
+          "PrivateBytes": 10178560.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 2.8419956,
+          "WorkingSetBytes": 23969792.0,
+          "PrivateBytes": 10178560.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 3.0559036,
+          "WorkingSetBytes": 23969792.0,
+          "PrivateBytes": 10178560.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 3.267722,
+          "WorkingSetBytes": 23969792.0,
+          "PrivateBytes": 10178560.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 3.5809868,
+          "WorkingSetBytes": 23969792.0,
+          "PrivateBytes": 10178560.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 3.7944195,
+          "WorkingSetBytes": 23969792.0,
+          "PrivateBytes": 10178560.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 4.0055668,
+          "WorkingSetBytes": 23969792.0,
+          "PrivateBytes": 10178560.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 4.4630283,
+          "WorkingSetBytes": 23969792.0,
+          "PrivateBytes": 10178560.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 5.0051936,
+          "WorkingSetBytes": 24092672.0,
+          "PrivateBytes": 10145792.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 5.4467631,
+          "WorkingSetBytes": 24092672.0,
+          "PrivateBytes": 10145792.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 5.9022961,
+          "WorkingSetBytes": 24092672.0,
+          "PrivateBytes": 10145792.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 6.4374498,
+          "WorkingSetBytes": 24092672.0,
+          "PrivateBytes": 10145792.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 6.8900073,
+          "WorkingSetBytes": 24092672.0,
+          "PrivateBytes": 10145792.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 7.3338194,
+          "WorkingSetBytes": 24092672.0,
+          "PrivateBytes": 10145792.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 7.8785322,
+          "WorkingSetBytes": 24092672.0,
+          "PrivateBytes": 10145792.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 8.3509154,
+          "WorkingSetBytes": 24092672.0,
+          "PrivateBytes": 10145792.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 8.8346528,
+          "WorkingSetBytes": 24092672.0,
+          "PrivateBytes": 10145792.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 9.3816831,
+          "WorkingSetBytes": 24092672.0,
+          "PrivateBytes": 10145792.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 9.8351821,
+          "WorkingSetBytes": 24092672.0,
+          "PrivateBytes": 10145792.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 10.2890062,
+          "WorkingSetBytes": 24092672.0,
+          "PrivateBytes": 10145792.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 10.8237816,
+          "WorkingSetBytes": 24092672.0,
+          "PrivateBytes": 10145792.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 11.2769414,
+          "WorkingSetBytes": 24092672.0,
+          "PrivateBytes": 10145792.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 11.7630181,
+          "WorkingSetBytes": 24092672.0,
+          "PrivateBytes": 10145792.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 12.3232516,
+          "WorkingSetBytes": 24092672.0,
+          "PrivateBytes": 10145792.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        }
+      ]
+    },
+    {
+      "Scenario": "keyboard-profile-import",
+      "PresentedFrame": {
+        "detected_devices": 2,
+        "device_kind": "keyboard",
+        "dpi_awareness": 2,
+        "failed": false,
+        "fidelity": "partial source-derived native port; pixel identity unproven",
+        "height": 884,
+        "keyboard_artwork": true,
+        "keyboard_customize_artwork": true,
+        "keyboard_named_source_inputs": 112,
+        "keyboard_source_assignment_options": 1647,
+        "keyboard_source_inputs": 112,
+        "lighting_brightness_readback": {
+          "available": true,
+          "error": null,
+          "percent": 100,
+          "raw": 255,
+          "selectors_match": true
+        },
+        "lighting_intent_origin": {
+          "brightness_baseline": null,
+          "retained_value_known": false,
+          "source": "hardware-brightness-with-default-policy",
+          "synapse_profile_state_read": false
+        },
+        "lighting_overlay": {
+          "color_editor_exact_canvas_assets": false,
+          "color_editor_inputs": 0,
+          "color_editor_open": false,
+          "custom_slot_count": 16,
+          "palette_open": false,
+          "presentation_only_effect_override": false,
+          "ready": false,
+          "scroll_css": 0.0,
+          "source_anchor_available": false
+        },
+        "lighting_source_icons": 17,
+        "loaded_source_fonts": 3,
+        "matched": true,
+        "mouse_artwork": true,
+        "performance_configured_rows": null,
+        "performance_independent_rows": null,
+        "performance_inputs": 0,
+        "performance_scroll_css": 0.0,
+        "performance_visible_rows": null,
+        "power_sleep_available": false,
+        "power_threshold_available": false,
+        "presentation_only_override": false,
+        "presented": true,
+        "profile_overlay": {
+          "cloud": false,
+          "commit_enabled": false,
+          "has_browsed_file": false,
+          "has_error": false,
+          "loading": false,
+          "macro_rows": 0,
+          "mode": "import",
+          "open": true,
+          "owner_matches_current_snapshot": true,
+          "profile_rows": 0,
+          "ready": true,
+          "selected_macro_references": 0,
+          "selected_profiles": 0,
+          "warning": false
+        },
+        "profile_source_icons": 5,
+        "requested": "keyboard-profile-import",
+        "reserved_footer_css": 0,
+        "scale": 1.25,
+        "smoke_overlay_started": true,
+        "source_lighting_view": false,
+        "source_performance_view": false,
+        "source_power_view": false,
+        "source_viewport": true,
+        "tab": "CUSTOMIZE",
+        "visible": true,
+        "width": 1584
+      },
+      "PeakWorkingSetBytes": 23584768,
+      "SampledPeakWorkingSetBytes": 22151168.0,
+      "SampledPeakPrivateBytes": 8589312.0,
+      "PeakPagedMemoryBytes": 9658368,
+      "MaxObservedProcesses": 1.0,
+      "ObservedTcpConnections": [],
+      "Under100MB": true,
+      "Samples": [
+        {
+          "ElapsedSeconds": 0.1022231,
+          "WorkingSetBytes": 9031680.0,
+          "PrivateBytes": 1773568.0,
+          "Processes": 1,
+          "CpuSeconds": 0.0
+        },
+        {
+          "ElapsedSeconds": 0.314361,
+          "WorkingSetBytes": 13766656.0,
+          "PrivateBytes": 2404352.0,
+          "Processes": 1,
+          "CpuSeconds": 0.046875
+        },
+        {
+          "ElapsedSeconds": 0.5271223,
+          "WorkingSetBytes": 21745664.0,
+          "PrivateBytes": 8589312.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 0.7377148,
+          "WorkingSetBytes": 22003712.0,
+          "PrivateBytes": 8589312.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 0.9487256,
+          "WorkingSetBytes": 22007808.0,
+          "PrivateBytes": 8589312.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 1.2539908,
+          "WorkingSetBytes": 22020096.0,
+          "PrivateBytes": 8589312.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 1.4624671,
+          "WorkingSetBytes": 22020096.0,
+          "PrivateBytes": 8589312.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 1.6764048,
+          "WorkingSetBytes": 22020096.0,
+          "PrivateBytes": 8589312.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 1.8844957,
+          "WorkingSetBytes": 22020096.0,
+          "PrivateBytes": 8589312.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 2.0994713,
+          "WorkingSetBytes": 22020096.0,
+          "PrivateBytes": 8589312.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 2.4041852,
+          "WorkingSetBytes": 22020096.0,
+          "PrivateBytes": 8589312.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 2.6131523,
+          "WorkingSetBytes": 22020096.0,
+          "PrivateBytes": 8589312.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 2.8269922,
+          "WorkingSetBytes": 22020096.0,
+          "PrivateBytes": 8589312.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 3.0385548,
+          "WorkingSetBytes": 22020096.0,
+          "PrivateBytes": 8589312.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 3.2509183,
+          "WorkingSetBytes": 22020096.0,
+          "PrivateBytes": 8589312.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 3.5550976,
+          "WorkingSetBytes": 22024192.0,
+          "PrivateBytes": 8589312.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 3.769299,
+          "WorkingSetBytes": 22024192.0,
+          "PrivateBytes": 8589312.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 3.9808792,
+          "WorkingSetBytes": 22024192.0,
+          "PrivateBytes": 8589312.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 4.1921854,
+          "WorkingSetBytes": 22024192.0,
+          "PrivateBytes": 8589312.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 4.7947208,
+          "WorkingSetBytes": 22151168.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 5.2835252,
+          "WorkingSetBytes": 22151168.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 5.7365068,
+          "WorkingSetBytes": 22151168.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 6.2830854,
+          "WorkingSetBytes": 22151168.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 6.7511373,
+          "WorkingSetBytes": 22151168.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 7.2199162,
+          "WorkingSetBytes": 22151168.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 7.7697725,
+          "WorkingSetBytes": 22151168.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 8.2368349,
+          "WorkingSetBytes": 22151168.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 8.7053664,
+          "WorkingSetBytes": 22151168.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 9.2648986,
+          "WorkingSetBytes": 22151168.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 9.7242936,
+          "WorkingSetBytes": 22151168.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.265625
+        },
+        {
+          "ElapsedSeconds": 10.1925476,
+          "WorkingSetBytes": 22151168.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.265625
+        },
+        {
+          "ElapsedSeconds": 10.7382772,
+          "WorkingSetBytes": 22151168.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.265625
+        },
+        {
+          "ElapsedSeconds": 11.1973241,
+          "WorkingSetBytes": 22151168.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.265625
+        },
+        {
+          "ElapsedSeconds": 11.6472718,
+          "WorkingSetBytes": 22151168.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.265625
+        },
+        {
+          "ElapsedSeconds": 12.1899046,
+          "WorkingSetBytes": 22151168.0,
+          "PrivateBytes": 8560640.0,
+          "Processes": 1,
+          "CpuSeconds": 0.265625
+        }
+      ]
+    },
+    {
+      "Scenario": "keyboard-profile-export",
+      "PresentedFrame": {
+        "detected_devices": 2,
+        "device_kind": "keyboard",
+        "dpi_awareness": 2,
+        "failed": false,
+        "fidelity": "partial source-derived native port; pixel identity unproven",
+        "height": 884,
+        "keyboard_artwork": true,
+        "keyboard_customize_artwork": true,
+        "keyboard_named_source_inputs": 112,
+        "keyboard_source_assignment_options": 1647,
+        "keyboard_source_inputs": 112,
+        "lighting_brightness_readback": {
+          "available": true,
+          "error": null,
+          "percent": 100,
+          "raw": 255,
+          "selectors_match": true
+        },
+        "lighting_intent_origin": {
+          "brightness_baseline": null,
+          "retained_value_known": false,
+          "source": "hardware-brightness-with-default-policy",
+          "synapse_profile_state_read": false
+        },
+        "lighting_overlay": {
+          "color_editor_exact_canvas_assets": false,
+          "color_editor_inputs": 0,
+          "color_editor_open": false,
+          "custom_slot_count": 16,
+          "palette_open": false,
+          "presentation_only_effect_override": false,
+          "ready": false,
+          "scroll_css": 0.0,
+          "source_anchor_available": false
+        },
+        "lighting_source_icons": 17,
+        "loaded_source_fonts": 3,
+        "matched": true,
+        "mouse_artwork": true,
+        "performance_configured_rows": null,
+        "performance_independent_rows": null,
+        "performance_inputs": 0,
+        "performance_scroll_css": 0.0,
+        "performance_visible_rows": null,
+        "power_sleep_available": false,
+        "power_threshold_available": false,
+        "presentation_only_override": false,
+        "presented": true,
+        "profile_overlay": {
+          "cloud": false,
+          "commit_enabled": true,
+          "has_browsed_file": false,
+          "has_error": false,
+          "loading": false,
+          "macro_rows": 0,
+          "mode": "export",
+          "open": true,
+          "owner_matches_current_snapshot": true,
+          "profile_rows": 1,
+          "ready": true,
+          "selected_macro_references": 0,
+          "selected_profiles": 1,
+          "warning": false
+        },
+        "profile_source_icons": 5,
+        "requested": "keyboard-profile-export",
+        "reserved_footer_css": 0,
+        "scale": 1.25,
+        "smoke_overlay_started": true,
+        "source_lighting_view": false,
+        "source_performance_view": false,
+        "source_power_view": false,
+        "source_viewport": true,
+        "tab": "CUSTOMIZE",
+        "visible": true,
+        "width": 1584
+      },
+      "PeakWorkingSetBytes": 23564288,
+      "SampledPeakWorkingSetBytes": 22163456.0,
+      "SampledPeakPrivateBytes": 8585216.0,
+      "PeakPagedMemoryBytes": 9637888,
+      "MaxObservedProcesses": 1.0,
+      "ObservedTcpConnections": [],
+      "Under100MB": true,
+      "Samples": [
+        {
+          "ElapsedSeconds": 0.0945152,
+          "WorkingSetBytes": 9039872.0,
+          "PrivateBytes": 1785856.0,
+          "Processes": 1,
+          "CpuSeconds": 0.015625
+        },
+        {
+          "ElapsedSeconds": 0.3101448,
+          "WorkingSetBytes": 13750272.0,
+          "PrivateBytes": 2400256.0,
+          "Processes": 1,
+          "CpuSeconds": 0.0625
+        },
+        {
+          "ElapsedSeconds": 0.532244,
+          "WorkingSetBytes": 21725184.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.109375
+        },
+        {
+          "ElapsedSeconds": 0.7498121,
+          "WorkingSetBytes": 21999616.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 0.9627654,
+          "WorkingSetBytes": 22003712.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 1.264646,
+          "WorkingSetBytes": 22016000.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 1.4772703,
+          "WorkingSetBytes": 22016000.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 1.6877348,
+          "WorkingSetBytes": 22016000.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 1.9009973,
+          "WorkingSetBytes": 22016000.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 2.1136384,
+          "WorkingSetBytes": 22016000.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 2.4158367,
+          "WorkingSetBytes": 22016000.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 2.6278595,
+          "WorkingSetBytes": 22016000.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 2.8402176,
+          "WorkingSetBytes": 22016000.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 3.0527307,
+          "WorkingSetBytes": 22016000.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 3.2631291,
+          "WorkingSetBytes": 22016000.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 3.5620338,
+          "WorkingSetBytes": 22020096.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 3.7772543,
+          "WorkingSetBytes": 22020096.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 3.9910015,
+          "WorkingSetBytes": 22020096.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 4.2038267,
+          "WorkingSetBytes": 22020096.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 4.7442503,
+          "WorkingSetBytes": 22163456.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 5.2014979,
+          "WorkingSetBytes": 22163456.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 5.6597298,
+          "WorkingSetBytes": 22163456.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 6.2036055,
+          "WorkingSetBytes": 22163456.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 6.6696499,
+          "WorkingSetBytes": 22163456.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 7.1562228,
+          "WorkingSetBytes": 22163456.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 7.7630763,
+          "WorkingSetBytes": 22163456.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 8.2515879,
+          "WorkingSetBytes": 22163456.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 8.702374,
+          "WorkingSetBytes": 22163456.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 9.2547853,
+          "WorkingSetBytes": 22163456.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 9.7123515,
+          "WorkingSetBytes": 22163456.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 10.1694553,
+          "WorkingSetBytes": 22163456.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 10.7479207,
+          "WorkingSetBytes": 22163456.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 11.2115935,
+          "WorkingSetBytes": 22163456.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 11.680953,
+          "WorkingSetBytes": 22163456.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 12.2298583,
+          "WorkingSetBytes": 22163456.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        }
+      ]
+    },
+    {
+      "Scenario": "keyboard-profile-cloud",
+      "PresentedFrame": {
+        "detected_devices": 2,
+        "device_kind": "keyboard",
+        "dpi_awareness": 2,
+        "failed": false,
+        "fidelity": "partial source-derived native port; pixel identity unproven",
+        "height": 884,
+        "keyboard_artwork": true,
+        "keyboard_customize_artwork": true,
+        "keyboard_named_source_inputs": 112,
+        "keyboard_source_assignment_options": 1647,
+        "keyboard_source_inputs": 112,
+        "lighting_brightness_readback": {
+          "available": true,
+          "error": null,
+          "percent": 100,
+          "raw": 255,
+          "selectors_match": true
+        },
+        "lighting_intent_origin": {
+          "brightness_baseline": null,
+          "retained_value_known": false,
+          "source": "hardware-brightness-with-default-policy",
+          "synapse_profile_state_read": false
+        },
+        "lighting_overlay": {
+          "color_editor_exact_canvas_assets": false,
+          "color_editor_inputs": 0,
+          "color_editor_open": false,
+          "custom_slot_count": 16,
+          "palette_open": false,
+          "presentation_only_effect_override": false,
+          "ready": false,
+          "scroll_css": 0.0,
+          "source_anchor_available": false
+        },
+        "lighting_source_icons": 17,
+        "loaded_source_fonts": 3,
+        "matched": true,
+        "mouse_artwork": true,
+        "performance_configured_rows": null,
+        "performance_independent_rows": null,
+        "performance_inputs": 0,
+        "performance_scroll_css": 0.0,
+        "performance_visible_rows": null,
+        "power_sleep_available": false,
+        "power_threshold_available": false,
+        "presentation_only_override": false,
+        "presented": true,
+        "profile_overlay": {
+          "cloud": true,
+          "commit_enabled": false,
+          "has_browsed_file": false,
+          "has_error": false,
+          "loading": false,
+          "macro_rows": 0,
+          "mode": "import",
+          "open": true,
+          "owner_matches_current_snapshot": true,
+          "profile_rows": 0,
+          "ready": true,
+          "selected_macro_references": 0,
+          "selected_profiles": 0,
+          "warning": false
+        },
+        "profile_source_icons": 5,
+        "requested": "keyboard-profile-cloud",
+        "reserved_footer_css": 0,
+        "scale": 1.25,
+        "smoke_overlay_started": true,
+        "source_lighting_view": false,
+        "source_performance_view": false,
+        "source_power_view": false,
+        "source_viewport": true,
+        "tab": "CUSTOMIZE",
+        "visible": true,
+        "width": 1584
+      },
+      "PeakWorkingSetBytes": 23494656,
+      "SampledPeakWorkingSetBytes": 22028288.0,
+      "SampledPeakPrivateBytes": 8585216.0,
+      "PeakPagedMemoryBytes": 9637888,
+      "MaxObservedProcesses": 1.0,
+      "ObservedTcpConnections": [],
+      "Under100MB": true,
+      "Samples": [
+        {
+          "ElapsedSeconds": 0.0928847,
+          "WorkingSetBytes": 9027584.0,
+          "PrivateBytes": 1773568.0,
+          "Processes": 1,
+          "CpuSeconds": 0.078125
+        },
+        {
+          "ElapsedSeconds": 0.299269,
+          "WorkingSetBytes": 13459456.0,
+          "PrivateBytes": 2273280.0,
+          "Processes": 1,
+          "CpuSeconds": 0.109375
+        },
+        {
+          "ElapsedSeconds": 0.5116306,
+          "WorkingSetBytes": 21729280.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.1875
+        },
+        {
+          "ElapsedSeconds": 0.723705,
+          "WorkingSetBytes": 21995520.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 0.9330143,
+          "WorkingSetBytes": 21999616.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 1.235685,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 1.4489783,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 1.6617704,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 1.87397,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 2.0877805,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 2.3932459,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 2.6052021,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 2.8195112,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 3.0300561,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 3.2414039,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 3.5725622,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 3.7864709,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 3.997247,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 4.208141,
+          "WorkingSetBytes": 22011904.0,
+          "PrivateBytes": 8585216.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 4.7679791,
+          "WorkingSetBytes": 22028288.0,
+          "PrivateBytes": 8245248.0,
+          "Processes": 1,
+          "CpuSeconds": 0.265625
+        },
+        {
+          "ElapsedSeconds": 5.219877,
+          "WorkingSetBytes": 22028288.0,
+          "PrivateBytes": 8245248.0,
+          "Processes": 1,
+          "CpuSeconds": 0.265625
+        },
+        {
+          "ElapsedSeconds": 5.6892582,
+          "WorkingSetBytes": 22028288.0,
+          "PrivateBytes": 8245248.0,
+          "Processes": 1,
+          "CpuSeconds": 0.265625
+        },
+        {
+          "ElapsedSeconds": 6.2843696,
+          "WorkingSetBytes": 22028288.0,
+          "PrivateBytes": 8245248.0,
+          "Processes": 1,
+          "CpuSeconds": 0.265625
+        },
+        {
+          "ElapsedSeconds": 6.7501338,
+          "WorkingSetBytes": 22028288.0,
+          "PrivateBytes": 8245248.0,
+          "Processes": 1,
+          "CpuSeconds": 0.28125
+        },
+        {
+          "ElapsedSeconds": 7.2077043,
+          "WorkingSetBytes": 22028288.0,
+          "PrivateBytes": 8245248.0,
+          "Processes": 1,
+          "CpuSeconds": 0.28125
+        },
+        {
+          "ElapsedSeconds": 7.7635649,
+          "WorkingSetBytes": 22028288.0,
+          "PrivateBytes": 8245248.0,
+          "Processes": 1,
+          "CpuSeconds": 0.28125
+        },
+        {
+          "ElapsedSeconds": 8.2325655,
+          "WorkingSetBytes": 22028288.0,
+          "PrivateBytes": 8245248.0,
+          "Processes": 1,
+          "CpuSeconds": 0.28125
+        },
+        {
+          "ElapsedSeconds": 8.7047461,
+          "WorkingSetBytes": 22028288.0,
+          "PrivateBytes": 8245248.0,
+          "Processes": 1,
+          "CpuSeconds": 0.28125
+        },
+        {
+          "ElapsedSeconds": 9.268897,
+          "WorkingSetBytes": 22028288.0,
+          "PrivateBytes": 8245248.0,
+          "Processes": 1,
+          "CpuSeconds": 0.28125
+        },
+        {
+          "ElapsedSeconds": 9.7316103,
+          "WorkingSetBytes": 22028288.0,
+          "PrivateBytes": 8245248.0,
+          "Processes": 1,
+          "CpuSeconds": 0.3125
+        },
+        {
+          "ElapsedSeconds": 10.1977078,
+          "WorkingSetBytes": 22028288.0,
+          "PrivateBytes": 8245248.0,
+          "Processes": 1,
+          "CpuSeconds": 0.3125
+        },
+        {
+          "ElapsedSeconds": 10.7527554,
+          "WorkingSetBytes": 22028288.0,
+          "PrivateBytes": 8245248.0,
+          "Processes": 1,
+          "CpuSeconds": 0.3125
+        },
+        {
+          "ElapsedSeconds": 11.216021,
+          "WorkingSetBytes": 22028288.0,
+          "PrivateBytes": 8245248.0,
+          "Processes": 1,
+          "CpuSeconds": 0.3125
+        },
+        {
+          "ElapsedSeconds": 11.6718141,
+          "WorkingSetBytes": 22028288.0,
+          "PrivateBytes": 8245248.0,
+          "Processes": 1,
+          "CpuSeconds": 0.3125
+        },
+        {
+          "ElapsedSeconds": 12.2159487,
+          "WorkingSetBytes": 22028288.0,
+          "PrivateBytes": 8245248.0,
+          "Processes": 1,
+          "CpuSeconds": 0.3125
+        }
+      ]
+    },
+    {
+      "Scenario": "keyboard-lighting-color-editor",
+      "PresentedFrame": {
+        "detected_devices": 2,
+        "device_kind": "keyboard",
+        "dpi_awareness": 2,
+        "failed": false,
+        "fidelity": "partial source-derived native port; pixel identity unproven",
+        "height": 884,
+        "keyboard_artwork": true,
+        "keyboard_customize_artwork": true,
+        "keyboard_named_source_inputs": 112,
+        "keyboard_source_assignment_options": 1647,
+        "keyboard_source_inputs": 112,
+        "lighting_brightness_readback": {
+          "available": true,
+          "error": null,
+          "percent": 100,
+          "raw": 255,
+          "selectors_match": true
+        },
+        "lighting_intent_origin": {
+          "brightness_baseline": null,
+          "retained_value_known": false,
+          "source": "hardware-brightness-with-default-policy",
+          "synapse_profile_state_read": false
+        },
+        "lighting_overlay": {
+          "color_editor_exact_canvas_assets": true,
+          "color_editor_inputs": 4,
+          "color_editor_open": true,
+          "custom_slot_count": 16,
+          "palette_open": true,
+          "presentation_only_effect_override": true,
+          "ready": true,
+          "scroll_css": 208.79999999999995,
+          "source_anchor_available": true
+        },
+        "lighting_source_icons": 17,
+        "loaded_source_fonts": 3,
+        "matched": true,
+        "mouse_artwork": true,
+        "performance_configured_rows": null,
+        "performance_independent_rows": null,
+        "performance_inputs": 0,
+        "performance_scroll_css": 0.0,
+        "performance_visible_rows": null,
+        "power_sleep_available": false,
+        "power_threshold_available": false,
+        "presentation_only_override": true,
+        "presented": true,
+        "profile_overlay": {
+          "open": false,
+          "ready": false
+        },
+        "profile_source_icons": 5,
+        "requested": "keyboard-lighting-color-editor",
+        "reserved_footer_css": 0,
+        "scale": 1.25,
+        "smoke_overlay_started": true,
+        "source_lighting_view": true,
+        "source_performance_view": false,
+        "source_power_view": false,
+        "source_viewport": true,
+        "tab": "LIGHTING",
+        "visible": true,
+        "width": 1584
+      },
+      "PeakWorkingSetBytes": 25538560,
+      "SampledPeakWorkingSetBytes": 25112576.0,
+      "SampledPeakPrivateBytes": 11010048.0,
+      "PeakPagedMemoryBytes": 11268096,
+      "MaxObservedProcesses": 1.0,
+      "ObservedTcpConnections": [],
+      "Under100MB": true,
+      "Samples": [
+        {
+          "ElapsedSeconds": 0.0972013,
+          "WorkingSetBytes": 9031680.0,
+          "PrivateBytes": 1781760.0,
+          "Processes": 1,
+          "CpuSeconds": 0.0
+        },
+        {
+          "ElapsedSeconds": 0.3114302,
+          "WorkingSetBytes": 13766656.0,
+          "PrivateBytes": 2404352.0,
+          "Processes": 1,
+          "CpuSeconds": 0.03125
+        },
+        {
+          "ElapsedSeconds": 0.5262094,
+          "WorkingSetBytes": 21741568.0,
+          "PrivateBytes": 8601600.0,
+          "Processes": 1,
+          "CpuSeconds": 0.109375
+        },
+        {
+          "ElapsedSeconds": 0.7371835,
+          "WorkingSetBytes": 23986176.0,
+          "PrivateBytes": 10207232.0,
+          "Processes": 1,
+          "CpuSeconds": 0.125
+        },
+        {
+          "ElapsedSeconds": 0.9510308,
+          "WorkingSetBytes": 23990272.0,
+          "PrivateBytes": 10207232.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 1.2489199,
+          "WorkingSetBytes": 24002560.0,
+          "PrivateBytes": 10207232.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 1.4539356,
+          "WorkingSetBytes": 24002560.0,
+          "PrivateBytes": 10207232.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 1.6688985,
+          "WorkingSetBytes": 24002560.0,
+          "PrivateBytes": 10207232.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 1.8826689,
+          "WorkingSetBytes": 24002560.0,
+          "PrivateBytes": 10207232.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 2.0913425,
+          "WorkingSetBytes": 24002560.0,
+          "PrivateBytes": 10207232.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 2.3970098,
+          "WorkingSetBytes": 24002560.0,
+          "PrivateBytes": 10207232.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 2.6071475,
+          "WorkingSetBytes": 24002560.0,
+          "PrivateBytes": 10207232.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 2.8179157,
+          "WorkingSetBytes": 24002560.0,
+          "PrivateBytes": 10207232.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 3.0308857,
+          "WorkingSetBytes": 24002560.0,
+          "PrivateBytes": 10207232.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 3.2421423,
+          "WorkingSetBytes": 24002560.0,
+          "PrivateBytes": 10207232.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 3.5497107,
+          "WorkingSetBytes": 24002560.0,
+          "PrivateBytes": 10207232.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 3.7590314,
+          "WorkingSetBytes": 24002560.0,
+          "PrivateBytes": 10207232.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 3.9726785,
+          "WorkingSetBytes": 24002560.0,
+          "PrivateBytes": 10207232.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 4.1836168,
+          "WorkingSetBytes": 24002560.0,
+          "PrivateBytes": 10207232.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 4.7388742,
+          "WorkingSetBytes": 24055808.0,
+          "PrivateBytes": 9953280.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 5.1848528,
+          "WorkingSetBytes": 24055808.0,
+          "PrivateBytes": 9953280.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 5.6235265,
+          "WorkingSetBytes": 24055808.0,
+          "PrivateBytes": 9953280.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 6.1634647,
+          "WorkingSetBytes": 24055808.0,
+          "PrivateBytes": 9953280.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 6.6082471,
+          "WorkingSetBytes": 24055808.0,
+          "PrivateBytes": 9953280.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 7.0615313,
+          "WorkingSetBytes": 24055808.0,
+          "PrivateBytes": 9953280.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 7.6115067,
+          "WorkingSetBytes": 24055808.0,
+          "PrivateBytes": 9953280.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 8.0638411,
+          "WorkingSetBytes": 24055808.0,
+          "PrivateBytes": 9953280.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 8.5188528,
+          "WorkingSetBytes": 24055808.0,
+          "PrivateBytes": 9953280.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 9.0654595,
+          "WorkingSetBytes": 24055808.0,
+          "PrivateBytes": 9953280.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 9.5160093,
+          "WorkingSetBytes": 24055808.0,
+          "PrivateBytes": 9953280.0,
+          "Processes": 1,
+          "CpuSeconds": 0.1875
+        },
+        {
+          "ElapsedSeconds": 9.9742623,
+          "WorkingSetBytes": 24055808.0,
+          "PrivateBytes": 9953280.0,
+          "Processes": 1,
+          "CpuSeconds": 0.1875
+        },
+        {
+          "ElapsedSeconds": 10.5122899,
+          "WorkingSetBytes": 24055808.0,
+          "PrivateBytes": 9953280.0,
+          "Processes": 1,
+          "CpuSeconds": 0.1875
+        },
+        {
+          "ElapsedSeconds": 10.9678612,
+          "WorkingSetBytes": 24055808.0,
+          "PrivateBytes": 9953280.0,
+          "Processes": 1,
+          "CpuSeconds": 0.1875
+        },
+        {
+          "ElapsedSeconds": 11.4247326,
+          "WorkingSetBytes": 24055808.0,
+          "PrivateBytes": 9953280.0,
+          "Processes": 1,
+          "CpuSeconds": 0.1875
+        },
+        {
+          "ElapsedSeconds": 12.007162,
+          "WorkingSetBytes": 24055808.0,
+          "PrivateBytes": 9953280.0,
+          "Processes": 1,
+          "CpuSeconds": 0.1875
+        },
+        {
+          "ElapsedSeconds": 12.4720212,
+          "WorkingSetBytes": 25112576.0,
+          "PrivateBytes": 11010048.0,
+          "Processes": 1,
+          "CpuSeconds": 0.1875
+        }
+      ]
+    },
+    {
+      "Scenario": "keyboard-profile-import",
+      "PresentedFrame": {
+        "detected_devices": 2,
+        "device_kind": "keyboard",
+        "dpi_awareness": 2,
+        "failed": false,
+        "fidelity": "partial source-derived native port; pixel identity unproven",
+        "height": 884,
+        "keyboard_artwork": true,
+        "keyboard_customize_artwork": true,
+        "keyboard_named_source_inputs": 112,
+        "keyboard_source_assignment_options": 1647,
+        "keyboard_source_inputs": 112,
+        "lighting_brightness_readback": {
+          "available": true,
+          "error": null,
+          "percent": 100,
+          "raw": 255,
+          "selectors_match": true
+        },
+        "lighting_intent_origin": {
+          "brightness_baseline": null,
+          "retained_value_known": false,
+          "source": "hardware-brightness-with-default-policy",
+          "synapse_profile_state_read": false
+        },
+        "lighting_overlay": {
+          "color_editor_exact_canvas_assets": false,
+          "color_editor_inputs": 0,
+          "color_editor_open": false,
+          "custom_slot_count": 16,
+          "palette_open": false,
+          "presentation_only_effect_override": false,
+          "ready": false,
+          "scroll_css": 0.0,
+          "source_anchor_available": false
+        },
+        "lighting_source_icons": 17,
+        "loaded_source_fonts": 3,
+        "matched": true,
+        "mouse_artwork": true,
+        "performance_configured_rows": null,
+        "performance_independent_rows": null,
+        "performance_inputs": 0,
+        "performance_scroll_css": 0.0,
+        "performance_visible_rows": null,
+        "power_sleep_available": false,
+        "power_threshold_available": false,
+        "presentation_only_override": false,
+        "presented": true,
+        "profile_overlay": {
+          "cloud": false,
+          "commit_enabled": false,
+          "has_browsed_file": false,
+          "has_error": false,
+          "loading": false,
+          "macro_rows": 0,
+          "mode": "import",
+          "open": true,
+          "owner_matches_current_snapshot": true,
+          "profile_rows": 0,
+          "ready": true,
+          "selected_macro_references": 0,
+          "selected_profiles": 0,
+          "warning": false
+        },
+        "profile_source_icons": 5,
+        "requested": "keyboard-profile-import",
+        "reserved_footer_css": 0,
+        "scale": 1.25,
+        "smoke_overlay_started": true,
+        "source_lighting_view": false,
+        "source_performance_view": false,
+        "source_power_view": false,
+        "source_viewport": true,
+        "tab": "CUSTOMIZE",
+        "visible": true,
+        "width": 1584
+      },
+      "PeakWorkingSetBytes": 23531520,
+      "SampledPeakWorkingSetBytes": 22044672.0,
+      "SampledPeakPrivateBytes": 8577024.0,
+      "PeakPagedMemoryBytes": 9637888,
+      "MaxObservedProcesses": 1.0,
+      "ObservedTcpConnections": [],
+      "Under100MB": true,
+      "Samples": [
+        {
+          "ElapsedSeconds": 0.0970771,
+          "WorkingSetBytes": 9031680.0,
+          "PrivateBytes": 1773568.0,
+          "Processes": 1,
+          "CpuSeconds": 0.03125
+        },
+        {
+          "ElapsedSeconds": 0.3127386,
+          "WorkingSetBytes": 13750272.0,
+          "PrivateBytes": 2387968.0,
+          "Processes": 1,
+          "CpuSeconds": 0.046875
+        },
+        {
+          "ElapsedSeconds": 0.5297137,
+          "WorkingSetBytes": 21749760.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.09375
+        },
+        {
+          "ElapsedSeconds": 0.73875,
+          "WorkingSetBytes": 21958656.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.109375
+        },
+        {
+          "ElapsedSeconds": 0.9503344,
+          "WorkingSetBytes": 21962752.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.109375
+        },
+        {
+          "ElapsedSeconds": 1.2627911,
+          "WorkingSetBytes": 21975040.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.109375
+        },
+        {
+          "ElapsedSeconds": 1.4712891,
+          "WorkingSetBytes": 21975040.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.109375
+        },
+        {
+          "ElapsedSeconds": 1.6827473,
+          "WorkingSetBytes": 21975040.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.109375
+        },
+        {
+          "ElapsedSeconds": 1.8941271,
+          "WorkingSetBytes": 21975040.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.109375
+        },
+        {
+          "ElapsedSeconds": 2.1037094,
+          "WorkingSetBytes": 21975040.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.109375
+        },
+        {
+          "ElapsedSeconds": 2.4048934,
+          "WorkingSetBytes": 21975040.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.109375
+        },
+        {
+          "ElapsedSeconds": 2.6191652,
+          "WorkingSetBytes": 21975040.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.109375
+        },
+        {
+          "ElapsedSeconds": 2.8287966,
+          "WorkingSetBytes": 21975040.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.109375
+        },
+        {
+          "ElapsedSeconds": 3.0403015,
+          "WorkingSetBytes": 21975040.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.109375
+        },
+        {
+          "ElapsedSeconds": 3.253278,
+          "WorkingSetBytes": 21975040.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.109375
+        },
+        {
+          "ElapsedSeconds": 3.5545317,
+          "WorkingSetBytes": 21975040.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.125
+        },
+        {
+          "ElapsedSeconds": 3.7688926,
+          "WorkingSetBytes": 21975040.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.125
+        },
+        {
+          "ElapsedSeconds": 3.9798226,
+          "WorkingSetBytes": 21975040.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.125
+        },
+        {
+          "ElapsedSeconds": 4.192903,
+          "WorkingSetBytes": 21975040.0,
+          "PrivateBytes": 8577024.0,
+          "Processes": 1,
+          "CpuSeconds": 0.125
+        },
+        {
+          "ElapsedSeconds": 4.7447128,
+          "WorkingSetBytes": 22044672.0,
+          "PrivateBytes": 8253440.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 5.1949815,
+          "WorkingSetBytes": 22044672.0,
+          "PrivateBytes": 8253440.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 5.6482332,
+          "WorkingSetBytes": 22044672.0,
+          "PrivateBytes": 8253440.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 6.1976499,
+          "WorkingSetBytes": 22044672.0,
+          "PrivateBytes": 8253440.0,
+          "Processes": 1,
+          "CpuSeconds": 0.171875
+        },
+        {
+          "ElapsedSeconds": 6.6681995,
+          "WorkingSetBytes": 22044672.0,
+          "PrivateBytes": 8253440.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 7.1227046,
+          "WorkingSetBytes": 22044672.0,
+          "PrivateBytes": 8253440.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 7.6725296,
+          "WorkingSetBytes": 22044672.0,
+          "PrivateBytes": 8253440.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 8.1259571,
+          "WorkingSetBytes": 22044672.0,
+          "PrivateBytes": 8253440.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 8.5793718,
+          "WorkingSetBytes": 22044672.0,
+          "PrivateBytes": 8253440.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 9.120306,
+          "WorkingSetBytes": 22044672.0,
+          "PrivateBytes": 8253440.0,
+          "Processes": 1,
+          "CpuSeconds": 0.203125
+        },
+        {
+          "ElapsedSeconds": 9.5765534,
+          "WorkingSetBytes": 22044672.0,
+          "PrivateBytes": 8253440.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 10.030481,
+          "WorkingSetBytes": 22044672.0,
+          "PrivateBytes": 8253440.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 10.5755857,
+          "WorkingSetBytes": 22044672.0,
+          "PrivateBytes": 8253440.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 11.0635583,
+          "WorkingSetBytes": 22044672.0,
+          "PrivateBytes": 8253440.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 11.516432,
+          "WorkingSetBytes": 22044672.0,
+          "PrivateBytes": 8253440.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 12.0681132,
+          "WorkingSetBytes": 22044672.0,
+          "PrivateBytes": 8253440.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        }
+      ]
+    },
+    {
+      "Scenario": "keyboard-profile-export",
+      "PresentedFrame": {
+        "detected_devices": 2,
+        "device_kind": "keyboard",
+        "dpi_awareness": 2,
+        "failed": false,
+        "fidelity": "partial source-derived native port; pixel identity unproven",
+        "height": 884,
+        "keyboard_artwork": true,
+        "keyboard_customize_artwork": true,
+        "keyboard_named_source_inputs": 112,
+        "keyboard_source_assignment_options": 1647,
+        "keyboard_source_inputs": 112,
+        "lighting_brightness_readback": {
+          "available": true,
+          "error": null,
+          "percent": 100,
+          "raw": 255,
+          "selectors_match": true
+        },
+        "lighting_intent_origin": {
+          "brightness_baseline": null,
+          "retained_value_known": false,
+          "source": "hardware-brightness-with-default-policy",
+          "synapse_profile_state_read": false
+        },
+        "lighting_overlay": {
+          "color_editor_exact_canvas_assets": false,
+          "color_editor_inputs": 0,
+          "color_editor_open": false,
+          "custom_slot_count": 16,
+          "palette_open": false,
+          "presentation_only_effect_override": false,
+          "ready": false,
+          "scroll_css": 0.0,
+          "source_anchor_available": false
+        },
+        "lighting_source_icons": 17,
+        "loaded_source_fonts": 3,
+        "matched": true,
+        "mouse_artwork": true,
+        "performance_configured_rows": null,
+        "performance_independent_rows": null,
+        "performance_inputs": 0,
+        "performance_scroll_css": 0.0,
+        "performance_visible_rows": null,
+        "power_sleep_available": false,
+        "power_threshold_available": false,
+        "presentation_only_override": false,
+        "presented": true,
+        "profile_overlay": {
+          "cloud": false,
+          "commit_enabled": true,
+          "has_browsed_file": false,
+          "has_error": false,
+          "loading": false,
+          "macro_rows": 0,
+          "mode": "export",
+          "open": true,
+          "owner_matches_current_snapshot": true,
+          "profile_rows": 1,
+          "ready": true,
+          "selected_macro_references": 0,
+          "selected_profiles": 1,
+          "warning": false
+        },
+        "profile_source_icons": 5,
+        "requested": "keyboard-profile-export",
+        "reserved_footer_css": 0,
+        "scale": 1.25,
+        "smoke_overlay_started": true,
+        "source_lighting_view": false,
+        "source_performance_view": false,
+        "source_power_view": false,
+        "source_viewport": true,
+        "tab": "CUSTOMIZE",
+        "visible": true,
+        "width": 1584
+      },
+      "PeakWorkingSetBytes": 23625728,
+      "SampledPeakWorkingSetBytes": 22126592.0,
+      "SampledPeakPrivateBytes": 8581120.0,
+      "PeakPagedMemoryBytes": 9658368,
+      "MaxObservedProcesses": 1.0,
+      "ObservedTcpConnections": [],
+      "Under100MB": true,
+      "Samples": [
+        {
+          "ElapsedSeconds": 0.0981428,
+          "WorkingSetBytes": 9039872.0,
+          "PrivateBytes": 1781760.0,
+          "Processes": 1,
+          "CpuSeconds": 0.03125
+        },
+        {
+          "ElapsedSeconds": 0.314781,
+          "WorkingSetBytes": 13758464.0,
+          "PrivateBytes": 2387968.0,
+          "Processes": 1,
+          "CpuSeconds": 0.046875
+        },
+        {
+          "ElapsedSeconds": 0.5261211,
+          "WorkingSetBytes": 21741568.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.109375
+        },
+        {
+          "ElapsedSeconds": 0.7365924,
+          "WorkingSetBytes": 21991424.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 0.9490289,
+          "WorkingSetBytes": 22020096.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 1.2509595,
+          "WorkingSetBytes": 22032384.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 1.460735,
+          "WorkingSetBytes": 22032384.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 1.671886,
+          "WorkingSetBytes": 22032384.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 1.8837598,
+          "WorkingSetBytes": 22032384.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 2.0966755,
+          "WorkingSetBytes": 22032384.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 2.4028287,
+          "WorkingSetBytes": 22032384.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 2.609876,
+          "WorkingSetBytes": 22032384.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 2.820699,
+          "WorkingSetBytes": 22032384.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 3.0346276,
+          "WorkingSetBytes": 22032384.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 3.2467064,
+          "WorkingSetBytes": 22032384.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 3.5586519,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 3.762122,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 3.9767674,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 4.1888834,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.15625
+        },
+        {
+          "ElapsedSeconds": 4.7795072,
+          "WorkingSetBytes": 22126592.0,
+          "PrivateBytes": 8278016.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 5.254183,
+          "WorkingSetBytes": 22126592.0,
+          "PrivateBytes": 8278016.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 5.7480352,
+          "WorkingSetBytes": 22126592.0,
+          "PrivateBytes": 8278016.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 6.3298987,
+          "WorkingSetBytes": 22126592.0,
+          "PrivateBytes": 8278016.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 6.7953316,
+          "WorkingSetBytes": 22126592.0,
+          "PrivateBytes": 8278016.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 7.2532267,
+          "WorkingSetBytes": 22126592.0,
+          "PrivateBytes": 8278016.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 7.8275745,
+          "WorkingSetBytes": 22126592.0,
+          "PrivateBytes": 8278016.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 8.3266667,
+          "WorkingSetBytes": 22126592.0,
+          "PrivateBytes": 8228864.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 8.825771,
+          "WorkingSetBytes": 22126592.0,
+          "PrivateBytes": 8228864.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 9.3918467,
+          "WorkingSetBytes": 22126592.0,
+          "PrivateBytes": 8228864.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 9.9028822,
+          "WorkingSetBytes": 22126592.0,
+          "PrivateBytes": 8228864.0,
+          "Processes": 1,
+          "CpuSeconds": 0.25
+        },
+        {
+          "ElapsedSeconds": 10.3891551,
+          "WorkingSetBytes": 22126592.0,
+          "PrivateBytes": 8228864.0,
+          "Processes": 1,
+          "CpuSeconds": 0.25
+        },
+        {
+          "ElapsedSeconds": 10.9533137,
+          "WorkingSetBytes": 22126592.0,
+          "PrivateBytes": 8228864.0,
+          "Processes": 1,
+          "CpuSeconds": 0.25
+        },
+        {
+          "ElapsedSeconds": 11.410392,
+          "WorkingSetBytes": 22126592.0,
+          "PrivateBytes": 8228864.0,
+          "Processes": 1,
+          "CpuSeconds": 0.25
+        },
+        {
+          "ElapsedSeconds": 11.8654931,
+          "WorkingSetBytes": 22126592.0,
+          "PrivateBytes": 8228864.0,
+          "Processes": 1,
+          "CpuSeconds": 0.25
+        },
+        {
+          "ElapsedSeconds": 12.4298311,
+          "WorkingSetBytes": 22126592.0,
+          "PrivateBytes": 8228864.0,
+          "Processes": 1,
+          "CpuSeconds": 0.25
+        }
+      ]
+    },
+    {
+      "Scenario": "keyboard-profile-cloud",
+      "PresentedFrame": {
+        "detected_devices": 2,
+        "device_kind": "keyboard",
+        "dpi_awareness": 2,
+        "failed": false,
+        "fidelity": "partial source-derived native port; pixel identity unproven",
+        "height": 884,
+        "keyboard_artwork": true,
+        "keyboard_customize_artwork": true,
+        "keyboard_named_source_inputs": 112,
+        "keyboard_source_assignment_options": 1647,
+        "keyboard_source_inputs": 112,
+        "lighting_brightness_readback": {
+          "available": true,
+          "error": null,
+          "percent": 100,
+          "raw": 255,
+          "selectors_match": true
+        },
+        "lighting_intent_origin": {
+          "brightness_baseline": null,
+          "retained_value_known": false,
+          "source": "hardware-brightness-with-default-policy",
+          "synapse_profile_state_read": false
+        },
+        "lighting_overlay": {
+          "color_editor_exact_canvas_assets": false,
+          "color_editor_inputs": 0,
+          "color_editor_open": false,
+          "custom_slot_count": 16,
+          "palette_open": false,
+          "presentation_only_effect_override": false,
+          "ready": false,
+          "scroll_css": 0.0,
+          "source_anchor_available": false
+        },
+        "lighting_source_icons": 17,
+        "loaded_source_fonts": 3,
+        "matched": true,
+        "mouse_artwork": true,
+        "performance_configured_rows": null,
+        "performance_independent_rows": null,
+        "performance_inputs": 0,
+        "performance_scroll_css": 0.0,
+        "performance_visible_rows": null,
+        "power_sleep_available": false,
+        "power_threshold_available": false,
+        "presentation_only_override": false,
+        "presented": true,
+        "profile_overlay": {
+          "cloud": true,
+          "commit_enabled": false,
+          "has_browsed_file": false,
+          "has_error": false,
+          "loading": false,
+          "macro_rows": 0,
+          "mode": "import",
+          "open": true,
+          "owner_matches_current_snapshot": true,
+          "profile_rows": 0,
+          "ready": true,
+          "selected_macro_references": 0,
+          "selected_profiles": 0,
+          "warning": false
+        },
+        "profile_source_icons": 5,
+        "requested": "keyboard-profile-cloud",
+        "reserved_footer_css": 0,
+        "scale": 1.25,
+        "smoke_overlay_started": true,
+        "source_lighting_view": false,
+        "source_performance_view": false,
+        "source_power_view": false,
+        "source_viewport": true,
+        "tab": "CUSTOMIZE",
+        "visible": true,
+        "width": 1584
+      },
+      "PeakWorkingSetBytes": 23539712,
+      "SampledPeakWorkingSetBytes": 22052864.0,
+      "SampledPeakPrivateBytes": 8581120.0,
+      "PeakPagedMemoryBytes": 9646080,
+      "MaxObservedProcesses": 1.0,
+      "ObservedTcpConnections": [],
+      "Under100MB": true,
+      "Samples": [
+        {
+          "ElapsedSeconds": 0.1092644,
+          "WorkingSetBytes": 9027584.0,
+          "PrivateBytes": 1773568.0,
+          "Processes": 1,
+          "CpuSeconds": 0.015625
+        },
+        {
+          "ElapsedSeconds": 0.327686,
+          "WorkingSetBytes": 13766656.0,
+          "PrivateBytes": 2383872.0,
+          "Processes": 1,
+          "CpuSeconds": 0.046875
+        },
+        {
+          "ElapsedSeconds": 0.5392476,
+          "WorkingSetBytes": 21778432.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.109375
+        },
+        {
+          "ElapsedSeconds": 0.7488792,
+          "WorkingSetBytes": 22020096.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.125
+        },
+        {
+          "ElapsedSeconds": 0.9614147,
+          "WorkingSetBytes": 22024192.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.125
+        },
+        {
+          "ElapsedSeconds": 1.266833,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.125
+        },
+        {
+          "ElapsedSeconds": 1.4761111,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.125
+        },
+        {
+          "ElapsedSeconds": 1.6881974,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.125
+        },
+        {
+          "ElapsedSeconds": 1.8991715,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.125
+        },
+        {
+          "ElapsedSeconds": 2.1111916,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.125
+        },
+        {
+          "ElapsedSeconds": 2.418533,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.125
+        },
+        {
+          "ElapsedSeconds": 2.6298825,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.125
+        },
+        {
+          "ElapsedSeconds": 2.8408566,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.125
+        },
+        {
+          "ElapsedSeconds": 3.0527017,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.125
+        },
+        {
+          "ElapsedSeconds": 3.2651916,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.125
+        },
+        {
+          "ElapsedSeconds": 3.5710293,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 3.7810708,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 3.9932888,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 4.2046206,
+          "WorkingSetBytes": 22036480.0,
+          "PrivateBytes": 8581120.0,
+          "Processes": 1,
+          "CpuSeconds": 0.140625
+        },
+        {
+          "ElapsedSeconds": 4.7594522,
+          "WorkingSetBytes": 22052864.0,
+          "PrivateBytes": 8306688.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 5.2039823,
+          "WorkingSetBytes": 22052864.0,
+          "PrivateBytes": 8306688.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 5.6556298,
+          "WorkingSetBytes": 22052864.0,
+          "PrivateBytes": 8306688.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 6.2020348,
+          "WorkingSetBytes": 22052864.0,
+          "PrivateBytes": 8306688.0,
+          "Processes": 1,
+          "CpuSeconds": 0.21875
+        },
+        {
+          "ElapsedSeconds": 6.6551086,
+          "WorkingSetBytes": 22052864.0,
+          "PrivateBytes": 8306688.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 7.1131843,
+          "WorkingSetBytes": 22052864.0,
+          "PrivateBytes": 8306688.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 7.6466494,
+          "WorkingSetBytes": 22052864.0,
+          "PrivateBytes": 8306688.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 8.0977363,
+          "WorkingSetBytes": 22052864.0,
+          "PrivateBytes": 8306688.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 8.5383401,
+          "WorkingSetBytes": 22052864.0,
+          "PrivateBytes": 8306688.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 9.0701789,
+          "WorkingSetBytes": 22052864.0,
+          "PrivateBytes": 8306688.0,
+          "Processes": 1,
+          "CpuSeconds": 0.234375
+        },
+        {
+          "ElapsedSeconds": 9.5194816,
+          "WorkingSetBytes": 22052864.0,
+          "PrivateBytes": 8306688.0,
+          "Processes": 1,
+          "CpuSeconds": 0.25
+        },
+        {
+          "ElapsedSeconds": 9.957197,
+          "WorkingSetBytes": 22052864.0,
+          "PrivateBytes": 8306688.0,
+          "Processes": 1,
+          "CpuSeconds": 0.25
+        },
+        {
+          "ElapsedSeconds": 10.4948874,
+          "WorkingSetBytes": 22052864.0,
+          "PrivateBytes": 8306688.0,
+          "Processes": 1,
+          "CpuSeconds": 0.25
+        },
+        {
+          "ElapsedSeconds": 10.9313213,
+          "WorkingSetBytes": 22052864.0,
+          "PrivateBytes": 8306688.0,
+          "Processes": 1,
+          "CpuSeconds": 0.25
+        },
+        {
+          "ElapsedSeconds": 11.3728536,
+          "WorkingSetBytes": 22052864.0,
+          "PrivateBytes": 8306688.0,
+          "Processes": 1,
+          "CpuSeconds": 0.25
+        },
+        {
+          "ElapsedSeconds": 11.9154811,
+          "WorkingSetBytes": 22052864.0,
+          "PrivateBytes": 8306688.0,
+          "Processes": 1,
+          "CpuSeconds": 0.25
+        },
+        {
+          "ElapsedSeconds": 12.3568342,
+          "WorkingSetBytes": 22052864.0,
+          "PrivateBytes": 8306688.0,
+          "Processes": 1,
+          "CpuSeconds": 0.25
+        }
+      ]
+    }
+  ],
+  "SourceCheckpoint": "b746eda",
+  "StockSession": {
+    "stock_before": 15,
+    "stock_isolated": 0,
+    "stock_after_5_seconds": 15,
+    "services_changed": false,
+    "isolation_rounds": [
+      15,
+      0,
+      0
+    ],
+    "error": null
+  }
+}
