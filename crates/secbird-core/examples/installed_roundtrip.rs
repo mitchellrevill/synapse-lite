@@ -257,12 +257,42 @@ fn run() -> Result<(), String> {
             &[cmd::NOSTORE, cmd::BACKLIGHT_LED, 0],
             true,
         )?);
+        for (name, profile) in [
+            ("brightness-source-saved", cmd::VARSTORE),
+            ("brightness-source-live", cmd::NOSTORE),
+        ] {
+            let register = Register::capture(
+                device,
+                name,
+                cmd::MATRIX_BRIGHTNESS,
+                3,
+                &[profile, 0, 0],
+                true,
+            )?;
+            if register.original[..2] != [profile, 0] {
+                return Err("Source brightness selector did not echo; no setting changed".into());
+            }
+            registers.push(register);
+        }
     }
     if inject_failure && pid != 0x00c4 {
         return Err("Failure injection applies only to the mouse DPI check".into());
     }
     let mut report = json!({"product_id":format!("{pid:04X}"),"transport":"real-hid", "mode":if roundtrip {"roundtrip"} else {"read-only"},
         "snapshot":registers.iter().map(|r|json!({"name":r.name,"bytes":r.original})).collect::<Vec<_>>(),"steps":[],"restore_verified":false});
+    let effect_before = if pid == 0x025d {
+        let effect = device
+            .ornata_effect_readback(1, 0)
+            .map_err(|e| e.to_string())?;
+        if !effect.selectors_match() {
+            return Err("Effect selector did not echo; no setting changed".into());
+        }
+        report["effect_before"] =
+            json!({"declared_size":effect.declared_size(),"raw_args":effect.raw_args().to_vec()});
+        Some(effect)
+    } else {
+        None
+    };
     let path = Path::new(&args[1]);
     write_report(path, &report)?;
     if !roundtrip {
@@ -274,6 +304,7 @@ fn run() -> Result<(), String> {
         registers[0].original[1..] == registers[1].original[1..]
     } else {
         registers[0].original[2] == registers[1].original[2]
+            && registers[2].original[2] == registers[3].original[2]
     };
     if !equal {
         return Err("Live and saved values differ; no settings were changed because exact restoration semantics need further validation".into());
@@ -409,6 +440,70 @@ fn run() -> Result<(), String> {
             steps.push(json!({"setting":"brightness-percent","requested":target,"actual":actual,"passed":actual==target}));
             if actual != target {
                 return Err("Brightness readback differs".into());
+            }
+            let mut intent = secbird_core::lighting::LightingSettings {
+                brightness: Some(secbird_core::lighting::Brightness {
+                    enabled: false,
+                    value: 73,
+                    ..Default::default()
+                }),
+                ..Default::default()
+            };
+            for (enabled, expected) in [(false, 0u8), (true, 73u8)] {
+                intent.brightness.as_mut().unwrap().set_enabled(enabled);
+                let sent = intent.apply_brightness(device).map_err(|e| e.to_string())?;
+                let source = device
+                    .ornata_brightness_readback(1, 0)
+                    .map_err(|e| e.to_string())?;
+                let expected_raw = (u16::from(expected) * 255 / 100) as u8;
+                let effect = device
+                    .ornata_effect_readback(1, 0)
+                    .map_err(|e| e.to_string())?;
+                let before = effect_before.as_ref().unwrap();
+                let effect_same = effect.selectors_match()
+                    && effect.declared_size() == before.declared_size()
+                    && effect.raw_args()[..usize::from(effect.declared_size())]
+                        == before.raw_args()[..usize::from(before.declared_size())];
+                let passed = sent == Some(expected)
+                    && source.selectors_match()
+                    && source.raw_brightness() == expected_raw
+                    && effect_same;
+                steps.push(json!({"setting":if enabled{"source-brightness-on"}else{"source-brightness-off"},"retained_value":73,"projected_percent":sent,"source_region0_raw":source.raw_brightness(),"expected_source_raw":expected_raw,"effect_unchanged":effect_same,"passed":passed}));
+                if !passed {
+                    return Err("Source region0 brightness projection differs from backlight API; effect/brightness snapshot retained".into());
+                }
+            }
+            let saved_before = device
+                .ornata_brightness_readback(1, 0)
+                .map_err(|e| e.to_string())?
+                .raw_brightness();
+            for percent in [0u8, 73] {
+                device
+                    .set_brightness_live(cmd::BACKLIGHT_LED, percent)
+                    .map_err(|e| e.to_string())?;
+                let live = device
+                    .ornata_brightness_readback(0, 0)
+                    .map_err(|e| e.to_string())?;
+                let saved = device
+                    .ornata_brightness_readback(1, 0)
+                    .map_err(|e| e.to_string())?;
+                let effect = device
+                    .ornata_effect_readback(1, 0)
+                    .map_err(|e| e.to_string())?;
+                let before = effect_before.as_ref().unwrap();
+                let effect_same = effect.selectors_match()
+                    && effect.declared_size() == before.declared_size()
+                    && effect.raw_args()[..usize::from(effect.declared_size())]
+                        == before.raw_args()[..usize::from(before.declared_size())];
+                let passed = live.selectors_match()
+                    && saved.selectors_match()
+                    && live.raw_brightness() == (u16::from(percent) * 255 / 100) as u8
+                    && saved.raw_brightness() == saved_before
+                    && effect_same;
+                steps.push(json!({"setting":if percent==0{"live-brightness-suppress"}else{"live-brightness-restore"},"requested_percent":percent,"live_region0_raw":live.raw_brightness(),"saved_region0_raw":saved.raw_brightness(),"saved_unchanged":saved.raw_brightness()==saved_before,"effect_unchanged":effect_same,"passed":passed}));
+                if !passed {
+                    return Err("Live brightness selector or saved-state preservation differs; raw recovery snapshot retained".into());
+                }
             }
         }
         Ok(())

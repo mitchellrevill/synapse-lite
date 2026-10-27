@@ -1,0 +1,89 @@
+{
+  "scope": "Installed Ornata V2 brightness only; no mode or effect SET; firmware readback does not prove optical output or input recovery",
+  "product_id": "025D",
+  "interface": 2,
+  "example_sha256": "e2c1a2bc9dfa588b3c989715c788a766675afc53e9e7d2919aff9fdb07cd532a",
+  "snapshot": [
+    {
+      "bytes": [
+        1,
+        5,
+        255
+      ],
+      "name": "brightness-saved"
+    },
+    {
+      "bytes": [
+        0,
+        5,
+        255
+      ],
+      "name": "brightness-live"
+    },
+    {
+      "bytes": [
+        1,
+        0,
+        255
+      ],
+      "name": "brightness-source-saved"
+    },
+    {
+      "bytes": [
+        0,
+        0,
+        255
+      ],
+      "name": "brightness-source-live"
+    }
+  ],
+  "steps": [
+    {
+      "actual": 50,
+      "passed": true,
+      "requested": 50,
+      "setting": "brightness-percent"
+    },
+    {
+      "effect_unchanged": true,
+      "expected_source_raw": 0,
+      "passed": true,
+      "projected_percent": 0,
+      "retained_value": 73,
+      "setting": "source-brightness-off",
+      "source_region0_raw": 0
+    },
+    {
+      "effect_unchanged": true,
+      "expected_source_raw": 186,
+      "passed": true,
+      "projected_percent": 73,
+      "retained_value": 73,
+      "setting": "source-brightness-on",
+      "source_region0_raw": 186
+    },
+    {
+      "effect_unchanged": true,
+      "live_region0_raw": 0,
+      "passed": true,
+      "requested_percent": 0,
+      "saved_region0_raw": 186,
+      "saved_unchanged": true,
+      "setting": "live-brightness-suppress"
+    },
+    {
+      "effect_unchanged": true,
+      "live_region0_raw": 186,
+      "passed": true,
+      "requested_percent": 73,
+      "saved_region0_raw": 186,
+      "saved_unchanged": true,
+      "setting": "live-brightness-restore"
+    }
+  ],
+  "exercise_error": null,
+  "restore_verified": true,
+  "restore_errors": [],
+  "stock_user_processes_restored_after_3_seconds": 11,
+  "services_and_drivers_changed": false
+}
