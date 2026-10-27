@@ -75,6 +75,8 @@ pub struct SimState {
     pub smart_dimming: Option<(u8, u8)>,
     /// Keyboards: gaming mode bits (`00:08`); `None` where the device has none.
     pub game_mode: Option<u8>,
+    /// Read-only mode query (00:84); no mode setter is simulated.
+    pub device_mode: Option<u8>,
     pub auto_sleep: Option<bool>,
     /// The auto-sleep switch saved in the on-board slot, which the live one starts from.
     pub auto_sleep_saved: Option<bool>,
@@ -135,6 +137,7 @@ impl SimState {
             critical_threshold: None,
             smart_dimming: None,
             game_mode: None,
+            device_mode: None,
             auto_sleep: None,
             auto_sleep_saved: None,
             active_slot: None,
@@ -276,6 +279,10 @@ impl SimState {
         let known = |s: &Self, led: u8| s.leds.contains(&led);
         match c {
             c if c == cmd::FIRMWARE.get() => ok(vec![self.firmware.0, self.firmware.1]),
+            c if c == Command::new(0, 0x84) => match self.device_mode {
+                Some(mode) => ok(vec![mode]),
+                None => (NotSupported, vec![]),
+            },
             c if c == cmd::SERIAL.get() => {
                 let mut v = self.serial.as_bytes().to_vec();
                 v.resize(cmd::SERIAL_SIZE as usize, 0);
@@ -665,6 +672,7 @@ impl Sim {
         s.leds = vec![5];
         s.matrix = Some((6, 22, vec![[0; 3]; 6 * 22]));
         s.game_mode = Some(0);
+        s.device_mode = Some(0);
         with_keys(&mut s);
         Sim::new(s)
     }

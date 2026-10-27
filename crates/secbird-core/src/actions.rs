@@ -25,6 +25,21 @@ fn check_lighting(dev: &Device, store: &mut Store) -> Result<()> {
     Ok(())
 }
 
+// Legacy color/effect callers have no mutable host-frame runtime. A firmware
+// acknowledgement in Driver Mode does not demonstrate that color was rendered.
+fn check_firmware_lighting(dev: &Device) -> Result<()> {
+    if dev.pid == 605 && dev.interface == 2 {
+        let mode = dev.ornata_mode_readback()?;
+        if mode.mode() != 0 {
+            return Err(crate::Error::Unsupported(format!(
+                "Ornata firmware color/effect requires Normal Mode0; observed mode{}. Use the tray's source Lighting controls for supported host effects; no mode change was attempted",
+                mode.mode()
+            )));
+        }
+    }
+    Ok(())
+}
+
 /// Returns the DPI actually set, after rounding to the device's step.
 pub fn set_dpi(dev: &Device, store: &mut Store, x: u16, y: u16) -> Result<(u16, u16)> {
     if let Some(mut intent) = store.for_device(dev).active().performance.clone() {
@@ -178,6 +193,7 @@ pub fn set_polling(dev: &Device, store: &mut Store, hz: u32) -> Result<()> {
 
 pub fn set_color(dev: &Device, store: &mut Store, zone_name: &str, color: Rgb) -> Result<()> {
     check_lighting(dev, store)?;
+    check_firmware_lighting(dev)?;
     dev.set_static_color(dev.led_id(zone_name)?, color)?;
     store.for_device(dev).active_mut().keys.clear();
     let z = zone(store, dev, zone_name);
@@ -190,6 +206,7 @@ pub fn set_color(dev: &Device, store: &mut Store, zone_name: &str, color: Rgb) -
 /// A built-in effect on one zone. Like a color, it replaces per-key colors.
 pub fn set_effect(dev: &Device, store: &mut Store, zone_name: &str, effect: crate::effects::Effect) -> Result<()> {
     check_lighting(dev, store)?;
+    check_firmware_lighting(dev)?;
     dev.set_effect(dev.led_id(zone_name)?, &effect)?;
     store.for_device(dev).active_mut().keys.clear();
     let z = zone(store, dev, zone_name);
@@ -552,7 +569,9 @@ pub fn sync_effect(devices: &[Device], store: &mut Store, effect: &crate::effect
         }
         let zones: Vec<String> = dev.spec.as_ref().map(|s| s.leds.iter().map(|l| l.name.clone()).collect()).unwrap_or_default();
         for zone in zones {
-            let result = dev.led_id(&zone).and_then(|led| dev.set_effect(led, effect));
+            let result = check_firmware_lighting(dev)
+                .and_then(|_| dev.led_id(&zone))
+                .and_then(|led| dev.set_effect(led, effect));
             out.push(Synced { pid: dev.pid, key: dev.key(), device: dev.name(), zone, result });
         }
     }
@@ -568,8 +587,10 @@ pub fn sync_effect(devices: &[Device], store: &mut Store, effect: &crate::effect
             z.off = false;
         }
     }
-    if let Err(e) = store.save() {
-        out.iter_mut().filter(|r| r.result.is_ok()).for_each(|r| r.result = Err(crate::error::Error::System(format!("set, but not saved: {e}"))));
+    if out.iter().any(|r| r.result.is_ok()) {
+        if let Err(e) = store.save() {
+            out.iter_mut().filter(|r| r.result.is_ok()).for_each(|r| r.result = Err(crate::error::Error::System(format!("set, but not saved: {e}"))));
+        }
     }
     out
 }
@@ -794,6 +815,62 @@ mod power_tests {
         let value = serde_json::to_value(&store).unwrap();
         let restored: Store = serde_json::from_value(value.clone()).unwrap();
         assert_eq!(serde_json::to_value(restored).unwrap(), value);
+    }
+}
+
+#[cfg(test)]
+mod ornata_firmware_guard_tests {
+    use super::*;
+    use crate::sim::Sim;
+    use std::{ffi::CString, sync::atomic::{AtomicUsize, Ordering}};
+    static SEQUENCE: AtomicUsize = AtomicUsize::new(0);
+
+    fn fixture() -> (Sim, Device, Store, std::path::PathBuf) {
+        let sim = Sim::keyboard();
+        let dev = Device::open(
+            Box::new(sim.clone()), 605, 2, CString::new("sim-mode-guard").unwrap(),
+            &[0xff], Sim::spec_for(crate::sim::KEYBOARD_PID),
+        ).unwrap();
+        let path = std::env::temp_dir().join(format!(
+            "synapse-firmware-guard-{}-{}", std::process::id(),
+            SEQUENCE.fetch_add(1, Ordering::Relaxed),
+        )).join("profiles.json");
+        let mut store = Store::load(&path).unwrap();
+        store.for_device(&dev);
+        sim.state().log.clear();
+        (sim, dev, store, path)
+    }
+
+    #[test]
+    fn driver_mode_and_unreadable_mode_refuse_legacy_single_and_sync_without_sets_or_save() {
+        for mode in [Some(3), Some(2), None] {
+            let (sim, dev, mut store, path) = fixture();
+            sim.state().device_mode = mode;
+            let before = serde_json::to_value(&store).unwrap();
+            assert!(set_color(&dev, &mut store, "backlight", Rgb(1, 2, 3)).is_err());
+            assert!(set_effect(&dev, &mut store, "backlight", "spectrum".parse().unwrap()).is_err());
+            let devices = [dev];
+            assert!(sync_color(&devices, &mut store, Rgb(3, 2, 1)).iter().all(|r| r.result.is_err()));
+            assert!(sync_effect(&devices, &mut store, &"spectrum".parse().unwrap()).iter().all(|r| r.result.is_err()));
+            assert_eq!(serde_json::to_value(&store).unwrap(), before);
+            assert!(!path.exists());
+            assert!(sim.state().log.iter().all(|c| *c == crate::proto::Command::new(0, 0x84)));
+        }
+    }
+
+    #[test]
+    fn normal_mode_keeps_firmware_projection_and_disabled_control_precedes_mode_query() {
+        let (sim, dev, mut store, path) = fixture();
+        store.for_device(&dev).lighting_off = true;
+        assert!(set_color(&dev, &mut store, "backlight", Rgb(1, 2, 3)).is_err());
+        assert!(sim.state().log.is_empty());
+        store.for_device(&dev).lighting_off = false;
+        set_color(&dev, &mut store, "backlight", Rgb(1, 2, 3)).unwrap();
+        set_effect(&dev, &mut store, "backlight", "spectrum".parse().unwrap()).unwrap();
+        assert!(sim.state().log.contains(&crate::commands::MATRIX_EFFECT));
+        assert!(path.exists());
+        std::fs::remove_file(&path).unwrap();
+        std::fs::remove_dir(path.parent().unwrap()).unwrap();
     }
 }
 
