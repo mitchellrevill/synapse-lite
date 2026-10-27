@@ -1,0 +1,132 @@
+{
+  "scope": "Query-only native Export Profiles preview with 1000 synthetic profiles; no worker, hardware mutation or final-build acceptance",
+  "source_commit": "4922aad",
+  "binary_sha256": "04AAC8D00750D21EA3E76675FF2092299F38FD3BA748D79A059DD995B1539894",
+  "limit_bytes": 100000000,
+  "run_seconds": 10,
+  "metric_note": "Observed process-tree working-set high water, sampled private committed bytes and additional peak paged-memory metric; Windows sampling may miss private peaks. Shared resident pages can be counted per process.",
+  "stock": {
+    "stock_before": 11,
+    "stock_isolated": true,
+    "isolation_rounds": [
+      11,
+      0,
+      0
+    ],
+    "stock_after": 11,
+    "services_changed": false
+  },
+  "fixtures": {
+    "opaque-bytes": {
+      "bytes": 2097152,
+      "structural_tokens": 6011,
+      "sha256": "38238ae17a43274d3c568269c8ac7202b819974cb44d4cecfbcb622269f804e8",
+      "profiles": 1000
+    },
+    "structured-nodes": {
+      "bytes": 174857,
+      "structural_tokens": 32768,
+      "sha256": "65bb6c36b230de5efb070c6032083f1c58e7c69f342794e73236a126608b2581",
+      "profiles": 1000
+    }
+  },
+  "runs": [
+    {
+      "case": "opaque-bytes",
+      "run": 1,
+      "peak_working_set_bytes": 52547584,
+      "sampled_peak_private_bytes": 20815872,
+      "peak_paged_memory_bytes": 41136128,
+      "max_observed_processes": 1,
+      "observed_tcp_connections": 0,
+      "presented_profile_rows": 1000,
+      "selected_profiles": 1,
+      "loaded_source_fonts": 3,
+      "intrinsic_query_only": true,
+      "profile_file_byte_identical": true,
+      "under_100MB": true
+    },
+    {
+      "case": "opaque-bytes",
+      "run": 2,
+      "peak_working_set_bytes": 49897472,
+      "sampled_peak_private_bytes": 20033536,
+      "peak_paged_memory_bytes": 40304640,
+      "max_observed_processes": 1,
+      "observed_tcp_connections": 0,
+      "presented_profile_rows": 1000,
+      "selected_profiles": 1,
+      "loaded_source_fonts": 3,
+      "intrinsic_query_only": true,
+      "profile_file_byte_identical": true,
+      "under_100MB": true
+    },
+    {
+      "case": "opaque-bytes",
+      "run": 3,
+      "peak_working_set_bytes": 49852416,
+      "sampled_peak_private_bytes": 34230272,
+      "peak_paged_memory_bytes": 40456192,
+      "max_observed_processes": 1,
+      "observed_tcp_connections": 0,
+      "presented_profile_rows": 1000,
+      "selected_profiles": 1,
+      "loaded_source_fonts": 3,
+      "intrinsic_query_only": true,
+      "profile_file_byte_identical": true,
+      "under_100MB": true
+    },
+    {
+      "case": "structured-nodes",
+      "run": 1,
+      "peak_working_set_bytes": 38350848,
+      "sampled_peak_private_bytes": 17920000,
+      "peak_paged_memory_bytes": 25858048,
+      "max_observed_processes": 1,
+      "observed_tcp_connections": 0,
+      "presented_profile_rows": 1000,
+      "selected_profiles": 1,
+      "loaded_source_fonts": 3,
+      "intrinsic_query_only": true,
+      "profile_file_byte_identical": true,
+      "under_100MB": true
+    },
+    {
+      "case": "structured-nodes",
+      "run": 2,
+      "peak_working_set_bytes": 38514688,
+      "sampled_peak_private_bytes": 17993728,
+      "peak_paged_memory_bytes": 25972736,
+      "max_observed_processes": 1,
+      "observed_tcp_connections": 0,
+      "presented_profile_rows": 1000,
+      "selected_profiles": 1,
+      "loaded_source_fonts": 3,
+      "intrinsic_query_only": true,
+      "profile_file_byte_identical": true,
+      "under_100MB": true
+    },
+    {
+      "case": "structured-nodes",
+      "run": 3,
+      "peak_working_set_bytes": 38305792,
+      "sampled_peak_private_bytes": 17403904,
+      "peak_paged_memory_bytes": 25686016,
+      "max_observed_processes": 1,
+      "observed_tcp_connections": 0,
+      "presented_profile_rows": 1000,
+      "selected_profiles": 1,
+      "loaded_source_fonts": 3,
+      "intrinsic_query_only": true,
+      "profile_file_byte_identical": true,
+      "under_100MB": true
+    }
+  ],
+  "full_build_acceptance": false,
+  "assignment_popup_workload_measured": false,
+  "active_lighting_measured": false,
+  "optical_or_pixel_parity_proven": false,
+  "binary_bytes": 2247168,
+  "preview_manifest_files_verified": 150,
+  "preview_zip_bytes": 2532334
+}

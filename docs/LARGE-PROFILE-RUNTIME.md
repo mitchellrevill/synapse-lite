@@ -1,5 +1,22 @@
 # Large-profile native runtime checkpoint
 
+## Updated build 4922aad
+
+The same six ten-second query-only workloads pass on source `4922aad`, including the full-client frame, corrected font origins and guarded Wave integration. The exact 2,247,168-byte release executable has SHA256 `04AAC8D00750D21EA3E76675FF2092299F38FD3BA748D79A059DD995B1539894`. This measurement disables playback, so it does not establish active Wave resource use.
+
+| Document | Run | Peak working set | Sampled peak private bytes | Peak paged memory |
+| --- | ---: | ---: | ---: | ---: |
+| Exact byte limit | 1 | 52,547,584 | 20,815,872 | 41,136,128 |
+| Exact byte limit | 2 | 49,897,472 | 20,033,536 | 40,304,640 |
+| Exact byte limit | 3 | 49,852,416 | 34,230,272 | 40,456,192 |
+| Exact token limit | 1 | 38,350,848 | 17,920,000 | 25,858,048 |
+| Exact token limit | 2 | 38,514,688 | 17,993,728 | 25,972,736 |
+| Exact token limit | 3 | 38,305,792 | 17,403,904 | 25,686,016 |
+
+All six reports confirm 1,000 available rows, one selected profile, three loaded source fonts, visible presentation and intrinsic query-only enforcement. One replacement process and no TCP connections were observed. Profile bytes remained unchanged. Stock user processes were 11 before isolation, zero at two stable observations, and 11 after hidden restart; services and kernel drivers were unchanged and excluded. [Sanitized results](validation/large-profile-native-memory-4922aad.json) retain fixture identities and measurement limits. The local preview archive was CRC-checked and all 150 listed file lengths/hashes verified.
+
+## Earlier build ed25abd
+
 Six ten-second release runs presented the native Export Profiles preview with 1,000 synthetic profiles. Three used an exactly 2,097,152-byte compact native document; three used a 174,857-byte document with exactly 32,768 structural tokens. The byte-heavy document has 6,011 tokens. Each retains opaque fields and uses a legacy model key, exercising the alias-aware preview without expanding the original backup.
 
 The measured source is `ed25abdb75c6f8ec6fff85e765ccb5ce50f7b6f2`, built with locked offline dependencies. The exact release executable SHA256 is `9F10AF8B425CC384D521A02A51BA7BB857E119078AB33FB2E6A328342F93A06C`. This includes the source-derived assignment UI code, but the measured workload opens the profile export preview, not an assignment popup.
