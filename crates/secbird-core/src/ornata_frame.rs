@@ -10,7 +10,7 @@ use crate::{
     proto::{Command, Report},
     Device, Error, Result, Rgb,
 };
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 pub const ROWS: usize = 6;
 pub const COLS: usize = 22;
@@ -41,6 +41,11 @@ pub struct FrameTransferOutcome {
     /// Includes a failed OUT, which may have affected hardware. Excludes mode GET.
     pub attempted_packets: usize,
     pub mode_query_attempted: bool,
+    /// Wall time spent in this batch's fresh mode GET, including its transport.
+    pub mode_query_elapsed: Duration,
+    /// Sum of actual frame OUT call durations, including a failed call.
+    /// Excludes mode GET, packet construction, cancellation and loop overhead.
+    pub usb_out_elapsed: Duration,
     /// Fresh preflight only; no post-write or unchanged-mode claim is made.
     pub observed_mode: Option<DeviceModeReadback>,
     pub stop: FrameTransferStop,
@@ -105,6 +110,8 @@ impl PreparedOrnataFrame {
             accepted_packets: 0,
             attempted_packets: 0,
             mode_query_attempted: false,
+            mode_query_elapsed: Duration::ZERO,
+            usb_out_elapsed: Duration::ZERO,
             observed_mode: None,
             stop: FrameTransferStop::CompleteUsbOut,
         };
@@ -113,7 +120,10 @@ impl PreparedOrnataFrame {
             return Ok(outcome);
         }
         outcome.mode_query_attempted = true;
-        match device.ornata_mode_readback() {
+        let mode_started = Instant::now();
+        let mode_result = device.ornata_mode_readback();
+        outcome.mode_query_elapsed = mode_started.elapsed();
+        match mode_result {
             Ok(mode) => {
                 let value = mode.mode();
                 outcome.observed_mode = Some(mode);
@@ -133,7 +143,10 @@ impl PreparedOrnataFrame {
                 return Ok(outcome);
             }
             outcome.attempted_packets += 1;
-            if let Err(error) = device.send_ornata_frame_packet(packet) {
+            let out_started = Instant::now();
+            let out_result = device.send_ornata_frame_packet(packet);
+            outcome.usb_out_elapsed += out_started.elapsed();
+            if let Err(error) = out_result {
                 outcome.stop = FrameTransferStop::TransferError {
                     packet_index,
                     error,
@@ -368,6 +381,8 @@ mod tests {
             .unwrap();
         assert!(matches!(outcome.stop, FrameTransferStop::Deadline));
         assert!(!outcome.mode_query_attempted);
+        assert_eq!(outcome.mode_query_elapsed, Duration::ZERO);
+        assert_eq!(outcome.usb_out_elapsed, Duration::ZERO);
         let outcome = frame()
             .transfer_out(&mut device, Instant::now() + Duration::from_secs(1), || {
                 true
@@ -386,6 +401,7 @@ mod tests {
         assert!(matches!(outcome.stop, FrameTransferStop::Cancelled));
         assert!(outcome.mode_query_attempted);
         assert_eq!(outcome.attempted_packets, 0);
+        assert_eq!(outcome.usb_out_elapsed, Duration::ZERO);
         assert_eq!(spy.0.lock().unwrap().packets.len(), 1);
     }
     #[test]

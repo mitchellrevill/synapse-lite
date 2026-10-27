@@ -7,6 +7,9 @@ use super::{Completion, FrameTicket};
 use secbird_core::{ornata_frame::PreparedOrnataFrame, Device, Error, Result};
 use std::time::{Duration, Instant};
 
+mod stream;
+pub(crate) use stream::StreamState;
+
 #[derive(Debug)]
 pub(crate) struct Submission {
     pub completion: Completion,
@@ -16,6 +19,8 @@ pub(crate) struct Submission {
     pub mode_after: Option<u8>,
     pub parameter_after: Option<u8>,
     pub elapsed: Duration,
+    pub mode_query_elapsed: Duration,
+    pub usb_out_elapsed: Duration,
 }
 impl Submission {
     pub(crate) fn parameter_unchanged(&self) -> Option<bool> {
@@ -81,6 +86,8 @@ pub(crate) fn submit(
         mode_after: None,
         parameter_after: None,
         elapsed: Duration::ZERO,
+        mode_query_elapsed: Duration::ZERO,
+        usb_out_elapsed: Duration::ZERO,
     };
     let preflight = (|| {
         if device.pid != 605
@@ -116,6 +123,8 @@ pub(crate) fn submit(
         PreparedOrnataFrame::new(&[ticket.color; 132]).expect("fixed physical frame geometry");
     match frame.transfer_out(device, deadline, &mut cancelled) {
         Ok(outcome) => {
+            result.mode_query_elapsed = outcome.mode_query_elapsed;
+            result.usb_out_elapsed = outcome.usb_out_elapsed;
             result.completion.accepted_packets = outcome.accepted_packets;
             result.completion.attempted_packets = outcome.attempted_packets;
             if let Some(mode) = &outcome.observed_mode {

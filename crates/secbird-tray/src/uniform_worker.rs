@@ -1,17 +1,77 @@
 //! One cooperative, joinable off-UI uniform worker. There is no per-frame spawn.
 use crate::engine::Engine;
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
+    atomic::{AtomicBool, AtomicU64, Ordering},
     Arc, Mutex, TryLockError,
 };
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
+#[derive(Default)]
+struct Metrics {
+    ticks_started: AtomicU64,
+    ticks_completed: AtomicU64,
+    lock_skips: AtomicU64,
+    tick_us_total: AtomicU64,
+    last_tick_us: AtomicU64,
+    max_tick_us: AtomicU64,
+    park_calls: AtomicU64,
+    park_requested_us_total: AtomicU64,
+    park_actual_us_total: AtomicU64,
+    last_park_requested_us: AtomicU64,
+    last_park_actual_us: AtomicU64,
+    max_park_actual_us: AtomicU64,
+}
+impl Metrics {
+    fn tick_completed(&self, elapsed: Duration) {
+        let micros = elapsed.as_micros().min(u128::from(u64::MAX)) as u64;
+        self.ticks_completed.fetch_add(1, Ordering::Relaxed);
+        self.tick_us_total.fetch_add(micros, Ordering::Relaxed);
+        self.last_tick_us.store(micros, Ordering::Relaxed);
+        self.max_tick_us.fetch_max(micros, Ordering::Relaxed);
+    }
+    fn parked(&self, requested: Duration, actual: Duration) {
+        let requested = requested.as_micros().min(u128::from(u64::MAX)) as u64;
+        let actual = actual.as_micros().min(u128::from(u64::MAX)) as u64;
+        self.park_calls.fetch_add(1, Ordering::Relaxed);
+        self.park_requested_us_total
+            .fetch_add(requested, Ordering::Relaxed);
+        self.park_actual_us_total
+            .fetch_add(actual, Ordering::Relaxed);
+        self.last_park_requested_us
+            .store(requested, Ordering::Relaxed);
+        self.last_park_actual_us.store(actual, Ordering::Relaxed);
+        self.max_park_actual_us.fetch_max(actual, Ordering::Relaxed);
+    }
+    fn status(&self) -> serde_json::Value {
+        serde_json::json!({
+            "ticks_started":self.ticks_started.load(Ordering::Relaxed),
+            "ticks_completed":self.ticks_completed.load(Ordering::Relaxed),
+            "engine_lock_skips":self.lock_skips.load(Ordering::Relaxed),
+            "tick_us_total":self.tick_us_total.load(Ordering::Relaxed),
+            "last_tick_us":self.last_tick_us.load(Ordering::Relaxed),
+            "max_tick_us":self.max_tick_us.load(Ordering::Relaxed),
+            "park_calls":self.park_calls.load(Ordering::Relaxed),
+            "park_requested_us_total":self.park_requested_us_total.load(Ordering::Relaxed),
+            "park_actual_us_total":self.park_actual_us_total.load(Ordering::Relaxed),
+            "last_park_requested_us":self.last_park_requested_us.load(Ordering::Relaxed),
+            "last_park_actual_us":self.last_park_actual_us.load(Ordering::Relaxed),
+            "max_park_actual_us":self.max_park_actual_us.load(Ordering::Relaxed),
+            "diagnostic_snapshot_atomic_fields_not_simultaneous":true,
+            "wait_policy":"unchanged-park_timeout-minimum8ms-no-timer-resolution-change"
+        })
+    }
+}
+
 pub(crate) struct Signal {
     alive: AtomicBool,
     stop: AtomicBool,
+    metrics: Metrics,
 }
 impl Signal {
+    pub(crate) fn metrics(&self) -> serde_json::Value {
+        self.metrics.status()
+    }
     pub(crate) fn running(&self) -> bool {
         self.alive.load(Ordering::Acquire) && !self.stop.load(Ordering::Acquire)
     }
@@ -24,6 +84,7 @@ impl Signal {
         Arc::new(Self {
             alive: AtomicBool::new(true),
             stop: AtomicBool::new(false),
+            metrics: Metrics::default(),
         })
     }
 }
@@ -39,14 +100,17 @@ pub(crate) struct Worker {
 }
 fn try_tick<T>(
     shared: &Mutex<T>,
-    stop: &AtomicBool,
+    signal: &Signal,
     tick: impl FnOnce(&mut T) -> Duration,
 ) -> Duration {
     match shared.try_lock() {
         Ok(mut value) => tick(&mut value),
-        Err(TryLockError::WouldBlock) => Duration::from_millis(10),
+        Err(TryLockError::WouldBlock) => {
+            signal.metrics.lock_skips.fetch_add(1, Ordering::Relaxed);
+            Duration::from_millis(10)
+        }
         Err(TryLockError::Poisoned(_)) => {
-            stop.store(true, Ordering::Release);
+            signal.stop.store(true, Ordering::Release);
             Duration::from_millis(250)
         }
     }
@@ -54,8 +118,9 @@ fn try_tick<T>(
 impl Worker {
     pub(crate) fn start(engine: Arc<Mutex<Engine>>) -> Result<Self, String> {
         let shared = engine.clone();
-        let mut worker =
-            Self::spawn(move |stop| try_tick(&shared, stop, |engine| engine.tick_uniform(stop)))?;
+        let mut worker = Self::spawn(move |signal| {
+            try_tick(&shared, signal, |engine| engine.tick_uniform(&signal.stop))
+        })?;
         let wake = worker.handle.as_ref().unwrap().thread().clone();
         match engine.lock() {
             Ok(mut engine) => {
@@ -69,12 +134,11 @@ impl Worker {
         }
         Ok(worker)
     }
-    fn spawn(
-        mut tick: impl FnMut(&AtomicBool) -> Duration + Send + 'static,
-    ) -> Result<Self, String> {
+    fn spawn(mut tick: impl FnMut(&Signal) -> Duration + Send + 'static) -> Result<Self, String> {
         let signal = Arc::new(Signal {
             alive: AtomicBool::new(false),
             stop: AtomicBool::new(false),
+            metrics: Metrics::default(),
         });
         let cancelled = signal.clone();
         let handle = thread::Builder::new()
@@ -83,14 +147,22 @@ impl Worker {
                 let _alive = AliveGuard(cancelled.clone());
                 cancelled.alive.store(true, Ordering::Release);
                 while !cancelled.stop.load(Ordering::Acquire) {
-                    let delay = tick(&cancelled.stop)
+                    cancelled
+                        .metrics
+                        .ticks_started
+                        .fetch_add(1, Ordering::Relaxed);
+                    let tick_started = Instant::now();
+                    let delay = tick(&cancelled)
                         .clamp(Duration::from_millis(8), Duration::from_millis(250));
+                    cancelled.metrics.tick_completed(tick_started.elapsed());
                     if cancelled.stop.load(Ordering::Acquire) {
                         break;
                     }
                     // At least 8ms between batches gives pending UI/server lock users
                     // an opportunity. Timing is a local policy, not certified 25fps.
+                    let park_started = Instant::now();
                     thread::park_timeout(delay);
+                    cancelled.metrics.parked(delay, park_started.elapsed());
                 }
             })
             .map_err(|e| format!("Uniform worker could not start: {e}"))?;
@@ -130,6 +202,21 @@ mod tests {
     use super::*;
     use std::sync::{atomic::AtomicUsize, mpsc, Condvar};
     #[test]
+    fn diagnostic_wait_aggregates_keep_requested_and_actual_times_distinct() {
+        let measured = Metrics::default();
+        measured.parked(Duration::from_millis(8), Duration::from_millis(12));
+        measured.parked(Duration::from_millis(250), Duration::from_millis(1));
+        measured.tick_completed(Duration::from_micros(75));
+        let value = measured.status();
+        assert_eq!(value["park_calls"], 2);
+        assert_eq!(value["park_requested_us_total"], 258000);
+        assert_eq!(value["park_actual_us_total"], 13000);
+        assert_eq!(value["last_park_requested_us"], 250000);
+        assert_eq!(value["last_park_actual_us"], 1000);
+        assert_eq!(value["max_park_actual_us"], 12000);
+        assert_eq!(value["tick_us_total"], 75);
+    }
+    #[test]
     fn one_worker_runs_multiple_ticks_and_joins_once() {
         let ticks = Arc::new(AtomicUsize::new(0));
         let counted = ticks.clone();
@@ -145,6 +232,11 @@ mod tests {
         assert!(worker.stop(Duration::from_secs(1)));
         let count = ticks.load(Ordering::Relaxed);
         assert!(count >= 3);
+        let measured = worker.signal.metrics();
+        assert_eq!(measured["ticks_completed"], count);
+        assert_eq!(measured["ticks_started"], count);
+        assert!(measured["park_calls"].as_u64().unwrap() > 0);
+        assert_eq!(measured["last_park_requested_us"], 8000);
         assert!(worker.stop(Duration::ZERO));
         assert_eq!(ticks.load(Ordering::Relaxed), count);
     }
@@ -172,6 +264,12 @@ mod tests {
         }
         assert!(worker.stop(Duration::from_secs(1)));
         assert!(ticks.load(Ordering::Relaxed) > 0);
+        assert!(
+            worker.signal.metrics()["engine_lock_skips"]
+                .as_u64()
+                .unwrap()
+                > 0
+        );
     }
     #[test]
     fn normal_stop_panic_and_poison_never_leave_false_worker_ready() {

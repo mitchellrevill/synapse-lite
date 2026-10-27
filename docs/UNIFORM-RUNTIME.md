@@ -1,5 +1,7 @@
 # Opted-in Ornata uniform runtime
 
+This document records the initial runtime baseline. The later [control sampling checkpoint](UNIFORM-CONTROL-CHECKPOINTS.md) changes worker control-query frequency and adds timing diagnostics; explicit actions retain the strict path.
+
 This checkpoint connects source Spectrum (UI3/native4) and fixed one/two-color Breathing (UI2/native5) to the bounded Ornata host-frame transport. It has simulator coverage and one bounded physical backend/worker test. Native3 is Reactive. Random Breathing and ambiguous black second-color/count behavior remain unsupported.
 
 ## Admission and persistence

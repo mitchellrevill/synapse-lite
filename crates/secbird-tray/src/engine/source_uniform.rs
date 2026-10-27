@@ -11,6 +11,7 @@ struct Session {
     profile: String,
     program: Program,
     playback: Playback,
+    controls: host_uniform::io::StreamState,
     prepared: bool,
     pending_live: bool,
     mode: Option<u8>,
@@ -106,6 +107,7 @@ impl UniformState {
                     profile: name.into(),
                     program,
                     playback: Playback::new(program, self.generation, self.epoch.elapsed()),
+                    controls: host_uniform::io::StreamState::default(),
                     prepared: false,
                     pending_live: true,
                     mode: None,
@@ -369,11 +371,14 @@ impl Engine {
             match availability {
                 Err(reason) => {
                     session.prepared = false;
+                    session.controls.invalidate();
                     session.playback.poll(now, Availability::Blocked);
                     session.status = json!({"state":"blocked","reason":reason,"streaming":false});
                     continue;
                 }
                 Ok(Availability::Suppressed) => {
+                    session.prepared = false;
+                    session.controls.invalidate();
                     session.playback.poll(now, Availability::Suppressed);
                     session.status =
                         json!({"state":"suppressed","deferred":true,"streaming":false});
@@ -423,7 +428,7 @@ impl Engine {
                     else {
                         continue;
                     };
-                    let submitted = host_uniform::io::submit(
+                    let submitted = session.controls.submit(
                         device,
                         ticket,
                         Instant::now() + Duration::from_millis(500),
@@ -455,7 +460,7 @@ impl Engine {
                         session.pending_live = true;
                         refresh_live = true;
                     }
-                    session.status = json!({"state":if success {"playing"}else{"faulted"},"streaming":success,"source_id":candidate.program.source_id(),"native_id":candidate.program.native_id(),"palette_index":ticket.palette_index,"frame_count":session.playback.frame_count(),"accepted_frames":session.playback.accepted_frames(),"accepted_packets":accepted,"attempted_packets":attempted,"error":error,"custom_frame_control_verified":submitted.control_verified,"mode_before":submitted.observed_mode,"parameter_before":submitted.observed_parameter,"mode_after":submitted.mode_after,"parameter_after":submitted.parameter_after,"parameter_unchanged":submitted.parameter_unchanged(),"optically_verified":false,"automatic_retry":false,"last_submit_us":submitted.elapsed.as_micros() as u64,"last_gate_us":gate_us,"nominal_interval_ms":40,"cadence_certified":false,"phase_policy":"local-freeze-no-catchup"});
+                    session.status = json!({"state":if success {"playing"}else{"faulted"},"streaming":success,"source_id":candidate.program.source_id(),"native_id":candidate.program.native_id(),"palette_index":ticket.palette_index,"frame_count":session.playback.frame_count(),"accepted_frames":session.playback.accepted_frames(),"accepted_packets":accepted,"attempted_packets":attempted,"error":error,"custom_frame_control_verified":submitted.control_verified,"mode_before":submitted.observed_mode,"parameter_before":submitted.observed_parameter,"mode_after":submitted.mode_after,"parameter_after":submitted.parameter_after,"parameter_unchanged":submitted.parameter_unchanged(),"optically_verified":false,"automatic_retry":false,"last_submit_us":submitted.elapsed.as_micros() as u64,"last_mode_get_us":submitted.mode_query_elapsed.as_micros() as u64,"last_seven_out_calls_us":submitted.usb_out_elapsed.as_micros() as u64,"last_gate_us":gate_us,"nominal_interval_ms":40,"cadence_certified":false,"phase_policy":"local-freeze-no-catchup"});
                     if let Some(fault) = fault {
                         state.faults.insert(candidate.key.clone(), fault);
                     }
@@ -529,6 +534,8 @@ impl Engine {
         );
         drop(runtime);
         if plan.suppressed || !config.enabled || plan.target == Some(0) {
+            session.controls.invalidate();
+            session.prepared = false;
             if session.pending_live {
                 self.lighting_runtime
                     .borrow_mut()
@@ -560,11 +567,13 @@ impl Engine {
             value["profile"] = json!(session.profile);
             value["opted_in"] = json!(true);
             value["worker_enabled"] = json!(self.uniform_is_enabled());
+            value["worker_timing"] = self.uniform.alive.as_ref().map(|signal| signal.metrics()).unwrap_or(Value::Null);
             if !self.uniform_is_enabled() {
                 value["streaming"] = json!(false);
                 value["worker_stopped"] = json!(true);
             }
             value["configuration_reloads"] = json!(self.uniform.cache.reloads);
+            value["control_observation"] = session.controls.status();
             value["session_elapsed_us"] = json!(session.started.elapsed().as_micros() as u64);
             value["accepted_frames"] = json!(session.playback.accepted_frames());
             result.insert(key.clone(), value);
@@ -763,6 +772,91 @@ mod tests {
         }
     }
     #[test]
+    fn cached_controls_refresh_on_resume_owner_reentry_program_change_and_reconnect() {
+        let mut f = Fixture::new(true);
+        f.tick();
+        assert_eq!(f.spy.state.lock().unwrap().effects_read, 2);
+        f.advance();
+        f.tick();
+        assert_eq!(f.spy.state.lock().unwrap().effects_read, 2);
+        let status = f.engine.uniform_status();
+        assert_eq!(status[&f.key]["custom_frame_control_verified"], false);
+        assert_eq!(status[&f.key]["mode_before"], 3);
+        assert!(status[&f.key]["mode_after"].is_null());
+        assert_eq!(
+            status[&f.key]["control_observation"]["maximum_first_packet_admission_age_ms"],
+            500
+        );
+        assert_eq!(
+            status[&f.key]["control_observation"]["observation_is_ownership_lease"],
+            false
+        );
+        f.engine
+            .lighting_runtime
+            .borrow_mut()
+            .test_environment
+            .as_mut()
+            .unwrap()
+            .display_off = Some(true);
+        f.engine.refresh_lighting_runtime();
+        assert_eq!(f.spy.sim.state().live_brightness[&5], 0);
+        f.engine
+            .lighting_runtime
+            .borrow_mut()
+            .test_environment
+            .as_mut()
+            .unwrap()
+            .display_off = Some(false);
+        f.engine.refresh_lighting_runtime();
+        assert_eq!(f.spy.sim.state().live_brightness[&5], 0);
+        f.advance();
+        f.tick();
+        assert_eq!(f.spy.state.lock().unwrap().effects_read, 4);
+        assert_eq!(f.spy.sim.state().live_brightness[&5], 255);
+        assert_eq!(f.engine.uniform_status()[&f.key]["palette_index"], 2);
+        let attempts = f.spy.state.lock().unwrap().attempts;
+        f.engine
+            .lighting_runtime
+            .borrow_mut()
+            .test_environment
+            .as_mut()
+            .unwrap()
+            .owner = Owner::Competing(vec!["RazerAppEngine.exe".into()]);
+        f.advance();
+        f.tick();
+        assert_eq!(f.spy.state.lock().unwrap().attempts, attempts);
+        f.engine
+            .lighting_runtime
+            .borrow_mut()
+            .test_environment
+            .as_mut()
+            .unwrap()
+            .owner = Owner::Clear;
+        f.advance();
+        f.tick();
+        assert_eq!(f.spy.state.lock().unwrap().effects_read, 6);
+        let mut store = Store::load(&f.path).unwrap();
+        let profile = store.for_device(&f.engine.devices[0]).active_mut();
+        profile.lighting.get_mut("backlight").unwrap().effect =
+            Some(secbird_core::effects::Effect::Breathing(vec![
+                secbird_core::Rgb(1, 2, 3),
+            ]));
+        Program::Breathing {
+            first: secbird_core::Rgb(1, 2, 3),
+            second: None,
+        }
+        .opt_in(profile)
+        .unwrap();
+        store.save().unwrap();
+        f.engine.uniform_settings_changed(&f.key);
+        f.advance();
+        f.tick();
+        assert_eq!(f.spy.state.lock().unwrap().effects_read, 8);
+        f.engine.reset_uniform_handles();
+        f.tick();
+        assert_eq!(f.spy.state.lock().unwrap().effects_read, 10);
+    }
+    #[test]
     fn initial_frame_precedes_live_brightness_and_cache_is_reused() {
         let mut f = Fixture::new(true);
         f.engine.refresh_lighting_runtime();
@@ -900,6 +994,9 @@ mod tests {
             .unwrap()
             .display_off = Some(false);
         f.engine.refresh_lighting_runtime();
+        assert_eq!(f.spy.sim.state().live_brightness[&5], 0);
+        f.advance();
+        f.tick();
         observed.push(f.spy.sim.state().live_brightness[&5]);
         assert_eq!(observed, vec![128; 5]);
         assert_eq!(f.spy.sim.state().brightness[&5], 128);
