@@ -1,134 +1,45 @@
-# Pure Ornata host Wave preparation
+# Guarded Ornata host Wave
 
-The tray `host_wave` module prepares source Quick Wave4 frames. It has no Engine,
-server, worker, UI, clock, file loader, device GET, or HID writer integration.
-Preparing a frame is not an ownership check, hardware admission, or optical
-verification. A caller must establish fresh device identity, authenticate the
-matching source layout, and enforce output ownership/runtime gates separately.
+Source Quick Wave4 now has a tray action and worker path for an already compatible Ornata V2 Driver Mode3/CustomFrame8 state. It uses a current scoped layout GET, the exact authenticated local source manifest, source-derived Wave math and the existing guarded physical-frame writer. It does not acquire a mode or install a driver. This is not yet evidence of visible hardware output, stock cadence, full lifecycle recovery or final RAM acceptance.
 
-`Program::from_setting` accepts source direction1(left) or2(right). The retained
-Quick choice must be4, with a matching native `Effect::Wave` at speed3 and no
-native off/per-key override for `Program::from_profile` to return a program.
-Split/up/down/rotational direction IDs, either value of counterclockwise, explicit
-angle, and nondefault speed/width/pause/cycle/split parameters are rejected.
-Unrelated opaque setting members are retained without mutation.
+## Choice, projection and opt-in
 
-The existing interchange codec maps source direction1 to native reverse=false
-and direction2 to reverse=true. Its legacy Effect Display labels call those
-right and left, respectively. This unit preserves that codec contract and
-checks its Boolean projection, while **rendering source1 left and source2
-right**. It does not change legacy labels or approximate a firmware Wave rate.
+The accepted source directions are 1(left) and 2(right). Split/up/down/rotational IDs, either Boolean value of counterclockwise, explicit angle and nondefault speed/width/pause/cycles/split parameters are rejected. Unrelated opaque members survive unchanged. The retained Quick choice must be4, with a matching native Effect::Wave at speed3 and no off/per-key override.
 
-An explicit action can call `Program::opt_in` only after its profile projection
-matches the choice. The marker `_synapseLiteSynapse4.waveHostIntent` binds
-version1/source4/direction and is outside the vendor `decoded` payload. Neither
-import nor a bare/default profile gains opt-in here. `opted_in` rechecks the
-current source/native choice, so a changed direction, native speed/override, or
-stale marker does not authorize the old choice. Clearing/setting the marker
-preserves the foreign export and opaque setting members. There is no runtime
-consumer of this marker in this checkpoint.
+The existing interchange codec maps source1 to reverse=false and source2 to reverse=true. Its legacy Effect Display labels call those right and left. Host rendering follows source1 left/source2 right without changing that compatibility contract or approximating a firmware Wave rate. Native lighting-engine effect2 is a different namespace from firmware effect IDs.
 
-`PreparedWave::new(program, &AuthenticatedLayout)` is the only production
-constructor. A caller cannot substitute an OrnataSpatialMap made from a claimed
-manifest digest. Authentication remains the bounded core manifest loader's
-responsibility; the prepared object retains only its selected numeric map.
-Its identity getter reports that selection, without claiming fresh hardware
-identity or an exclusive lease.
+An explicit source-effect action adds _synapseLiteSynapse4.waveHostIntent outside the vendor decoded payload. Its version/source/direction must match the current source/native projection. Discovery alone does not opt in a profile, imports/defaults do not manufacture permission, and stale markers cannot authorize another choice. Setting/clearing the marker preserves opaque fields and the foreign export; clearing host opt-in removes both uniform and Wave markers.
 
-The logical canvas is exactly23x7 with zero offset and half-open bounds
-`WaveRegion::new(7,23,0,0,23,7)`. The existing source-derived WaveCycle uses
-default speed25/width100/pause0/infinite unsplit linear behavior and maps the
-logical frame through the selected source geometry to a physical6x22
-PreparedOrnataFrame. Unmapped physical destinations remain black.
-`render_frame(index)` is an immutable index query, wrapping modulo25 for this
-geometry. It never advances hidden state; querying0 again returns the same
-frame. Its40ms source sample interval is not an achieved-cadence or phase-parity
-claim. Outer scheduling, suppression/resume, backlog, dropped frames, and
-hardware transfer behavior are outside this module.
+## Current identity and authenticated geometry
 
-Source authority and exact math are recorded in [WAVE-LIGHTING.md](WAVE-LIGHTING.md),
-[ORNATA-SPATIAL.md](ORNATA-SPATIAL.md), and [ORNATA-MANIFEST.md](ORNATA-MANIFEST.md).
-The native renderer source SHA-256 is
-`cd9fc2a61ff920b9b73e1f5e27632020e2f8586f443e426a875ad3b042b714fa`.
-The authenticated source manifest SHA-256 is
-`3595e11f1d8778180d1dd6edd2463c8b3b8e446542c5020dc1fa038c67937a93`.
-This composition reuses the independently scalar-derived physical-cycle fixture
-SHA-256 `f855946d0c43ad03a9ec5d29843d54db10cb17d4804adc6107622d727d68ee56`.
-These numeric fixtures are static-derived; they are not vendor runtime captures.
+The preparation child performs a fresh scoped GET00:86 before authenticating the exact observed edition/layout in the local manifest. A measured two-byte response carries layout/edition; firmware ID stays unavailable when undeclared. There is no cache, locale or historical-layout fallback in preparation. The separate [physical identity observation](validation/ornata-identity-physical.json) establishes layout6/edition0 at its recorded time, not a lasting ownership lease.
 
-Four isolated pure tests verify source direction/native projection consistency,
-unsupported variants, explicit/stale opt-in with byte-identical foreign exports
-and opaque-field preservation, and every physical RGB byte of both25-frame
-left/right cycles. The latter checks all18 UK-layout holes, row/commit packing,
-wrap/large indices, and non-advancing repeated index queries. A private test-only
-constructor supplies numeric fixture maps; it is unavailable to production
-callers. No manifest file or hardware was read during these tests. The unit is
-registered as a Windows tray module, but has no production runtime caller in
-this checkpoint.
+Production preparation requires the loader's opaque AuthenticatedLayout. A caller-supplied digest or numeric map cannot bypass full-file authentication. The pinned manifest is 2,895,966 bytes, SHA256 3595e11f1d8778180d1dd6edd2463c8b3b8e446542c5020dc1fa038c67937a93. The bounded loader hashes the same bytes it selectively parses. No full vendor manifest is embedded or committed publicly.
 
-## Explicit playback intent
+The tray uses the existing native asset directory, selected by SYNAPSE_LITE_ASSETS or assets beside the executable, and filename DeviceManifest_605_0.json. Missing, changed or mismatched assets refuse preparation. Local provisioning must supply the exact recovered artifact.
 
-The existing pure host playback now accepts an explicit
-`host_uniform::Program::Wave(host_wave::Program)`. Its source/native effect IDs
-are4/2. Cycle metadata comes from the same bounded23x7 zero-offset WaveCycle
-constructor, yielding25 indices at a40ms nominal sample interval. A ticket is
-typed `FrameContent::SpatialIndex`; `palette_index` supplies the requested
-spatial index. Uniform programs instead emit `FrameContent::Uniform(Rgb)`.
-Wave never fabricates a uniform RGB value or advances the WaveCycle's hidden
-frame counter; the existing playback index owns the local intent sequence.
+ReadyWave retains a numeric prepared frame function, raw identity, actual digest/length and conservative monotonic GET start/end times. It retains no path or source JSON. Clone/render/metadata access issues no extra GET or file load and does not renew freshness. Metadata distinguishes preparation's lack of output from subsequent worker output.
 
-Both direct and streaming uniform-only submission wrappers reject spatial
-tickets before any GET/OUT or admission callback, with zero accepted/attempted
-frame packets and an explicit error. The generic prepared-physical-frame seams
-remain unchanged. A later caller must use PreparedWave with an authenticated
-layout and pass its prepared physical frame to that separate guarded seam.
+The verified single-device region is WaveRegion::new(7,23,0,0,23,7). Default speed25/width100/pause0/infinite unsplit math renders a 23x7 logical grid, then maps it into 6x22 physical RGB order. UK layout6 has 114 mapped pixels and 18 black holes; logical row 6 is padding. Both directions have 25 indexed frames and a nominal 40ms sample interval. Index queries wrap without advancing hidden state.
 
-Playback retains generation/sequence ticket checks, stale/duplicate completion
-refusal, partial-failure latching with real counts, local phase freezing while
-suppressed/blocked, and one next index after a late pump without catchup bursts.
-This is our declared scheduling policy; it is not newly established native
-outer-clock or pause parity. Existing Spectrum/Breathing vector fixtures remain
-unchanged.
+## Action and worker lifecycle
 
-Explicit Wave opt-in delegates to the profile-bound Wave marker, and clearing
-host opt-in removes both uniform and Wave markers. Import/default profile
-discovery through Program::from_profile deliberately remains **uniform-only**,
-even for a profile with an explicit Wave marker. Engine/server/worker integration
-has not been added. Four additional tests cover every index and wrap for both
-directions, typed zero-I/O refusal, phase/fault/generation behavior, and delegated
-opt-in without automatic Wave discovery.
+The API stages a matching source/native candidate, clears stale host markers, explicitly opts in and validates persistence limits before any SET. Existing device/profile/known-owner and brightness gates remain. Source Wave is refused in Normal Mode0 before a firmware effect SET; the tray profile shadow prevents that fallback too. Legacy native CLI firmware behavior is a separate boundary.
 
-## Fresh identity and authenticated asset preparation seam
+In Driver3, the action prepares identity/assets and either submits index 0 through the guarded prepared-frame adapter, or saves deferred intent after a read-only Custom8 preflight when policy suppresses output. A successful initial action hands preparation and completion counts to the worker. Its next frame is index 1; handoff does not repeat identity/authentication.
 
-The separate `host_wave::preparation::prepare(&Device, program, explicit_path)`
-seam performs one scoped Ornata edition GET on each call, selects the exact raw
-observed edition/layout in the authenticated manifest loader, then constructs
-PreparedWave from its opaque AuthenticatedLayout. There is no default/locale/
-historical fallback, implicit asset search, cached identity, Store load/save,
-mode GET/SET, brightness/effect/frame output, driver operation, or ownership
-acquisition. Ordinary protocol response-read retries remain bounded by the
-existing GET implementation. The caller enforces DriverMode3, device/profile
-binding, owner and lighting policies separately.
+A stored opted-in Wave starting a new generation prepares against its selected handle before its first frame. Rescans and program/profile changes clear the relevant session. Identity/asset failures latch before frame OUT, with no automatic write retry. Suppression invalidates control admission and retains the explicit local phase policy. The cached layout observation is not an exclusive lease.
 
-ReadyWave retains the prepared numeric frame function, raw identity observation,
-authenticated digest/byte length, and monotonic query start/end Instants. It
-retains neither the supplied file path nor source JSON. `prepared()` exposes
-immutable index rendering. `observation_started_at()` is conservatively stamped
-before GET, not after asset loading. `metadata_at(caller_time)` reports raw
-layout/edition/optional firmware ID, declared identity size, digest/length, query
-span and observation age. It makes no new device request or ownership lease.
-A caller time preceding the observation produces unknown age instead of a
-fabricated fresh timestamp. PreparedWave and ReadyWave are Clone/Debug; cloning
-shares the same observation time and prepared data without another GET or file
-load. It does not renew hardware freshness.
+Each frame retains the existing Driver3 mode GET, sampled CustomFrame controls, deadline, cooperative per-packet cancellation and postflight checks. Typed spatial intent can never be submitted as a repeated RGB color: uniform-only adapters refuse it before GET/OUT. The worker renders the authenticated physical frame and passes it through the shared stream gate. Partial counts/faults stay structured; accepted USB OUT is not optical verification, and an in-flight HID syscall is not made interruptible by the deadline.
 
-Two regular synthetic tests verify wrong PID/interface zero I/O, unsupported or
-truncated identity refusal before asset loading, missing/untrusted asset refusal,
-and a fresh GET for every preparation call. A separate ignored test requires
-`SECBIRD_ORNATA_MANIFEST_TEST_PATH` explicitly selecting the pinned private asset.
-It was run with a **mock** two-byte `[6,0]` reply and actual authenticated manifest
-bytes, proving exact layout6 selection, absent firmware ID despite padding9,
-the2,895,966-byte digest-bound asset, all18 black holes, conservative observation
-metadata, and canonical request-size3/zero selectors. Clone/render/metadata
-perform no additional GET. No physical device was opened or queried in any of
-these tests. The ignored test does not make this a public bundled-asset claim.
+The existing frame-before-LIVE brightness gate remains. Preparation/frame streaming does not change saved brightness or acquire a mode. Explicit brightness/policy edits retain their intent/LIVE reconciliation behavior. A filesystem failure after accepted frame OUT is possible and reported; no visible animation-phase rollback is invented.
+
+## Timing and validation limits
+
+The local scheduler freezes phase while suppressed and emits at most one frame per poll without catch-up bursts. This is an explicit implementation policy. Static recovery shows stock requests periodic 40ms callbacks, advances per render call and can replace/drop frames before asynchronous USB completion. Exact OS backlog, pause, route selection and optical timing remain unresolved. Nominal 25fps, elapsed-time skips and accepted packets do not establish stock cadence parity.
+
+Pure tests compare every physical RGB byte of both 25-frame cycles against independent scalar-derived vectors (SHA256 f855946d0c43ad03a9ec5d29843d54db10cb17d4804adc6107622d727d68ee56), including 18 holes, row/commit packing, wrap and immutable repeated queries. Other checks cover projection mismatch, stale opt-in, opaque exports, typed zero-I/O refusal, generation/suppression/fault behavior, malformed identity and asset refusal.
+
+Explicit private-asset tests use simulated HID only. They cover both initial API directions, deferred 0-frame intent, partial 2/3 and save-failure 7/7 results, persisted-candidate rollback, Custom8 refusal and foreign export preservation. Worker tests compare 26 delivered frames per direction (a full cycle plus wrap), unchanged profile bytes/saved brightness and one layout GET per generation. An action-to-worker test checks cached observation handoff and phase 1 continuation. These tests do not establish physical Wave output.
+
+See [Wave math](WAVE-LIGHTING.md), [spatial mapping](ORNATA-SPATIAL.md), [manifest authentication](ORNATA-MANIFEST.md) and [layout GET](ORNATA-IDENTITY.md). The source native renderer SHA256 is cd9fc2a61ff920b9b73e1f5e27632020e2f8586f443e426a875ad3b042b714fa. Optical placement/phase, abrupt termination, sleep/wake/hotplug, nondefault effects/geometry and release resource acceptance remain follow-up work.

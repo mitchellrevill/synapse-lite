@@ -17,6 +17,7 @@ struct Session {
     mode: Option<u8>,
     status: Value,
     started: Instant,
+    wave: Option<crate::host_wave::preparation::ReadyWave>,
 }
 #[derive(Default)]
 struct StoreCache {
@@ -77,6 +78,8 @@ pub(super) struct UniformState {
     cache: StoreCache,
     pub wake: Option<std::thread::Thread>,
     error: Option<String>,
+    #[cfg(test)]
+    test_wave_manifest: Option<PathBuf>,
 }
 impl Default for UniformState {
     fn default() -> Self {
@@ -90,6 +93,8 @@ impl Default for UniformState {
             cache: StoreCache::default(),
             wake: None,
             error: None,
+            #[cfg(test)]
+            test_wave_manifest: None,
         }
     }
 }
@@ -113,6 +118,7 @@ impl UniformState {
                     mode: None,
                     status: json!({"state":"pending-first-frame"}),
                     started: Instant::now(),
+                    wave: None,
                 },
             );
         }
@@ -222,6 +228,7 @@ impl Engine {
         }
         let epoch = self.uniform.epoch;
         let session = self.uniform.session(key, name, program);
+        session.wave = trace.and_then(|trace| trace.prepared_wave.clone());
         let now = epoch.elapsed();
         match result {
             Ok(value) if value["execution"] == "firmware" => {
@@ -325,11 +332,14 @@ impl Engine {
         let mut state = std::mem::take(&mut self.uniform);
         let path = self.uniform_path();
         let candidates = (|| -> std::result::Result<Vec<Candidate>, String> {
-            let probe_store = self.lighting_probe_store_snapshot()
+            let probe_store = self
+                .lighting_probe_store_snapshot()
                 .map_err(|error| error.to_string())?;
             let store = match probe_store.as_ref() {
                 Some(store) => store,
-                None => state.cache.refresh(&path)
+                None => state
+                    .cache
+                    .refresh(&path)
                     .map_err(|error| self.latch_lighting_probe_error(&error))?,
             };
             let mut result = Vec::new();
@@ -396,6 +406,8 @@ impl Engine {
             let availability = self.uniform_availability(&candidate.config);
             let gate_us = gate_started.elapsed().as_micros() as u64;
             let worker_signal = state.alive.clone();
+            #[cfg(test)]
+            let test_wave_manifest = state.test_wave_manifest.clone();
             let session = state.session(&candidate.key, &candidate.name, candidate.program);
             let now = epoch.elapsed();
             match availability {
@@ -417,6 +429,19 @@ impl Engine {
                 Ok(_) => {}
             }
             if session.mode == Some(0) {
+                if matches!(candidate.program, Program::Wave(_)) {
+                    let error =
+                        "Host Wave requires existing Driver Mode3; no firmware Wave was applied"
+                            .to_string();
+                    session.status = json!({"state":"faulted","error":error,"streaming":false});
+                    state.faults.insert(
+                        candidate.key.clone(),
+                        Fault {
+                            error,
+                            completion: None,
+                        },
+                    );
+                }
                 continue;
             }
             if session.mode.is_none() {
@@ -426,6 +451,19 @@ impl Engine {
                 match device.ornata_mode_readback() {
                     Ok(mode) if mode.mode() == 0 => {
                         session.mode = Some(0);
+                        if matches!(candidate.program, Program::Wave(_)) {
+                            let error = "Host Wave requires existing Driver Mode3; no firmware Wave was applied".to_string();
+                            session.status =
+                                json!({"state":"faulted","error":error,"streaming":false});
+                            state.faults.insert(
+                                candidate.key.clone(),
+                                Fault {
+                                    error,
+                                    completion: None,
+                                },
+                            );
+                            continue;
+                        }
                         session.status = json!({"state":"normal-mode-firmware","streaming":false});
                         continue;
                     }
@@ -452,23 +490,98 @@ impl Engine {
                     }
                 }
             }
+            if let Program::Wave(program) = candidate.program {
+                if session.wave.is_none() {
+                    let Some(device) = self.devices.iter().find(|d| d.key() == candidate.key)
+                    else {
+                        continue;
+                    };
+                    let manifest = {
+                        #[cfg(test)]
+                        if let Some(path) = &test_wave_manifest {
+                            path.clone()
+                        } else {
+                            crate::native_editor::assets_dir().join("DeviceManifest_605_0.json")
+                        }
+                        #[cfg(not(test))]
+                        crate::native_editor::assets_dir().join("DeviceManifest_605_0.json")
+                    };
+                    match crate::host_wave::preparation::prepare(device, program, &manifest) {
+                        Ok(wave) => session.wave = Some(wave),
+                        Err(error) => {
+                            let error = error.to_string();
+                            session.status = json!({"state":"faulted","error":error,"streaming":false,"accepted_packets":0,"attempted_packets":0,"automatic_retry":false});
+                            state.faults.insert(
+                                candidate.key.clone(),
+                                Fault {
+                                    error,
+                                    completion: None,
+                                },
+                            );
+                            continue;
+                        }
+                    }
+                }
+            }
             match session.playback.poll(epoch.elapsed(), Availability::Ready) {
                 Poll::Frame(ticket) => {
                     let Some(device) = self.devices.iter_mut().find(|d| d.key() == candidate.key)
                     else {
                         continue;
                     };
-                    let Some(signal) = worker_signal.as_ref() else { break; };
+                    let Some(signal) = worker_signal.as_ref() else {
+                        break;
+                    };
                     let Some(mut admission) = signal.begin_batch() else {
                         session.status = json!({"state":"quiescing","streaming":false});
                         break;
                     };
-                    let submitted = session.controls.submit(
-                        device,
-                        ticket,
-                        Instant::now() + Duration::from_millis(500),
-                        || stopped.load(Ordering::Acquire),
-                    );
+                    let deadline = Instant::now() + Duration::from_millis(500);
+                    let submitted = match (candidate.program, ticket.content) {
+                        (Program::Wave(program), host_uniform::FrameContent::SpatialIndex) => {
+                            match session
+                                .wave
+                                .as_ref()
+                                .filter(|wave| wave.prepared().program() == program)
+                                .ok_or_else(|| {
+                                    Error::InvalidArg(
+                                        "Wave frame has no matching authenticated preparation"
+                                            .into(),
+                                    )
+                                })
+                                .and_then(|wave| {
+                                    if wave.prepared().frame_count()
+                                        != session.playback.frame_count()
+                                    {
+                                        return Err(Error::InvalidArg(
+                                            "Wave playback and prepared frame periods disagree"
+                                                .into(),
+                                        ));
+                                    }
+                                    wave.prepared().render_frame(ticket.palette_index)
+                                }) {
+                                Ok(frame) => {
+                                    session.controls.submit_frame(device, &frame, deadline, || {
+                                        stopped.load(Ordering::Acquire)
+                                    })
+                                }
+                                Err(error) => host_uniform::io::Submission::refused(error),
+                            }
+                        }
+                        (Program::Wave(_), _) => host_uniform::io::Submission::refused(
+                            Error::InvalidArg("Wave playback produced uniform color intent".into()),
+                        ),
+                        (_, host_uniform::FrameContent::SpatialIndex) => {
+                            host_uniform::io::Submission::refused(Error::InvalidArg(
+                                "Uniform playback produced spatial frame intent".into(),
+                            ))
+                        }
+                        (_, host_uniform::FrameContent::Uniform(_)) => {
+                            session.controls.submit(device, ticket, deadline, || {
+                                stopped.load(Ordering::Acquire)
+                            })
+                        }
+                    };
                     admission.record(&submitted.completion);
                     drop(admission);
                     let success = submitted.completion.error.is_none()
@@ -498,6 +611,9 @@ impl Engine {
                         refresh_live = true;
                     }
                     session.status = json!({"state":if success {"playing"}else{"faulted"},"streaming":success,"source_id":candidate.program.source_id(),"native_id":candidate.program.native_id(),"palette_index":ticket.palette_index,"frame_count":session.playback.frame_count(),"accepted_frames":session.playback.accepted_frames(),"accepted_packets":accepted,"attempted_packets":attempted,"error":error,"custom_frame_control_verified":submitted.control_verified,"mode_before":submitted.observed_mode,"parameter_before":submitted.observed_parameter,"mode_after":submitted.mode_after,"parameter_after":submitted.parameter_after,"parameter_unchanged":submitted.parameter_unchanged(),"optically_verified":false,"automatic_retry":false,"last_submit_us":submitted.elapsed.as_micros() as u64,"last_mode_get_us":submitted.mode_query_elapsed.as_micros() as u64,"last_seven_out_calls_us":submitted.usb_out_elapsed.as_micros() as u64,"last_gate_us":gate_us,"nominal_interval_ms":40,"cadence_certified":false,"phase_policy":"local-freeze-no-catchup"});
+                    if let Some(wave) = &session.wave {
+                        session.status["wave_preparation"] = wave.metadata_at(Instant::now());
+                    }
                     if let Some(fault) = fault {
                         state.faults.insert(candidate.key.clone(), fault);
                     }
@@ -620,11 +736,24 @@ impl Engine {
             value["profile"] = json!(session.profile);
             value["opted_in"] = json!(true);
             value["worker_enabled"] = json!(self.uniform_is_enabled());
-            value["worker_timing"] = self.uniform.alive.as_ref().map(|signal| signal.metrics()).unwrap_or(Value::Null);
+            value["worker_timing"] = self
+                .uniform
+                .alive
+                .as_ref()
+                .map(|signal| signal.metrics())
+                .unwrap_or(Value::Null);
             if !self.uniform_is_enabled() {
                 value["streaming"] = json!(false);
-                value["worker_stopped"] = json!(self.uniform.alive.as_ref().is_none_or(|signal|!signal.thread_alive()));
-                value["quiesce_requested"] = json!(self.uniform.alive.as_ref().is_some_and(|signal|signal.quiescing()));
+                value["worker_stopped"] = json!(self
+                    .uniform
+                    .alive
+                    .as_ref()
+                    .is_none_or(|signal| !signal.thread_alive()));
+                value["quiesce_requested"] = json!(self
+                    .uniform
+                    .alive
+                    .as_ref()
+                    .is_some_and(|signal| signal.quiescing()));
             }
             value["configuration_reloads"] = json!(self.uniform.cache.reloads);
             value["control_observation"] = session.controls.status();
@@ -682,6 +811,10 @@ impl Engine {
             }
         };
         if mode == 0 {
+            if matches!(program, Ok(Some(Program::Wave(_)))) {
+                profiles.lighting_off = true;
+                return vec!["Source Wave requires existing Driver Mode3; firmware projection was not applied".into()];
+            }
             return Vec::new();
         }
         if mode != 3 {
@@ -698,7 +831,10 @@ impl Engine {
         };
         if !self.uniform_is_enabled() || !program.opted_in(profile) {
             profiles.lighting_off = true;
-            return vec!["Select Spectrum or fixed Breathing explicitly in Lighting to authorize the host worker".into()];
+            return vec![
+                "Select a supported host effect explicitly in Lighting to authorize the worker"
+                    .into(),
+            ];
         }
         let profile = profiles.profiles.get_mut(name).unwrap();
         let zone = profile.lighting.get_mut("backlight").unwrap();
@@ -793,6 +929,28 @@ mod tests {
         fn tick(&mut self) {
             self.engine.tick_uniform(&AtomicBool::new(false));
         }
+        fn choose_wave(&mut self, choice: crate::host_wave::Program, opted: bool) {
+            let mut store = Store::load(&self.path).unwrap();
+            let profile = store.for_device(&self.engine.devices[0]).active_mut();
+            Program::clear_opt_in(profile);
+            secbird_core::profile_compat::set_source_quick_effect(
+                profile,
+                605,
+                "Default",
+                4,
+                &json!({"direction":choice.source_direction()}),
+            )
+            .unwrap();
+            let zone = profile.lighting.get_mut("backlight").unwrap();
+            zone.color = None;
+            zone.effect = Some(choice.native_projection());
+            zone.off = false;
+            if opted {
+                Program::Wave(choice).opt_in(profile).unwrap();
+            }
+            store.save().unwrap();
+            self.engine.uniform.cache.invalidate();
+        }
         fn actual_action(&mut self, program: Program) -> (Result<Value>, ActionTrace) {
             let mut playback = Playback::new(program, 999, Duration::ZERO);
             let ticket = match playback.poll(Duration::ZERO, Availability::Ready) {
@@ -809,6 +967,7 @@ mod tests {
                 output_attempted: true,
                 requested: Some(program),
                 completion: Some(submitted.completion.clone()),
+                prepared_wave: None,
             };
             let result = if let Some(error) = &submitted.completion.error {
                 Err(Error::InvalidArg(error.clone()))
@@ -824,6 +983,204 @@ mod tests {
         fn drop(&mut self) {
             std::fs::remove_dir_all(self.path.parent().unwrap()).unwrap();
         }
+    }
+    #[test]
+    fn wave_requires_opt_in_and_failed_identity_latches_before_frame_output() {
+        let mut f = Fixture::new(false);
+        f.choose_wave(crate::host_wave::Program::Left, false);
+        let original = std::fs::read(&f.path).unwrap();
+        f.tick();
+        assert_eq!(f.spy.state.lock().unwrap().attempts, 0);
+        assert!(!f
+            .spy
+            .state
+            .lock()
+            .unwrap()
+            .commands
+            .contains(&secbird_core::proto::Command::new(0, 0x86)));
+        assert!(f.engine.uniform.sessions.is_empty());
+        assert_eq!(std::fs::read(&f.path).unwrap(), original);
+
+        f.choose_wave(crate::host_wave::Program::Left, true);
+        let original = std::fs::read(&f.path).unwrap();
+        f.tick();
+        assert_eq!(f.spy.state.lock().unwrap().attempts, 0);
+        let queries = f
+            .spy
+            .state
+            .lock()
+            .unwrap()
+            .commands
+            .iter()
+            .filter(|c| **c == secbird_core::proto::Command::new(0, 0x86))
+            .count();
+        assert_eq!(queries, 1);
+        assert!(f.engine.uniform.faults.contains_key(&f.key));
+        f.advance();
+        f.tick();
+        assert_eq!(f.spy.state.lock().unwrap().attempts, 0);
+        assert_eq!(
+            f.spy
+                .state
+                .lock()
+                .unwrap()
+                .commands
+                .iter()
+                .filter(|c| **c == secbird_core::proto::Command::new(0, 0x86))
+                .count(),
+            1
+        );
+        assert_eq!(std::fs::read(&f.path).unwrap(), original);
+    }
+
+    #[test]
+    fn normal_mode_wave_has_no_identity_frame_or_firmware_fallback() {
+        let mut f = Fixture::new(false);
+        f.choose_wave(crate::host_wave::Program::Right, true);
+        f.spy.state.lock().unwrap().mode = 0;
+        let original = std::fs::read(&f.path).unwrap();
+        f.tick();
+        assert_eq!(f.spy.state.lock().unwrap().attempts, 0);
+        assert!(!f
+            .spy
+            .state
+            .lock()
+            .unwrap()
+            .commands
+            .contains(&secbird_core::proto::Command::new(0, 0x86)));
+        assert!(f.engine.uniform.faults.contains_key(&f.key));
+        let mut store = Store::load(&f.path).unwrap();
+        let mut shadow = store.for_device(&f.engine.devices[0]).clone();
+        let errors = f
+            .engine
+            .uniform_shadow(&f.engine.devices[0], &mut shadow, "Default");
+        assert!(!errors.is_empty());
+        assert!(shadow.lighting_off);
+        assert_eq!(f.spy.state.lock().unwrap().attempts, 0);
+        assert_eq!(std::fs::read(&f.path).unwrap(), original);
+    }
+
+    fn private_wave_manifest() -> PathBuf {
+        std::env::var_os("SECBIRD_ORNATA_MANIFEST_TEST_PATH")
+            .map(PathBuf::from)
+            .expect("select the exact pinned private manifest explicitly")
+    }
+
+    #[test]
+    #[ignore = "requires explicit pinned private manifest; simulated HID only"]
+    fn wave_worker_maps_full_cycles_and_reuses_the_generation_identity() {
+        let golden = include_bytes!("../../../secbird-core/tests/fixtures/ornata_spatial_wave.rgb");
+        for (choice, offset) in [
+            (crate::host_wave::Program::Left, 0),
+            (crate::host_wave::Program::Right, 25 * 396),
+        ] {
+            let mut f = Fixture::new(false);
+            f.choose_wave(choice, true);
+            f.spy.sim.state().ornata_layout_edition = Some([6, 0]);
+            f.engine.uniform.test_wave_manifest = Some(private_wave_manifest());
+            let original = std::fs::read(&f.path).unwrap();
+            for index in 0..26 {
+                f.tick();
+                let pixels: Vec<u8> = f
+                    .spy
+                    .sim
+                    .state()
+                    .matrix
+                    .as_ref()
+                    .unwrap()
+                    .2
+                    .iter()
+                    .flat_map(|pixel| pixel.iter().copied())
+                    .collect();
+                let start = offset + (index % 25) * 396;
+                assert_eq!(pixels, golden[start..start + 396]);
+                let status = f.engine.uniform_status();
+                assert_eq!(status[&f.key]["source_id"], 4);
+                assert_eq!(status[&f.key]["native_id"], 2);
+                assert_eq!(status[&f.key]["palette_index"], index % 25);
+                assert_eq!(status[&f.key]["wave_preparation"]["layout_id"], 6);
+                assert!(status[&f.key]["wave_preparation"]["firmware_id"].is_null());
+                f.advance();
+            }
+            assert_eq!(f.spy.state.lock().unwrap().attempts, 26 * 7);
+            assert_eq!(
+                f.spy
+                    .state
+                    .lock()
+                    .unwrap()
+                    .commands
+                    .iter()
+                    .filter(|c| **c == secbird_core::proto::Command::new(0, 0x86))
+                    .count(),
+                1
+            );
+            assert_eq!(f.spy.sim.state().brightness[&5], 255);
+            assert_eq!(f.spy.sim.state().live_brightness[&5], 255);
+            assert!(!f.spy.sim.state().effects.contains_key(&5));
+            assert_eq!(std::fs::read(&f.path).unwrap(), original);
+        }
+    }
+
+    #[test]
+    #[ignore = "requires explicit pinned private manifest; simulated HID only"]
+    fn successful_wave_action_hands_preparation_and_next_phase_to_worker() {
+        let mut f = Fixture::new(false);
+        let choice = crate::host_wave::Program::Right;
+        f.choose_wave(choice, true);
+        f.spy.sim.state().ornata_layout_edition = Some([6, 0]);
+        let ready = crate::host_wave::preparation::prepare(
+            &f.engine.devices[0],
+            choice,
+            &private_wave_manifest(),
+        )
+        .unwrap();
+        let first = ready.prepared().render_frame(0).unwrap();
+        let submitted = host_uniform::io::submit_prepared(
+            &mut f.engine.devices[0],
+            &first,
+            Instant::now() + Duration::from_secs(2),
+            || false,
+        );
+        assert!(submitted.completion.error.is_none());
+        let trace = ActionTrace {
+            output_attempted: true,
+            requested: Some(Program::Wave(choice)),
+            completion: Some(submitted.completion.clone()),
+            prepared_wave: Some(ready.clone()),
+        };
+        let result = Ok(
+            json!({"execution":"host-wave","accepted_packets":7,"attempted_packets":7,"control_state_verified":true}),
+        );
+        f.engine.uniform_action_record(
+            &f.key,
+            "Default",
+            Program::Wave(choice),
+            &result,
+            Some(&trace),
+        );
+        assert_eq!(
+            f.engine.uniform.sessions[&f.key]
+                .wave
+                .as_ref()
+                .unwrap()
+                .observation_started_at(),
+            ready.observation_started_at()
+        );
+        f.advance();
+        f.tick();
+        assert_eq!(f.engine.uniform_status()[&f.key]["palette_index"], 1);
+        assert_eq!(f.spy.state.lock().unwrap().attempts, 14);
+        assert_eq!(
+            f.spy
+                .state
+                .lock()
+                .unwrap()
+                .commands
+                .iter()
+                .filter(|c| **c == secbird_core::proto::Command::new(0, 0x86))
+                .count(),
+            1
+        );
     }
     #[test]
     fn cached_controls_refresh_on_resume_owner_reentry_program_change_and_reconnect() {
@@ -916,7 +1273,7 @@ mod tests {
         entered: bool,
         released: bool,
     }
-    type RowGate = std::sync::Arc<(std::sync::Mutex<RowGateState>,std::sync::Condvar)>;
+    type RowGate = std::sync::Arc<(std::sync::Mutex<RowGateState>, std::sync::Condvar)>;
     type SharedEngine = std::sync::Arc<std::sync::Mutex<Engine>>;
     struct BlockedRow {
         spy: Spy,
@@ -1442,6 +1799,7 @@ mod tests {
             output_attempted: true,
             requested: None,
             completion: None,
+            prepared_wave: None,
         };
         f.engine
             .latch_uniform_action_failure(&f.key, &error, &trace);

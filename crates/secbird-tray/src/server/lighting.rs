@@ -184,7 +184,7 @@ pub(super) fn host_uniform_settings(
         return Err(error);
     }
     Ok(json!({
-        "execution":"host-uniform", "saved":true, "deferred":true,
+        "execution":if matches!(program,crate::host_uniform::Program::Wave(_)){"host-wave"}else{"host-uniform"}, "saved":true, "deferred":true,
         "reason":reason, "configured_intent":want,
         "saved_hardware_unchanged":true, "live_policy_reconcile_pending":true,
         "accepted_packets":0, "attempted_packets":0,

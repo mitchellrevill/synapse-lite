@@ -1,5 +1,6 @@
-//! Exact durable subset of the shipped UI-to-firmware conversion (module6394)
-//! and generateSetChromaEffectCommonData. No host animation or mode acquisition.
+//! Source effect staging and the supported firmware/host dispatch boundaries.
+//! Wave uses authenticated physical frames in Driver3; Normal0 is rejected.
+//! No mode acquisition or optical/cadence parity is claimed.
 use super::*;
 use secbird_core::{effects::Effect, features::Rgb, profile::Zone};
 
@@ -48,7 +49,7 @@ impl Plan {
                 let duration = duration(setting)?; args[4] = duration;
                 Some(Effect::Reactive { color, duration })
             }
-            4 => return Err(Error::Unsupported("Source Wave direction/rate is not preserved by the current native profile codec; effect unchanged".into())),
+            4 => Some(crate::host_wave::Program::from_setting(setting)?.native_projection()),
             11 | 12 => return Err(Error::Unsupported(format!("Source effect {id} requires a screen/audio host pipeline that this firmware-only endpoint does not implement"))),
             6 | 8 | 13 | 19 => return Err(Error::Unsupported(format!("Source effect {id} has no implemented durable native projection; its host animation is also unavailable"))),
             _ => return Err(Error::Unsupported(format!("Source effect {id} has no verified durable firmware projection"))),
@@ -82,6 +83,9 @@ impl Plan {
         // Retained brightness and switch-off policies are independent of effects.
     }
     fn write_verified(&self, dev: &Device) -> Result<(), Error> {
+        if matches!(self.effect, Some(Effect::Wave { .. })) {
+            return Err(Error::Unsupported("Source Wave requires the authenticated DriverMode3 host path; no firmware effect SET is supported".into()));
+        }
         // Ordinary transport validation stays strict. An unexpectedly short SET
         // acknowledgement is an error, not permission to retry a physical write.
         // Use exactly the same native writer as Profile::apply. A matching
@@ -234,9 +238,9 @@ fn apply_traced(
         )?;
         plan.project(profile);
         crate::host_uniform::Program::clear_opt_in(profile);
-        if matches!(id, 2 | 3) {
+        if matches!(id, 2 | 3 | 4) {
             let program = crate::host_uniform::Program::from_profile(profile, 605)?
-                .ok_or_else(|| Error::Unsupported("Effect has no uniform projection".into()))?;
+                .ok_or_else(|| Error::Unsupported("Effect has no supported host projection".into()))?;
             program.opt_in(profile)?;
             trace.requested = Some(program);
         }
@@ -245,8 +249,9 @@ fn apply_traced(
         // Mode GET is read-only; failures before it must never mutate resolution keys.
         let mode = dev.ornata_mode_readback()?;
         let execution=match mode.mode() {
+        0 if id==4=>return Err(Error::Unsupported("Source Wave requires existing DriverMode3; no Normal0 firmware Wave SET was attempted".into())),
         0=>{attempted=true;trace.output_attempted=true;plan.write_verified(dev)?;json!({"execution":"firmware","verified":true,"host_animation_parity":false})},
-        3 if matches!(id,1|2|3)=>{
+        3 if matches!(id,1|2|3|4)=>{
             let gate=host_gate?;
             let gate=if matches!(&gate,crate::host_static::Gate::NeedsBaseline{..}) {
                 initialize_brightness_baseline(dev,store,body)?;initialized_baseline=true;
@@ -561,7 +566,7 @@ mod tests {
         let mut f = Fixture::new();
         let before = serde_json::to_value(&f.store).unwrap();
         for (id, setting) in [
-            (4, json!({"direction":1})),
+            (4, json!({"direction":5})),
             (11, json!({})),
             (12, json!({})),
             (2, json!({"isRandom":true})),
@@ -799,6 +804,232 @@ mod host_dispatch_tests {
             "source_effect_setting":setting
         }))
         .unwrap()
+    }
+    fn wave_body(f: &Fixture, direction: u8) -> Body {
+        serde_json::from_value(json!({
+            "id":f.dev.key(),"expected_device":f.dev.key(),"expected_profile":"Default",
+            "source_effect_id":4,"source_effect_setting":{"direction":direction,"futureWave":{"retain":[1,true]}}
+        })).unwrap()
+    }
+    #[test]
+    fn wave_refusals_roll_back_candidates_without_any_set_or_opt_in() {
+        for reason in [
+            "normal",
+            "worker",
+            "identity",
+            "asset",
+            "budget",
+            "owner",
+            "profile",
+            "process",
+            "direction",
+        ] {
+            let mut f = Fixture::new();
+            let key = f.dev.key();
+            let profiles = f.store.devices.remove(&key).unwrap();
+            f.store.devices.insert("025D".into(), profiles);
+            if reason == "normal" {
+                f.spy.state.lock().unwrap().mode = 0;
+            }
+            if reason == "asset" {
+                f.spy.sim.state().ornata_layout_edition = Some([255, 0]);
+            }
+            if reason == "budget" {
+                f.store
+                    .extra
+                    .insert("padding".into(), json!("x".repeat(2 * 1024 * 1024)));
+            }
+            if reason == "owner" {
+                f.store.devices.get_mut("025D").unwrap().lighting_off = true;
+            }
+            let mut body = wave_body(&f, if reason == "direction" { 5 } else { 1 });
+            if reason == "profile" {
+                body.expected_profile = Some("stale".into());
+            }
+            let before = serde_json::to_value(&f.store).unwrap();
+            let mut trace = crate::host_uniform::ActionTrace::default();
+            let result = apply_traced(
+                &mut f.dev,
+                &mut f.store,
+                &body,
+                || {
+                    if reason == "process" {
+                        Err(Error::Unsupported("competing owner".into()))
+                    } else {
+                        Ok(())
+                    }
+                },
+                Ok(Gate::Ready),
+                reason != "worker",
+                &mut trace,
+            );
+            assert!(result.is_err(), "{reason}");
+            assert_eq!(serde_json::to_value(&f.store).unwrap(), before, "{reason}");
+            assert!(!f.folder.exists());
+            assert_eq!(f.spy.state.lock().unwrap().attempts, 0);
+            assert!(
+                f.spy
+                    .state
+                    .lock()
+                    .unwrap()
+                    .commands
+                    .iter()
+                    .all(|command| command.id & 0x80 != 0),
+                "{reason}"
+            );
+            assert!(trace.prepared_wave.is_none());
+        }
+        let f = Fixture::new();
+        let plan = Plan::parse(4, &json!({"direction":1})).unwrap();
+        assert!(matches!(
+            plan.write_verified(&f.dev),
+            Err(Error::Unsupported(_))
+        ));
+        assert!(
+            f.spy.state.lock().unwrap().commands.is_empty(),
+            "host-only Wave has no direct firmware writer"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires explicit SECBIRD_ORNATA_MANIFEST_TEST_PATH and SYNAPSE_LITE_ASSETS pointing to its parent; MOCK HID only"]
+    fn wave_api_with_mock_identity_and_pinned_asset_saves_ready_deferred_and_reports_partial_failure(
+    ) {
+        let source = std::env::var_os("SECBIRD_ORNATA_MANIFEST_TEST_PATH")
+            .expect("explicit private asset path");
+        let configured = crate::native_editor::assets_dir().join("DeviceManifest_605_0.json");
+        assert_eq!(
+            std::fs::canonicalize(configured).unwrap(),
+            std::fs::canonicalize(source).unwrap()
+        );
+        for (direction, deferred) in [(1, false), (2, false), (1, true)] {
+            let mut f = Fixture::new();
+            f.spy.sim.state().ornata_layout_edition = Some([6, 0]);
+            let body = wave_body(&f, direction);
+            let mut trace = crate::host_uniform::ActionTrace::default();
+            let gate = if deferred {
+                Gate::Deferred("display-off".into())
+            } else {
+                Gate::Ready
+            };
+            let response = apply_traced(
+                &mut f.dev,
+                &mut f.store,
+                &body,
+                || Ok(()),
+                Ok(gate),
+                true,
+                &mut trace,
+            )
+            .unwrap();
+            assert_eq!(response["execution"], "host-wave");
+            assert_eq!(response["source_effect_id"], 4);
+            assert_eq!(response["native_effect_id"], 2);
+            assert_eq!(response["saved"], true);
+            assert_eq!(response["deferred"], deferred);
+            assert_eq!(response["optically_verified"], false);
+            assert_eq!(response["cadence_certified"], false);
+            assert_eq!(response["accepted_packets"], if deferred { 0 } else { 7 });
+            assert_eq!(response["wave_preparation"]["layout_id"], 6);
+            assert!(response["wave_preparation"]["firmware_id"].is_null());
+            let ready = trace.prepared_wave.as_ref().unwrap();
+            assert_eq!(ready.prepared().program().source_direction(), direction);
+            assert_eq!(
+                f.spy
+                    .state
+                    .lock()
+                    .unwrap()
+                    .commands
+                    .iter()
+                    .filter(|c| **c == secbird_core::proto::Command::new(0, 0x86))
+                    .count(),
+                1
+            );
+            assert!(!f
+                .spy
+                .state
+                .lock()
+                .unwrap()
+                .commands
+                .contains(&secbird_core::commands::MATRIX_BRIGHTNESS));
+            assert!(
+                !f.spy.sim.state().effects.contains_key(&5),
+                "no saved-profile firmware effect projection"
+            );
+            if !deferred {
+                let packets = ready
+                    .prepared()
+                    .render_frame(0)
+                    .unwrap()
+                    .packets(f.dev.txid);
+                let expected: Vec<[u8; 3]> = packets[..6]
+                    .iter()
+                    .flat_map(|row| {
+                        row[14..80]
+                            .chunks_exact(3)
+                            .map(|rgb| rgb.try_into().unwrap())
+                    })
+                    .collect();
+                assert_eq!(f.spy.sim.state().matrix.as_ref().unwrap().2, expected);
+                assert_eq!(expected.iter().filter(|rgb| **rgb == [0, 0, 0]).count(), 18);
+            } else {
+                assert_eq!(f.spy.state.lock().unwrap().attempts, 0);
+            }
+            let profile = f.store.for_device(&f.dev).active();
+            let program = crate::host_uniform::Program::from_profile(profile, 605)
+                .unwrap()
+                .unwrap();
+            assert!(program.opted_in(profile));
+            assert_eq!(
+                secbird_core::profile_compat::source_quick_effects(profile).unwrap()
+                    ["selectedEffectSetting"]["futureWave"],
+                json!({"retain":[1,true]})
+            );
+            let source =
+                secbird_core::profile_compat::export_synapse4(&f.store, &f.dev.key()).unwrap();
+            let imported = secbird_core::profile_compat::import_document(&source.bytes).unwrap();
+            assert!(!program.opted_in(imported.store.devices.values().next().unwrap().active()));
+        }
+        for failure in ["partial", "save", "control"] {
+            let mut f = Fixture::new();
+            f.spy.sim.state().ornata_layout_edition = Some([6, 0]);
+            if failure == "partial" {
+                f.spy.state.lock().unwrap().fail_at = Some(2);
+            } else if failure == "control" {
+                f.spy.sim.state().effects.insert(0, vec![3, 0, 0, 0]);
+            } else {
+                std::fs::create_dir_all(f.folder.join("profiles.json")).unwrap();
+            }
+            let before = serde_json::to_value(&f.store).unwrap();
+            let body = wave_body(&f, 1);
+            let mut trace = crate::host_uniform::ActionTrace::default();
+            let error = apply_traced(
+                &mut f.dev,
+                &mut f.store,
+                &body,
+                || Ok(()),
+                Ok(Gate::Ready),
+                true,
+                &mut trace,
+            )
+            .unwrap_err();
+            assert_eq!(
+                error.to_string().contains("may have changed"),
+                failure != "control"
+            );
+            assert_eq!(serde_json::to_value(&f.store).unwrap(), before);
+            let counts = trace.completion.as_ref().unwrap();
+            assert_eq!(
+                (counts.accepted_packets, counts.attempted_packets),
+                match failure {
+                    "partial" => (2, 3),
+                    "control" => (0, 0),
+                    _ => (7, 7),
+                }
+            );
+            assert_eq!(trace.output_attempted, failure != "control");
+            assert!(trace.prepared_wave.is_some());
+        }
     }
     #[test]
     fn uniform_source_actions_persist_exact_opt_in_only_after_complete_frame() {

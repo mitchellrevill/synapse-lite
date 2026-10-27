@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "recorded_utc": "2026-10-27T17:32:19Z",
+  "scope": "Guarded Wave API and worker integration; simulated HID only",
+  "regular_tray_tests": { "passed": 190, "failed": 0, "ignored": 13 },
+  "worker_controller_tests_including_explicit_private_asset": { "passed": 21, "failed": 0 },
+  "explicit_private_asset_api_test": { "passed": 1, "failed": 0 },
+  "private_asset_sha256": "3595e11f1d8778180d1dd6edd2463c8b3b8e446542c5020dc1fa038c67937a93",
+  "checks": [
+    "Both directions: 26 delivered frames each, including wrap, compared byte-for-byte against independent physical vectors",
+    "One identity GET per generation and cached initial-action preparation handed to worker at phase 1",
+    "No identity or frame output without matching explicit opt-in",
+    "Normal Mode0 refuses host Wave and suppresses firmware projection",
+    "Deferred intent emits zero frames; partial output and late save failure retain structured counts and candidate rollback",
+    "Saved brightness, profile bytes and foreign export preservation checked"
+  ],
+  "test_setup_note": "An API rerun initially omitted SYNAPSE_LITE_ASSETS and failed its explicit path precondition before device access. With both documented private-asset environment variables set, it passed.",
+  "physical_wave_output_tested": false,
+  "optically_verified": false,
+  "stock_cadence_verified": false,
+  "release_memory_measured_for_this_integration": false,
+  "known_limits": ["Synchronous HID calls are not interruptible by the cooperative deadline", "Local freeze/no-catchup phase policy is not demonstrated stock timing parity", "Full sleep/wake, hotplug and abrupt termination recovery remain open"]
+}

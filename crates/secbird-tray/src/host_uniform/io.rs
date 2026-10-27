@@ -23,7 +23,7 @@ pub(crate) struct Submission {
     pub usb_out_elapsed: Duration,
 }
 impl Submission {
-    fn refused(error: Error) -> Self {
+    pub(crate) fn refused(error: Error) -> Self {
         Self {
             completion: Completion {
                 accepted_packets: 0,

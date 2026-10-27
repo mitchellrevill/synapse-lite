@@ -3,7 +3,7 @@
 //! RGB tables are derived from the shipped native renderer, not observed optical
 //! output. Source Spectrum is UI3/native4; Breathing is UI2/native5 (native3 is
 //! Reactive). Explicit Wave is UI4/native2 and emits an index, never a dummy RGB
-//! color. The native outer scheduler is unknown. Our policy emits at most one
+//! color. Exact stock scheduling parity is unresolved. Our policy emits at most one
 //! frame per poll, never catches up in a burst, and freezes phase while suppressed.
 //! Program/scheduler logic is pure; the separate io child is a bounded adapter.
 use secbird_core::{
@@ -27,8 +27,7 @@ pub(crate) enum Program {
         first: Rgb,
         second: Option<Rgb>,
     },
-    /// Explicit frame-index intent only. Discovery remains uniform-only until
-    /// the Engine can authenticate and map a selected physical layout.
+    /// Explicit frame-index intent; callers authenticate its physical layout.
     Wave(crate::host_wave::Program),
 }
 impl Program {
@@ -47,6 +46,9 @@ impl Program {
         }
     }
     pub(crate) fn from_profile(profile: &Profile, pid: u16) -> Result<Option<Self>> {
+        if let Some(program) = crate::host_wave::Program::from_profile(profile, pid)? {
+            return Ok(Some(Self::Wave(program)));
+        }
         if pid != 605
             || secbird_core::profile_compat::source_quick_effects(profile).is_none()
             || !profile.keys.is_empty()
@@ -205,6 +207,7 @@ pub(crate) struct ActionTrace {
     pub output_attempted: bool,
     pub requested: Option<Program>,
     pub completion: Option<Completion>,
+    pub prepared_wave: Option<crate::host_wave::preparation::ReadyWave>,
 }
 
 #[derive(Debug, Clone)]
@@ -667,7 +670,7 @@ mod tests {
     }
 
     #[test]
-    fn explicit_wave_opt_in_delegates_but_uniform_discovery_never_autoactivates_it() {
+    fn wave_discovery_still_requires_explicit_current_opt_in() {
         let mut profile =
             secbird_core::profile_compat::new_native_profile(605, "Synthetic").unwrap();
         Program::Spectrum.opt_in(&mut profile).unwrap();
@@ -684,11 +687,11 @@ mod tests {
         let decoded = profile.extra[SOURCE]["decoded"].clone();
         let program = Program::Wave(crate::host_wave::Program::Left);
         assert!(!program.opted_in(&profile));
-        assert_eq!(Program::from_profile(&profile, 605).unwrap(), None);
+        assert_eq!(Program::from_profile(&profile, 605).unwrap(), Some(program));
         program.opt_in(&mut profile).unwrap();
         assert!(program.opted_in(&profile));
         assert_eq!(profile.extra[SOURCE]["decoded"], decoded);
-        assert_eq!(Program::from_profile(&profile, 605).unwrap(), None);
+        assert_eq!(Program::from_profile(&profile, 605).unwrap(), Some(program));
         Program::clear_opt_in(&mut profile);
         assert!(!program.opted_in(&profile));
         assert!(profile.extra[SOURCE].get(OPT_IN).is_none());

@@ -494,7 +494,7 @@ fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
             .ok_or_else(|| Error::NotFound(format!("device {target}")))?;
         let response = lighting::effect(dev, &mut store, &b, gate, worker_ready, &mut trace);
         match &response {
-            Ok(_) if matches!(b.source_effect_id, Some(2 | 3)) => {
+            Ok(_) if matches!(b.source_effect_id, Some(2 | 3 | 4)) => {
                 let profiles = store
                     .devices
                     .get(&target)
