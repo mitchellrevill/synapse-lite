@@ -550,17 +550,25 @@ impl Profile {
         if let Some(g) = &self.game_mode {
             push(format!("gaming mode: {g}"), g.parse().and_then(|g| dev.set_game_mode(g)));
         }
-        // Driver-mode Static must not brighten the previous frame before a
-        // standalone caller learns that it needs the tray host runtime.
-        let lighting = if lighting && self.source_static_color(dev.pid).is_some() {
+        // No firmware color/effect projection may brighten an old driver-mode
+        // frame before reporting the host-runtime limitation. Host shadows clear
+        // their handled color/effect fields; brightness/per-key-only paths stay
+        // separate. Preserve the prior source-Static wrong-interface refusal.
+        let firmware_projection = self
+            .lighting
+            .values()
+            .any(|zone| !zone.off && (zone.color.is_some() || zone.effect.is_some()));
+        let needs_mode_guard = self.source_static_color(dev.pid).is_some()
+            || (dev.pid == 605 && dev.interface == 2 && firmware_projection);
+        let lighting = if lighting && needs_mode_guard {
             match dev.ornata_mode_readback() {
                 Ok(mode) if mode.mode() == 0 => true,
                 Ok(mode) => {
-                    push("source Static lighting".into(),Err(Error::Unsupported(format!("source Static in mode{} requires the running tray host-frame runtime; lighting projection was not applied",mode.mode()))));
+                    push("Ornata firmware color/effect".into(),Err(Error::Unsupported(format!("Ornata firmware color/effect in mode{} requires the running tray host-frame runtime and an explicit supported host choice; lighting projection was not applied",mode.mode()))));
                     false
                 }
                 Err(error) => {
-                    push("source Static mode preflight".into(), Err(error));
+                    push("Ornata firmware lighting mode preflight".into(), Err(error));
                     false
                 }
             }
@@ -890,5 +898,73 @@ mod tests {
         local.import_for(incoming, &target);
         assert_eq!(local.devices["00C5:ONE"].active().dpi, Some((1200, 1200)));
         assert!(!local.devices.contains_key("00C4:FOREIGN"));
+    }
+}
+
+#[cfg(test)]
+mod ornata_projection_guard_tests {
+    use super::*;
+    use crate::{
+        commands as cmd,
+        effects::Effect,
+        sim::{Sim, KEYBOARD_PID},
+    };
+    fn device(mode: Option<u8>) -> (Sim, Device) {
+        let sim = Sim::keyboard();
+        sim.state().device_mode = mode;
+        let mut dev = sim.open(605, Sim::spec_for(KEYBOARD_PID)).unwrap();
+        dev.interface = 2;
+        sim.state().brightness.insert(5, 255);
+        sim.state().live_brightness.insert(5, 255);
+        sim.state().log.clear();
+        (sim, dev)
+    }
+    fn profile(effect: bool) -> Profile {
+        let mut profile = Profile::default();
+        let zone = profile.lighting.entry("backlight".into()).or_default();
+        zone.brightness = Some(25);
+        if effect {
+            zone.effect = Some(Effect::Spectrum);
+        } else {
+            zone.color = Some(Rgb(1, 2, 3));
+        }
+        profile
+    }
+    #[test]
+    fn legacy_and_source_uniform_projection_refuse_driver_mode_before_brightness() {
+        for mode in [Some(3), None] {
+            for effect in [false, true] {
+                let (sim, dev) = device(mode);
+                let results = profile(effect).apply(&dev);
+                assert!(results.iter().any(|r| r.result.is_err()));
+                let state = sim.state();
+                assert_eq!(state.brightness[&5], 255);
+                assert!(!state.log.contains(&cmd::MATRIX_BRIGHTNESS));
+                assert!(!state.log.contains(&cmd::MATRIX_EFFECT));
+            }
+        }
+        let (sim, dev) = device(Some(3));
+        let profile = crate::profile_compat::new_native_profile(605, "Imported").unwrap();
+        let results = profile.apply(&dev);
+        assert!(results.iter().any(|r| r
+            .result
+            .as_ref()
+            .err()
+            .is_some_and(|e| e.to_string().contains("explicit supported host choice"))));
+        assert!(!sim.state().log.contains(&cmd::MATRIX_BRIGHTNESS));
+        assert!(!sim.state().log.contains(&cmd::MATRIX_EFFECT));
+    }
+    #[test]
+    fn normal_mode_and_brightness_only_keep_their_existing_projection() {
+        let (sim, dev) = device(Some(0));
+        assert!(profile(false).apply(&dev).iter().all(|r| r.result.is_ok()));
+        assert!(sim.state().log.contains(&cmd::MATRIX_BRIGHTNESS));
+        assert!(sim.state().log.contains(&cmd::MATRIX_EFFECT));
+        let (sim, dev) = device(Some(3));
+        let mut p = profile(false);
+        p.lighting.get_mut("backlight").unwrap().color = None;
+        assert!(p.apply(&dev).iter().all(|r| r.result.is_ok()));
+        assert!(!sim.state().log.contains(&cmd::DEVICE_MODE.get()));
+        assert!(sim.state().log.contains(&cmd::MATRIX_BRIGHTNESS));
     }
 }
