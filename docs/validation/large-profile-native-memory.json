@@ -1,0 +1,135 @@
+{
+  "scope": "Query-only native Export Profiles preview with 1000 synthetic profiles; no worker, hardware mutation or final-build acceptance",
+  "source_commit": "ed25abd",
+  "binary_sha256": "9F10AF8B425CC384D521A02A51BA7BB857E119078AB33FB2E6A328342F93A06C",
+  "limit_bytes": 100000000,
+  "run_seconds": 10,
+  "metric_note": "Observed process-tree working-set high water, sampled private committed bytes and additional peak paged-memory metric; Windows sampling may miss private peaks. Shared resident pages can be counted per process.",
+  "stock": {
+    "stock_before": 11,
+    "stock_isolated": true,
+    "isolation_rounds": [
+      11,
+      0,
+      0
+    ],
+    "stock_after": 15,
+    "services_changed": false
+  },
+  "fixtures": {
+    "opaque-bytes": {
+      "bytes": 2097152,
+      "structural_tokens": 6011,
+      "sha256": "38238ae17a43274d3c568269c8ac7202b819974cb44d4cecfbcb622269f804e8",
+      "profiles": 1000
+    },
+    "structured-nodes": {
+      "bytes": 174857,
+      "structural_tokens": 32768,
+      "sha256": "65bb6c36b230de5efb070c6032083f1c58e7c69f342794e73236a126608b2581",
+      "profiles": 1000
+    }
+  },
+  "runs": [
+    {
+      "case": "opaque-bytes",
+      "run": 1,
+      "peak_working_set_bytes": 51798016,
+      "sampled_peak_private_bytes": 20598784,
+      "peak_paged_memory_bytes": 40382464,
+      "max_observed_processes": 1,
+      "observed_tcp_connections": 0,
+      "presented_profile_rows": 1000,
+      "selected_profiles": 1,
+      "loaded_source_fonts": 3,
+      "intrinsic_query_only": true,
+      "profile_file_byte_identical": true,
+      "under_100MB": true
+    },
+    {
+      "case": "opaque-bytes",
+      "run": 2,
+      "peak_working_set_bytes": 49897472,
+      "sampled_peak_private_bytes": 34291712,
+      "peak_paged_memory_bytes": 40534016,
+      "max_observed_processes": 1,
+      "observed_tcp_connections": 0,
+      "presented_profile_rows": 1000,
+      "selected_profiles": 1,
+      "loaded_source_fonts": 3,
+      "intrinsic_query_only": true,
+      "profile_file_byte_identical": true,
+      "under_100MB": true
+    },
+    {
+      "case": "opaque-bytes",
+      "run": 3,
+      "peak_working_set_bytes": 49889280,
+      "sampled_peak_private_bytes": 20250624,
+      "peak_paged_memory_bytes": 40325120,
+      "max_observed_processes": 1,
+      "observed_tcp_connections": 0,
+      "presented_profile_rows": 1000,
+      "selected_profiles": 1,
+      "loaded_source_fonts": 3,
+      "intrinsic_query_only": true,
+      "profile_file_byte_identical": true,
+      "under_100MB": true
+    },
+    {
+      "case": "structured-nodes",
+      "run": 1,
+      "peak_working_set_bytes": 38416384,
+      "sampled_peak_private_bytes": 17526784,
+      "peak_paged_memory_bytes": 25935872,
+      "max_observed_processes": 1,
+      "observed_tcp_connections": 0,
+      "presented_profile_rows": 1000,
+      "selected_profiles": 1,
+      "loaded_source_fonts": 3,
+      "intrinsic_query_only": true,
+      "profile_file_byte_identical": true,
+      "under_100MB": true
+    },
+    {
+      "case": "structured-nodes",
+      "run": 2,
+      "peak_working_set_bytes": 38424576,
+      "sampled_peak_private_bytes": 17395712,
+      "peak_paged_memory_bytes": 25899008,
+      "max_observed_processes": 1,
+      "observed_tcp_connections": 0,
+      "presented_profile_rows": 1000,
+      "selected_profiles": 1,
+      "loaded_source_fonts": 3,
+      "intrinsic_query_only": true,
+      "profile_file_byte_identical": true,
+      "under_100MB": true
+    },
+    {
+      "case": "structured-nodes",
+      "run": 3,
+      "peak_working_set_bytes": 38490112,
+      "sampled_peak_private_bytes": 18006016,
+      "peak_paged_memory_bytes": 25931776,
+      "max_observed_processes": 1,
+      "observed_tcp_connections": 0,
+      "presented_profile_rows": 1000,
+      "selected_profiles": 1,
+      "loaded_source_fonts": 3,
+      "intrinsic_query_only": true,
+      "profile_file_byte_identical": true,
+      "under_100MB": true
+    }
+  ],
+  "excluded_attempts": {
+    "source_commit": "a0766e1",
+    "binary_sha256": "B4B716BDDCC8462A2953BCB6B23351DDFF37DC25F5E7DECBB7447C0D9B96E32B",
+    "count": 2,
+    "reason": "Neither presented the required export preview. First lacked the selected keyboard view; second exposed exact-limit alias growth. Intrinsic report fields were absent from state snapshots although enforcement was active. Both are excluded from RAM acceptance."
+  },
+  "full_build_acceptance": false,
+  "assignment_popup_workload_measured": false,
+  "active_lighting_measured": false,
+  "optical_or_pixel_parity_proven": false
+}

@@ -55,6 +55,8 @@ Six [active Lighting/color-editor measurements](docs/ACTIVE-LIGHTING-RUNTIME.md)
 
 Raw proprietary application bundles, recovered fonts/images and private user profiles are local research material and are not committed to this repository. Local visual assets are provisioned separately into an ignored directory.
 
+The [Customize assignment popup](docs/CUSTOMIZE-ASSIGNMENT.md) now supports source-derived drafts, drawers, Mouse Function/Turbo editing and discard flows. Assignment writes remain disabled where protocol identity is unresolved. [Bounded native storage](docs/NATIVE-STORAGE.md) rejects predictable save failures before device mutation. Six [large-profile export-preview measurements](docs/LARGE-PROFILE-RUNTIME.md), each presenting 1,000 synthetic profiles, peaked at 51,798,016 working-set bytes and 34,291,712 sampled private bytes; they are query-only workload evidence. Pure [Wave math](docs/WAVE-LIGHTING.md), [spatial layout mapping](docs/ORNATA-SPATIAL.md) and an explicit [layout identity GET](docs/ORNATA-IDENTITY.md) are implemented separately; Wave runtime integration remains unfinished.
+
 ## Attribution
 
 Secretarybird is by [infinityInfinite and contributors](https://github.com/infinityInfinite/secbird). Its MIT/Apache-2.0 license files and [NOTICE](NOTICE) are preserved. Razer device protocol facts also draw on [OpenRazer](https://github.com/openrazer/openrazer). This is an independent project.
