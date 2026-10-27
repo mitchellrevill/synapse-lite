@@ -1,0 +1,3150 @@
+{
+  "Scenario": "Current desktop after stock-owner restart; no workload automation; named apps plus inventoried service processes",
+  "DurationSeconds": 30.8312961,
+  "SamplingIntervalMilliseconds": 1000,
+  "LogicalProcessors": 16,
+  "Scope": "Visible Razer/RzSynapse/GameManagerService/Synapse process names plus PIDs of matching services inventoried at start; no processes or services changed; kernel-driver memory excluded",
+  "MemoryNote": "Summed working sets may count shared pages repeatedly; private bytes measure private committed memory, not private resident memory. Peaks are sampled.",
+  "CpuNote": "Percent of one core; missing/protected process CPU stays null and is excluded from the partial aggregate. First observations have no delta.",
+  "Services": [
+    {
+      "Name": "Razer Chroma SDK Server",
+      "State": "Running",
+      "StartMode": "Auto"
+    },
+    {
+      "Name": "Razer Chroma SDK Service",
+      "State": "Running",
+      "StartMode": "Auto"
+    },
+    {
+      "Name": "Razer Chroma Stream Server",
+      "State": "Running",
+      "StartMode": "Auto"
+    },
+    {
+      "Name": "Razer Elevation Service",
+      "State": "Running",
+      "StartMode": "Manual"
+    },
+    {
+      "Name": "Razer Game Manager Service 3",
+      "State": "Running",
+      "StartMode": "Auto"
+    }
+  ],
+  "Summary": {
+    "Samples": 29,
+    "AverageWorkingSetBytes": 1704211138.2068965,
+    "PeakSampledWorkingSetBytes": 1705050112.0,
+    "AveragePrivateBytes": 939385255.7241379,
+    "PeakSampledPrivateBytes": 940527616.0,
+    "AverageCpuPercentOfOneCore": 4.886121203289995
+  },
+  "Samples": [
+    {
+      "TimestampUtc": "2026-10-27T10:54:11.2860800+00:00",
+      "ElapsedSeconds": 0.0841698,
+      "ProcessCount": 16,
+      "WorkingSetBytes": 1704579072.0,
+      "PrivateBytes": 939536384.0,
+      "CpuPercentOfOneCore": null,
+      "CpuMeasuredProcesses": 0,
+      "Processes": [
+        {
+          "Name": "GameManagerService3",
+          "WorkingSetBytes": 212283392,
+          "PrivateBytes": 123334656,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 246734848,
+          "PrivateBytes": 184352768,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 120492032,
+          "PrivateBytes": 45117440,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 114446336,
+          "PrivateBytes": 112910336,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 65847296,
+          "PrivateBytes": 17985536,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 130420736,
+          "PrivateBytes": 51187712,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 137584640,
+          "PrivateBytes": 58245120,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 217669632,
+          "PrivateBytes": 132194304,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 128253952,
+          "PrivateBytes": 62869504,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 136486912,
+          "PrivateBytes": 59854848,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 139268096,
+          "PrivateBytes": 59125760,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "razerwdl",
+          "WorkingSetBytes": 22274048,
+          "PrivateBytes": 7782400,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "razer_elevation_service",
+          "WorkingSetBytes": 10375168,
+          "PrivateBytes": 3846144,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzChromaStreamServer",
+          "WorkingSetBytes": 2547712,
+          "PrivateBytes": 2195456,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKServer",
+          "WorkingSetBytes": 17162240,
+          "PrivateBytes": 15040512,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKService",
+          "WorkingSetBytes": 2732032,
+          "PrivateBytes": 3493888,
+          "CpuPercentOfOneCore": null
+        }
+      ]
+    },
+    {
+      "TimestampUtc": "2026-10-27T10:54:12.3671453+00:00",
+      "ElapsedSeconds": 1.1631478,
+      "ProcessCount": 16,
+      "WorkingSetBytes": 1704685568.0,
+      "PrivateBytes": 939646976.0,
+      "CpuPercentOfOneCore": 8.629923948962357,
+      "CpuMeasuredProcesses": 11,
+      "Processes": [
+        {
+          "Name": "GameManagerService3",
+          "WorkingSetBytes": 212283392,
+          "PrivateBytes": 123334656,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 246689792,
+          "PrivateBytes": 184311808,
+          "CpuPercentOfOneCore": 4.31048197027694
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 120492032,
+          "PrivateBytes": 45117440,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 114446336,
+          "PrivateBytes": 112910336,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 65847296,
+          "PrivateBytes": 17985536,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 130424832,
+          "PrivateBytes": 51191808,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 137584640,
+          "PrivateBytes": 58245120,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 217812992,
+          "PrivateBytes": 132337664,
+          "CpuPercentOfOneCore": 2.8785383915040654
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 128253952,
+          "PrivateBytes": 62869504,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 136486912,
+          "PrivateBytes": 59854848,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 139272192,
+          "PrivateBytes": 59129856,
+          "CpuPercentOfOneCore": 1.4409035871813527
+        },
+        {
+          "Name": "razerwdl",
+          "WorkingSetBytes": 22274048,
+          "PrivateBytes": 7782400,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razer_elevation_service",
+          "WorkingSetBytes": 10375168,
+          "PrivateBytes": 3846144,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzChromaStreamServer",
+          "WorkingSetBytes": 2547712,
+          "PrivateBytes": 2195456,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKServer",
+          "WorkingSetBytes": 17162240,
+          "PrivateBytes": 15040512,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKService",
+          "WorkingSetBytes": 2732032,
+          "PrivateBytes": 3493888,
+          "CpuPercentOfOneCore": null
+        }
+      ]
+    },
+    {
+      "TimestampUtc": "2026-10-27T10:54:13.4295742+00:00",
+      "ElapsedSeconds": 2.2255799,
+      "ProcessCount": 16,
+      "WorkingSetBytes": 1704755200.0,
+      "PrivateBytes": 939716608.0,
+      "CpuPercentOfOneCore": 5.855237587124784,
+      "CpuMeasuredProcesses": 11,
+      "Processes": [
+        {
+          "Name": "GameManagerService3",
+          "WorkingSetBytes": 212283392,
+          "PrivateBytes": 123334656,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 246689792,
+          "PrivateBytes": 184311808,
+          "CpuPercentOfOneCore": 2.9184550959494637
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 120492032,
+          "PrivateBytes": 45117440,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 114446336,
+          "PrivateBytes": 112910336,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 65847296,
+          "PrivateBytes": 17985536,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 130424832,
+          "PrivateBytes": 51191808,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 137584640,
+          "PrivateBytes": 58245120,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 217882624,
+          "PrivateBytes": 132407296,
+          "CpuPercentOfOneCore": 2.9367824911753204
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 128253952,
+          "PrivateBytes": 62869504,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 136486912,
+          "PrivateBytes": 59854848,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 139272192,
+          "PrivateBytes": 59129856,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razerwdl",
+          "WorkingSetBytes": 22274048,
+          "PrivateBytes": 7782400,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razer_elevation_service",
+          "WorkingSetBytes": 10375168,
+          "PrivateBytes": 3846144,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzChromaStreamServer",
+          "WorkingSetBytes": 2547712,
+          "PrivateBytes": 2195456,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKServer",
+          "WorkingSetBytes": 17162240,
+          "PrivateBytes": 15040512,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKService",
+          "WorkingSetBytes": 2732032,
+          "PrivateBytes": 3493888,
+          "CpuPercentOfOneCore": null
+        }
+      ]
+    },
+    {
+      "TimestampUtc": "2026-10-27T10:54:14.4934560+00:00",
+      "ElapsedSeconds": 3.289471,
+      "ProcessCount": 16,
+      "WorkingSetBytes": 1704935424.0,
+      "PrivateBytes": 939909120.0,
+      "CpuPercentOfOneCore": 2.936356525770467,
+      "CpuMeasuredProcesses": 11,
+      "Processes": [
+        {
+          "Name": "GameManagerService3",
+          "WorkingSetBytes": 212283392,
+          "PrivateBytes": 123334656,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 246792192,
+          "PrivateBytes": 184426496,
+          "CpuPercentOfOneCore": 1.4670880738274403
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 120492032,
+          "PrivateBytes": 45117440,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 114446336,
+          "PrivateBytes": 112910336,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 65847296,
+          "PrivateBytes": 17985536,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 130424832,
+          "PrivateBytes": 51191808,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 137584640,
+          "PrivateBytes": 58245120,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 217960448,
+          "PrivateBytes": 132485120,
+          "CpuPercentOfOneCore": 1.4692684519430266
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 128253952,
+          "PrivateBytes": 62869504,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 136486912,
+          "PrivateBytes": 59854848,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 139272192,
+          "PrivateBytes": 59129856,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razerwdl",
+          "WorkingSetBytes": 22274048,
+          "PrivateBytes": 7782400,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razer_elevation_service",
+          "WorkingSetBytes": 10375168,
+          "PrivateBytes": 3846144,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzChromaStreamServer",
+          "WorkingSetBytes": 2547712,
+          "PrivateBytes": 2195456,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKServer",
+          "WorkingSetBytes": 17162240,
+          "PrivateBytes": 15040512,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKService",
+          "WorkingSetBytes": 2732032,
+          "PrivateBytes": 3493888,
+          "CpuPercentOfOneCore": null
+        }
+      ]
+    },
+    {
+      "TimestampUtc": "2026-10-27T10:54:15.5566852+00:00",
+      "ElapsedSeconds": 4.3527095,
+      "ProcessCount": 16,
+      "WorkingSetBytes": 1705009152.0,
+      "PrivateBytes": 939978752.0,
+      "CpuPercentOfOneCore": 4.405969922666834,
+      "CpuMeasuredProcesses": 11,
+      "Processes": [
+        {
+          "Name": "GameManagerService3",
+          "WorkingSetBytes": 212283392,
+          "PrivateBytes": 123334656,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 246796288,
+          "PrivateBytes": 184426496,
+          "CpuPercentOfOneCore": 1.469252563716429
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 120492032,
+          "PrivateBytes": 45117440,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 114446336,
+          "PrivateBytes": 112910336,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 65847296,
+          "PrivateBytes": 17985536,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 130424832,
+          "PrivateBytes": 51191808,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 137584640,
+          "PrivateBytes": 58245120,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 218030080,
+          "PrivateBytes": 132554752,
+          "CpuPercentOfOneCore": 2.9367173589504056
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 128253952,
+          "PrivateBytes": 62869504,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 136486912,
+          "PrivateBytes": 59854848,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 139272192,
+          "PrivateBytes": 59129856,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razerwdl",
+          "WorkingSetBytes": 22274048,
+          "PrivateBytes": 7782400,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razer_elevation_service",
+          "WorkingSetBytes": 10375168,
+          "PrivateBytes": 3846144,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzChromaStreamServer",
+          "WorkingSetBytes": 2547712,
+          "PrivateBytes": 2195456,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKServer",
+          "WorkingSetBytes": 17162240,
+          "PrivateBytes": 15040512,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKService",
+          "WorkingSetBytes": 2732032,
+          "PrivateBytes": 3493888,
+          "CpuPercentOfOneCore": null
+        }
+      ]
+    },
+    {
+      "TimestampUtc": "2026-10-27T10:54:16.6169869+00:00",
+      "ElapsedSeconds": 5.4130206,
+      "ProcessCount": 16,
+      "WorkingSetBytes": 1703645184.0,
+      "PrivateBytes": 938622976.0,
+      "CpuPercentOfOneCore": 13.256808362454246,
+      "CpuMeasuredProcesses": 11,
+      "Processes": [
+        {
+          "Name": "GameManagerService3",
+          "WorkingSetBytes": 212303872,
+          "PrivateBytes": 123375616,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 246693888,
+          "PrivateBytes": 184311808,
+          "CpuPercentOfOneCore": 8.837696342975391
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 120492032,
+          "PrivateBytes": 45117440,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 114446336,
+          "PrivateBytes": 112910336,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 65847296,
+          "PrivateBytes": 17985536,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 130428928,
+          "PrivateBytes": 51195904,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 137584640,
+          "PrivateBytes": 58245120,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 216743936,
+          "PrivateBytes": 131268608,
+          "CpuPercentOfOneCore": 2.9461801242675194
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 128253952,
+          "PrivateBytes": 62869504,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 136486912,
+          "PrivateBytes": 59854848,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 139272192,
+          "PrivateBytes": 59129856,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razerwdl",
+          "WorkingSetBytes": 22274048,
+          "PrivateBytes": 7782400,
+          "CpuPercentOfOneCore": 1.4729318952113357
+        },
+        {
+          "Name": "razer_elevation_service",
+          "WorkingSetBytes": 10375168,
+          "PrivateBytes": 3846144,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzChromaStreamServer",
+          "WorkingSetBytes": 2547712,
+          "PrivateBytes": 2195456,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKServer",
+          "WorkingSetBytes": 17162240,
+          "PrivateBytes": 15040512,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKService",
+          "WorkingSetBytes": 2732032,
+          "PrivateBytes": 3493888,
+          "CpuPercentOfOneCore": null
+        }
+      ]
+    },
+    {
+      "TimestampUtc": "2026-10-27T10:54:17.6921574+00:00",
+      "ElapsedSeconds": 6.4882008,
+      "ProcessCount": 16,
+      "WorkingSetBytes": 1703727104.0,
+      "PrivateBytes": 938700800.0,
+      "CpuPercentOfOneCore": 2.906011273468563,
+      "CpuMeasuredProcesses": 11,
+      "Processes": [
+        {
+          "Name": "GameManagerService3",
+          "WorkingSetBytes": 212303872,
+          "PrivateBytes": 123375616,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 246738944,
+          "PrivateBytes": 184352768,
+          "CpuPercentOfOneCore": 1.4526913512939605
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 120492032,
+          "PrivateBytes": 45117440,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 114446336,
+          "PrivateBytes": 112910336,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 65847296,
+          "PrivateBytes": 17985536,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 130428928,
+          "PrivateBytes": 51195904,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 137584640,
+          "PrivateBytes": 58245120,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 216780800,
+          "PrivateBytes": 131305472,
+          "CpuPercentOfOneCore": 1.4533199221746023
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 128253952,
+          "PrivateBytes": 62869504,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 136486912,
+          "PrivateBytes": 59854848,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 139272192,
+          "PrivateBytes": 59129856,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razerwdl",
+          "WorkingSetBytes": 22274048,
+          "PrivateBytes": 7782400,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razer_elevation_service",
+          "WorkingSetBytes": 10375168,
+          "PrivateBytes": 3846144,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzChromaStreamServer",
+          "WorkingSetBytes": 2547712,
+          "PrivateBytes": 2195456,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKServer",
+          "WorkingSetBytes": 17162240,
+          "PrivateBytes": 15040512,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKService",
+          "WorkingSetBytes": 2732032,
+          "PrivateBytes": 3493888,
+          "CpuPercentOfOneCore": null
+        }
+      ]
+    },
+    {
+      "TimestampUtc": "2026-10-27T10:54:18.7596827+00:00",
+      "ElapsedSeconds": 7.5557366,
+      "ProcessCount": 16,
+      "WorkingSetBytes": 1703768064.0,
+      "PrivateBytes": 938741760.0,
+      "CpuPercentOfOneCore": 2.927930447531053,
+      "CpuMeasuredProcesses": 11,
+      "Processes": [
+        {
+          "Name": "GameManagerService3",
+          "WorkingSetBytes": 212303872,
+          "PrivateBytes": 123375616,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 246738944,
+          "PrivateBytes": 184352768,
+          "CpuPercentOfOneCore": 1.4646391124540066
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 120492032,
+          "PrivateBytes": 45117440,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 114446336,
+          "PrivateBytes": 112910336,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 65847296,
+          "PrivateBytes": 17985536,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 130428928,
+          "PrivateBytes": 51195904,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 137584640,
+          "PrivateBytes": 58245120,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 216821760,
+          "PrivateBytes": 131346432,
+          "CpuPercentOfOneCore": 1.4632913350770462
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 128253952,
+          "PrivateBytes": 62869504,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 136486912,
+          "PrivateBytes": 59854848,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 139272192,
+          "PrivateBytes": 59129856,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razerwdl",
+          "WorkingSetBytes": 22274048,
+          "PrivateBytes": 7782400,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razer_elevation_service",
+          "WorkingSetBytes": 10375168,
+          "PrivateBytes": 3846144,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzChromaStreamServer",
+          "WorkingSetBytes": 2547712,
+          "PrivateBytes": 2195456,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKServer",
+          "WorkingSetBytes": 17162240,
+          "PrivateBytes": 15040512,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKService",
+          "WorkingSetBytes": 2732032,
+          "PrivateBytes": 3493888,
+          "CpuPercentOfOneCore": null
+        }
+      ]
+    },
+    {
+      "TimestampUtc": "2026-10-27T10:54:19.8163467+00:00",
+      "ElapsedSeconds": 8.612411,
+      "ProcessCount": 16,
+      "WorkingSetBytes": 1703018496.0,
+      "PrivateBytes": 937992192.0,
+      "CpuPercentOfOneCore": 4.4367848038697,
+      "CpuMeasuredProcesses": 11,
+      "Processes": [
+        {
+          "Name": "GameManagerService3",
+          "WorkingSetBytes": 212303872,
+          "PrivateBytes": 123375616,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 246738944,
+          "PrivateBytes": 184352768,
+          "CpuPercentOfOneCore": 1.4777159023321043
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 120492032,
+          "PrivateBytes": 45117440,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 114446336,
+          "PrivateBytes": 112910336,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 65847296,
+          "PrivateBytes": 17985536,
+          "CpuPercentOfOneCore": 1.4794109548937298
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 130428928,
+          "PrivateBytes": 51195904,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 137584640,
+          "PrivateBytes": 58245120,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 216858624,
+          "PrivateBytes": 131383296,
+          "CpuPercentOfOneCore": 1.479657946643866
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 128253952,
+          "PrivateBytes": 62869504,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 136486912,
+          "PrivateBytes": 59854848,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 138485760,
+          "PrivateBytes": 58343424,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razerwdl",
+          "WorkingSetBytes": 22274048,
+          "PrivateBytes": 7782400,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razer_elevation_service",
+          "WorkingSetBytes": 10375168,
+          "PrivateBytes": 3846144,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzChromaStreamServer",
+          "WorkingSetBytes": 2547712,
+          "PrivateBytes": 2195456,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKServer",
+          "WorkingSetBytes": 17162240,
+          "PrivateBytes": 15040512,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKService",
+          "WorkingSetBytes": 2732032,
+          "PrivateBytes": 3493888,
+          "CpuPercentOfOneCore": null
+        }
+      ]
+    },
+    {
+      "TimestampUtc": "2026-10-27T10:54:20.8836209+00:00",
+      "ElapsedSeconds": 9.679695,
+      "ProcessCount": 16,
+      "WorkingSetBytes": 1703038976.0,
+      "PrivateBytes": 938016768.0,
+      "CpuPercentOfOneCore": 1.4689134665662147,
+      "CpuMeasuredProcesses": 11,
+      "Processes": [
+        {
+          "Name": "GameManagerService3",
+          "WorkingSetBytes": 212303872,
+          "PrivateBytes": 123375616,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 246689792,
+          "PrivateBytes": 184307712,
+          "CpuPercentOfOneCore": 1.4689134665662147
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 120492032,
+          "PrivateBytes": 45117440,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 114446336,
+          "PrivateBytes": 112910336,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 65847296,
+          "PrivateBytes": 17985536,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 130428928,
+          "PrivateBytes": 51195904,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 137584640,
+          "PrivateBytes": 58245120,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 216928256,
+          "PrivateBytes": 131452928,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 128253952,
+          "PrivateBytes": 62869504,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 136486912,
+          "PrivateBytes": 59854848,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 138485760,
+          "PrivateBytes": 58343424,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razerwdl",
+          "WorkingSetBytes": 22274048,
+          "PrivateBytes": 7782400,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razer_elevation_service",
+          "WorkingSetBytes": 10375168,
+          "PrivateBytes": 3846144,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzChromaStreamServer",
+          "WorkingSetBytes": 2547712,
+          "PrivateBytes": 2195456,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKServer",
+          "WorkingSetBytes": 17162240,
+          "PrivateBytes": 15040512,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKService",
+          "WorkingSetBytes": 2732032,
+          "PrivateBytes": 3493888,
+          "CpuPercentOfOneCore": null
+        }
+      ]
+    },
+    {
+      "TimestampUtc": "2026-10-27T10:54:21.9392528+00:00",
+      "ElapsedSeconds": 10.7353373,
+      "ProcessCount": 16,
+      "WorkingSetBytes": 1703251968.0,
+      "PrivateBytes": 938229760.0,
+      "CpuPercentOfOneCore": 2.9549366456031727,
+      "CpuMeasuredProcesses": 11,
+      "Processes": [
+        {
+          "Name": "GameManagerService3",
+          "WorkingSetBytes": 212303872,
+          "PrivateBytes": 123375616,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 246689792,
+          "PrivateBytes": 184307712,
+          "CpuPercentOfOneCore": 1.4752354003623647
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 120492032,
+          "PrivateBytes": 45117440,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 114446336,
+          "PrivateBytes": 112910336,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 65847296,
+          "PrivateBytes": 17985536,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 130428928,
+          "PrivateBytes": 51195904,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 137584640,
+          "PrivateBytes": 58245120,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 217141248,
+          "PrivateBytes": 131665920,
+          "CpuPercentOfOneCore": 1.479701245240808
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 128253952,
+          "PrivateBytes": 62869504,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 136486912,
+          "PrivateBytes": 59854848,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 138485760,
+          "PrivateBytes": 58343424,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razerwdl",
+          "WorkingSetBytes": 22274048,
+          "PrivateBytes": 7782400,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razer_elevation_service",
+          "WorkingSetBytes": 10375168,
+          "PrivateBytes": 3846144,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzChromaStreamServer",
+          "WorkingSetBytes": 2547712,
+          "PrivateBytes": 2195456,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKServer",
+          "WorkingSetBytes": 17162240,
+          "PrivateBytes": 15040512,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKService",
+          "WorkingSetBytes": 2732032,
+          "PrivateBytes": 3493888,
+          "CpuPercentOfOneCore": null
+        }
+      ]
+    },
+    {
+      "TimestampUtc": "2026-10-27T10:54:22.9961930+00:00",
+      "ElapsedSeconds": 11.7922892,
+      "ProcessCount": 16,
+      "WorkingSetBytes": 1703460864.0,
+      "PrivateBytes": 938622976.0,
+      "CpuPercentOfOneCore": 5.91165522811117,
+      "CpuMeasuredProcesses": 11,
+      "Processes": [
+        {
+          "Name": "GameManagerService3",
+          "WorkingSetBytes": 212303872,
+          "PrivateBytes": 123375616,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 246812672,
+          "PrivateBytes": 184614912,
+          "CpuPercentOfOneCore": 4.434829576240327
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 120492032,
+          "PrivateBytes": 45117440,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 114446336,
+          "PrivateBytes": 112910336,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 65847296,
+          "PrivateBytes": 17985536,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 130428928,
+          "PrivateBytes": 51195904,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 137584640,
+          "PrivateBytes": 58245120,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 217227264,
+          "PrivateBytes": 131751936,
+          "CpuPercentOfOneCore": 1.4768256518708425
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 128253952,
+          "PrivateBytes": 62869504,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 136486912,
+          "PrivateBytes": 59854848,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 138485760,
+          "PrivateBytes": 58343424,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razerwdl",
+          "WorkingSetBytes": 22274048,
+          "PrivateBytes": 7782400,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razer_elevation_service",
+          "WorkingSetBytes": 10375168,
+          "PrivateBytes": 3846144,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzChromaStreamServer",
+          "WorkingSetBytes": 2547712,
+          "PrivateBytes": 2195456,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKServer",
+          "WorkingSetBytes": 17162240,
+          "PrivateBytes": 15040512,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKService",
+          "WorkingSetBytes": 2732032,
+          "PrivateBytes": 3493888,
+          "CpuPercentOfOneCore": null
+        }
+      ]
+    },
+    {
+      "TimestampUtc": "2026-10-27T10:54:24.0808572+00:00",
+      "ElapsedSeconds": 12.8769633,
+      "ProcessCount": 16,
+      "WorkingSetBytes": 1703866368.0,
+      "PrivateBytes": 938958848.0,
+      "CpuPercentOfOneCore": 4.363472190565815,
+      "CpuMeasuredProcesses": 11,
+      "Processes": [
+        {
+          "Name": "GameManagerService3",
+          "WorkingSetBytes": 212303872,
+          "PrivateBytes": 123375616,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 247144448,
+          "PrivateBytes": 184877056,
+          "CpuPercentOfOneCore": 1.4603950216652508
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 120492032,
+          "PrivateBytes": 45117440,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 114446336,
+          "PrivateBytes": 112910336,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 65847296,
+          "PrivateBytes": 17985536,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 130433024,
+          "PrivateBytes": 51200000,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 137584640,
+          "PrivateBytes": 58245120,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 217296896,
+          "PrivateBytes": 131821568,
+          "CpuPercentOfOneCore": 2.9030771689005643
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 128253952,
+          "PrivateBytes": 62869504,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 136486912,
+          "PrivateBytes": 59854848,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 138485760,
+          "PrivateBytes": 58343424,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razerwdl",
+          "WorkingSetBytes": 22274048,
+          "PrivateBytes": 7782400,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razer_elevation_service",
+          "WorkingSetBytes": 10375168,
+          "PrivateBytes": 3846144,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzChromaStreamServer",
+          "WorkingSetBytes": 2547712,
+          "PrivateBytes": 2195456,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKServer",
+          "WorkingSetBytes": 17162240,
+          "PrivateBytes": 15040512,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKService",
+          "WorkingSetBytes": 2732032,
+          "PrivateBytes": 3493888,
+          "CpuPercentOfOneCore": null
+        }
+      ]
+    },
+    {
+      "TimestampUtc": "2026-10-27T10:54:25.1791643+00:00",
+      "ElapsedSeconds": 13.9752826,
+      "ProcessCount": 16,
+      "WorkingSetBytes": 1704169472.0,
+      "PrivateBytes": 939347968.0,
+      "CpuPercentOfOneCore": 0.0,
+      "CpuMeasuredProcesses": 11,
+      "Processes": [
+        {
+          "Name": "GameManagerService3",
+          "WorkingSetBytes": 212324352,
+          "PrivateBytes": 123416576,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 247341056,
+          "PrivateBytes": 185139200,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 120492032,
+          "PrivateBytes": 45117440,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 114446336,
+          "PrivateBytes": 112910336,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 65847296,
+          "PrivateBytes": 17985536,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 130433024,
+          "PrivateBytes": 51200000,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 137584640,
+          "PrivateBytes": 58245120,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 217382912,
+          "PrivateBytes": 131907584,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 128253952,
+          "PrivateBytes": 62869504,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 136486912,
+          "PrivateBytes": 59854848,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 138485760,
+          "PrivateBytes": 58343424,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razerwdl",
+          "WorkingSetBytes": 22274048,
+          "PrivateBytes": 7782400,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razer_elevation_service",
+          "WorkingSetBytes": 10375168,
+          "PrivateBytes": 3846144,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzChromaStreamServer",
+          "WorkingSetBytes": 2547712,
+          "PrivateBytes": 2195456,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKServer",
+          "WorkingSetBytes": 17162240,
+          "PrivateBytes": 15040512,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKService",
+          "WorkingSetBytes": 2732032,
+          "PrivateBytes": 3493888,
+          "CpuPercentOfOneCore": null
+        }
+      ]
+    },
+    {
+      "TimestampUtc": "2026-10-27T10:54:26.2312045+00:00",
+      "ElapsedSeconds": 15.0273302,
+      "ProcessCount": 16,
+      "WorkingSetBytes": 1704255488.0,
+      "PrivateBytes": 939433984.0,
+      "CpuPercentOfOneCore": 10.182441101559618,
+      "CpuMeasuredProcesses": 11,
+      "Processes": [
+        {
+          "Name": "GameManagerService3",
+          "WorkingSetBytes": 212324352,
+          "PrivateBytes": 123416576,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 247341056,
+          "PrivateBytes": 185139200,
+          "CpuPercentOfOneCore": 5.769417343311621
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 120492032,
+          "PrivateBytes": 45117440,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 114446336,
+          "PrivateBytes": 112910336,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 65847296,
+          "PrivateBytes": 17985536,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 130433024,
+          "PrivateBytes": 51200000,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 137584640,
+          "PrivateBytes": 58245120,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 217468928,
+          "PrivateBytes": 131993600,
+          "CpuPercentOfOneCore": 2.9355195517344232
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 128253952,
+          "PrivateBytes": 62869504,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 136486912,
+          "PrivateBytes": 59854848,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 138485760,
+          "PrivateBytes": 58343424,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razerwdl",
+          "WorkingSetBytes": 22274048,
+          "PrivateBytes": 7782400,
+          "CpuPercentOfOneCore": 1.4775042065135748
+        },
+        {
+          "Name": "razer_elevation_service",
+          "WorkingSetBytes": 10375168,
+          "PrivateBytes": 3846144,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzChromaStreamServer",
+          "WorkingSetBytes": 2547712,
+          "PrivateBytes": 2195456,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKServer",
+          "WorkingSetBytes": 17162240,
+          "PrivateBytes": 15040512,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKService",
+          "WorkingSetBytes": 2732032,
+          "PrivateBytes": 3493888,
+          "CpuPercentOfOneCore": null
+        }
+      ]
+    },
+    {
+      "TimestampUtc": "2026-10-27T10:54:27.2984436+00:00",
+      "ElapsedSeconds": 16.0945789,
+      "ProcessCount": 16,
+      "WorkingSetBytes": 1704333312.0,
+      "PrivateBytes": 939507712.0,
+      "CpuPercentOfOneCore": 0.0,
+      "CpuMeasuredProcesses": 11,
+      "Processes": [
+        {
+          "Name": "GameManagerService3",
+          "WorkingSetBytes": 212324352,
+          "PrivateBytes": 123416576,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 247345152,
+          "PrivateBytes": 185139200,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 120492032,
+          "PrivateBytes": 45117440,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 114446336,
+          "PrivateBytes": 112910336,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 65847296,
+          "PrivateBytes": 17985536,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 130433024,
+          "PrivateBytes": 51200000,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 137584640,
+          "PrivateBytes": 58245120,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 217542656,
+          "PrivateBytes": 132067328,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 128253952,
+          "PrivateBytes": 62869504,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 136486912,
+          "PrivateBytes": 59854848,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 138485760,
+          "PrivateBytes": 58343424,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razerwdl",
+          "WorkingSetBytes": 22274048,
+          "PrivateBytes": 7782400,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razer_elevation_service",
+          "WorkingSetBytes": 10375168,
+          "PrivateBytes": 3846144,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzChromaStreamServer",
+          "WorkingSetBytes": 2547712,
+          "PrivateBytes": 2195456,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKServer",
+          "WorkingSetBytes": 17162240,
+          "PrivateBytes": 15040512,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKService",
+          "WorkingSetBytes": 2732032,
+          "PrivateBytes": 3493888,
+          "CpuPercentOfOneCore": null
+        }
+      ]
+    },
+    {
+      "TimestampUtc": "2026-10-27T10:54:28.3515479+00:00",
+      "ElapsedSeconds": 17.1476929,
+      "ProcessCount": 16,
+      "WorkingSetBytes": 1704361984.0,
+      "PrivateBytes": 939544576.0,
+      "CpuPercentOfOneCore": 8.884966309865284,
+      "CpuMeasuredProcesses": 11,
+      "Processes": [
+        {
+          "Name": "GameManagerService3",
+          "WorkingSetBytes": 212324352,
+          "PrivateBytes": 123416576,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 247296000,
+          "PrivateBytes": 185098240,
+          "CpuPercentOfOneCore": 5.918197443944719
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 120492032,
+          "PrivateBytes": 45117440,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 114446336,
+          "PrivateBytes": 112910336,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 65847296,
+          "PrivateBytes": 17985536,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 130433024,
+          "PrivateBytes": 51200000,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 137584640,
+          "PrivateBytes": 58245120,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 217620480,
+          "PrivateBytes": 132145152,
+          "CpuPercentOfOneCore": 2.9667688659205647
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 128253952,
+          "PrivateBytes": 62869504,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 136486912,
+          "PrivateBytes": 59854848,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 138485760,
+          "PrivateBytes": 58343424,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razerwdl",
+          "WorkingSetBytes": 22274048,
+          "PrivateBytes": 7782400,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razer_elevation_service",
+          "WorkingSetBytes": 10375168,
+          "PrivateBytes": 3846144,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzChromaStreamServer",
+          "WorkingSetBytes": 2547712,
+          "PrivateBytes": 2195456,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKServer",
+          "WorkingSetBytes": 17162240,
+          "PrivateBytes": 15040512,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKService",
+          "WorkingSetBytes": 2732032,
+          "PrivateBytes": 3493888,
+          "CpuPercentOfOneCore": null
+        }
+      ]
+    },
+    {
+      "TimestampUtc": "2026-10-27T10:54:29.4151771+00:00",
+      "ElapsedSeconds": 18.2113401,
+      "ProcessCount": 16,
+      "WorkingSetBytes": 1704480768.0,
+      "PrivateBytes": 939962368.0,
+      "CpuPercentOfOneCore": 8.827935946674417,
+      "CpuMeasuredProcesses": 11,
+      "Processes": [
+        {
+          "Name": "GameManagerService3",
+          "WorkingSetBytes": 212365312,
+          "PrivateBytes": 123498496,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 247296000,
+          "PrivateBytes": 185098240,
+          "CpuPercentOfOneCore": 7.357649379588888
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 120492032,
+          "PrivateBytes": 45117440,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 114446336,
+          "PrivateBytes": 112910336,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 65847296,
+          "PrivateBytes": 17985536,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 130433024,
+          "PrivateBytes": 51200000,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 137584640,
+          "PrivateBytes": 58245120,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 217694208,
+          "PrivateBytes": 132218880,
+          "CpuPercentOfOneCore": 1.4702865670855294
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 128258048,
+          "PrivateBytes": 63131648,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 136486912,
+          "PrivateBytes": 59854848,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 138485760,
+          "PrivateBytes": 58343424,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razerwdl",
+          "WorkingSetBytes": 22274048,
+          "PrivateBytes": 7782400,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razer_elevation_service",
+          "WorkingSetBytes": 10375168,
+          "PrivateBytes": 3846144,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzChromaStreamServer",
+          "WorkingSetBytes": 2547712,
+          "PrivateBytes": 2195456,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKServer",
+          "WorkingSetBytes": 17162240,
+          "PrivateBytes": 15040512,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKService",
+          "WorkingSetBytes": 2732032,
+          "PrivateBytes": 3493888,
+          "CpuPercentOfOneCore": null
+        }
+      ]
+    },
+    {
+      "TimestampUtc": "2026-10-27T10:54:30.4721377+00:00",
+      "ElapsedSeconds": 19.2683019,
+      "ProcessCount": 16,
+      "WorkingSetBytes": 1704599552.0,
+      "PrivateBytes": 940077056.0,
+      "CpuPercentOfOneCore": 1.4780402009907632,
+      "CpuMeasuredProcesses": 11,
+      "Processes": [
+        {
+          "Name": "GameManagerService3",
+          "WorkingSetBytes": 212369408,
+          "PrivateBytes": 123502592,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 247341056,
+          "PrivateBytes": 185139200,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 120492032,
+          "PrivateBytes": 45117440,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 114446336,
+          "PrivateBytes": 112910336,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 65847296,
+          "PrivateBytes": 17985536,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 130433024,
+          "PrivateBytes": 51200000,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 137584640,
+          "PrivateBytes": 58245120,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 217763840,
+          "PrivateBytes": 132288512,
+          "CpuPercentOfOneCore": 1.4780402009907632
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 128258048,
+          "PrivateBytes": 63131648,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 136486912,
+          "PrivateBytes": 59854848,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 138485760,
+          "PrivateBytes": 58343424,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razerwdl",
+          "WorkingSetBytes": 22274048,
+          "PrivateBytes": 7782400,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razer_elevation_service",
+          "WorkingSetBytes": 10375168,
+          "PrivateBytes": 3846144,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzChromaStreamServer",
+          "WorkingSetBytes": 2547712,
+          "PrivateBytes": 2195456,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKServer",
+          "WorkingSetBytes": 17162240,
+          "PrivateBytes": 15040512,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKService",
+          "WorkingSetBytes": 2732032,
+          "PrivateBytes": 3493888,
+          "CpuPercentOfOneCore": null
+        }
+      ]
+    },
+    {
+      "TimestampUtc": "2026-10-27T10:54:31.5192725+00:00",
+      "ElapsedSeconds": 20.3154471,
+      "ProcessCount": 16,
+      "WorkingSetBytes": 1704681472.0,
+      "PrivateBytes": 940158976.0,
+      "CpuPercentOfOneCore": 7.452569006095626,
+      "CpuMeasuredProcesses": 11,
+      "Processes": [
+        {
+          "Name": "GameManagerService3",
+          "WorkingSetBytes": 212369408,
+          "PrivateBytes": 123502592,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 247341056,
+          "PrivateBytes": 185139200,
+          "CpuPercentOfOneCore": 5.961558914271352
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 120492032,
+          "PrivateBytes": 45117440,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 114446336,
+          "PrivateBytes": 112910336,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 65847296,
+          "PrivateBytes": 17985536,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 130437120,
+          "PrivateBytes": 51204096,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 137584640,
+          "PrivateBytes": 58245120,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 217841664,
+          "PrivateBytes": 132366336,
+          "CpuPercentOfOneCore": 1.4910100918242732
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 128258048,
+          "PrivateBytes": 63131648,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 136486912,
+          "PrivateBytes": 59854848,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 138485760,
+          "PrivateBytes": 58343424,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razerwdl",
+          "WorkingSetBytes": 22274048,
+          "PrivateBytes": 7782400,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razer_elevation_service",
+          "WorkingSetBytes": 10375168,
+          "PrivateBytes": 3846144,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzChromaStreamServer",
+          "WorkingSetBytes": 2547712,
+          "PrivateBytes": 2195456,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKServer",
+          "WorkingSetBytes": 17162240,
+          "PrivateBytes": 15040512,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKService",
+          "WorkingSetBytes": 2732032,
+          "PrivateBytes": 3493888,
+          "CpuPercentOfOneCore": null
+        }
+      ]
+    },
+    {
+      "TimestampUtc": "2026-10-27T10:54:32.5736923+00:00",
+      "ElapsedSeconds": 21.3698765,
+      "ProcessCount": 16,
+      "WorkingSetBytes": 1704837120.0,
+      "PrivateBytes": 940318720.0,
+      "CpuPercentOfOneCore": 5.9267984939263565,
+      "CpuMeasuredProcesses": 11,
+      "Processes": [
+        {
+          "Name": "GameManagerService3",
+          "WorkingSetBytes": 212369408,
+          "PrivateBytes": 123502592,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 247345152,
+          "PrivateBytes": 185147392,
+          "CpuPercentOfOneCore": 4.445043333364317
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 120492032,
+          "PrivateBytes": 45117440,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 114446336,
+          "PrivateBytes": 112910336,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 65847296,
+          "PrivateBytes": 17985536,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 130437120,
+          "PrivateBytes": 51204096,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 137584640,
+          "PrivateBytes": 58245120,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 217993216,
+          "PrivateBytes": 132517888,
+          "CpuPercentOfOneCore": 1.4817551605620396
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 128258048,
+          "PrivateBytes": 63131648,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 136486912,
+          "PrivateBytes": 59854848,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 138485760,
+          "PrivateBytes": 58343424,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razerwdl",
+          "WorkingSetBytes": 22274048,
+          "PrivateBytes": 7782400,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razer_elevation_service",
+          "WorkingSetBytes": 10375168,
+          "PrivateBytes": 3846144,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzChromaStreamServer",
+          "WorkingSetBytes": 2547712,
+          "PrivateBytes": 2195456,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKServer",
+          "WorkingSetBytes": 17162240,
+          "PrivateBytes": 15040512,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKService",
+          "WorkingSetBytes": 2732032,
+          "PrivateBytes": 3493888,
+          "CpuPercentOfOneCore": null
+        }
+      ]
+    },
+    {
+      "TimestampUtc": "2026-10-27T10:54:33.6382672+00:00",
+      "ElapsedSeconds": 22.4344609,
+      "ProcessCount": 16,
+      "WorkingSetBytes": 1704910848.0,
+      "PrivateBytes": 940392448.0,
+      "CpuPercentOfOneCore": 2.9391586761860147,
+      "CpuMeasuredProcesses": 11,
+      "Processes": [
+        {
+          "Name": "GameManagerService3",
+          "WorkingSetBytes": 212369408,
+          "PrivateBytes": 123502592,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 247345152,
+          "PrivateBytes": 185147392,
+          "CpuPercentOfOneCore": 1.471154404739857
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 120492032,
+          "PrivateBytes": 45117440,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 114446336,
+          "PrivateBytes": 112910336,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 65847296,
+          "PrivateBytes": 17985536,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 130437120,
+          "PrivateBytes": 51204096,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 137584640,
+          "PrivateBytes": 58245120,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 218066944,
+          "PrivateBytes": 132591616,
+          "CpuPercentOfOneCore": 1.4680042714461579
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 128258048,
+          "PrivateBytes": 63131648,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 136486912,
+          "PrivateBytes": 59854848,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 138485760,
+          "PrivateBytes": 58343424,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razerwdl",
+          "WorkingSetBytes": 22274048,
+          "PrivateBytes": 7782400,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razer_elevation_service",
+          "WorkingSetBytes": 10375168,
+          "PrivateBytes": 3846144,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzChromaStreamServer",
+          "WorkingSetBytes": 2547712,
+          "PrivateBytes": 2195456,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKServer",
+          "WorkingSetBytes": 17162240,
+          "PrivateBytes": 15040512,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKService",
+          "WorkingSetBytes": 2732032,
+          "PrivateBytes": 3493888,
+          "CpuPercentOfOneCore": null
+        }
+      ]
+    },
+    {
+      "TimestampUtc": "2026-10-27T10:54:34.6940141+00:00",
+      "ElapsedSeconds": 23.4902184,
+      "ProcessCount": 16,
+      "WorkingSetBytes": 1704976384.0,
+      "PrivateBytes": 940457984.0,
+      "CpuPercentOfOneCore": 1.4768121122600264,
+      "CpuMeasuredProcesses": 11,
+      "Processes": [
+        {
+          "Name": "GameManagerService3",
+          "WorkingSetBytes": 212369408,
+          "PrivateBytes": 123502592,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 247345152,
+          "PrivateBytes": 185147392,
+          "CpuPercentOfOneCore": 1.4768121122600264
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 120492032,
+          "PrivateBytes": 45117440,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 114446336,
+          "PrivateBytes": 112910336,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 65847296,
+          "PrivateBytes": 17985536,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 130437120,
+          "PrivateBytes": 51204096,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 137584640,
+          "PrivateBytes": 58245120,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 218132480,
+          "PrivateBytes": 132657152,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 128258048,
+          "PrivateBytes": 63131648,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 136486912,
+          "PrivateBytes": 59854848,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 138485760,
+          "PrivateBytes": 58343424,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razerwdl",
+          "WorkingSetBytes": 22274048,
+          "PrivateBytes": 7782400,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razer_elevation_service",
+          "WorkingSetBytes": 10375168,
+          "PrivateBytes": 3846144,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzChromaStreamServer",
+          "WorkingSetBytes": 2547712,
+          "PrivateBytes": 2195456,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKServer",
+          "WorkingSetBytes": 17162240,
+          "PrivateBytes": 15040512,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKService",
+          "WorkingSetBytes": 2732032,
+          "PrivateBytes": 3493888,
+          "CpuPercentOfOneCore": null
+        }
+      ]
+    },
+    {
+      "TimestampUtc": "2026-10-27T10:54:35.7549870+00:00",
+      "ElapsedSeconds": 24.5512027,
+      "ProcessCount": 16,
+      "WorkingSetBytes": 1705050112.0,
+      "PrivateBytes": 940527616.0,
+      "CpuPercentOfOneCore": 8.830075484124615,
+      "CpuMeasuredProcesses": 11,
+      "Processes": [
+        {
+          "Name": "GameManagerService3",
+          "WorkingSetBytes": 212369408,
+          "PrivateBytes": 123502592,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 247349248,
+          "PrivateBytes": 185147392,
+          "CpuPercentOfOneCore": 4.414255384567574
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 120492032,
+          "PrivateBytes": 45117440,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 114446336,
+          "PrivateBytes": 112910336,
+          "CpuPercentOfOneCore": 1.4717344567180555
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 65847296,
+          "PrivateBytes": 17985536,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 130437120,
+          "PrivateBytes": 51204096,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 137584640,
+          "PrivateBytes": 58245120,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 218202112,
+          "PrivateBytes": 132726784,
+          "CpuPercentOfOneCore": 2.944085642838985
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 128258048,
+          "PrivateBytes": 63131648,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 136486912,
+          "PrivateBytes": 59854848,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 138485760,
+          "PrivateBytes": 58343424,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razerwdl",
+          "WorkingSetBytes": 22274048,
+          "PrivateBytes": 7782400,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razer_elevation_service",
+          "WorkingSetBytes": 10375168,
+          "PrivateBytes": 3846144,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzChromaStreamServer",
+          "WorkingSetBytes": 2547712,
+          "PrivateBytes": 2195456,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKServer",
+          "WorkingSetBytes": 17162240,
+          "PrivateBytes": 15040512,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKService",
+          "WorkingSetBytes": 2732032,
+          "PrivateBytes": 3493888,
+          "CpuPercentOfOneCore": null
+        }
+      ]
+    },
+    {
+      "TimestampUtc": "2026-10-27T10:54:36.8066037+00:00",
+      "ElapsedSeconds": 25.6028275,
+      "ProcessCount": 16,
+      "WorkingSetBytes": 1704239104.0,
+      "PrivateBytes": 939659264.0,
+      "CpuPercentOfOneCore": 4.4614223309439796,
+      "CpuMeasuredProcesses": 11,
+      "Processes": [
+        {
+          "Name": "GameManagerService3",
+          "WorkingSetBytes": 212369408,
+          "PrivateBytes": 123502592,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 247296000,
+          "PrivateBytes": 185098240,
+          "CpuPercentOfOneCore": 4.4614223309439796
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 120492032,
+          "PrivateBytes": 45117440,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 114446336,
+          "PrivateBytes": 112910336,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 65847296,
+          "PrivateBytes": 17985536,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 130441216,
+          "PrivateBytes": 51208192,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 137584640,
+          "PrivateBytes": 58245120,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 217436160,
+          "PrivateBytes": 131899392,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 128258048,
+          "PrivateBytes": 63131648,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 136486912,
+          "PrivateBytes": 59854848,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 138485760,
+          "PrivateBytes": 58343424,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razerwdl",
+          "WorkingSetBytes": 22278144,
+          "PrivateBytes": 7786496,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razer_elevation_service",
+          "WorkingSetBytes": 10375168,
+          "PrivateBytes": 3846144,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzChromaStreamServer",
+          "WorkingSetBytes": 2547712,
+          "PrivateBytes": 2195456,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKServer",
+          "WorkingSetBytes": 17162240,
+          "PrivateBytes": 15040512,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKService",
+          "WorkingSetBytes": 2732032,
+          "PrivateBytes": 3493888,
+          "CpuPercentOfOneCore": null
+        }
+      ]
+    },
+    {
+      "TimestampUtc": "2026-10-27T10:54:37.8548317+00:00",
+      "ElapsedSeconds": 26.6510654,
+      "ProcessCount": 16,
+      "WorkingSetBytes": 1703743488.0,
+      "PrivateBytes": 938905600.0,
+      "CpuPercentOfOneCore": 2.9811472455048444,
+      "CpuMeasuredProcesses": 11,
+      "Processes": [
+        {
+          "Name": "GameManagerService3",
+          "WorkingSetBytes": 212369408,
+          "PrivateBytes": 123502592,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 246710272,
+          "PrivateBytes": 184311808,
+          "CpuPercentOfOneCore": 1.4902804149779953
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 120492032,
+          "PrivateBytes": 45117440,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 114446336,
+          "PrivateBytes": 112910336,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 65847296,
+          "PrivateBytes": 17985536,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 130498560,
+          "PrivateBytes": 51208192,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 137584640,
+          "PrivateBytes": 58245120,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 217468928,
+          "PrivateBytes": 131932160,
+          "CpuPercentOfOneCore": 1.490866830526849
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 128258048,
+          "PrivateBytes": 63131648,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 136486912,
+          "PrivateBytes": 59854848,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 138485760,
+          "PrivateBytes": 58343424,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razerwdl",
+          "WorkingSetBytes": 22278144,
+          "PrivateBytes": 7786496,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razer_elevation_service",
+          "WorkingSetBytes": 10375168,
+          "PrivateBytes": 3846144,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzChromaStreamServer",
+          "WorkingSetBytes": 2547712,
+          "PrivateBytes": 2195456,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKServer",
+          "WorkingSetBytes": 17162240,
+          "PrivateBytes": 15040512,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKService",
+          "WorkingSetBytes": 2732032,
+          "PrivateBytes": 3493888,
+          "CpuPercentOfOneCore": null
+        }
+      ]
+    },
+    {
+      "TimestampUtc": "2026-10-27T10:54:38.9080839+00:00",
+      "ElapsedSeconds": 27.7043283,
+      "ProcessCount": 16,
+      "WorkingSetBytes": 1703845888.0,
+      "PrivateBytes": 938999808.0,
+      "CpuPercentOfOneCore": 4.4549051725662006,
+      "CpuMeasuredProcesses": 11,
+      "Processes": [
+        {
+          "Name": "GameManagerService3",
+          "WorkingSetBytes": 212369408,
+          "PrivateBytes": 123502592,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 246767616,
+          "PrivateBytes": 184360960,
+          "CpuPercentOfOneCore": 2.9708152810752577
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 120492032,
+          "PrivateBytes": 45117440,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 114446336,
+          "PrivateBytes": 112910336,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 65847296,
+          "PrivateBytes": 17985536,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 130498560,
+          "PrivateBytes": 51208192,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 137584640,
+          "PrivateBytes": 58245120,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 217513984,
+          "PrivateBytes": 131977216,
+          "CpuPercentOfOneCore": 1.484089891490943
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 128258048,
+          "PrivateBytes": 63131648,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 136486912,
+          "PrivateBytes": 59854848,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 138485760,
+          "PrivateBytes": 58343424,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razerwdl",
+          "WorkingSetBytes": 22278144,
+          "PrivateBytes": 7786496,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razer_elevation_service",
+          "WorkingSetBytes": 10375168,
+          "PrivateBytes": 3846144,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzChromaStreamServer",
+          "WorkingSetBytes": 2547712,
+          "PrivateBytes": 2195456,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKServer",
+          "WorkingSetBytes": 17162240,
+          "PrivateBytes": 15040512,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKService",
+          "WorkingSetBytes": 2732032,
+          "PrivateBytes": 3493888,
+          "CpuPercentOfOneCore": null
+        }
+      ]
+    },
+    {
+      "TimestampUtc": "2026-10-27T10:54:39.9652830+00:00",
+      "ElapsedSeconds": 28.7615367,
+      "ProcessCount": 16,
+      "WorkingSetBytes": 1703923712.0,
+      "PrivateBytes": 939073536.0,
+      "CpuPercentOfOneCore": 7.380124177830574,
+      "CpuMeasuredProcesses": 11,
+      "Processes": [
+        {
+          "Name": "GameManagerService3",
+          "WorkingSetBytes": 212369408,
+          "PrivateBytes": 123502592,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 246767616,
+          "PrivateBytes": 184360960,
+          "CpuPercentOfOneCore": 4.427105616431598
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 120492032,
+          "PrivateBytes": 45117440,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 114446336,
+          "PrivateBytes": 112910336,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 65847296,
+          "PrivateBytes": 17985536,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 130498560,
+          "PrivateBytes": 51208192,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 137584640,
+          "PrivateBytes": 58245120,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 217587712,
+          "PrivateBytes": 132050944,
+          "CpuPercentOfOneCore": 2.9530185613989755
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 128262144,
+          "PrivateBytes": 63131648,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 136486912,
+          "PrivateBytes": 59854848,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 138485760,
+          "PrivateBytes": 58343424,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razerwdl",
+          "WorkingSetBytes": 22278144,
+          "PrivateBytes": 7786496,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razer_elevation_service",
+          "WorkingSetBytes": 10375168,
+          "PrivateBytes": 3846144,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzChromaStreamServer",
+          "WorkingSetBytes": 2547712,
+          "PrivateBytes": 2195456,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKServer",
+          "WorkingSetBytes": 17162240,
+          "PrivateBytes": 15040512,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKService",
+          "WorkingSetBytes": 2732032,
+          "PrivateBytes": 3493888,
+          "CpuPercentOfOneCore": null
+        }
+      ]
+    },
+    {
+      "TimestampUtc": "2026-10-27T10:54:41.0235786+00:00",
+      "ElapsedSeconds": 29.8198443,
+      "ProcessCount": 16,
+      "WorkingSetBytes": 1703972864.0,
+      "PrivateBytes": 939130880.0,
+      "CpuPercentOfOneCore": 1.4809970308971534,
+      "CpuMeasuredProcesses": 11,
+      "Processes": [
+        {
+          "Name": "GameManagerService3",
+          "WorkingSetBytes": 212369408,
+          "PrivateBytes": 123502592,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 246743040,
+          "PrivateBytes": 184348672,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 120492032,
+          "PrivateBytes": 45117440,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 114446336,
+          "PrivateBytes": 112910336,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 65847296,
+          "PrivateBytes": 17985536,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 130502656,
+          "PrivateBytes": 51208192,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 137584640,
+          "PrivateBytes": 58245120,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 217657344,
+          "PrivateBytes": 132120576,
+          "CpuPercentOfOneCore": 1.4809970308971534
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 128262144,
+          "PrivateBytes": 63131648,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 136486912,
+          "PrivateBytes": 59854848,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "RazerAppEngine",
+          "WorkingSetBytes": 138485760,
+          "PrivateBytes": 58343424,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razerwdl",
+          "WorkingSetBytes": 22278144,
+          "PrivateBytes": 7786496,
+          "CpuPercentOfOneCore": 0.0
+        },
+        {
+          "Name": "razer_elevation_service",
+          "WorkingSetBytes": 10375168,
+          "PrivateBytes": 3846144,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzChromaStreamServer",
+          "WorkingSetBytes": 2547712,
+          "PrivateBytes": 2195456,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKServer",
+          "WorkingSetBytes": 17162240,
+          "PrivateBytes": 15040512,
+          "CpuPercentOfOneCore": null
+        },
+        {
+          "Name": "RzSDKService",
+          "WorkingSetBytes": 2732032,
+          "PrivateBytes": 3493888,
+          "CpuPercentOfOneCore": null
+        }
+      ]
+    }
+  ],
+  "Redaction": "Process IDs removed; no local paths, device identities or profile documents included"
+}
