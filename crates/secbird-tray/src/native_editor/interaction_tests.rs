@@ -114,6 +114,32 @@ fn native_power_pointer_routes_to_simulator_and_preserves_profile_scope() {
             let geometry =
                 power_layout::geometry(f64::from(client.right) / scale, 128.0, 0.0, false)
                     .ok_or("No Power geometry")?;
+            // Actual message dispatch with the same readonly State policy set
+            // by --runtime-smoke, before reverting to normal interaction checks.
+            let before_log = controller_sim.state().log.len();
+            let before_store = std::fs::read(controller_directory.join("profiles.json")).unwrap();
+            SendMessageW(hwnd, READ_ONLY_TEST_SET, 1, 0);
+            let shape = geometry.threshold.slider;
+            let start = position(shape.x + 8.0, shape.y + 36.0, scale);
+            let end = position(shape.x + shape.width - 8.0, shape.y + 36.0, scale);
+            SendMessageW(hwnd, WM_LBUTTONDOWN, 1, start);
+            SendMessageW(hwnd, WM_MOUSEMOVE, 1, end);
+            SendMessageW(hwnd, WM_LBUTTONUP, 0, end);
+            std::thread::sleep(Duration::from_millis(80));
+            if controller_sim.state().log.len() != before_log
+                || std::fs::read(controller_directory.join("profiles.json")).unwrap()
+                    != before_store
+            {
+                return Err("Readonly native slider changed device or profile data".into());
+            }
+            let thread = GetWindowThreadProcessId(hwnd, null_mut());
+            let mut gui: GUITHREADINFO = std::mem::zeroed();
+            gui.cbSize = std::mem::size_of::<GUITHREADINFO>() as u32;
+            GetGUIThreadInfo(thread, &mut gui);
+            if gui.hwndCapture == hwnd {
+                return Err("Readonly source control started pointer capture".into());
+            }
+            SendMessageW(hwnd, READ_ONLY_TEST_SET, 0, 0);
             let mut results = Vec::new();
             for (kind, shape, fraction, target) in [
                 ("sleep", geometry.sleep.slider, 3.0 / 14.0, 4u16),
@@ -180,7 +206,7 @@ fn native_power_pointer_routes_to_simulator_and_preserves_profile_scope() {
                     },
                     "device intent persisted",
                 )?;
-                results.push(json!({"control":kind,"value":target,"no_write_before_release":true,"verified_simulated_write":true}));
+                results.push(json!({"readonly_native_messages_no_io_or_save":true,"control":kind,"value":target,"no_write_before_release":true,"verified_simulated_write":true}));
             }
             let shape = geometry.threshold.slider;
             let at_percent = |percent: u16| {

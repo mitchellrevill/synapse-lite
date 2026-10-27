@@ -69,6 +69,8 @@ const PROFILE_MODAL_TEST_QUERY: u32 = WM_APP + 99;
 const RUNTIME_TEST_INJECT: u32 = WM_APP + 104;
 #[cfg(test)]
 const RUNTIME_TEST_QUERY: u32 = WM_APP + 105;
+#[cfg(test)]
+const READ_ONLY_TEST_SET: u32 = WM_APP + 106;
 const FAILURE_DIALOG: u32 = WM_APP + 93;
 const FAILURE_TITLE: &str = "Synapse Lite - Action failed";
 const PERFORMANCE_REPEAT: usize = 73;
@@ -787,6 +789,8 @@ struct State {
     replies: mpsc::Receiver<WorkerReply>,
     runtime_observer: runtime_status::Observer,
     lighting_probe: bool,
+    read_only_smoke: bool,
+    restricted_actions: bool,
     lighting_runtime_observed: Option<std::time::Instant>,
     runtime_feedback_waiting: bool,
     pending: usize,
@@ -1432,6 +1436,11 @@ impl State {
         });
         report["active_native_runtime"] = active_runtime.unwrap_or(Value::Null);
         report["uniform_worker_disabled"] = json!(!self.lighting_probe);
+        report["intrinsic_read_only_measurement"] = json!(
+            self.read_only_smoke
+                && self.state["measurement_read_only"] == true
+                && self.state["query_only_device_handles"] == true
+        );
         match serde_json::to_vec_pretty(&report)
             .ok()
             .and_then(|bytes| std::fs::write(path, bytes).ok())
@@ -1463,9 +1472,14 @@ impl State {
         self.submit(job, true);
     }
     unsafe fn submit(&mut self, job: Job, user_operation: bool) {
-        // Probe presentation is read-only. Only cached status and the ordinary
-        // GET snapshot may reach the engine; no UI action can broaden admission.
-        if self.lighting_probe && !matches!(&job, Job::Refresh) {
+        // Measurement presentations reject device/file mutations. A read-only
+        // profile-export preview remains allowed solely to render its dialog.
+        let presentation_preview = self.read_only_smoke
+            && matches!(
+                &job,
+                Job::Profiles(profile_modal_model::Request::PreviewExport { .. })
+            );
+        if self.restricted_actions && !matches!(&job, Job::Refresh) && !presentation_preview {
             return;
         }
         if self.pending > 0 {
@@ -1938,7 +1952,7 @@ impl State {
     }
 
     unsafe fn action(&mut self, action: Action) {
-        if self.lighting_probe
+        if self.restricted_actions
             && !matches!(&action, Action::Close | Action::Minimize | Action::Maximize)
         {
             return;
@@ -3431,6 +3445,14 @@ unsafe extern "system" fn window_proc(
         return 0;
     }
     #[cfg(test)]
+    if message == READ_ONLY_TEST_SET {
+        if let Ok(mut state) = (*pointer).try_borrow_mut() {
+            state.read_only_smoke = wparam != 0;
+            state.restricted_actions = state.read_only_smoke || state.lighting_probe;
+        }
+        return 0;
+    }
+    #[cfg(test)]
     if message == RUNTIME_TEST_INJECT {
         if wparam == 2 {
             SetFocus(GetDlgItem(hwnd, i32::from(lighting_view::HEX)));
@@ -3499,7 +3521,7 @@ unsafe extern "system" fn window_proc(
         }
         return DefWindowProcW(hwnd, message, wparam, lparam);
     };
-    if state.lighting_probe
+    if state.restricted_actions
         && matches!(
             message,
             WM_LBUTTONDOWN | WM_MOUSEMOVE | WM_RBUTTONUP | WM_MOUSEWHEEL | WM_COMMAND | WM_KEYDOWN
@@ -4159,6 +4181,8 @@ fn run_window(
     ready: Option<mpsc::SyncSender<Result<(), String>>>,
 ) -> Result<(), String> {
     unsafe {
+        let arguments: Vec<String> = std::env::args().skip(1).collect();
+        let policy = crate::runtime_probe::Policy::from_args(&arguments);
         let lighting_probe = std::env::args().any(|arg| arg == crate::runtime_probe::FLAG);
         let smoke = close_after.is_some()
             || lighting_probe
@@ -4213,6 +4237,8 @@ fn run_window(
             replies: replies_rx,
             runtime_observer: runtime_status::Observer::default(),
             lighting_probe,
+            read_only_smoke: policy.read_only(),
+            restricted_actions: policy.restricted_actions(),
             lighting_runtime_observed: None,
             runtime_feedback_waiting: false,
             pending: 0,

@@ -8,12 +8,15 @@ use std::time::{Duration, Instant, SystemTime};
 mod source_static;
 mod source_uniform;
 mod lighting_probe;
+#[cfg(test)]
+mod measurement_read_only;
 
 pub struct Engine {
     #[cfg(test)]
     simulated_only: bool,
     api: HidApi,
     devices: Vec<Device>,
+    measurement_read_only: bool,
     unsupported: Vec<Unsupported>,
     /// Synapse processes seen at the last rescan.
     synapse: Vec<String>,
@@ -92,6 +95,7 @@ impl Engine {
             simulated_only: false,
             api,
             devices: Vec::new(),
+            measurement_read_only: false,
             unsupported: Vec::new(),
             synapse: Vec::new(),
             foreground: None,
@@ -158,6 +162,23 @@ impl Engine {
         Ok(engine)
     }
 
+    /// Sticky process-lifetime measurement restriction, installed before startup.
+    /// Existing handles and every later discovery are independently GET-only.
+    pub(crate) fn enforce_measurement_read_only(&mut self) -> Result<()> {
+        if self.lighting_runtime.borrow().running || self.uniform_is_enabled() {
+            return Err(secbird_core::Error::Unsupported(
+                "Read-only measurement must be enabled before runtime startup".into(),
+            ));
+        }
+        self.measurement_read_only = true;
+        for device in &mut self.devices {
+            device.enforce_query_only();
+        }
+        Ok(())
+    }
+    pub(crate) fn is_measurement_read_only(&self) -> bool {
+        self.measurement_read_only
+    }
     pub fn foreground(&self) -> Option<&str> {
         self.foreground.as_deref()
     }
@@ -196,6 +217,9 @@ impl Engine {
     pub fn dpi_changed(&mut self, key: &str, x: u16, y: u16) {
         self.live_seq += 1;
         self.live_dpi.insert(key.to_string(), (x, y));
+        if self.measurement_read_only {
+            return;
+        }
         let Some(dev) = self.devices.iter().find(|d| d.key() == key) else { return };
         if let Ok(mut store) = self.load_store() {
             let p = store.for_device(dev);
@@ -217,6 +241,9 @@ impl Engine {
     /// profile depends on the program in front get that profile; nothing is sent when
     /// neither the old nor the new program is tied to a profile.
     pub fn set_foreground(&mut self, exe: Option<String>) -> Vec<ApplyReport> {
+        if self.measurement_read_only {
+            return Vec::new();
+        }
         self.refresh_apps();
         let exe = exe.map(|e| secbird_core::profile::normalize_app(&e)).filter(|e| self.apps.contains(e));
         if exe == self.foreground {
@@ -273,6 +300,9 @@ impl Engine {
     /// Failures are left out: a mouse off its dock or asleep doesn't answer, and the
     /// colour stays until the next check.
     pub fn refresh_battery_lights(&self) {
+        if self.measurement_read_only {
+            return;
+        }
         let Ok(mut store) = self.load_store() else { return };
         for dev in self.devices.iter().filter(|d| d.spec.as_ref().is_some_and(|s| s.wireless)) {
             let p = store.for_device(dev);
@@ -287,6 +317,9 @@ impl Engine {
     /// alone: the traffic would keep them awake. Failures are left out, as for batteries.
     /// Not while away: the lights are down then anyway.
     pub fn refresh_frames(&mut self) {
+        if self.measurement_read_only {
+            return;
+        }
         if self.away.is_some() || self.frames_paused_until.is_some_and(|t| Instant::now() < t) {
             return;
         }
@@ -349,6 +382,9 @@ impl Engine {
     /// Laptops set to "stays lit" still fade by themselves (#34), but any read restarts
     /// that idle fade, so read the setting back now and then. Only while the tray runs.
     pub fn keep_laptops_lit(&self) {
+        if self.measurement_read_only {
+            return;
+        }
         if self.away.is_some() {
             return;
         }
@@ -369,6 +405,9 @@ impl Engine {
     /// power cycle brings the lights back. Also call it after a rescan while away, for
     /// devices that just arrived. Devices with the older lighting commands are left lit.
     pub fn lights_away(&mut self, percent: u8) {
+        if self.measurement_read_only {
+            return;
+        }
         self.away = Some(percent);
         self.relight.clear();
         self.refresh_lighting_runtime();
@@ -382,6 +421,9 @@ impl Engine {
     /// (it answers the saved level, not the dimmed one), so it works after a tray restart too.
     /// Then the profiles, in case one changed while away.
     pub fn lights_back(&mut self) -> Vec<ApplyReport> {
+        if self.measurement_read_only {
+            return Vec::new();
+        }
         if self.away.take().is_none() {
             return Vec::new();
         }
@@ -399,6 +441,9 @@ impl Engine {
     /// [`Engine::lights_back`] again for the devices that missed it, until they answer or
     /// [`RELIGHT_FOR`] runs out.
     pub fn retry_lights_back(&mut self) {
+        if self.measurement_read_only {
+            return;
+        }
         let now = Instant::now();
         self.relight.retain(|_, until| now < *until);
         if self.relight.is_empty() || self.away.is_some() {
@@ -464,6 +509,9 @@ impl Engine {
             .or_else(|_| Db::builtin())
             .unwrap_or_default();
         self.devices = discover(&self.api, &db);
+        if self.measurement_read_only {
+            for device in &mut self.devices { device.enforce_query_only(); }
+        }
         self.unsupported = secbird_core::device::unanswered(&self.api, &self.devices)
             .into_iter()
             .map(|pid| match db.get(pid) {
@@ -517,6 +565,9 @@ impl Engine {
     }
     /// Standalone editors do not claim a continuously running host policy service.
     pub fn start_lighting_runtime(&mut self) {
+        if self.measurement_read_only {
+            return;
+        }
         self.lighting_runtime.borrow_mut().start();
         self.refresh_lighting_runtime();
     }
@@ -525,6 +576,9 @@ impl Engine {
         self.refresh_lighting_runtime();
     }
     pub fn refresh_lighting_runtime(&mut self) {
+        if self.measurement_read_only {
+            return;
+        }
         self.lighting_runtime.borrow_mut().sample_host();
         let admitted_store = self.lighting_probe_store_snapshot().and_then(|probe| {
             match probe { Some(store) => Ok(store), None => self.load_store() }
@@ -629,6 +683,9 @@ impl Engine {
     /// Re-sample input immediately after an action; do not leave a new saved value
     /// visible until the next timer when display/idle suppression is still active.
     pub fn request_lighting_refresh(&mut self) {
+        if self.measurement_read_only {
+            return;
+        }
         self.invalidate_uniform();
         self.lighting_runtime.borrow_mut().invalidate_all();
         self.refresh_lighting_runtime();
@@ -678,6 +735,9 @@ impl Engine {
     }
     /// Release only our live overrides, with bounded attempts and ownership gates.
     pub fn shutdown_lighting_runtime(&mut self) -> Vec<String> {
+        if self.measurement_read_only {
+            return Vec::new();
+        }
         if !self.lighting_runtime.borrow().running {
             return Vec::new();
         }
@@ -727,6 +787,9 @@ impl Engine {
     /// Apply the current profile of each listed device (by [`Device::key`]): the one tied
     /// to the program in front, else the active one.
     pub fn apply(&mut self, keys: &[String]) -> Vec<ApplyReport> {
+        if self.measurement_read_only {
+            return Vec::new();
+        }
         self.lighting_runtime.borrow_mut().sample_host();
         for key in keys {
             self.host_static_results.borrow_mut().remove(key);
@@ -888,6 +951,9 @@ impl Engine {
     /// `skip` holds keys re-sent moments ago, left alone so a mouse that keeps losing
     /// them isn't written over and over. Returns the keys re-sent, with their reports.
     pub fn restore_lost_buttons(&self, skip: &HashSet<String>) -> Vec<(String, ApplyReport)> {
+        if self.measurement_read_only {
+            return Vec::new();
+        }
         let Ok(mut store) = self.load_store() else { return Vec::new() };
         self.devices
             .iter()
@@ -916,6 +982,9 @@ impl Engine {
     /// Make `name` the active profile for a device and apply it.
     /// Every mouse's remapped buttons back to what the mouse stores. Returns (device, count).
     pub fn restore_buttons(&self) -> Vec<(String, Result<usize>)> {
+        if self.measurement_read_only {
+            return Vec::new();
+        }
         let mut store = match self.load_store() {
             Ok(s) => s,
             Err(e) => return vec![("profiles".into(), Err(e))],
@@ -928,6 +997,7 @@ impl Engine {
     }
 
     pub fn switch_profile(&mut self, key: &str, name: &str) -> Result<Vec<ApplyReport>> {
+        if self.measurement_read_only { return Err(secbird_core::Error::Unsupported("Read-only measurement refuses profile switching".into())); }
         let dev = self
             .devices
             .iter()

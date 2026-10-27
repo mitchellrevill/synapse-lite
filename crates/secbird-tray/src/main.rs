@@ -37,11 +37,9 @@ fn main() {
         eprintln!("{error}");
         std::process::exit(2);
     }
-    if let Some(index) = args.iter().position(|arg| arg == "--runtime-smoke") {
-        if !args.get(index + 1).and_then(|s| s.parse::<u32>().ok()).is_some_and(|s| (1..=600).contains(&s)) {
-            eprintln!("--runtime-smoke requires 1..600 seconds");
-            std::process::exit(2);
-        }
+    if let Err(error) = runtime_probe::read_only_duration(&args) {
+        eprintln!("{error}");
+        std::process::exit(2);
     }
     if let Some(index) = args.iter().position(|arg| arg == "--native-smoke") {
         let seconds = args.get(index + 1).and_then(|s| s.parse::<u64>().ok()).filter(|s| (1..=600).contains(s));

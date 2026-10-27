@@ -79,11 +79,13 @@ try {
         if (-not $frame.matched -or -not $frame.presented -or -not $frame.visible -or $frame.failed) {
             throw "Requested view $scenario was not successfully presented; this run does not cover it"
         }
+        $intrinsicField = $frame.PSObject.Properties['intrinsic_read_only_measurement']
         $sampledPrivate = ($samples | Measure-Object PrivateBytes -Maximum).Maximum
         $sampledWorking = ($samples | Measure-Object WorkingSetBytes -Maximum).Maximum
         $results += [pscustomobject]@{
             Scenario = $scenario
             PresentedFrame = $frame
+            IntrinsicReadOnlyReported = ($null -ne $intrinsicField -and $intrinsicField.Value -eq $true)
             PeakWorkingSetBytes = $peakWorking
             SampledPeakWorkingSetBytes = $sampledWorking
             SampledPeakPrivateBytes = $sampledPrivate
@@ -97,12 +99,15 @@ try {
 } finally {
     foreach ($key in $original.Keys) { [Environment]::SetEnvironmentVariable($key, $original[$key], 'Process') }
 }
+$intrinsicAllRuns = @($results | Where-Object { -not $_.IntrinsicReadOnlyReported }).Count -eq 0
 [pscustomobject]@{
     BinarySha256 = (Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash
     TimestampUtc = [DateTimeOffset]::UtcNow.ToString('o')
     LimitBytes = 100000000
     MetricNote = 'Working set high-water plus sampled private committed bytes. Peak paged memory is recorded as an additional conservative process metric. Shared resident pages may be counted per process.'
-    Scope = 'Real tray, native editor, worker/listener threads and observed descendants. Uniform animation worker excluded. Stock Synapse/services and installed kernel drivers excluded. Historical read-only runs used fresh no-action configurations; --runtime-smoke alone does not prevent generic profile/policy apply from an existing configuration. Not full workflow, visual or hardware parity.'
+    IntrinsicReadOnlyReportedInEveryRun = $intrinsicAllRuns
+    Scope = if ($intrinsicAllRuns) { 'Query-only runtime-smoke checkpoint: real tray/native presentation/GET discovery/listeners and observed descendants. Generic profile/policy apply, uniform worker and mutation actions disabled. Stock services/kernel drivers excluded. Not active-lighting, full workflow, visual or hardware parity.' } else { 'Historical/legacy scope: real tray/native presentation/listeners and observed descendants using fresh no-action configuration. Intrinsic read-only enforcement was not reported; --runtime-smoke alone on older binaries did not prevent generic profile/policy apply from existing configuration. Uniform worker and stock services/kernel drivers excluded. Not full workflow or parity.' }
+    HistoricalEvidenceNote = 'Earlier binary-hash-scoped reports retain their original conditional no-action scope; this script does not retrofit intrinsic enforcement onto them.'
     Runs = $results
 } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $outputPath -Encoding utf8
 $results | Select-Object Scenario,PeakWorkingSetBytes,SampledPeakPrivateBytes,PeakPagedMemoryBytes,MaxObservedProcesses,Under100MB | Format-Table

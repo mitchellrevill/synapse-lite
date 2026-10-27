@@ -230,6 +230,9 @@ impl Server {
 /// Shared device/profile boundary for the native editor and optional legacy
 /// browser editor. Calling this function opens no listener or browser process.
 pub(crate) fn dispatch(engine: &mut Engine, method: &str, path: &str, body: &[u8]) -> Result<Value, Error> {
+    if engine.is_measurement_read_only() && method != "GET" {
+        return Err(Error::Unsupported("Read-only measurement refuses mutation requests".into()));
+    }
     match (method, path) {
         ("GET", "/api/state") => Ok(state(engine)),
         ("GET", "/api/apps") => Ok(json!({ "apps": crate::apps::running() })),
@@ -743,6 +746,8 @@ fn settings_json(engine: &Engine) -> Value {
     let s = crate::settings::TraySettings::load();
     json!({
         "version": env!("CARGO_PKG_VERSION"),
+        "measurement_read_only":engine.is_measurement_read_only(),
+        "query_only_device_handles":engine.is_measurement_read_only() && engine.devices().iter().all(Device::is_query_only),
         "repository": env!("CARGO_PKG_REPOSITORY"),
         "folder": config_dir().display().to_string(),
         "autostart": crate::settings::autostart_enabled(),
@@ -836,6 +841,7 @@ fn app_post(engine: &mut Engine, path: &str, b: &Body) -> Option<Result<Value, E
 /// Import a selected local file without a JSON transport round trip. The merged
 /// candidate remains local until its size/complexity has passed validation.
 pub(crate) fn import_profile_document(engine: &mut Engine, bytes: &[u8], target: Option<&str>) -> Result<Value, Error> {
+    if engine.is_measurement_read_only() { return Err(Error::Unsupported("Read-only measurement refuses imports".into())); }
     let incoming = secbird_core::profile_compat::import_document(bytes)?;
     let connected: Vec<_> = engine.all_keys().into_iter().filter(|key| target.is_none_or(|target| key == target)).collect();
     incoming.store.validate_import_targets(&connected)?;
@@ -870,6 +876,7 @@ pub(crate) fn import_profile_document_bound(
     expected_device: &str,
     expected_active: &str,
 ) -> Result<Value, Error> {
+    if engine.is_measurement_read_only() { return Err(Error::Unsupported("Read-only measurement refuses imports".into())); }
     let dev = engine
         .devices()
         .iter()

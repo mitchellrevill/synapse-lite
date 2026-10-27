@@ -226,6 +226,9 @@ fn try_tick<T>(
 }
 impl Worker {
     pub(crate) fn start(engine: Arc<Mutex<Engine>>) -> Result<Self, String> {
+        if engine.lock().map_err(|_| "Read-only worker admission could not inspect poisoned Engine")?.is_measurement_read_only() {
+            return Err("Read-only measurement cannot start the uniform worker".into());
+        }
         let shared = engine.clone();
         let mut worker = Self::spawn(move |signal| {
             try_tick(&shared, signal, |engine| {

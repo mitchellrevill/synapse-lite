@@ -3,6 +3,53 @@
 use secbird_core::{Error, Result, Store};
 use serde_json::{json, Value};
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Policy {
+    Normal,
+    ReadOnlySmoke,
+    ActiveLightingProbe,
+}
+impl Policy {
+    pub(crate) fn from_args(args: &[String]) -> Self {
+        if args.iter().any(|arg| arg == "--runtime-smoke") {
+            Self::ReadOnlySmoke
+        } else if args.iter().any(|arg| arg == FLAG) {
+            Self::ActiveLightingProbe
+        } else {
+            Self::Normal
+        }
+    }
+    pub(crate) fn read_only(self) -> bool {
+        self == Self::ReadOnlySmoke
+    }
+    pub(crate) fn restricted_actions(self) -> bool {
+        self != Self::Normal
+    }
+    pub(crate) fn starts_worker(self) -> bool {
+        !self.read_only()
+    }
+    pub(crate) fn starts_policies(self) -> bool {
+        !self.read_only()
+    }
+    pub(crate) fn generic_apply(self) -> bool {
+        self == Self::Normal
+    }
+}
+pub(crate) fn read_only_duration(args: &[String]) -> std::result::Result<Option<u32>, String> {
+    if !args.iter().any(|arg| arg == "--runtime-smoke") {
+        return Ok(None);
+    }
+    if args.len() != 2 || args[0] != "--runtime-smoke" {
+        return Err("--runtime-smoke must be used alone with one duration".into());
+    }
+    args[1]
+        .parse::<u32>()
+        .ok()
+        .filter(|seconds| (1..=600).contains(seconds))
+        .map(Some)
+        .ok_or_else(|| "--runtime-smoke requires1..600 seconds".into())
+}
+
 pub(crate) const FLAG: &str = "--runtime-lighting-probe";
 
 pub(crate) fn duration(args: &[String]) -> std::result::Result<Option<u32>, String> {
@@ -217,6 +264,7 @@ pub(crate) fn readiness(runtime: &Value, expected_profile: &str) -> Value {
         "worker_liveness_sampled_separately":runtime["worker_liveness_sampled_separately"]==true,
         "worker_liveness_scope":if runtime["worker_liveness_sampled_separately"]==true {"live-signal-at-cache-read"}else{"engine-status-snapshot"},
         "accepted_frames":accepted_frames,"controls_checkpoint_ready":controls,
+        "controls_checkpoint_ready_at_observation":controls,
         "control_checkpoint_age_us":checkpoint_age,"control_age_at_producer_us":checkpoint_age,
         "current_controls_verified":false,"control_age_scope":"at-producer-observation",
         "control_parameter_known":uniform["parameter_before"].is_number(),
@@ -286,7 +334,7 @@ pub(crate) fn stop_report(
 /// Central startup rule: existing measurement/editor-only modes never schedule
 /// uniform output. The explicit active probe is separately admitted first.
 pub(crate) fn starts_worker(args: &[String]) -> bool {
-    !args.iter().any(|arg| {
+    Policy::from_args(args).starts_worker() && !args.iter().any(|arg| {
         matches!(
             arg.as_str(),
             "--runtime-smoke" | "--native-smoke" | "--serve"
@@ -332,6 +380,40 @@ mod tests {
         device.profiles.insert("Default".into(), profile);
         store.devices.insert("025D:SIMULATED".into(), device);
         store
+    }
+    #[test]
+    fn read_only_smoke_policy_is_distinct_and_refuses_ambiguous_entrypoints() {
+        let readonly = args(&["--runtime-smoke", "5"]);
+        assert_eq!(Policy::from_args(&readonly), Policy::ReadOnlySmoke);
+        assert_eq!(read_only_duration(&readonly).unwrap(), Some(5));
+        assert!(Policy::ReadOnlySmoke.read_only());
+        assert!(!Policy::ReadOnlySmoke.starts_worker());
+        assert!(!Policy::ReadOnlySmoke.starts_policies());
+        assert!(!Policy::ReadOnlySmoke.generic_apply());
+        assert!(Policy::ActiveLightingProbe.starts_worker());
+        assert!(Policy::ActiveLightingProbe.starts_policies());
+        assert!(!Policy::ActiveLightingProbe.generic_apply());
+        assert!(!Policy::ActiveLightingProbe.read_only());
+        assert!(Policy::Normal.generic_apply());
+        for values in [
+            vec!["--runtime-smoke", "5", "--serve"],
+            vec!["--runtime-smoke", "5", "--native-smoke", "5"],
+            vec!["--runtime-smoke", "0"],
+            vec!["--runtime-smoke", "601"],
+            vec!["--runtime-smoke", "5", "--runtime-smoke", "5"],
+        ] {
+            assert!(read_only_duration(&args(&values)).is_err());
+        }
+    }
+    #[test]
+    fn read_only_policy_is_applied_to_startup_callbacks_and_shutdown_source_paths() {
+        let source = include_str!("win.rs");
+        assert!(source.contains("engine.enforce_measurement_read_only()"));
+        assert!(source.contains("if policy.starts_policies()"));
+        assert!(source.contains("if !policy.generic_apply()"));
+        assert!(source.contains("policy.restricted_actions()"));
+        assert!(source.contains("self.policy.read_only()"));
+        assert!(source.contains("worker.log_shutdown_diagnostics()"));
     }
     #[test]
     fn explicit_probe_rejects_invalid_duration_and_mixed_entrypoints() {

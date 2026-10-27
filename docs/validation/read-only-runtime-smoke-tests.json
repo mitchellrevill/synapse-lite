@@ -1,0 +1,25 @@
+{
+  "scope": "Independent indexed tree of intrinsic read-only smoke changes, excluding concurrent native-storage and action-transaction work",
+  "base_commit": "6d10549",
+  "workspace": {
+    "cli_passed": 1,
+    "core_passed": 253,
+    "core_ignored": 5,
+    "tray_passed": 158,
+    "tray_ignored": 6,
+    "doc_passed": 1,
+    "failed": 0
+  },
+  "native_hwnd": {
+    "lighting_passed": true,
+    "power_with_read_only_zero_command_subtest_passed": true,
+    "profiles_passed": true,
+    "four_overlay_presentations_passed": true,
+    "overlay_initial_setup_refusal": "Source assets were absent at the isolated tree's expected path; provisioned existing assets and reran the single test successfully",
+    "desktop_font_context": true,
+    "physical_device_discovery_disabled": true
+  },
+  "hardware_exercised": false,
+  "new_ram_acceptance": false,
+  "new_pixel_identity_acceptance": false
+}

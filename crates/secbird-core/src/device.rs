@@ -21,6 +21,7 @@ pub const TXID_CANDIDATES: [u8; 4] = [0x1F, 0x3F, 0xFF, 0x9F];
 
 pub struct Device {
     transport: Box<dyn Transport>,
+    query_only: bool,
     pub pid: u16,
     /// Serial number read during discovery; empty if the device reports none.
     pub serial: String,
@@ -31,6 +32,22 @@ pub struct Device {
 }
 
 impl Device {
+    /// Irreversibly restrict this handle to protocol GETs. Used by explicit
+    /// read-only measurements; it does not alter the physical device.
+    pub fn enforce_query_only(&mut self) {
+        self.query_only = true;
+    }
+    pub fn is_query_only(&self) -> bool {
+        self.query_only
+    }
+    fn permit_command(&self, command: Command) -> Result<()> {
+        if self.query_only && command.id & 0x80 == 0 {
+            return Err(Error::Unsupported(format!(
+                "Read-only device handle refuses protocol SET {command}"
+            )));
+        }
+        Ok(())
+    }
     pub fn name(&self) -> String {
         match &self.spec {
             Some(s) => s.name.clone(),
@@ -143,6 +160,9 @@ impl Device {
     /// seam sends one canonical row/commit HID wrapper, with no read or retry.
     /// USB acceptance is not firmware acknowledgement or optical verification.
     pub(crate) fn send_ornata_frame_packet(&mut self, packet: &[u8; 91]) -> Result<()> {
+        if self.query_only {
+            return Err(Error::Unsupported("Read-only device handle refuses raw lighting frame OUT".into()));
+        }
         crate::ornata_frame::validate_device(self)?;
         let report = Report(packet[1..].try_into().expect("fixed HID wrapper"));
         let size = report.0[5];
@@ -177,6 +197,7 @@ impl Device {
     /// Send one command and wait for its reply. `size` is the argument length the
     /// device expects for this command.
     pub fn transact(&self, command: Command, size: u8, args: &[u8]) -> Result<Report> {
+        self.permit_command(command)?;
         transact(
             self.transport.as_ref(),
             self.txid,
@@ -189,6 +210,7 @@ impl Device {
 
     /// [`Device::transact`] for commands that write flash and answer slowly.
     pub(crate) fn transact_slow(&self, command: Command, size: u8, args: &[u8]) -> Result<Report> {
+        self.permit_command(command)?;
         transact(
             self.transport.as_ref(),
             self.txid,
@@ -201,6 +223,7 @@ impl Device {
 
     /// [`Device::transact`] with another transaction id (see [`DOCK_TXID`]).
     pub fn transact_as(&self, txid: u8, command: Command, size: u8, args: &[u8]) -> Result<Report> {
+        self.permit_command(command)?;
         transact(
             self.transport.as_ref(),
             txid,
@@ -228,6 +251,7 @@ impl Device {
                 "mode readback is verified only for Ornata V2 interface2".into(),
             ));
         }
+        self.permit_command(Command::new(0, 0x84))?;
         transact_with_response_minimum(
             self.transport.as_ref(),
             self.txid,
@@ -252,6 +276,7 @@ impl Device {
                 "effect readback requires profile0/1 and region0".into(),
             ));
         }
+        self.permit_command(Command::new(0x0f, 0x82))?;
         transact_with_response_minimum(
             self.transport.as_ref(),
             self.txid,
@@ -506,6 +531,7 @@ impl Device {
         let serial = parse_serial(reply.args());
         Some(Device {
             transport,
+            query_only: false,
             pid,
             serial,
             interface,
@@ -584,6 +610,44 @@ mod tests {
         wire
     }
 
+    #[test]
+    fn query_only_handle_blocks_all_set_ids_across_transaction_and_raw_frame_paths() {
+        let sim = crate::sim::Sim::keyboard();
+        let mut dev = sim
+            .open(0x025d, crate::sim::Sim::spec_for(crate::sim::KEYBOARD_PID))
+            .unwrap();
+        dev.interface = 2;
+        assert!(!dev.is_query_only());
+        assert!(
+            dev.set_brightness(5, 43).is_ok(),
+            "ordinary handle still permits writes"
+        );
+        dev.enforce_query_only();
+        dev.enforce_query_only();
+        assert!(dev.is_query_only());
+        sim.state().log.clear();
+        for class in [0, 2, 4, 15, 127, 255] {
+            for id in 0..128 {
+                let command = Command::new(class, id);
+                assert!(dev.transact(command, 0, &[]).is_err());
+                assert!(dev.transact_as(0x3f, command, 0, &[]).is_err());
+                assert!(dev.transact_slow(command, 0, &[]).is_err());
+            }
+        }
+        let packets = crate::ornata_frame::PreparedOrnataFrame::new(&[crate::Rgb(1, 2, 3); 132])
+            .unwrap()
+            .packets(dev.txid);
+        for packet in &packets {
+            assert!(dev.send_ornata_frame_packet(packet).is_err());
+        }
+        assert!(
+            sim.state().log.is_empty(),
+            "all SET/raw-frame attempts refused before transport"
+        );
+        assert!(dev.firmware_version().is_ok());
+        assert!(dev.brightness(5).is_ok());
+        assert!(sim.state().log.iter().all(|command| command.id & 0x80 != 0));
+    }
     #[test]
     fn stale_transaction_cannot_supply_a_feature_value() {
         let command = Command::new(0x0f, 0x84);

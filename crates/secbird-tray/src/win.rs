@@ -102,6 +102,7 @@ struct App {
     uniform_worker: RefCell<Option<crate::uniform_worker::Worker>>,
     uniform_shutdown_blocked: Cell<bool>,
     lighting_probe: bool,
+    policy: crate::runtime_probe::Policy,
     probe_binding: Option<(String, String)>,
     lighting_status: crate::lighting_status::Reader,
     probe_observation: RefCell<Option<(std::time::Instant, serde_json::Value)>>,
@@ -221,6 +222,10 @@ pub fn run() {
         Ok(value) => value,
         Err(error) => { eprintln!("{error}"); return; }
     };
+    let policy = crate::runtime_probe::Policy::from_args(&arguments);
+    if let Err(error) = crate::runtime_probe::read_only_duration(&arguments) {
+        eprintln!("{error}"); return;
+    }
     let lighting_probe = probe_seconds.is_some();
     let probe_view = if lighting_probe {
         match crate::runtime_probe::presentation(&std::env::var("SYNAPSE_LITE_SMOKE_VIEW").unwrap_or_else(|_|"keyboard-lighting".into())) {
@@ -231,8 +236,8 @@ pub fn run() {
     unsafe {
         let _mutex = CreateMutexW(null(), 0, wide("Local\\SynapseLite.Tray").as_ptr());
         if GetLastError() == ERROR_ALREADY_EXISTS {
-            if lighting_probe {
-                eprintln!("Active Lighting probe rejected: another tray instance is running");
+            if policy.restricted_actions() {
+                eprintln!("Measurement rejected: another tray instance is running");
                 std::process::exit(2);
             }
             let running = FindWindowW(wide(CLASS_NAME).as_ptr(), null());
@@ -255,8 +260,8 @@ pub fn run() {
         let mut engine = match Engine::new() {
             Ok(e) => e,
             Err(e) => {
-                if lighting_probe {
-                    eprintln!("Active Lighting probe could not start HID access: {e}");
+                if policy.restricted_actions() {
+                    eprintln!("Measurement could not start HID access: {e}");
                     std::process::exit(2);
                 }
                 let text = wide(&format!("Could not start HID access: {e}"));
@@ -265,6 +270,12 @@ pub fn run() {
             }
         };
 
+        if policy.read_only() {
+            if let Err(error) = engine.enforce_measurement_read_only() {
+                eprintln!("{error}"); std::process::exit(2);
+            }
+            engine.rescan();
+        }
         // Active measurement is a separate admitted path. Never fall back to
         // ordinary startup/profile apply after a rejected probe configuration.
         let probe_binding = if lighting_probe {
@@ -320,15 +331,17 @@ pub fn run() {
         // Event-driven, no polling: Windows calls back on this thread when the window
         // in front changes, and nothing runs in between.
         TRAY_HWND.store(hwnd, Ordering::Relaxed);
-        SetWinEventHook(
-            EVENT_SYSTEM_FOREGROUND,
-            EVENT_SYSTEM_FOREGROUND,
-            null_mut(),
-            Some(on_foreground),
-            0,
-            0,
-            WINEVENT_OUTOFCONTEXT,
-        );
+        if policy.generic_apply() {
+            SetWinEventHook(
+                EVENT_SYSTEM_FOREGROUND,
+                EVENT_SYSTEM_FOREGROUND,
+                null_mut(),
+                Some(on_foreground),
+                0,
+                0,
+                WINEVENT_OUTOFCONTEXT,
+            );
+        }
 
         let icon = load_icon();
         add_icon(hwnd, icon);
@@ -344,6 +357,7 @@ pub fn run() {
                 uniform_worker: RefCell::new(None),
                 uniform_shutdown_blocked: Cell::new(false),
                 lighting_probe,
+                policy,
                 probe_binding,
                 lighting_status,
                 probe_observation: RefCell::new(None),
@@ -371,7 +385,9 @@ pub fn run() {
                 screen_off: false,
             })
         });
-        with_app(|app| app.engine().start_lighting_runtime());
+        if policy.starts_policies() {
+            with_app(|app| app.engine().start_lighting_runtime());
+        }
         // Smoke/serve/native-smoke runs never opt into a scheduling worker.
         if crate::runtime_probe::starts_worker(&arguments) {
             with_app(|app| match crate::uniform_worker::Worker::start(app.engine.clone()) {
@@ -387,7 +403,8 @@ pub fn run() {
         WTSRegisterSessionNotification(hwnd, NOTIFY_FOR_THIS_SESSION);
         RegisterPowerSettingNotification(hwnd, &GUID_CONSOLE_DISPLAY_STATE, DEVICE_NOTIFY_WINDOW_HANDLE);
         log::append("tray started");
-        if lighting_probe {
+        if !policy.generic_apply() {
+            // Measurement listeners are read-only; replay/timers stay disabled.
             // Same event listeners and worker as the native tray, without generic
             // input/profile replay or background remap/laptop/reapply timers.
             with_app(|app| app.start_listeners());
@@ -520,6 +537,7 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
         }
         WM_TIMER if wparam == TIMER_RETRY => {
             KillTimer(hwnd, TIMER_RETRY);
+            if with_app(|app| !app.policy.generic_apply()).unwrap_or(true) { return 0; }
             let next = with_app(|app| {
                 app.rescan();
                 app.retry_step += 1;
@@ -552,6 +570,7 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
         }
         WM_TIMER if wparam == TIMER_LIGHTS => {
             with_app(|app| {
+                if !app.policy.starts_policies() { return; }
                 let mut engine = app.engine();
                 engine.refresh_lighting_runtime();
                 engine.retry_lights_back();
@@ -601,14 +620,14 @@ unsafe extern "system" fn on_foreground(_: HWINEVENTHOOK, _: u32, _: HWND, _: i3
 
 /// Rescan a few more times over the next minute (new devices get their profile).
 fn start_retries(hwnd: HWND) {
-    if std::env::args().any(|arg| arg == crate::runtime_probe::FLAG) { return; }
+    if crate::runtime_probe::Policy::from_args(&std::env::args().skip(1).collect::<Vec<_>>()).restricted_actions() { return; }
     with_app(|app| app.retry_step = 0);
     unsafe { SetTimer(hwnd, TIMER_RETRY, RETRY_DELAYS_MS[0], None) };
 }
 
 /// Debounce: a device arrival fires one notification per HID interface.
 fn schedule_rescan(hwnd: HWND, apply_all: bool) {
-    if std::env::args().any(|arg| arg == crate::runtime_probe::FLAG) { return; }
+    if crate::runtime_probe::Policy::from_args(&std::env::args().skip(1).collect::<Vec<_>>()).restricted_actions() { return; }
     with_app(|app| app.apply_all_pending |= apply_all);
     unsafe { SetTimer(hwnd, TIMER_RESCAN, SETTLE_MS, None) };
 }
@@ -619,7 +638,9 @@ impl App {
     }
 
     fn rescan(&mut self) {
-        if self.lighting_probe { return; }
+        if self.policy.restricted_actions() {
+            return;
+        }
         let apply_all = std::mem::take(&mut self.apply_all_pending);
         let (reports, new_names, synapse) = {
             let mut engine = self.engine();
@@ -683,6 +704,9 @@ impl App {
         }
     }
     fn shutdown_lighting(&self) {
+        if self.policy.read_only() {
+            return;
+        }
         // WM_ENDSESSION and WM_DESTROY can both arrive. A prior timeout must
         // not make the second callback block on the still-running worker.
         if self.uniform_shutdown_blocked.get() {
@@ -692,6 +716,7 @@ impl App {
         // Never join while holding Engine: the worker may be finishing one batch.
         if let Some(mut worker) = self.uniform_worker.borrow_mut().take() {
             if !worker.stop(std::time::Duration::from_secs(2)) {
+                worker.log_shutdown_diagnostics();
                 self.uniform_shutdown_blocked.set(true);
                 log::append("uniform worker did not stop cleanly within2s (timeout or panic); an in-flight HID call cannot be interrupted, lighting cleanup was not claimed");
                 self.report_probe_stop(false, 0, None);
@@ -726,7 +751,9 @@ impl App {
     /// and come back after.
     fn set_away(&mut self, locked: bool, screen_off: bool) {
         (self.locked, self.screen_off) = (locked, screen_off);
-        if self.lighting_probe { return; }
+        if self.policy.restricted_actions() {
+            return;
+        }
         let percent = TraySettings::load().away_percent().filter(|_| locked || screen_off);
         let mut engine = self.engine();
         match percent {
@@ -783,7 +810,7 @@ impl App {
     }
 
     fn device_events(&mut self) {
-        if self.lighting_probe {
+        if self.policy.restricted_actions() {
             while self.events.try_recv().is_ok() {}
             return;
         }
@@ -806,7 +833,9 @@ impl App {
 
     /// Switch devices to the profile tied to the program now in front, or back.
     fn foreground_changed(&mut self) {
-        if self.lighting_probe { return; }
+        if self.policy.restricted_actions() {
+            return;
+        }
         let settings = TraySettings::load();
         if settings.auto_switch_off {
             return;
@@ -845,6 +874,9 @@ impl App {
     }
 
     fn restore_lost_buttons(&mut self) {
+        if self.policy.restricted_actions() {
+            return;
+        }
         let now = now_secs();
         self.buttons_restored.retain(|_, at| now.saturating_sub(*at) < BUTTONS_AGAIN_SECS);
         let skip: HashSet<String> = self.buttons_restored.keys().cloned().collect();
@@ -953,6 +985,9 @@ impl App {
     /// The weekly firmware check, if it's on and due (or `now`). Reads each device's version
     /// here, then asks Razer's servers on a background thread so the tray never waits.
     fn check_firmware(&mut self, now: bool) {
+        if self.policy.restricted_actions() {
+            return;
+        }
         let mut settings = TraySettings::load();
         if !settings.firmware_weekly || (!now && now_secs().saturating_sub(settings.firmware_checked) < FIRMWARE_EVERY_SECS) {
             return;
@@ -992,6 +1027,9 @@ impl App {
     /// The daily new-version check, unless turned off and unless asked from the menu
     /// (`manual`). Asks GitHub on a background thread so the tray never waits.
     fn check_update(&mut self, manual: bool) {
+        if self.policy.restricted_actions() {
+            return;
+        }
         let mut settings = TraySettings::load();
         if !manual && (settings.updates_off || now_secs().saturating_sub(settings.update_checked) < UPDATE_EVERY_SECS) {
             return;
@@ -1015,6 +1053,9 @@ impl App {
 
     /// Announce a newer version once (or always, when asked from the menu).
     fn update_news(&mut self) {
+        if self.policy.restricted_actions() {
+            return;
+        }
         while let Ok(UpdateResult { manual, found }) = self.updates.try_recv() {
             let current = secbird_core::update::CURRENT;
             match found {
@@ -1049,6 +1090,9 @@ impl App {
     /// Download the update, check its signature and run its installer, which closes this
     /// tray and starts the new one. Copies that weren't installed get the release page.
     fn start_update(&mut self, r: Release) {
+        if self.policy.restricted_actions() {
+            return;
+        }
         if !secbird_core::update::installed() {
             return open_url(&r.url);
         }
@@ -1081,6 +1125,9 @@ impl App {
 
     /// An update that couldn't be installed. A started installer closes the tray itself.
     fn install_news(&mut self) {
+        if self.policy.restricted_actions() {
+            return;
+        }
         while let Ok(result) = self.installs.try_recv() {
             if let Err(e) = result {
                 self.updating = false;
@@ -1111,6 +1158,9 @@ impl App {
 
     /// Announce each newer firmware once.
     fn firmware_news(&mut self) {
+        if self.policy.restricted_actions() {
+            return;
+        }
         let mut settings = TraySettings::load();
         let mut lines = Vec::new();
         while let Ok(news) = self.firmware.try_recv() {
@@ -1174,7 +1224,7 @@ impl App {
     }
 
     fn handle_command(&mut self, id: u32) {
-        if self.lighting_probe && !matches!(id, ID_EDITOR | ID_EXIT) { return; }
+        if self.policy.restricted_actions() && !matches!(id, ID_EDITOR | ID_EXIT) { return; }
         match id {
             ID_REAPPLY => {
                 self.apply_all_pending = true;
