@@ -2,6 +2,8 @@
 
 A later [physical checkpoint](validation/ornata-identity-physical.json) successfully read the current keyboard's declared `[6,0]`: layout 6, edition 0, firmware ID unavailable. One serial baseline GET and one edition GET produced two accepted OUT returns and two valid reads, with zero SETs or denied requests. Stock user processes were temporarily isolated and restored (11 before, two stable zero observations, 15 after the configured hidden restart); services and drivers were unchanged. This is a point-in-time identity observation, not an ownership lease or optical/Wave runtime acceptance.
 
+The general simulator can explicitly supply `ornata_layout_edition: Some([layout, edition])` for runtime tests. Its default is unsupported and it infers no country. This mock declares exactly two bytes while the request remains three, so firmware ID stays unavailable. The regression covers known and unknown tuples through a query-only handle and verifies mode/brightness remain unchanged. These simulated values never certify a physical device.
+
 `Device::ornata_edition_readback()` reads the retained shipped Ornata V2
 middleware's physical edition/layout tuple. It accepts only PID025D,
 interface2, and never changes device mode, profiles, lighting, or assignments.

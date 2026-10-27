@@ -77,6 +77,9 @@ pub struct SimState {
     pub game_mode: Option<u8>,
     /// Read-only mode query (00:84); no mode setter is simulated.
     pub device_mode: Option<u8>,
+    /// Explicit mock GET00:86 response in wire order [layout, edition]. None
+    /// remains unsupported; no country/layout is inferred for a simulator.
+    pub ornata_layout_edition: Option<[u8; 2]>,
     pub auto_sleep: Option<bool>,
     /// The auto-sleep switch saved in the on-board slot, which the live one starts from.
     pub auto_sleep_saved: Option<bool>,
@@ -138,6 +141,7 @@ impl SimState {
             smart_dimming: None,
             game_mode: None,
             device_mode: None,
+            ornata_layout_edition: None,
             auto_sleep: None,
             auto_sleep_saved: None,
             active_slot: None,
@@ -281,6 +285,10 @@ impl SimState {
             c if c == cmd::FIRMWARE.get() => ok(vec![self.firmware.0, self.firmware.1]),
             c if c == Command::new(0, 0x84) => match self.device_mode {
                 Some(mode) => ok(vec![mode]),
+                None => (NotSupported, vec![]),
+            },
+            c if c == Command::new(0, 0x86) => match self.ornata_layout_edition {
+                Some(tuple) => ok(tuple.to_vec()),
                 None => (NotSupported, vec![]),
             },
             c if c == cmd::SERIAL.get() => {
@@ -736,6 +744,11 @@ impl Transport for Sim {
             s.handle(command, req.args(), body[5])
         };
         let mut reply = Report::request(req.txid(), command, body[5], &args);
+        if command == Command::new(0, 0x86) && status == Status::Success {
+            // The observed device declares two bytes even though the source
+            // request declares three. Do not turn padding into firmware ID.
+            reply.0[5] = 2;
+        }
         reply.0[0] = match status {
             Status::New => 0,
             Status::Busy => 1,
@@ -914,6 +927,29 @@ mod tests {
     use super::*;
     use crate::features::Rgb;
     use crate::profile::{Profile, Zone};
+
+    #[test]
+    fn explicit_ornata_identity_mock_preserves_two_declared_bytes_without_sets() {
+        let sim = Sim::keyboard();
+        let mut device = sim.open(605, crate::Db::builtin().unwrap().get(605).cloned()).unwrap();
+        device.interface = 2;
+        device.enforce_query_only();
+        assert!(matches!(device.ornata_edition_readback(), Err(Error::Device { status: Status::NotSupported, .. })));
+        let before_mode = sim.state().device_mode;
+        let before_brightness = sim.state().brightness.clone();
+        for tuple in [[6, 0], [250, 251]] {
+            sim.state().ornata_layout_edition = Some(tuple);
+            sim.state().log.clear();
+            let observed = device.ornata_edition_readback().unwrap();
+            assert_eq!(observed.declared_args(), tuple);
+            assert_eq!(observed.declared_size(), 2);
+            assert_eq!(observed.firmware_id(), None);
+            let state = sim.state();
+            assert_eq!(state.log, [Command::new(0, 0x86)]);
+            assert_eq!(state.device_mode, before_mode);
+            assert_eq!(state.brightness, before_brightness);
+        }
+    }
 
     fn open(sim: &Sim, pid: u16) -> Device {
         sim.open(pid, Sim::spec_for(pid)).expect("simulator answers")
