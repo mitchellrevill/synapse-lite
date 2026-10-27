@@ -287,6 +287,9 @@ fn change_lighting_settings(
         }
         previous_profile = Some(profiles.active().clone());
         want.store_in_profile(profiles.active_mut())?;
+        if change == LightingChange::Brightness {
+            crate::profile_compat::clear_source_brightness_baseline(profiles.active_mut());
+        }
         crate::profile_compat::validate_store_budget(store)
     })();
     // All exits from preflight pass through this restoration. Even an early
@@ -310,6 +313,9 @@ fn change_lighting_settings(
         want.apply_brightness(dev)?;
     }
     want.store_in_profile(store.for_device(dev).active_mut())?;
+    if change == LightingChange::Brightness {
+        crate::profile_compat::clear_source_brightness_baseline(store.for_device(dev).active_mut());
+    }
     store.save()?;
     Ok(want.clone())
 }

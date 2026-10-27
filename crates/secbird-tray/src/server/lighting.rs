@@ -87,6 +87,73 @@ pub(super) fn intent(
     result
 }
 
+/// Dry-run only, preserving the real Store path and all early-refusal keys.
+pub(super) fn static_settings_candidate(
+    dev: &Device,
+    store: &Store,
+    body: &Body,
+) -> Result<Option<(Store, String, secbird_core::Rgb)>, Error> {
+    let want = body
+        .lighting_settings
+        .as_ref()
+        .ok_or_else(|| Error::InvalidArg("lighting_settings is required".into()))?;
+    want.validate()?;
+    let mut candidate = Store::default();
+    candidate.devices = store.devices.clone();
+    candidate.extra = store.extra.clone();
+    let profiles = owner(dev, &mut candidate, body)?;
+    let name = profiles.active.clone();
+    let Some(color) = profiles.active().source_static_color(dev.pid) else {
+        return Ok(None);
+    };
+    want.store_in_profile(profiles.active_mut())?;
+    secbird_core::profile_compat::clear_source_brightness_baseline(profiles.active_mut());
+    secbird_core::profile_compat::validate_store_budget(&candidate)?;
+    Ok(Some((candidate, name, color)))
+}
+
+pub(super) fn host_static_settings(
+    dev: &mut Device,
+    store: &mut Store,
+    candidate: Store,
+    want: &LightingSettings,
+    color: secbird_core::Rgb,
+    gate: Result<crate::host_static::Gate, Error>,
+    already_rendered: bool,
+) -> Result<Value, Error> {
+    // Candidate identity, settings and aggregate budget were checked before I/O.
+    let mut execution = match gate? {
+        crate::host_static::Gate::Ready => {
+            if already_rendered {
+                crate::host_static::preflight(dev)?;
+                json!({"execution":"host-static","deferred":false,"rendered":true,"frame_already_prepared":true})
+            } else {
+                crate::host_static::send_uniform(dev, color)?
+            }
+        }
+        crate::host_static::Gate::Deferred(reason) => {
+            crate::host_static::preflight(dev)?;
+            json!({"execution":"host-static","deferred":true,"rendered":false,"reason":reason})
+        }
+        crate::host_static::Gate::NeedsBaseline { .. } => {
+            return Err(Error::InvalidArg(
+                "Explicit brightness candidate still lacks a baseline".into(),
+            ))
+        }
+    };
+    let before = std::mem::replace(&mut store.devices, candidate.devices);
+    if let Err(error) = store.save() {
+        store.devices = before;
+        return Err(Error::InvalidArg(format!("Static brightness intent was not saved; a prepared frame may have changed; no retry: {error}")));
+    }
+    execution["saved"] = json!(true);
+    execution["configured_intent"] =
+        serde_json::to_value(want).map_err(|e| Error::InvalidArg(e.to_string()))?;
+    execution["saved_hardware_unchanged"] = json!(true);
+    execution["live_policy_reconcile_pending"] = json!(true);
+    Ok(execution)
+}
+
 pub(super) fn custom_colors(dev: &Device, store: &mut Store, body: &Body) -> Result<Value, Error> {
     let slots = body
         .custom_colors
@@ -114,8 +181,13 @@ pub(super) fn custom_colors(dev: &Device, store: &mut Store, body: &Body) -> Res
 
 mod effects;
 
-pub(super) fn effect(dev: &Device, store: &mut Store, body: &Body) -> Result<Value, Error> {
-    effects::apply(dev, store, body)
+pub(super) fn effect(
+    dev: &mut Device,
+    store: &mut Store,
+    body: &Body,
+    host_gate: Result<crate::host_static::Gate, Error>,
+) -> Result<Value, Error> {
+    effects::apply(dev, store, body, host_gate)
 }
 
 fn source_percent(raw: u8) -> u8 {
@@ -162,9 +234,13 @@ pub(super) fn snapshot(dev: &Device, profile: Option<&Profile>) -> (Value, Value
     if settings.switch_off.is_none() {
         settings.switch_off = Some(SwitchOffLighting::default());
     }
+    let baseline = profile.and_then(secbird_core::profile_compat::source_brightness_baseline);
+    if baseline.is_some() {
+        origin = "hardware-register-baseline";
+    }
     (
         serde_json::to_value(&settings).unwrap_or(Value::Null),
         readback,
-        json!({"source":origin,"retained_value_known":profile.is_some_and(|p|p.lighting_settings.is_some()),"synapse_profile_state_read":false}),
+        json!({"source":origin,"retained_value_known":baseline.is_none() && profile.is_some_and(|p|p.lighting_settings.as_ref().is_some_and(|settings|settings.brightness.is_some())),"brightness_baseline":baseline,"synapse_profile_state_read":false}),
     )
 }

@@ -136,14 +136,53 @@ fn duration(setting: &Value) -> Result<u8, Error> {
         .ok_or_else(|| Error::InvalidArg("Source duration must be integer1..3".into()))
 }
 
-pub(super) fn apply(dev: &Device, store: &mut Store, body: &Body) -> Result<Value, Error> {
-    apply_with_owner(dev, store, body, process_owner_gate)
-}
-fn apply_with_owner(
+fn initialize_brightness_baseline(
     dev: &Device,
     store: &mut Store,
     body: &Body,
+) -> Result<(), Error> {
+    let saved = dev.ornata_brightness_readback(1, 0)?;
+    let live = dev.ornata_brightness_readback(0, 0)?;
+    if !saved.selectors_match() || !live.selectors_match() {
+        return Err(Error::InvalidArg(
+            "Brightness baseline selectors differ".into(),
+        ));
+    }
+    let profile = owner(dev, store, body)?.active_mut();
+    let mut settings = LightingSettings::from_profile(profile)?.unwrap_or_default();
+    let raw = if saved.raw_brightness() != 0 {
+        saved.raw_brightness()
+    } else {
+        live.raw_brightness()
+    };
+    settings.brightness = Some(Brightness {
+        enabled: live.raw_brightness() != 0,
+        value: source_percent(raw),
+        ..Default::default()
+    });
+    settings.store_in_profile(profile)?;
+    secbird_core::profile_compat::record_ornata_brightness_baseline(
+        profile,
+        saved.raw_brightness(),
+        live.raw_brightness(),
+    )?;
+    secbird_core::profile_compat::validate_store_budget(store)
+}
+
+pub(super) fn apply(
+    dev: &mut Device,
+    store: &mut Store,
+    body: &Body,
+    host_gate: Result<crate::host_static::Gate, Error>,
+) -> Result<Value, Error> {
+    apply_with_gates(dev, store, body, process_owner_gate, host_gate)
+}
+fn apply_with_gates(
+    dev: &mut Device,
+    store: &mut Store,
+    body: &Body,
     gate: impl FnOnce() -> Result<(), Error>,
+    host_gate: Result<crate::host_static::Gate, Error>,
 ) -> Result<Value, Error> {
     let id = body
         .source_effect_id
@@ -155,6 +194,7 @@ fn apply_with_owner(
     let plan = Plan::parse(id, setting)?;
     let before = store.devices.clone();
     let mut attempted = false;
+    let mut initialized_baseline = false;
     let result = (|| {
         let profiles = owner(dev, store, body)?;
         let name = profiles.active.clone();
@@ -165,15 +205,35 @@ fn apply_with_owner(
         gate()?;
         // Mode GET is read-only; failures before it must never mutate resolution keys.
         let mode = dev.ornata_mode_readback()?;
-        if mode.mode() != 0 {
-            return Err(Error::Unsupported(format!("Firmware effects require existing Normal_Mode0; current mode is {}. Mode acquisition is not implemented", mode.mode())));
-        }
-        attempted = true;
-        plan.write_verified(dev)?;
+        let execution=match mode.mode() {
+            0=>{attempted=true;plan.write_verified(dev)?;json!({"execution":"firmware","verified":true,"host_animation_parity":false})},
+            3 if id==1=>{
+                let gate=host_gate?;
+                let gate=if matches!(&gate,crate::host_static::Gate::NeedsBaseline{..}) {
+                    initialize_brightness_baseline(dev,store,body)?;initialized_baseline=true;
+                    let profiles=owner(dev,store,body)?;
+                    gate.with_brightness(&profiles.active,profiles.active())?
+                } else {gate};
+                match gate {
+                    crate::host_static::Gate::Ready=>{attempted=true;crate::host_static::send_uniform(dev,plan.color.expect("Static plan has color"))?},
+                    crate::host_static::Gate::Deferred(reason)=>{crate::host_static::preflight(dev)?;json!({"execution":"host-static","deferred":true,"rendered":false,"reason":reason,"accepted_packets":0,"attempted_packets":0,"optically_verified":false})},
+                    crate::host_static::Gate::NeedsBaseline{..}=>return Err(Error::InvalidArg("Brightness baseline was not initialized".into())),
+                }
+            },
+            value=>return Err(Error::Unsupported(format!("Source effect {id} has no implemented host path in mode{value}; no effect was applied"))),
+        };
         store.save()?;
-        Ok(
-            json!({"saved":true,"source_effect_id":id,"execution":"firmware","verified":true,"host_animation_parity":false}),
-        )
+        let mut response = execution;
+        response["saved"] = json!(true);
+        response["source_effect_id"] = json!(id);
+        if initialized_baseline {
+            response["brightness_baseline_initialized"] = json!(true);
+            response["retained_brightness_intent_known"] = json!(false);
+            response["saved_hardware_unchanged"] = json!(true);
+            response["live_hardware_unchanged"] = json!(true);
+            response["live_policy_reconcile_pending"] = json!(false);
+        }
+        Ok(response)
     })();
     if let Err(error) = result {
         store.devices = before;
@@ -379,7 +439,13 @@ mod tests {
         }
     }
     fn apply_fixture(f: &mut Fixture, b: &Body) -> Result<Value, Error> {
-        apply_with_owner(&f.dev, &mut f.store, b, || Ok(()))
+        apply_with_gates(
+            &mut f.dev,
+            &mut f.store,
+            b,
+            || Ok(()),
+            Ok(crate::host_static::Gate::Ready),
+        )
     }
     #[test]
     fn source_packets_keep_exact_flags_duration_and_color_order() {
@@ -485,13 +551,19 @@ mod tests {
                 b.expected_profile = Some("old".into());
             }
             let before = serde_json::to_value(&f.store).unwrap();
-            let result = apply_with_owner(&f.dev, &mut f.store, &b, || {
-                if reason == "process" {
-                    Err(Error::Unsupported("competing owner".into()))
-                } else {
-                    Ok(())
-                }
-            });
+            let result = apply_with_gates(
+                &mut f.dev,
+                &mut f.store,
+                &b,
+                || {
+                    if reason == "process" {
+                        Err(Error::Unsupported("competing owner".into()))
+                    } else {
+                        Ok(())
+                    }
+                },
+                Ok(crate::host_static::Gate::Ready),
+            );
             assert!(result.is_err(), "{reason}");
             assert!(f.sim.state().log.is_empty());
             assert_eq!(serde_json::to_value(&f.store).unwrap(), before, "{reason}");
@@ -544,7 +616,7 @@ mod tests {
         assert!(apply_fixture(&mut f, &b)
             .unwrap_err()
             .to_string()
-            .contains("Normal_Mode0"));
+            .contains("no implemented host path"));
         assert!(f.sim.state().log.is_empty());
         *f.mode.lock().unwrap() = 0;
         *f.wrong.lock().unwrap() = true;
@@ -624,6 +696,352 @@ mod preservation_tests {
             for id in [5, 7] {
                 assert_eq!(Plan::parse(id, &setting).unwrap().args[4], duration);
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod host_dispatch_tests {
+    use super::*;
+    use crate::host_static::{test_support, Gate};
+    use secbird_core::lighting::{Brightness, LightingSettings};
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    static SEQ: AtomicUsize = AtomicUsize::new(0);
+    struct Fixture {
+        dev: Device,
+        spy: test_support::Spy,
+        store: Store,
+        folder: std::path::PathBuf,
+    }
+    impl Fixture {
+        fn new() -> Self {
+            let (dev, spy) = test_support::fixture();
+            let folder = std::env::temp_dir().join(format!(
+                "static-dispatch-{}-{}",
+                std::process::id(),
+                SEQ.fetch_add(1, Ordering::Relaxed)
+            ));
+            let mut store = Store::load(&folder.join("profiles.json")).unwrap();
+            store.for_device(&dev).profiles.insert(
+                "Default".into(),
+                secbird_core::profile_compat::new_native_profile(605, "Default").unwrap(),
+            );
+            Self {
+                dev,
+                spy,
+                store,
+                folder,
+            }
+        }
+        fn body(&self) -> Body {
+            serde_json::from_value(json!({"id":self.dev.key(),"expected_device":self.dev.key(),"expected_profile":"Default","source_effect_id":1,"source_effect_setting":{"color1":"#123456"}})).unwrap()
+        }
+    }
+    impl Drop for Fixture {
+        fn drop(&mut self) {
+            if self.folder.exists() {
+                std::fs::remove_dir_all(&self.folder).unwrap();
+            }
+        }
+    }
+    #[test]
+    fn driver_static_endpoint_renders_and_saves_only_after_verified_out() {
+        let mut f = Fixture::new();
+        let b = f.body();
+        let response =
+            apply_with_gates(&mut f.dev, &mut f.store, &b, || Ok(()), Ok(Gate::Ready)).unwrap();
+        assert_eq!(response["saved"], true);
+        assert_eq!(response["execution"], "host-static");
+        assert_eq!(response["accepted_packets"], 7);
+        assert_eq!(
+            f.store.for_device(&f.dev).active().source_static_color(605),
+            Some(Rgb(18, 52, 86))
+        );
+        assert!(!f.spy.sim.state().effects.contains_key(&5));
+        assert_eq!(f.spy.state.lock().unwrap().attempts, 7);
+        let mut f = Fixture::new();
+        f.spy.state.lock().unwrap().fail_at = Some(2);
+        let b = f.body();
+        let before = serde_json::to_value(&f.store).unwrap();
+        assert!(
+            apply_with_gates(&mut f.dev, &mut f.store, &b, || Ok(()), Ok(Gate::Ready))
+                .unwrap_err()
+                .to_string()
+                .contains("accepted2 attempted3")
+        );
+        assert_eq!(serde_json::to_value(&f.store).unwrap(), before);
+        assert!(!f.folder.exists());
+        assert_eq!(f.spy.state.lock().unwrap().attempts, 3);
+    }
+    #[test]
+    fn suppressed_selection_and_brightness_intent_remain_lossless_without_saved_hardware_write() {
+        let mut f = Fixture::new();
+        let disabled = LightingSettings {
+            brightness: Some(Brightness {
+                enabled: false,
+                value: 73,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        disabled
+            .store_in_profile(f.store.for_device(&f.dev).active_mut())
+            .unwrap();
+        let b = f.body();
+        let response = apply_with_gates(
+            &mut f.dev,
+            &mut f.store,
+            &b,
+            || Ok(()),
+            Ok(Gate::Deferred("display-off".into())),
+        )
+        .unwrap();
+        assert_eq!(response["deferred"], true);
+        assert_eq!(response["rendered"], false);
+        assert_eq!(f.spy.state.lock().unwrap().attempts, 0);
+        let source = secbird_core::profile_compat::export_synapse4(&f.store, &f.dev.key()).unwrap();
+        let imported = secbird_core::profile_compat::import_document(&source.bytes).unwrap();
+        let p = imported.store.devices.values().next().unwrap().active();
+        assert_eq!(
+            p.lighting_settings
+                .as_ref()
+                .unwrap()
+                .brightness
+                .as_ref()
+                .unwrap()
+                .value,
+            73
+        );
+        assert!(
+            !p.lighting_settings
+                .as_ref()
+                .unwrap()
+                .brightness
+                .as_ref()
+                .unwrap()
+                .enabled
+        );
+        assert_eq!(p.lighting["backlight"].brightness, Some(0));
+        assert_eq!(p.source_static_color(605), Some(Rgb(18, 52, 86)));
+        let native = serde_json::to_vec(&f.store).unwrap();
+        let imported = secbird_core::profile_compat::import_document(&native).unwrap();
+        assert_eq!(
+            serde_json::to_value(&imported.store).unwrap(),
+            serde_json::to_value(&f.store).unwrap()
+        );
+        // Driver3 brightness changes persist configured intent, not the saved
+        // register; the Engine owns the later LIVE policy update.
+        f.spy.sim.state().brightness.insert(5, 255);
+        f.spy.sim.state().live_brightness.insert(5, 0);
+        let mut edited = disabled.clone();
+        edited.brightness.as_mut().unwrap().value = 49;
+        let b:Body=serde_json::from_value(json!({"id":f.dev.key(),"expected_device":f.dev.key(),"expected_profile":"Default","lighting_settings":edited})).unwrap();
+        let (candidate, _, color) = super::super::static_settings_candidate(&f.dev, &f.store, &b)
+            .unwrap()
+            .unwrap();
+        let response = super::super::host_static_settings(
+            &mut f.dev,
+            &mut f.store,
+            candidate,
+            b.lighting_settings.as_ref().unwrap(),
+            color,
+            Ok(Gate::Deferred("brightness-off".into())),
+            false,
+        )
+        .unwrap();
+        assert_eq!(response["saved_hardware_unchanged"], true);
+        assert_eq!(response["configured_intent"]["brightness"]["value"], 49);
+        let exported =
+            secbird_core::profile_compat::export_synapse4(&f.store, &f.dev.key()).unwrap();
+        let imported = secbird_core::profile_compat::import_document(&exported.bytes).unwrap();
+        assert_eq!(
+            imported
+                .store
+                .devices
+                .values()
+                .next()
+                .unwrap()
+                .active()
+                .lighting_settings
+                .as_ref()
+                .unwrap()
+                .brightness
+                .as_ref()
+                .unwrap()
+                .value,
+            49
+        );
+        assert_eq!(f.spy.sim.state().brightness[&5], 255);
+        assert_eq!(f.spy.sim.state().live_brightness[&5], 0);
+        assert_eq!(f.spy.state.lock().unwrap().attempts, 0);
+    }
+    fn baseline_gate() -> Gate {
+        Gate::NeedsBaseline {
+            environment: crate::lighting_runtime::Environment {
+                now_ms: 1000,
+                idle_ms: Ok(0),
+                display_off: Some(false),
+                owner: crate::lighting_runtime::Owner::Clear,
+            },
+            away_percent: None,
+        }
+    }
+    #[test]
+    fn fresh_native_default_static_bootstraps_observed_saved_and_live_without_brightness_set() {
+        for (saved, live, enabled, value, attempts) in [
+            (255, 255, true, 100, 7),
+            (186, 0, false, 73, 0),
+            (0, 186, true, 73, 7),
+        ] {
+            let mut f = Fixture::new();
+            f.store.devices.clear();
+            f.spy.sim.state().brightness.insert(5, saved);
+            f.spy.sim.state().live_brightness.insert(5, live);
+            let b = f.body();
+            let response =
+                apply_with_gates(&mut f.dev, &mut f.store, &b, || Ok(()), Ok(baseline_gate()))
+                    .unwrap();
+            assert_eq!(response["brightness_baseline_initialized"], true);
+            assert_eq!(response["retained_brightness_intent_known"], false);
+            assert_eq!(response["live_policy_reconcile_pending"], false);
+            let profile = f.store.for_device(&f.dev).active();
+            let brightness = profile
+                .lighting_settings
+                .as_ref()
+                .unwrap()
+                .brightness
+                .as_ref()
+                .unwrap();
+            assert_eq!((brightness.enabled, brightness.value), (enabled, value));
+            let typed_settings = profile.lighting_settings.clone().unwrap();
+            let origin = secbird_core::profile_compat::source_brightness_baseline(profile)
+                .unwrap()
+                .clone();
+            assert_eq!(origin["saved_raw"], saved);
+            assert_eq!(origin["live_raw"], live);
+            let (_, _, snapshot_origin) = super::super::snapshot(&f.dev, Some(profile));
+            assert_eq!(snapshot_origin["source"], "hardware-register-baseline");
+            assert_eq!(snapshot_origin["retained_value_known"], false);
+            assert_eq!(f.spy.sim.state().brightness[&5], saved);
+            assert_eq!(f.spy.sim.state().live_brightness[&5], live);
+            assert_eq!(f.spy.state.lock().unwrap().attempts, attempts);
+            assert!(!f
+                .spy
+                .state
+                .lock()
+                .unwrap()
+                .commands
+                .contains(&secbird_core::commands::MATRIX_BRIGHTNESS));
+            let encoded = serde_json::to_vec(&f.store).unwrap();
+            let imported = secbird_core::profile_compat::import_document(&encoded).unwrap();
+            assert_eq!(
+                secbird_core::profile_compat::source_brightness_baseline(
+                    imported.store.devices.values().next().unwrap().active()
+                ),
+                Some(&origin)
+            );
+            let foreign =
+                secbird_core::profile_compat::export_synapse4(&f.store, &f.dev.key()).unwrap();
+            let imported = secbird_core::profile_compat::import_document(&foreign.bytes).unwrap();
+            assert!(
+                secbird_core::profile_compat::source_brightness_baseline(
+                    imported.store.devices.values().next().unwrap().active()
+                )
+                .is_none(),
+                "a foreign document supplies its own explicit brightness configuration"
+            );
+            let mut explicit = typed_settings;
+            explicit.brightness.as_mut().unwrap().value = 49;
+            let request:Body=serde_json::from_value(json!({"id":f.dev.key(),"expected_device":f.dev.key(),"expected_profile":"Default","lighting_settings":explicit})).unwrap();
+            let (candidate, _, _) =
+                super::super::static_settings_candidate(&f.dev, &f.store, &request)
+                    .unwrap()
+                    .unwrap();
+            let current = candidate.devices.values().next().unwrap().active();
+            assert!(secbird_core::profile_compat::source_brightness_baseline(current).is_none());
+            let (_, _, source) = super::super::snapshot(&f.dev, Some(current));
+            assert_eq!(source["retained_value_known"], true);
+        }
+    }
+    #[test]
+    fn baseline_read_failure_or_post_bootstrap_budget_refuses_frame_and_rolls_back_default_creation(
+    ) {
+        let mut f = Fixture::new();
+        f.store.devices.clear();
+        f.spy.state.lock().unwrap().fail_brightness = true;
+        let b = f.body();
+        let before = serde_json::to_value(&f.store).unwrap();
+        assert!(
+            apply_with_gates(&mut f.dev, &mut f.store, &b, || Ok(()), Ok(baseline_gate())).is_err()
+        );
+        assert_eq!(serde_json::to_value(&f.store).unwrap(), before);
+        assert_eq!(f.spy.state.lock().unwrap().attempts, 0);
+        assert!(!f.folder.exists());
+        let mut f = Fixture::new();
+        f.store.devices.clear();
+        f.store.extra.insert("padding".into(), json!(""));
+        let mut projected = Store::default();
+        projected.extra = f.store.extra.clone();
+        let p = projected.for_device(&f.dev).active_mut();
+        secbird_core::profile_compat::set_source_quick_effect(
+            p,
+            605,
+            "Default",
+            1,
+            &json!({"color1":"#123456"}),
+        )
+        .unwrap();
+        Plan::parse(1, &json!({"color1":"#123456"}))
+            .unwrap()
+            .project(p);
+        let length = serde_json::to_vec_pretty(&projected).unwrap().len();
+        f.store.extra.insert(
+            "padding".into(),
+            json!("x".repeat(2 * 1024 * 1024 - length - 16)),
+        );
+        let before = serde_json::to_value(&f.store).unwrap();
+        let b = f.body();
+        let error = apply_with_gates(&mut f.dev, &mut f.store, &b, || Ok(()), Ok(baseline_gate()))
+            .unwrap_err();
+        assert!(error.to_string().contains("2 MiB"));
+        assert_eq!(serde_json::to_value(&f.store).unwrap(), before);
+        assert_eq!(f.spy.state.lock().unwrap().attempts, 0);
+        assert!(!f.folder.exists());
+    }
+    #[test]
+    fn owner_profile_budget_and_host_gate_fail_before_frame_or_persistence() {
+        for reason in ["identity", "profile", "budget", "owner"] {
+            let mut f = Fixture::new();
+            let mut b = f.body();
+            if reason == "identity" {
+                b.expected_device = Some("other".into());
+            }
+            if reason == "profile" {
+                b.expected_profile = Some("other".into());
+            }
+            if reason == "budget" {
+                f.store
+                    .extra
+                    .insert("large".into(), json!("x".repeat(2 * 1024 * 1024)));
+            }
+            let before = serde_json::to_value(&f.store).unwrap();
+            let result = apply_with_gates(
+                &mut f.dev,
+                &mut f.store,
+                &b,
+                || {
+                    if reason == "owner" {
+                        Err(Error::Unsupported("competing owner".into()))
+                    } else {
+                        Ok(())
+                    }
+                },
+                Ok(Gate::Ready),
+            );
+            assert!(result.is_err());
+            assert_eq!(serde_json::to_value(&f.store).unwrap(), before);
+            assert!(f.spy.state.lock().unwrap().commands.is_empty());
+            assert!(!f.folder.exists());
         }
     }
 }

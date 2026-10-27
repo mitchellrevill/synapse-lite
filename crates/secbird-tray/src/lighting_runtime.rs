@@ -228,6 +228,7 @@ impl BrightnessIo for DeviceIo<'_> {
 struct Session {
     config: Option<Config>,
     applied: Option<u8>,
+    apply_configured: bool,
     modified: bool,
     read_ready: bool,
     saved_baseline: Option<u8>,
@@ -252,6 +253,12 @@ impl Session {
         stopping: bool,
         io: &mut impl BrightnessIo,
     ) {
+        // A pending configured write never carries an old profile's value into
+        // a profile with no known source brightness. A real suppression lease
+        // still follows the existing saved-baseline release path.
+        if !config.source_known {
+            self.apply_configured = false;
+        }
         let desired = plan(config, env, running, stopping);
         if self.config.as_ref() != Some(config) {
             self.dirty = true;
@@ -262,7 +269,10 @@ impl Session {
         if desired.blocked.is_some() {
             self.dirty = true;
             self.read_ready = false;
-        } else if (!config.source_known || !desired.suppressed) && !self.modified {
+        } else if (!config.source_known || !desired.suppressed)
+            && !self.modified
+            && !self.apply_configured
+        {
             // Merely observing a normal profile never imposes a live value.
             self.error = None;
             self.failures = 0;
@@ -299,6 +309,7 @@ impl Session {
                     match io.write_live(target) {
                         Ok(()) => {
                             self.applied = Some(target);
+                            self.apply_configured = false;
                             self.modified = desired.suppressed;
                             self.dirty = false;
                             self.error = None;
@@ -370,6 +381,22 @@ impl Runtime {
             }
         }
     }
+    /// Explicit action guards can inspect known process owners even when the
+    /// continuous policy runtime is not running (Normal_Mode0 remains usable).
+    pub(crate) fn sample_owner(&mut self) {
+        #[cfg(test)]
+        if let Some(environment) = &self.test_environment {
+            self.environment.owner = environment.owner.clone();
+            return;
+        }
+        self.environment.owner = native_owners().map_or_else(Owner::Unknown, |names| {
+            if names.is_empty() {
+                Owner::Clear
+            } else {
+                Owner::Competing(names)
+            }
+        });
+    }
     pub fn sample_host(&mut self) {
         #[cfg(test)]
         if let Some(environment) = &self.test_environment {
@@ -403,6 +430,15 @@ impl Runtime {
             session.dirty = true;
             session.read_ready = false;
         }
+    }
+    /// A source Static frame/settings action explicitly owns its configured LIVE
+    /// brightness update. Do not mark a restoration lease before a successful OUT.
+    pub(crate) fn request_configured_live(&mut self, key: &str) {
+        let session = self.sessions.entry(key.into()).or_default();
+        session.apply_configured = true;
+        session.dirty = true;
+        session.read_ready = false;
+        session.retry_at = 0;
     }
     pub fn reconcile(&mut self, key: &str, config: &Config, io: &mut impl BrightnessIo) {
         self.sessions.entry(key.into()).or_default().reconcile(
@@ -850,6 +886,88 @@ mod tests {
         assert_eq!(clock.sample(now + 180_000, future).unwrap(), 0);
         assert_eq!(clock.sample(now + 183_000, future).unwrap(), 3000);
         assert!(clock.sample(now, future).is_err());
+    }
+    #[test]
+    fn configured_live_request_is_one_shot_and_uses_latest_intent_after_failure_and_ownership_block(
+    ) {
+        let mut r = runtime();
+        let mut cfg = config();
+        let mut io = FakeIo {
+            saved: 100,
+            ..Default::default()
+        };
+        r.reconcile("device", &cfg, &mut io);
+        assert!(
+            io.writes.is_empty(),
+            "ordinary observation remains read/write free"
+        );
+        r.request_configured_live("device");
+        r.environment.owner = Owner::Competing(vec!["RazerAppEngine.exe".into()]);
+        r.reconcile("device", &cfg, &mut io);
+        assert_eq!(io.reads, 0);
+        assert!(io.writes.is_empty());
+        r.environment.owner = Owner::Clear;
+        io.fail_write = 1;
+        r.reconcile("device", &cfg, &mut io);
+        assert!(io.writes.is_empty());
+        assert!(
+            !r.sessions["device"].modified,
+            "a failed write is not fabricated as a successful restoration lease"
+        );
+        cfg.profile = "Latest".into();
+        cfg.value = Some(41);
+        r.reconcile("device", &cfg, &mut io);
+        assert_eq!(io.writes, [41]);
+        assert!(!r.sessions["device"].apply_configured);
+        r.invalidate_all();
+        r.reconcile("device", &cfg, &mut io);
+        assert_eq!(
+            io.writes,
+            [41],
+            "successful normal configured write is not repeated by observation"
+        );
+        r.request_configured_live("device");
+        cfg.enabled = false;
+        r.reconcile("device", &cfg, &mut io);
+        assert_eq!(io.writes, [41, 0]);
+        r.stopping = true;
+        r.reconcile("device", &cfg, &mut io);
+        r.finish_stop();
+        assert_eq!(io.writes,[41,0],"shutdown does not invent an unrelated brightness restore for a normal configured write");
+    }
+    #[test]
+    fn pending_configured_value_is_not_cached_across_unknown_profile_or_disconnect() {
+        let mut r = runtime();
+        let mut cfg = config();
+        let mut io = FakeIo {
+            saved: 100,
+            ..Default::default()
+        };
+        r.request_configured_live("device");
+        r.environment.owner = Owner::Unknown("not sampled".into());
+        r.reconcile("device", &cfg, &mut io);
+        cfg.profile = "Legacy".into();
+        cfg.source_known = false;
+        cfg.value = None;
+        r.environment.owner = Owner::Clear;
+        r.reconcile("device", &cfg, &mut io);
+        assert!(io.writes.is_empty());
+        assert_eq!(io.reads, 0);
+        r.request_configured_live("device");
+        r.retain(&HashSet::new());
+        assert!(
+            !r.sessions.contains_key("device"),
+            "an unsent request is not a physical restoration lease"
+        );
+        cfg.source_known = true;
+        cfg.value = Some(29);
+        r.request_configured_live("device");
+        r.reconcile("device", &cfg, &mut io);
+        assert_eq!(
+            io.writes,
+            [29],
+            "reconnect caller requests only latest stored intent"
+        );
     }
     #[test]
     fn process_owner_gate_matches_known_synapse_names_without_blocking_unrelated_helpers() {

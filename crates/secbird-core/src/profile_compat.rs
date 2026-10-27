@@ -30,6 +30,30 @@ pub fn source_quick_effects(profile: &Profile) -> Option<&Value> {
         .filter(|value| value.is_object())
 }
 
+/// Native provenance for a first editor baseline; this is outside the foreign
+/// decoded payload and must never claim the stock profile's retained intent.
+pub fn source_brightness_baseline(profile: &Profile) -> Option<&Value> {
+    profile.extra.get(SOURCE)?.get("brightnessBaseline")
+}
+pub fn record_ornata_brightness_baseline(
+    profile: &mut Profile,
+    saved_raw: u8,
+    live_raw: u8,
+) -> Result<()> {
+    let metadata = profile
+        .extra
+        .get_mut(SOURCE)
+        .and_then(Value::as_object_mut)
+        .ok_or_else(|| invalid("source lighting metadata is missing"))?;
+    metadata.insert("brightnessBaseline".into(),json!({"origin":"hardware-register-baseline","saved_raw":saved_raw,"live_raw":live_raw,"retained_intent_known":false}));
+    Ok(())
+}
+pub fn clear_source_brightness_baseline(profile: &mut Profile) {
+    if let Some(metadata) = profile.extra.get_mut(SOURCE).and_then(Value::as_object_mut) {
+        metadata.remove("brightnessBaseline");
+    }
+}
+
 fn source_quick_effects_mut<'a>(
     profile: &'a mut Profile,
     pid: u16,

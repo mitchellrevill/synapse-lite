@@ -9,6 +9,7 @@ mod apps;
 mod engine;
 #[cfg(windows)]
 mod lighting_runtime;
+mod host_static;
 #[cfg(windows)]
 mod osd;
 #[cfg(windows)]

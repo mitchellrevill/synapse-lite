@@ -408,8 +408,65 @@ fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
     }
     let target = if b.id.is_empty() { b.pid.to_ascii_uppercase() } else { b.id.clone() };
 
+    if path == "/api/lighting-settings" {
+        let mut store = Store::load(&config_dir().join("profiles.json"))?;
+        let dev = engine
+            .devices()
+            .iter()
+            .find(|d| d.key() == target)
+            .ok_or_else(|| Error::NotFound(format!("device {target}")))?;
+        // Only source Static uses deferred LIVE-only brightness. Other effects
+        // and Normal_Mode0 preserve the established brightness action path.
+        if dev.pid == 605 {
+            if let Some((candidate, name, color)) =
+                lighting::static_settings_candidate(dev, &store, &b)?
+            {
+                engine.validate_static_context(&target, &candidate, &name)?;
+                let gate = engine.host_static_gate(&target, &candidate, &name);
+                let already_rendered = engine.static_is_prepared(&target, &name, color);
+                let dev = engine.device_mut(&target).unwrap();
+                let mode = dev.ornata_mode_readback()?;
+                if mode.mode() == 3 {
+                    let result = lighting::host_static_settings(
+                        dev,
+                        &mut store,
+                        candidate,
+                        b.lighting_settings.as_ref().unwrap(),
+                        color,
+                        gate,
+                        already_rendered,
+                    );
+                    engine.record_host_static(&target, &name, color, &result);
+                    return result;
+                } else if mode.mode() != 0 {
+                    return Err(Error::Unsupported(format!(
+                        "Static brightness mode{} is unsupported; intent was not saved",
+                        mode.mode()
+                    )));
+                }
+            }
+        }
+    }
+    // Frame OUT errors are never passed through the generic rescan/retry route.
+    if path == "/api/source-effect" {
+        let mut store = Store::load(&config_dir().join("profiles.json"))?;
+        let gate =
+            engine.host_static_gate(&target, &store, b.expected_profile.as_deref().unwrap_or(""));
+        let dev = engine
+            .device_mut(&target)
+            .ok_or_else(|| Error::NotFound(format!("device {target}")))?;
+        let response = lighting::effect(dev, &mut store, &b, gate);
+        if b.source_effect_id == Some(1) {
+            if let Some(profiles) = store.devices.get(&target) {
+                if let Some(color) = profiles.active().source_static_color(605) {
+                    engine.record_host_static(&target, &profiles.active, color, &response);
+                }
+            }
+        }
+        return response;
+    }
     // A device can disappear between requests; rescan once and retry before giving up.
-    let attempt = |engine: &Engine| -> Result<Value, Error> {
+    let attempt = |engine: &mut Engine| -> Result<Value, Error> {
         let dev = engine
             .devices()
             .iter()
@@ -466,7 +523,6 @@ fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
             "/api/brightness" => actions::set_brightness(dev, &mut store, &b.zone, b.value).map(|_| json!({})),
             "/api/lighting-settings" => lighting::intent(dev,&mut store,&b,false),
             "/api/lighting-policy" => lighting::intent(dev,&mut store,&b,true),
-            "/api/source-effect" => lighting::effect(dev,&mut store,&b),
             "/api/source-custom-colors" => lighting::custom_colors(dev,&mut store,&b),
             "/api/off" => actions::lights_off(dev, &mut store, &b.zone).map(|_| json!({})),
             "/api/effect" => actions::set_effect(dev, &mut store, &b.zone, b.effect.parse()?).map(|_| json!({})),
@@ -477,8 +533,9 @@ fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
             "/api/find-light" => match b.light {
                 Some((row, col)) => actions::show_light(dev, &mut store, row, col).map(|_| json!({})),
                 None => {
+                    let key=dev.key();
                     let failures: Vec<String> =
-                        engine.apply(&[dev.key()]).into_iter().flat_map(|r| r.failures).collect();
+                        engine.apply(&[key]).into_iter().flat_map(|r| r.failures).collect();
                     match failures.is_empty() {
                         true => Ok(json!({})),
                         false => Err(Error::InvalidArg(failures.join("; "))),
@@ -574,19 +631,12 @@ fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
                     other => return Err(Error::InvalidArg(format!("unknown action '{other}'"))),
                 }
                 let switched = matches!(b.action.as_str(), "use" | "add" | "duplicate");
-                let profiles = profiles.clone();
                 secbird_core::profile_compat::validate_store_budget(&store)?;
                 store.save()?;
-                let failures: Vec<String> = if switched {
-                    profiles
-                        .apply(&profiles.active, dev)
-                        .into_iter()
-                        .filter_map(|a| a.result.err().map(|e| format!("{}: {e}", a.setting)))
-                        .collect()
-                } else {
-                    Vec::new()
-                };
-                Ok(json!({ "device": device_json(dev), "failures": failures }))
+                let key=dev.key();
+                let device=device_json(dev);
+                let failures:Vec<String>=if switched {engine.apply(&[key]).into_iter().flat_map(|r|r.failures).collect()} else {Vec::new()};
+                Ok(json!({ "device": device, "failures": failures }))
             }
             _ => Err(Error::NotFound(path.to_string())),
         }

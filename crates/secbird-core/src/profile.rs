@@ -494,6 +494,26 @@ pub struct Applied {
 }
 
 impl Profile {
+    /// Source Static semantics use the current native color projection. Native
+    /// per-key/off/effect overrides remain authoritative and are not re-enabled.
+    pub fn source_static_color(&self, pid: u16) -> Option<Rgb> {
+        if pid != 605
+            || !self.keys.is_empty()
+            || crate::profile_compat::source_quick_effects(self)?
+                .get("selectedEffectId")?
+                .as_u64()?
+                != 1
+        {
+            return None;
+        }
+        let zone = self.lighting.get("backlight")?;
+        if zone.off || zone.effect.is_some() {
+            None
+        } else {
+            zone.color
+        }
+    }
+
     /// Send every recorded setting to the device. Keeps going past individual failures.
     /// For stored profiles, use [`DeviceProfiles::apply`] to respect lighting ownership.
     pub fn apply(&self, dev: &Device) -> Vec<Applied> {
@@ -530,6 +550,23 @@ impl Profile {
         if let Some(g) = &self.game_mode {
             push(format!("gaming mode: {g}"), g.parse().and_then(|g| dev.set_game_mode(g)));
         }
+        // Driver-mode Static must not brighten the previous frame before a
+        // standalone caller learns that it needs the tray host runtime.
+        let lighting = if lighting && self.source_static_color(dev.pid).is_some() {
+            match dev.ornata_mode_readback() {
+                Ok(mode) if mode.mode() == 0 => true,
+                Ok(mode) => {
+                    push("source Static lighting".into(),Err(Error::Unsupported(format!("source Static in mode{} requires the running tray host-frame runtime; lighting projection was not applied",mode.mode()))));
+                    false
+                }
+                Err(error) => {
+                    push("source Static mode preflight".into(), Err(error));
+                    false
+                }
+            }
+        } else {
+            lighting
+        };
         if lighting {
             if let Some(settings) = &self.lighting_settings {
                 push("source brightness".into(), settings.apply_brightness(dev).map(|_| ()));

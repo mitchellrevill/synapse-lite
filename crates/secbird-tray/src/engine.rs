@@ -5,6 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::cell::RefCell;
 use crate::lighting_runtime::{Config as LightingConfig, DeviceIo, Runtime as LightingRuntime};
 use std::time::{Duration, Instant, SystemTime};
+mod source_static;
 
 pub struct Engine {
     #[cfg(test)]
@@ -29,6 +30,7 @@ pub struct Engine {
     /// Devices that didn't answer [`Engine::lights_back`], and until when to keep trying.
     relight: HashMap<String, Instant>,
     lighting_runtime: RefCell<LightingRuntime>,
+    host_static_results: RefCell<HashMap<String, (String, secbird_core::Rgb, serde_json::Value)>>,
     #[cfg(test)]
     runtime_store_path: Option<std::path::PathBuf>,
 }
@@ -94,6 +96,7 @@ impl Engine {
             away: None,
             relight: HashMap::new(),
             lighting_runtime: RefCell::new(LightingRuntime::default()),
+            host_static_results: RefCell::new(HashMap::new()),
             #[cfg(test)]
             runtime_store_path: None,
         }
@@ -264,22 +267,63 @@ impl Engine {
     /// frames all the time, so this does the same at a slow pace. Wireless boards are left
     /// alone: the traffic would keep them awake. Failures are left out, as for batteries.
     /// Not while away: the lights are down then anyway.
-    pub fn refresh_frames(&self) {
+    pub fn refresh_frames(&mut self) {
         if self.away.is_some() || self.frames_paused_until.is_some_and(|t| Instant::now() < t) {
             return;
         }
-        let Ok(mut store) = self.load_store() else { return };
-        let wired_boards = self.devices.iter().filter(|d| {
-            d.matrix().is_some()
-                && d.spec.as_ref().is_some_and(|s| {
-                    !s.wireless && matches!(s.kind, secbird_core::Kind::Keyboard | secbird_core::Kind::Keypad)
+        let Ok(mut store) = self.load_store() else {
+            return;
+        };
+        self.lighting_runtime.borrow_mut().sample_host();
+        let foreground = self.foreground.clone();
+        for index in 0..self.devices.len() {
+            let dev = &self.devices[index];
+            if !dev.matrix().is_some()
+                || !dev.spec.as_ref().is_some_and(|s| {
+                    !s.wireless
+                        && matches!(
+                            s.kind,
+                            secbird_core::Kind::Keyboard | secbird_core::Kind::Keypad
+                        )
                 })
-        });
-        for dev in wired_boards {
-            if dev.pid==605 && (!self.lighting_runtime.borrow().owner_clear() || self.lighting_runtime.borrow().blocks_frames(&dev.key())) {continue;}
-            let p = store.for_device(dev);
-            let name = p.effective(self.foreground()).to_string();
-            p.refresh_frame(&name, dev);
+            {
+                continue;
+            }
+            let key = dev.key();
+            let profiles = store.for_device(dev);
+            let name = profiles.effective(foreground.as_deref()).to_string();
+            let color = profiles.profiles[&name].source_static_color(dev.pid);
+            if let Some(color) = color {
+                if self
+                    .host_static_results
+                    .borrow()
+                    .get(&key)
+                    .is_some_and(|(p, c, value)| {
+                        p == &name && *c == color && value["deferred"] != true
+                    })
+                {
+                    continue;
+                }
+                if !matches!(
+                    self.host_static_gate(&key, &store, &name),
+                    Ok(crate::host_static::Gate::Ready)
+                ) {
+                    continue;
+                }
+                if secbird_core::profile_compat::validate_store_budget(&store).is_err() {
+                    continue;
+                }
+                let result = Self::apply_source_static(&mut self.devices[index], color);
+                self.record_host_static(&key, &name, color, &result);
+                continue;
+            }
+            if dev.pid == 605
+                && (!self.lighting_runtime.borrow().owner_clear()
+                    || self.lighting_runtime.borrow().blocks_frames(&key))
+            {
+                continue;
+            }
+            profiles.refresh_frame(&name, dev);
         }
     }
 
@@ -393,6 +437,7 @@ impl Engine {
         #[cfg(test)]
         if self.simulated_only { return Vec::new(); }
         let before: HashSet<String> = self.devices.iter().map(|d| d.key()).collect();
+        self.host_static_results.borrow_mut().clear();
         self.devices.clear(); // close stale handles before reopening
         let _ = self.api.refresh_devices();
         let db = Db::load(Some(&config_dir().join("devices.json")))
@@ -451,15 +496,15 @@ impl Engine {
         config
     }
     /// Standalone editors do not claim a continuously running host policy service.
-    pub fn start_lighting_runtime(&self) {
+    pub fn start_lighting_runtime(&mut self) {
         self.lighting_runtime.borrow_mut().start();
         self.refresh_lighting_runtime();
     }
-    pub fn set_lighting_display_off(&self, off: bool) {
+    pub fn set_lighting_display_off(&mut self, off: bool) {
         self.lighting_runtime.borrow_mut().environment.display_off = Some(off);
         self.refresh_lighting_runtime();
     }
-    pub fn refresh_lighting_runtime(&self) {
+    pub fn refresh_lighting_runtime(&mut self) {
         self.lighting_runtime.borrow_mut().sample_host();
         let mut store = match self.load_store() {
             Ok(store) => store,
@@ -477,16 +522,74 @@ impl Engine {
             .map(Device::key)
             .collect();
         self.lighting_runtime.borrow_mut().retain(&keys);
-        for dev in self.devices.iter().filter(|d| d.pid == 605) {
-            let config = self.lighting_config(dev, &mut store);
-            self.lighting_runtime
-                .borrow_mut()
-                .reconcile(&dev.key(), &config, &mut DeviceIo(dev));
+        for index in 0..self.devices.len() {
+            if self.devices[index].pid != 605 {
+                continue;
+            }
+            let dev = &self.devices[index];
+            let key = dev.key();
+            let mut config = self.lighting_config(dev, &mut store);
+            let name = config.profile.clone();
+            let color = store.for_device(dev).profiles[&name].source_static_color(dev.pid);
+            if let Some(color) = color {
+                let previous = self.host_static_results.borrow().get(&key).cloned();
+                let pending = !previous.as_ref().is_some_and(|(p, c, value)| {
+                    p == &name && *c == color && value["deferred"] != true
+                });
+                if pending {
+                    match self.host_static_gate(&key, &store, &name) {
+                        Ok(crate::host_static::Gate::Ready) => {
+                            let result =
+                                secbird_core::profile_compat::validate_store_budget(&store)
+                                    .and_then(|_| {
+                                        Self::apply_source_static(&mut self.devices[index], color)
+                                    });
+                            self.record_host_static(&key, &name, color, &result);
+                        }
+                        Ok(crate::host_static::Gate::Deferred(reason)) => {
+                            if !previous.as_ref().is_some_and(|(p, c, v)| {
+                                p == &name && *c == color && v["deferred"] == true
+                            }) {
+                                // The independent brightness policy can darken a
+                                // deferred frame without claiming it was rendered.
+                                let result = Ok(
+                                    serde_json::json!({"execution":"host-static","deferred":true,"rendered":false,"control_state_verified":false,"reason":reason}),
+                                );
+                                self.record_host_static(&key, &name, color, &result);
+                            }
+                        }
+                        Ok(crate::host_static::Gate::NeedsBaseline{..}) | Err(_) => {}
+                    }
+                }
+                if let Some((p, c, value)) = self.host_static_results.borrow().get(&key) {
+                    if p == &name && *c == color && value["error"].is_string() {
+                        // Never raise brightness onto a failed/partial pending frame.
+                        config.error=Some("Host Static failed; explicit reapply/reconnect is required before brightness resume".into());
+                    }
+                }
+            }
+            if let Some((p, c, value)) = self.host_static_results.borrow_mut().get_mut(&key) {
+                if p == &name
+                    && color == Some(*c)
+                    && value["live_policy_reconcile_pending"] == true
+                    && config.error.is_none()
+                {
+                    self.lighting_runtime
+                        .borrow_mut()
+                        .request_configured_live(&key);
+                    value["live_policy_reconcile_pending"] = serde_json::json!(false);
+                }
+            }
+            self.lighting_runtime.borrow_mut().reconcile(
+                &key,
+                &config,
+                &mut DeviceIo(&self.devices[index]),
+            );
         }
     }
     /// Re-sample input immediately after an action; do not leave a new saved value
     /// visible until the next timer when display/idle suppression is still active.
-    pub fn request_lighting_refresh(&self) {
+    pub fn request_lighting_refresh(&mut self) {
         self.lighting_runtime.borrow_mut().invalidate_all();
         self.refresh_lighting_runtime();
     }
@@ -498,10 +601,15 @@ impl Engine {
                 status[&key] = serde_json::json!({"available":false,"can_execute_policies":false,"suppressed":false,"blocked_reason":"host-runtime-not-yet-sampled","error":null});
             }
         }
+        for (key, (_, _, value)) in self.host_static_results.borrow().iter() {
+            if let Some(state) = status.get_mut(key) {
+                state["host_static"] = value.clone();
+            }
+        }
         status
     }
     /// Release only our live overrides, with bounded attempts and ownership gates.
-    pub fn shutdown_lighting_runtime(&self) -> Vec<String> {
+    pub fn shutdown_lighting_runtime(&mut self) -> Vec<String> {
         if !self.lighting_runtime.borrow().running {
             return Vec::new();
         }
@@ -550,14 +658,21 @@ impl Engine {
 
     /// Apply the current profile of each listed device (by [`Device::key`]): the one tied
     /// to the program in front, else the active one.
-    pub fn apply(&self, keys: &[String]) -> Vec<ApplyReport> {
+    pub fn apply(&mut self, keys: &[String]) -> Vec<ApplyReport> {
         self.lighting_runtime.borrow_mut().sample_host();
+        for key in keys {
+            self.host_static_results.borrow_mut().remove(key);
+        }
         let mut store = self.load_store();
-        let mut reports: Vec<ApplyReport> = self
-            .devices
-            .iter()
-            .filter(|dev| keys.contains(&dev.key()))
-            .map(|dev| match &mut store {
+        let foreground = self.foreground.clone();
+        let mut reports = Vec::new();
+        for index in 0..self.devices.len() {
+            if !keys.contains(&self.devices[index].key()) {
+                continue;
+            }
+            let dev = &self.devices[index];
+            let key = dev.key();
+            let report = match &mut store {
                 Ok(store) => {
                     let config = self.lighting_config(dev, store);
                     let runtime = self.lighting_runtime.borrow();
@@ -566,24 +681,88 @@ impl Engine {
                         && (runtime.stopping
                             || (runtime.running && runtime.should_suppress(&config)));
                     drop(runtime);
-                    let profiles = store.for_device(dev);
+                    let mut profiles = store.for_device(dev).clone();
+                    let name = profiles.effective(foreground.as_deref()).to_string();
+                    let color = profiles.profiles[&name].source_static_color(dev.pid);
+                    let host_gate = self.host_static_gate(&key, store, &name);
                     profiles.lighting_off |= self.away.is_some() || blocked;
-                    let name = profiles.effective(self.foreground()).to_string();
-                    let failures = profiles
+                    if color.is_some() {
+                        if let Err(error) =
+                            secbird_core::profile_compat::validate_store_budget(store)
+                        {
+                            let result = Err(error);
+                            self.record_host_static(&key, &name, color.unwrap(), &result);
+                            reports.push(ApplyReport {
+                                device: dev.name(),
+                                profile: name,
+                                failures: vec![result.unwrap_err().to_string()],
+                            });
+                            continue;
+                        }
+                    }
+                    let static_mode = if color.is_some() && !profiles.lighting_off {
+                        Some(dev.ornata_mode_readback())
+                    } else {
+                        None
+                    };
+                    // Normal0 retains its existing saved-brightness path. Driver3
+                    // keeps brightness in the host policy bridge, after its frame.
+                    if color.is_some() {
+                        let p = profiles.profiles.get_mut(&name).unwrap();
+                        let zone = p.lighting.get_mut("backlight").unwrap();
+                        zone.color = None;
+                        if !static_mode
+                            .as_ref()
+                            .is_some_and(|m| m.as_ref().is_ok_and(|m| m.mode() == 0))
+                        {
+                            zone.brightness = None;
+                            if let Some(settings) = p.lighting_settings.as_mut() {
+                                settings.brightness = None;
+                            }
+                        }
+                    }
+                    let dev = &mut self.devices[index];
+                    let mut failures: Vec<String> = profiles
                         .apply(&name, dev)
                         .into_iter()
                         .filter_map(|outcome| {
                             if handled && outcome.setting == "source idle/display lighting policy" {
-                                return None;
+                                None
+                            } else {
+                                outcome
+                                    .result
+                                    .err()
+                                    .map(|e| format!("{}: {e}", outcome.setting))
                             }
-                            outcome
-                                .result
-                                .err()
-                                .map(|error| format!("{}: {error}", outcome.setting))
                         })
                         .collect();
+                    if let Some(color) = color {
+                        if !profiles.lighting_off {
+                            let result=match static_mode.expect("unblocked source Static was queried") {
+                                Ok(mode) if mode.mode()==0 => dev.set_static_color(5,color).map(|_|serde_json::json!({"execution":"firmware"})),
+                                Ok(mode) if mode.mode()==3 => host_gate.and_then(|gate| match gate {
+                                    crate::host_static::Gate::Ready=>crate::host_static::send_uniform(dev,color),
+                                    crate::host_static::Gate::Deferred(reason)=>{crate::host_static::preflight(dev)?;Ok(serde_json::json!({"execution":"host-static","deferred":true,"rendered":false,"reason":reason}))},
+                                    crate::host_static::Gate::NeedsBaseline{..}=>Err(secbird_core::Error::Unsupported("Static activation needs an initialized brightness baseline; open Lighting".into())),
+                                }),
+                                Ok(mode)=>Err(secbird_core::Error::Unsupported(format!("Source Static mode{} is unsupported",mode.mode()))),
+                                Err(error)=>Err(error),
+                            };
+                            if let Err(error) = &result {
+                                failures.push(format!("source Static: {error}"));
+                            }
+                            self.record_host_static(&key, &name, color, &result);
+                        } else if let Ok(crate::host_static::Gate::Deferred(reason)) = host_gate {
+                            // Profile activation has retained intent but does not
+                            // paint over display/idle/global-away suppression.
+                            let result = Ok(
+                                serde_json::json!({"execution":"host-static","deferred":true,"rendered":false,"reason":reason,"control_state_verified":false}),
+                            );
+                            self.record_host_static(&key, &name, color, &result);
+                        }
+                    }
                     ApplyReport {
-                        device: dev.name(),
+                        device: self.devices[index].name(),
                         profile: name,
                         failures,
                     }
@@ -593,8 +772,9 @@ impl Engine {
                     profile: String::new(),
                     failures: vec![format!("profiles.json: {error}")],
                 },
-            })
-            .collect();
+            };
+            reports.push(report);
+        }
         self.lighting_runtime.borrow_mut().invalidate(keys);
         self.refresh_lighting_runtime();
         let status = self.lighting_runtime.borrow().status();
@@ -668,7 +848,7 @@ impl Engine {
             .collect()
     }
 
-    pub fn switch_profile(&self, key: &str, name: &str) -> Result<Vec<ApplyReport>> {
+    pub fn switch_profile(&mut self, key: &str, name: &str) -> Result<Vec<ApplyReport>> {
         let dev = self
             .devices
             .iter()
@@ -821,7 +1001,7 @@ mod lighting_runtime_tests {
     }
     #[test]
     fn engine_uses_latest_profile_value_and_respects_owner_revocation_and_competing_processes() {
-        let f = Fixture::new();
+        let mut f = Fixture::new();
         f.engine.start_lighting_runtime();
         f.edit(|store, dev| {
             let profiles = store.for_device(dev);
@@ -865,7 +1045,7 @@ mod lighting_runtime_tests {
     }
     #[test]
     fn shutdown_reports_unrestored_lease_without_fighting_a_competing_owner() {
-        let f = Fixture::new();
+        let mut f = Fixture::new();
         f.engine.start_lighting_runtime();
         f.environment(
             0,
@@ -885,7 +1065,7 @@ mod lighting_runtime_tests {
 
     #[test]
     fn engine_handles_core_policy_outcome_only_when_its_actual_gate_is_ready() {
-        let f = Fixture::new();
+        let mut f = Fixture::new();
         f.environment(0, false, Owner::Clear);
         f.edit(|store, dev| store.for_device(dev).active_mut().keys.clear());
         let mut store = f.engine.load_store().unwrap();
