@@ -445,6 +445,12 @@ struct RawLayout {
 struct RawKey {
     #[serde(rename = "buttonKey")]
     button_key: String,
+    #[serde(default, rename = "inputType")]
+    input_type: String,
+    #[serde(default, rename = "isSidePanelList")]
+    side_panel: Option<bool>,
+    #[serde(default, rename = "isKeyToggle")]
+    key_toggle: Option<bool>,
     #[serde(rename = "inputID")]
     input_id: String,
     #[serde(default)]
@@ -462,6 +468,9 @@ struct RawKey {
 #[derive(Debug)]
 pub struct KeyRegion {
     pub button_key: String,
+    pub input_type: String,
+    pub side_panel: Option<bool>,
+    pub key_toggle: Option<bool>,
     pub input_id: String,
     pub label: String,
     pub firmware_id: Option<u16>,
@@ -511,6 +520,9 @@ impl SourceLayout {
                 let geometry = key.d.as_deref().map(Geometry::parse).transpose()?;
                 Ok(KeyRegion {
                     button_key: key.button_key,
+                    input_type: key.input_type,
+                    side_panel: key.side_panel,
+                    key_toggle: key.key_toggle,
                     input_id: key.input_id,
                     label: key.counter,
                     firmware_id: key.firmware_id,

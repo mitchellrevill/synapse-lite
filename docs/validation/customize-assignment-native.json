@@ -1,0 +1,119 @@
+{
+  "schema": "synapse-lite-customize-assignment-validation-v1",
+  "scope": "simulated native window interaction and local source reconstruction; no physical device access",
+  "regular_tray_tests": {
+    "passed": 168,
+    "failed": 0,
+    "ignored": 8
+  },
+  "native_hwnd_regressions": {
+    "passed": 6,
+    "failed": 0,
+    "seconds": 5.46,
+    "transports": "simulated only"
+  },
+  "assignment_model_layout_tests": {
+    "passed": 15,
+    "failed": 0
+  },
+  "keyboard_assignment": {
+    "dirty_close_prompt": true,
+    "discard_and_cancel_no_writes": true,
+    "dismiss_keeps_draft": true,
+    "mouse_category_and_dropdown": true,
+    "opaque_mapping_preserved": true,
+    "physical_discovery_disabled": true,
+    "profile_bytes_unchanged": true,
+    "sim_commands_added": 0,
+    "source_drawer_wheel_and_thumb_drag": true,
+    "source_icons_loaded": 58,
+    "source_key_path_hit": true,
+    "turbo_controlled_numeric_repeat_and_drag": true,
+    "unsupported_save_disabled": true
+  },
+  "mouse_assignment": {
+    "drawer_filter_choices": true,
+    "escape_cancels": true,
+    "physical_discovery_disabled": true,
+    "primary_left_disabled": true,
+    "profile_bytes_unchanged": true,
+    "sim_commands_added": 0,
+    "source_drawer_anchor_230": true,
+    "source_mouse_label_click": true
+  },
+  "assets": {
+    "count": 58,
+    "scale": 1.25,
+    "browser_version": "156.0.4314.42",
+    "engine": "Chromium SVG Image decode and Canvas2D sRGB",
+    "all_bmp_rgb_matches_browser_canvas": true,
+    "maximum_straight_alpha_flatten_error": 1,
+    "vendor_javascript_executed": false,
+    "network": false,
+    "screenshots": false
+  },
+  "source_artifacts": [
+    {
+      "product_id": 605,
+      "url": "https://apps.razer.com/synapse/products/605/ui/static/js/main.fcf07de2.js",
+      "sha256": "307e2b199037ed53a8fde90d76fc67a9a3766a9361fb152e7820d8bf05f19c65"
+    },
+    {
+      "product_id": 605,
+      "url": "https://apps.razer.com/synapse/products/605/ui/static/js/1270.c45bee4e.chunk.js",
+      "sha256": "6f8b8a226e448c395ee029241ea53de1517b0ba78491c639719bfd210533ecb4"
+    },
+    {
+      "product_id": 605,
+      "url": "https://apps.razer.com/synapse/products/605/ui/static/css/main.f65da71b.css",
+      "sha256": "d8038bcd55d84e4f57b6c09057fe78e5c4a2495def92e0e259b2b72f861746e4"
+    },
+    {
+      "product_id": 605,
+      "url": "https://apps.razer.com/synapse/products/605/ui/static/css/KeyMappingComponent.b396b242.chunk.css",
+      "sha256": "f6db9de82eaea431bcb564ee3149c0c104308a52194d6adbcf0509712bd08161"
+    },
+    {
+      "product_id": 196,
+      "url": "https://apps.razer.com/synapse/products/196/ui/static/js/main.bbc961f9.js",
+      "sha256": "f99b1f88ca9496a77cab258d05814a312b876873cb5c586841c28a732db78c42"
+    },
+    {
+      "product_id": 196,
+      "url": "https://apps.razer.com/synapse/products/196/ui/static/js/257.8f5c638b.chunk.js",
+      "sha256": "85dd5d60dc9a7b14b588d7a161f17515ec6052bef612aec389452321179ac553"
+    },
+    {
+      "product_id": 196,
+      "url": "https://apps.razer.com/synapse/products/196/ui/static/css/main.116d273e.css",
+      "sha256": "cb6c673798b7e9bc844829d41cea64b5a0ab2d389f8863604df3bdcccc68138c"
+    }
+  ],
+  "rea_evidence": {
+    "assignment_parent": "ev_df300d5c0bdd26501a642441e78f64cf4ce1a16adaabb2da1855be302dc22acf",
+    "assignment_summary": "ev_37cca753633b7f0d8a50089d497e9ff17bad7a0620fbd1204acc26df9e03a683",
+    "mouse_parent": "ev_eb17834e0c798b6c9775fd274e33f4e3ae370acd91a89c2ab51c190f3eb4e29e",
+    "mouse_summary": "ev_5fca6efda0cee3dbaa9ec90d0e575369a34f6e330ecff1b07d47d7ee394bf5e6",
+    "semantic_coverage": "partial; retained source offsets and inert CSS/font replay supplement summary graphs"
+  },
+  "source_mouse_utf8_offsets": {
+    "canvas_metrics": 4717771,
+    "label_component_lT": 5297820,
+    "canvas_component_WO": 5349364
+  },
+  "assignment_save_enabled": false,
+  "mapping_readback_performed": false,
+  "full_pixel_parity_proven": false,
+  "new_ram_measurement": false,
+  "review_base_commit": "8465acb3f45305e162ba450a14abdef65ab16831",
+  "native_test_binary_sha256": "ccd02b694d8d954f862238c950ae6d1aa123f27b02d5746cd135884e7a4399a9",
+  "native_source_sha256": {
+    "crates/secbird-tray/src/native_editor.rs": "707fb31a4502fc95e9b3e8cb4b8c8e99ca7f3eb202eb5683f98a77a995645691",
+    "crates/secbird-tray/src/native_editor/assignment_geometry.rs": "bbb467edd2a03d96dae86125d905adfb1d40ad862fb75cda44c56e2889f12890",
+    "crates/secbird-tray/src/native_editor/assignment_layout.rs": "9b7554e50bfe9a255b9a2b22d61bd81c1c8e659c5fe38a038b1939075c624e3b",
+    "crates/secbird-tray/src/native_editor/assignment_model.rs": "afd300e5af46bc9a4526cc82df012fc06abacd476f223ea982e2635373035118",
+    "crates/secbird-tray/src/native_editor/assignment_view.rs": "2d8848b3ff8c13c10f2afee7d113a85292377bd188bad027cdfd259faec69198",
+    "crates/secbird-tray/src/native_editor/source_layout.rs": "e8cc59da1f99b311d2a59784a010946ce5c2d2fc075e9daa8836a3d1af7ad389",
+    "crates/secbird-tray/src/native_editor/interaction_tests.rs": "d0a95460b5e43459e0c5c211f5890fe1e949f646da98c038bf9b14428493d742"
+  }
+}

@@ -1367,3 +1367,442 @@ fn native_read_only_overlay_smokes_present_ready_without_saving_or_set_commands(
         eprintln!("Read-only overlay {scenario}: {}", directory.display());
     }
 }
+#[test]
+#[ignore = "opens a bounded native window with simulated transport only"]
+fn native_assignment_source_draft_has_no_device_or_store_writes() {
+    let directory = std::env::temp_dir().join(format!(
+        "synapse-native-assignment-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(&directory).unwrap();
+    let frame = directory.join("frame.json");
+    let _environment = Environment::set(&[
+        ("SYNAPSE_LITE_CONFIG_DIR", &directory),
+        ("SYNAPSE_LITE_SMOKE_REPORT", &frame),
+        ("SYNAPSE_LITE_SMOKE_VIEW", Path::new("keyboard-customize")),
+    ]);
+    let sim = Sim::keyboard();
+    let engine = Engine::with_simulated_keyboard(&sim, directory.join("profiles.json")).unwrap();
+    assert!(engine.event_paths().is_empty());
+    let device = &engine.devices()[0];
+    let mut profile = secbird_core::profile_compat::new_native_profile(605, "Fixture").unwrap();
+    let opaque = json!({"inputID":"KEY_A","inputType":"KeyInput","isHyperShift":false,"outputType":"futureGroup","futureGroup":{"opaque":[7,8],"unknownFlag":true}});
+    profile.extra.get_mut("_synapseLiteSynapse4").unwrap()["decoded"]["mappings"] = json!([opaque]);
+    let mut store = Store::load(&directory.join("profiles.json")).unwrap();
+    let profiles = store.for_device(device);
+    profiles.profiles.clear();
+    profiles.profiles.insert("Fixture".into(), profile);
+    profiles.active = "Fixture".into();
+    store.save().unwrap();
+    let engine = Arc::new(Mutex::new(engine));
+    let controller_sim = sim.clone();
+    let controller_directory = directory.clone();
+    let controller = std::thread::spawn(move || -> Result<Value, String> {
+        let result = (|| -> Result<Value, String> {
+            wait_for(
+                || {
+                    std::fs::read(&frame)
+                        .ok()
+                        .and_then(|b| serde_json::from_slice::<Value>(&b).ok())
+                        .is_some_and(|f| f["matched"] == true && f["presented"] == true)
+                },
+                "Customize native frame",
+            )?;
+            let hwnd = WINDOW.load(Ordering::Acquire) as HWND;
+            unsafe {
+                let mut client: RECT = std::mem::zeroed();
+                GetClientRect(hwnd, &mut client);
+                let scale = f64::from(GetDpiForWindow(hwnd).max(96)) / 96.0;
+                let width = client.right as f64 / scale;
+                let height = client.bottom as f64 / scale;
+                let layout =
+                    source_layout::SourceLayout::load(&assets_dir().join("keyboard-layout.json"))?;
+                let viewport = source_layout::Viewport {
+                    left: assignment_geometry::keyboard_center(width, false) - 365.0,
+                    top: 154.0,
+                    width: 730.0,
+                    height: 387.0,
+                };
+                let key = layout
+                    .bounds("KEY_A", viewport)
+                    .ok_or("Missing source KEY_A path")?;
+                let before = controller_sim.state().log.len();
+                let before_store =
+                    std::fs::read(controller_directory.join("profiles.json")).unwrap();
+                let query = || {
+                    let mut value = Value::Null;
+                    SendMessageW(
+                        hwnd,
+                        ASSIGNMENT_TEST_QUERY,
+                        0,
+                        &mut value as *mut Value as isize,
+                    );
+                    value
+                };
+                lighting_click(
+                    hwnd,
+                    (key.left + key.right) / 2.0,
+                    (key.top + key.bottom) / 2.0,
+                    scale,
+                );
+                let initial = query();
+                if initial["open"] != true
+                    || initial["input"] != "KEY_A"
+                    || !initial["category"].is_null()
+                {
+                    return Err(format!("Source key/opaque mapping open failed: {initial}"));
+                }
+                let x = initial["popup"]["x"].as_f64().unwrap();
+                let y = initial["popup"]["y"].as_f64().unwrap();
+                let original = initial["source_original"].clone();
+                // The fourth source category is Mouse Function. This is the real
+                // popup hitmap, not a test action injected into its model.
+                lighting_click(hwnd, x + 20.0, y + 3.0 * 40.0 + 20.0, scale);
+                if query()["category"] != "MOUSE_FUNCTION" {
+                    return Err(format!("Category hit failed: {}", query()));
+                }
+                lighting_click(hwnd, x + 65.0, y + 73.0, scale);
+                lighting_click(hwnd, x + 75.0, y + 28.0 + 73.0 + 3.0 * 25.0, scale);
+                if query()["dirty"] != true {
+                    return Err(format!("Mouse dropdown did not edit draft: {}", query()));
+                }
+                lighting_click(hwnd, x + 70.0, y + 107.0, scale);
+                if edit_text(hwnd, assignment_view::SPEED).as_deref() != Some("7") {
+                    return Err("Source Turbo did not create speed input7".into());
+                }
+                let edit = GetDlgItem(hwnd, i32::from(assignment_view::SPEED));
+                SetWindowTextW(edit, wide("1e").as_ptr());
+                if edit_text(hwnd, assignment_view::SPEED).as_deref() != Some("7") {
+                    return Err("Controlled speed input accepted invalid exponent text".into());
+                }
+                let up = position(x + 109.0, y + 154.0, scale);
+                SendMessageW(hwnd, WM_LBUTTONDOWN, 1, up);
+                SendMessageW(hwnd, WM_TIMER, ASSIGNMENT_REPEAT, 0);
+                SendMessageW(hwnd, WM_LBUTTONUP, 0, up);
+                redraw(hwnd);
+                if query()["speed"] != 9 {
+                    return Err(format!(
+                        "Source speed press/repeat/release failed: {}",
+                        query()
+                    ));
+                }
+                let start = position(x + 75.0, y + 191.0, scale);
+                let end = position(x + 265.0, y + 191.0, scale);
+                SendMessageW(hwnd, WM_LBUTTONDOWN, 1, start);
+                SendMessageW(hwnd, WM_MOUSEMOVE, 1, end);
+                SendMessageW(hwnd, WM_LBUTTONUP, 0, end);
+                redraw(hwnd);
+                if query()["speed"] != 20 {
+                    return Err(format!("Source speed drag did not reach20: {}", query()));
+                }
+                let source_shell =
+                    assignment_layout::shell(height - 42.0, 42.0, x, 36.0, false).unwrap();
+                let source_form = assignment_geometry::form(
+                    source_shell,
+                    605,
+                    Some(assignment_model::Category::Mouse),
+                    true,
+                    true,
+                    0.0,
+                );
+                lighting_click(
+                    hwnd,
+                    source_form.save.x + 50.0,
+                    source_form.save.y + 13.0,
+                    scale,
+                );
+                if query()["open"] != true || query()["pending"] != 0 {
+                    return Err("Disabled Save submitted or dismissed draft".into());
+                }
+
+                lighting_click(hwnd, x + 265.0, y - 16.0, scale);
+                if query()["prompt"] != true {
+                    return Err("Dirty close did not show recovered save alert".into());
+                }
+                let alert = assignment_geometry::alert(width, height);
+                lighting_click(hwnd, alert.close.x + 10.0, alert.close.y + 10.0, scale);
+                if query()["prompt"] == true || query()["dirty"] != true {
+                    return Err("Alert X discarded draft".into());
+                }
+                lighting_click(hwnd, x + 265.0, y - 16.0, scale);
+                lighting_click(hwnd, alert.discard.x + 50.0, alert.discard.y + 13.0, scale);
+                if query()["open"] == true {
+                    return Err("Don't Save did not close popup".into());
+                }
+                lighting_click(
+                    hwnd,
+                    (key.left + key.right) / 2.0,
+                    (key.top + key.bottom) / 2.0,
+                    scale,
+                );
+                if query()["source_original"] != original {
+                    return Err("Source opaque profile changed during discard".into());
+                }
+                // Cancel is source direct discard; it sends no API request.
+                lighting_click(hwnd, x + 20.0, y + 3.0 * 40.0 + 20.0, scale);
+                let shell = assignment_layout::shell(height - 42.0, 42.0, x, 36.0, false).unwrap();
+                let form = assignment_geometry::form(
+                    shell,
+                    605,
+                    Some(assignment_model::Category::Mouse),
+                    false,
+                    true,
+                    0.0,
+                );
+                lighting_click(hwnd, form.cancel.x + 50.0, form.cancel.y + 13.0, scale);
+                if query()["open"] == true {
+                    return Err("Cancel did not close popup".into());
+                }
+                let center = assignment_geometry::keyboard_center(width, false);
+                lighting_click(hwnd, center - 105.8125, 572.0, scale);
+                let drawer = query();
+                if drawer["view"]["drawer"] != true || drawer["view"]["source_icons"] != 58 {
+                    return Err(format!("Source drawer/assets incomplete: {drawer}"));
+                }
+                SendMessageW(hwnd, WM_MOUSEMOVE, 0, position(150.0, 260.0, scale));
+                SendMessageW(hwnd, WM_MOUSEWHEEL, (-120i16 as u16 as usize) << 16, 0);
+                redraw(hwnd);
+                let scrolled = query();
+                let offset = scrolled["view"]["drawer_scroll"].as_f64().unwrap();
+                if offset <= 0.0 {
+                    return Err("Drawer wheel did not scroll source rows".into());
+                }
+                let bar = assignment_geometry::scrollbar(
+                    assignment_layout::Rect {
+                        x: 0.0,
+                        y: 195.0,
+                        width: 230.0,
+                        height: height - 207.0,
+                    },
+                    scrolled["view"]["drawer_count"].as_u64().unwrap() as f64 * 50.0,
+                    offset,
+                    8.0,
+                )
+                .ok_or("No source drawer scrollbar")?;
+                let start = position(
+                    bar.thumb.x + 4.0,
+                    bar.thumb.y + bar.thumb.height / 2.0,
+                    scale,
+                );
+                SendMessageW(hwnd, WM_MOUSEMOVE, 0, start);
+                redraw(hwnd);
+                SendMessageW(hwnd, WM_LBUTTONDOWN, 1, start);
+                let end = position(bar.thumb.x + 4.0, height - 20.0, scale);
+                SendMessageW(hwnd, WM_MOUSEMOVE, 1, end);
+                SendMessageW(hwnd, WM_LBUTTONUP, 0, end);
+                redraw(hwnd);
+                if query()["view"]["drawer_scroll"].as_f64().unwrap() <= offset {
+                    return Err("Drawer thumb did not drag source rows".into());
+                }
+                if controller_sim.state().log.len() != before
+                    || std::fs::read(controller_directory.join("profiles.json")).unwrap()
+                        != before_store
+                {
+                    return Err("Assignment presentation changed device/store".into());
+                }
+                PostMessageW(hwnd, WM_CLOSE, 0, 0);
+                Ok(
+                    json!({"source_key_path_hit":true,"opaque_mapping_preserved":true,"mouse_category_and_dropdown":true,"turbo_controlled_numeric_repeat_and_drag":true,"unsupported_save_disabled":true,"source_drawer_wheel_and_thumb_drag":true,"source_icons_loaded":58,"dirty_close_prompt":true,"dismiss_keeps_draft":true,"discard_and_cancel_no_writes":true,"sim_commands_added":0,"profile_bytes_unchanged":true,"physical_discovery_disabled":true}),
+                )
+            }
+        })();
+        if result.is_err() {
+            unsafe {
+                let hwnd = WINDOW.load(Ordering::Acquire) as HWND;
+                let mut ignored = Value::Null;
+                SendMessageW(
+                    hwnd,
+                    ASSIGNMENT_TEST_QUERY,
+                    1,
+                    &mut ignored as *mut Value as isize,
+                );
+                PostMessageW(hwnd, WM_CLOSE, 0, 0);
+            }
+        }
+        result
+    });
+    let window = run_window(engine, Some(Duration::from_secs(12)), None);
+    let result = controller
+        .join()
+        .unwrap()
+        .expect("Assignment HWND interaction failed");
+    window.unwrap();
+    std::fs::write(
+        directory.join("interaction.json"),
+        serde_json::to_vec_pretty(&result).unwrap(),
+    )
+    .unwrap();
+    eprintln!("Native assignment evidence: {}", directory.display());
+}
+
+#[test]
+#[ignore = "opens a bounded native window with simulated mouse transport only"]
+fn native_assignment_mouse_labels_and_drawer_have_source_hit_targets() {
+    let directory = std::env::temp_dir().join(format!(
+        "synapse-native-mouse-assignment-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(&directory).unwrap();
+    let frame = directory.join("frame.json");
+    let _environment = Environment::set(&[
+        ("SYNAPSE_LITE_CONFIG_DIR", &directory),
+        ("SYNAPSE_LITE_SMOKE_REPORT", &frame),
+        ("SYNAPSE_LITE_SMOKE_VIEW", Path::new("mouse-performance")),
+    ]);
+    let sim = Sim::wireless_mouse();
+    let engine = Engine::with_simulated_mouse(&sim).unwrap();
+    let device = &engine.devices()[0];
+    assert!(matches!(device.pid, 196 | 197));
+    assert!(engine.event_paths().is_empty());
+    let mut store = Store::load(&directory.join("profiles.json")).unwrap();
+    let p = store.for_device(device);
+    p.profiles.clear();
+    p.profiles.insert(
+        "Fixture".into(),
+        secbird_core::profile_compat::new_native_profile(device.pid, "Fixture").unwrap(),
+    );
+    p.active = "Fixture".into();
+    store.save().unwrap();
+    let engine = Arc::new(Mutex::new(engine));
+    let controller_sim = sim.clone();
+    let controller_directory = directory.clone();
+    let controller = std::thread::spawn(move || -> Result<Value, String> {
+        let result = (|| -> Result<Value, String> {
+            wait_for(
+                || {
+                    std::fs::read(&frame)
+                        .ok()
+                        .and_then(|b| serde_json::from_slice::<Value>(&b).ok())
+                        .is_some_and(|f| f["matched"] == true && f["presented"] == true)
+                },
+                "Mouse native frame",
+            )?;
+            let hwnd = WINDOW.load(Ordering::Acquire) as HWND;
+            unsafe {
+                let scale = GetDpiForWindow(hwnd).max(96) as f64 / 96.0;
+                let mut client: RECT = std::mem::zeroed();
+                GetClientRect(hwnd, &mut client);
+                let width = client.right as f64 / scale;
+                // Click the actual source Customize tab in its native hitmap.
+                let total_width = Tab::Customize.width()
+                    + 20
+                    + Tab::Performance.width()
+                    + 20
+                    + Tab::Power.width()
+                    + 20
+                    + Tab::Calibration.width()
+                    + 20
+                    + Tab::Advanced.width()
+                    + 20;
+                let tabs_x = (width.round() as i32 / 2).max(420) - total_width / 2;
+                lighting_click(
+                    hwnd,
+                    (tabs_x + Tab::Customize.width() / 2) as f64,
+                    102.0,
+                    scale,
+                );
+                let before = controller_sim.state().log.len();
+                let before_store =
+                    std::fs::read(controller_directory.join("profiles.json")).unwrap();
+                let query = || {
+                    let mut v = Value::Null;
+                    SendMessageW(
+                        hwnd,
+                        ASSIGNMENT_TEST_QUERY,
+                        0,
+                        &mut v as *mut Value as isize,
+                    );
+                    v
+                };
+                let g = assignment_geometry::mouse(
+                    width,
+                    false,
+                    0.0,
+                    0.0,
+                    assignment_geometry::MOUSE_LABEL_WIDTHS,
+                );
+                let left = g.buttons[0];
+                lighting_click(hwnd, left.x + left.width / 2.0, left.y + 15.0, scale);
+                if query()["open"] == true {
+                    return Err(
+                        "Primary left button source-disabled target became actionable".into(),
+                    );
+                }
+                let right = g.buttons[1];
+                lighting_click(hwnd, right.x + right.width / 2.0, right.y + 15.0, scale);
+                let opened = query();
+                if opened["input"] != "RightClick" || opened["category"] != "DEFAULT" {
+                    return Err(format!(
+                        "Source right label did not open correct input: {opened}"
+                    ));
+                }
+                let x = opened["popup"]["x"].as_f64().unwrap();
+                let y = opened["popup"]["y"].as_f64().unwrap();
+                lighting_click(hwnd, x + 265.0, y - 16.0, scale);
+                // Drawer opens from the shipped38x27 control and uses two explicit
+                // filter options, rather than cycling state on a dropdown click.
+                lighting_click(hwnd, g.drawer.x + 19.0, g.drawer.y + 13.0, scale);
+                lighting_click(hwnd, 40.0, 160.0, scale);
+                lighting_click(hwnd, 40.0, 214.0, scale);
+                lighting_click(hwnd, 40.0, 160.0, scale);
+                lighting_click(hwnd, 40.0, 189.0, scale);
+                // Numeric source ordering makes RightClick row2; click only the
+                // source drawer key binding region, not guessed mouse-image boxes.
+                lighting_click(hwnd, 100.0, 195.0 + 50.0 + 25.0, scale);
+                let drawer = query();
+                if drawer["input"] != "RightClick" || drawer["popup"]["x"] != 230.0 {
+                    return Err(format!("Drawer source anchor failed: {drawer}"));
+                }
+                SendMessageW(hwnd, WM_KEYDOWN, 27, 0);
+                redraw(hwnd);
+                if query()["open"] == true {
+                    return Err("Escape did not cancel drawer popup".into());
+                }
+                if controller_sim.state().log.len() != before
+                    || std::fs::read(controller_directory.join("profiles.json")).unwrap()
+                        != before_store
+                {
+                    return Err("Mouse presentation dispatched a command or saved a profile".into());
+                }
+                PostMessageW(hwnd, WM_CLOSE, 0, 0);
+                Ok(
+                    json!({"primary_left_disabled":true,"source_mouse_label_click":true,"drawer_filter_choices":true,"source_drawer_anchor_230":true,"escape_cancels":true,"sim_commands_added":0,"profile_bytes_unchanged":true,"physical_discovery_disabled":true}),
+                )
+            }
+        })();
+        if result.is_err() {
+            unsafe {
+                let hwnd = WINDOW.load(Ordering::Acquire) as HWND;
+                let mut v = Value::Null;
+                SendMessageW(
+                    hwnd,
+                    ASSIGNMENT_TEST_QUERY,
+                    1,
+                    &mut v as *mut Value as isize,
+                );
+                PostMessageW(hwnd, WM_CLOSE, 0, 0);
+            }
+        }
+        result
+    });
+    let window = run_window(engine, Some(Duration::from_secs(12)), None);
+    let result = controller
+        .join()
+        .unwrap()
+        .expect("Mouse assignment HWND interaction failed");
+    window.unwrap();
+    std::fs::write(
+        directory.join("interaction.json"),
+        serde_json::to_vec_pretty(&result).unwrap(),
+    )
+    .unwrap();
+    eprintln!("Native mouse assignment evidence: {}", directory.display());
+}

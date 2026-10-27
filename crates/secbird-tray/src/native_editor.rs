@@ -27,8 +27,10 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
-#[cfg(test)]
+mod assignment_geometry;
 mod assignment_layout;
+mod assignment_model;
+mod assignment_view;
 mod color_editor_layout;
 mod color_editor_view;
 mod feedback;
@@ -52,6 +54,7 @@ mod viewport;
 
 const CLASS: &str = "SynapseLiteNativeEditor";
 const RESPONSE_TIMER: usize = 71;
+const ASSIGNMENT_REPEAT: usize = 78;
 const SMOKE_TIMER: usize = 72;
 const PROFILE_DIALOG: u32 = WM_APP + 91;
 const PROFILE_RENAME: u32 = WM_APP + 92;
@@ -71,6 +74,8 @@ const RUNTIME_TEST_INJECT: u32 = WM_APP + 104;
 const RUNTIME_TEST_QUERY: u32 = WM_APP + 105;
 #[cfg(test)]
 const READ_ONLY_TEST_SET: u32 = WM_APP + 106;
+#[cfg(test)]
+const ASSIGNMENT_TEST_QUERY: u32 = WM_APP + 107;
 const FAILURE_DIALOG: u32 = WM_APP + 93;
 const FAILURE_TITLE: &str = "Synapse Lite - Action failed";
 const PERFORMANCE_REPEAT: usize = 73;
@@ -372,6 +377,7 @@ enum Action {
     Sleep,
     PowerSlider(power_view::Kind, power_layout::Rect),
     Lighting(lighting_view::Control),
+    Assignment(assignment_view::Control),
     ReadButtons,
     SelectButton(String),
     Assign,
@@ -642,6 +648,7 @@ fn worker(
 }
 
 struct Fonts {
+    tiny: HFONT,
     small: HFONT,
     normal: HFONT,
     heading: HFONT,
@@ -683,6 +690,7 @@ impl Fonts {
             )
         };
         Self {
+            tiny: make("Roboto", 10, 400),
             small: make("Roboto", 12, 400),
             normal: make("Roboto", 14, 400),
             heading: make("RazerF5", 20, 400),
@@ -698,6 +706,7 @@ impl Drop for Fonts {
     fn drop(&mut self) {
         unsafe {
             for font in [
+                self.tiny,
                 self.small,
                 self.normal,
                 self.heading,
@@ -777,6 +786,8 @@ struct State {
     renaming: Option<String>,
     notices: Vec<String>,
     selected_button: String,
+    assignment: assignment_model::View,
+    assignment_next: Option<Box<Action>>,
     buttons: Vec<Value>,
     hits: Vec<Hit>,
     focus: usize,
@@ -1692,6 +1703,7 @@ impl State {
                 ReleaseCapture();
                 self.error("The selected device/profile changed; reopen the profile dialog");
             }
+            assignment_view::sync(self);
             self.sync_performance(false);
             if let Some(device) = self.device().cloned() {
                 let preserve=self.pending_jobs.iter().any(|job|matches!(job,Job::Action(path,_) if path.starts_with("/api/lighting-")||path.starts_with("/api/source-")));
@@ -1896,6 +1908,7 @@ impl State {
                     110,
                 );
             }
+            Tab::Customize if assignment_view::rebuild_fields(self) => {}
             Tab::Customize => {
                 if !self.buttons.is_empty() {
                     let current = self
@@ -1957,7 +1970,33 @@ impl State {
         {
             return;
         }
+        if !matches!(
+            &action,
+            Action::Assignment(_) | Action::Minimize | Action::Maximize
+        ) && self.assignment.draft.is_some()
+        {
+            if self
+                .assignment
+                .request(assignment_model::Transition::External)
+                .is_none()
+            {
+                self.assignment_next = Some(Box::new(action));
+                self.rebuild_fields();
+                InvalidateRect(self.hwnd, null(), 0);
+                return;
+            }
+            self.assignment.cancel();
+        }
+        if assignment_view::covered(self)
+            && matches!(
+                &action,
+                Action::ReadButtons | Action::Assign | Action::RestoreButtons
+            )
+        {
+            return;
+        }
         match action {
+            Action::Assignment(control) => assignment_view::action(self, control),
             Action::Close => {
                 PostMessageW(self.hwnd, WM_CLOSE, 0, 0);
             }
@@ -2693,6 +2732,7 @@ unsafe fn paint(state: &mut State, dc: HDC) {
             );
         }
         match state.tab {
+            Tab::Customize if assignment_view::paint_customize(state, &mut p) => {}
             Tab::Customize => {
                 let keyboard = device["kind"].as_str() == Some("keyboard");
                 let exact_keyboard = keyboard
@@ -3221,6 +3261,7 @@ unsafe fn paint(state: &mut State, dc: HDC) {
             DT_LEFT,
         );
     }
+    assignment_view::paint_popup(state, &mut p);
     profile_modal_view::paint(state, &mut p);
     if state.focus > 0 {
         if let Some(hit) = p.hits.get(state.focus - 1) {
@@ -3255,6 +3296,13 @@ unsafe extern "system" fn window_proc(
             let pointer = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut RefCell<State>;
             if !pointer.is_null() {
                 if let Ok(mut state) = (*pointer).try_borrow_mut() {
+                    if state.assignment.draft.as_ref().is_some_and(|d| d.dirty) {
+                        state.assignment.pending = Some(assignment_model::Transition::External);
+                        state.assignment_next = Some(Box::new(Action::Close));
+                        state.rebuild_fields();
+                        InvalidateRect(hwnd, null(), 0);
+                        return 0;
+                    }
                     let focused = GetFocus();
                     let input = state
                         .fields
@@ -3445,6 +3493,20 @@ unsafe extern "system" fn window_proc(
         return 0;
     }
     #[cfg(test)]
+    if message == ASSIGNMENT_TEST_QUERY {
+        if let Ok(mut state) = (*pointer).try_borrow_mut() {
+            if wparam == 1 {
+                state.assignment.cancel();
+                state.assignment_next = None;
+                state.rebuild_fields();
+            }
+            let draft = state.assignment.draft.as_ref();
+            let g = assignment_view::shell(&state);
+            *(lparam as *mut Value) = json!({"view":assignment_view::diagnostics(&state),"open":draft.is_some(),"input":draft.map(|d|&d.input.input_id),"category":draft.and_then(|d|d.category).map(|c|c.key()),"dirty":draft.is_some_and(|d|d.dirty),"prompt":state.assignment.pending.is_some(),"speed":draft.map(|d|d.speed),"source_original":draft.map(|d|&d.context.original_profile),"popup":g.map(|g|json!({"x":g.popup.x,"y":g.popup.y,"height":g.popup.height})),"pending":state.pending});
+        }
+        return 0;
+    }
+    #[cfg(test)]
     if message == READ_ONLY_TEST_SET {
         if let Ok(mut state) = (*pointer).try_borrow_mut() {
             state.read_only_smoke = wparam != 0;
@@ -3629,6 +3691,13 @@ unsafe extern "system" fn window_proc(
         }
     }
     match message {
+        WM_COMMAND if (wparam & 0xffff) as u16 == assignment_view::SPEED => {
+            let code = (wparam >> 16) as u32;
+            if code == EN_CHANGE || code == EN_KILLFOCUS {
+                assignment_view::change(&mut state, code == EN_KILLFOCUS);
+            }
+            0
+        }
         WM_COMMAND
             if (lighting_view::HEX..=lighting_view::BOOST)
                 .contains(&((wparam & 0xffff) as u16)) =>
@@ -3736,6 +3805,31 @@ unsafe extern "system" fn window_proc(
             }
             DefWindowProcW(hwnd, message, wparam, lparam)
         }
+        WM_TIMER if wparam == ASSIGNMENT_REPEAT => {
+            assignment_view::repeat(&mut state);
+            0
+        }
+        WM_MOUSEMOVE if assignment_view::covered(&state) => {
+            let mut tracking = TRACKMOUSEEVENT {
+                cbSize: std::mem::size_of::<TRACKMOUSEEVENT>() as u32,
+                dwFlags: TME_LEAVE,
+                hwndTrack: hwnd,
+                dwHoverTime: 0,
+            };
+            TrackMouseEvent(&mut tracking);
+            assignment_view::pointer(
+                &mut state,
+                POINT {
+                    x: (lparam as u32 & 0xffff) as i16 as i32,
+                    y: ((lparam as u32 >> 16) & 0xffff) as i16 as i32,
+                },
+            );
+            0
+        }
+        WM_MOUSEWHEEL if assignment_view::covered(&state) => {
+            assignment_view::wheel(&mut state, ((wparam >> 16) as u16 as i16) as f64 / 120.0);
+            0
+        }
         WM_MOUSEMOVE if state.lighting_capture => {
             let point = state.lighting_point(POINT {
                 x: (lparam as u32 & 0xffff) as i16 as i32,
@@ -3783,11 +3877,19 @@ unsafe extern "system" fn window_proc(
             0
         }
         WM_MOUSELEAVE => {
+            state.assignment.hover = None;
+            if let Some(d) = &mut state.assignment.draft {
+                if d.rail_expanded {
+                    d.rail_expanded = false;
+                    state.rebuild_fields();
+                }
+            }
             state.performance_hover = None;
             InvalidateRect(hwnd, null(), 0);
             0
         }
         WM_CANCELMODE => {
+            assignment_view::release(&mut state);
             let update = lighting_view::cancel(&mut state);
             state.lighting_update(update);
             // DefWindowProc can synchronously send WM_CAPTURECHANGED while
@@ -3799,6 +3901,18 @@ unsafe extern "system" fn window_proc(
                 state.rebuild_fields();
             }
             ReleaseCapture();
+            InvalidateRect(hwnd, null(), 0);
+            0
+        }
+        WM_CAPTURECHANGED
+            if state.assignment.speed_drag
+                || state.assignment.spinner.is_some()
+                || state.assignment.rail_grab.is_some()
+                || state.assignment.drawer_grab.is_some()
+                || state.assignment.form_grab.is_some()
+                || state.assignment.options_grab.is_some() =>
+        {
+            assignment_view::release(&mut state);
             InvalidateRect(hwnd, null(), 0);
             0
         }
@@ -3867,6 +3981,18 @@ unsafe extern "system" fn window_proc(
             } else if let Some(Action::Lighting(control)) = action {
                 let update = lighting_view::begin(&mut state, control, logical);
                 state.lighting_update(update);
+            } else if let Some(Action::Assignment(assignment_view::Control::Step(delta))) = action {
+                assignment_view::begin_step(&mut state, delta);
+            } else if let Some(Action::Assignment(
+                control @ (assignment_view::Control::Slider(_)
+                | assignment_view::Control::RailThumb(_)
+                | assignment_view::Control::DrawerThumb(_)
+                | assignment_view::Control::FormThumb(_)
+                | assignment_view::Control::OptionsThumb(_)),
+            )) = action
+            {
+                assignment_view::pointer(&mut state, point);
+                assignment_view::action(&mut state, control);
             } else if let Some(Action::PowerSlider(kind, shape)) = action {
                 power_view::begin(&mut state, kind, shape);
                 power_view::pointer(&mut state, point);
@@ -3909,6 +4035,9 @@ unsafe extern "system" fn window_proc(
             0
         }
         WM_LBUTTONUP => {
+            if assignment_view::release(&mut state) {
+                return 0;
+            }
             if state.lighting_capture {
                 let logical = state.lighting_point(POINT {
                     x: (lparam as u32 & 0xffff) as i16 as i32,
@@ -3953,6 +4082,10 @@ unsafe extern "system" fn window_proc(
             if let Some(action) = action {
                 state.action(action);
             } else {
+                if assignment_view::open_at(&mut state, point) {
+                    InvalidateRect(hwnd, null(), 0);
+                    return 0;
+                }
                 let center = ((state.width as f32 / state.scale).round() as i32 / 2).max(420);
                 let selection = if state.tab == Tab::Customize
                     && !state.profile_open
@@ -4008,6 +4141,15 @@ unsafe extern "system" fn window_proc(
             0
         }
         WM_KEYDOWN => {
+            if wparam == 27 && state.assignment.draft.is_some() {
+                let control = if state.assignment.pending.is_some() {
+                    assignment_view::Control::Dismiss
+                } else {
+                    assignment_view::Control::Cancel
+                };
+                assignment_view::action(&mut state, control);
+                return 0;
+            }
             match wparam as u32 {
                 9 => {
                     state.focus = state.focus % state.hits.len().max(1) + 1;
@@ -4225,6 +4367,8 @@ fn run_window(
             renaming: None,
             notices: Vec::new(),
             selected_button: String::new(),
+            assignment: assignment_model::View::default(),
+            assignment_next: None,
             buttons: Vec::new(),
             hits: Vec::new(),
             focus: 0,
@@ -4323,6 +4467,64 @@ fn run_window(
                 "lighting-right-active",
                 "lighting-right",
                 "lighting-sync",
+                "assignment-dialog-close",
+                "assignment-help",
+                "assignment-mouse-cycle",
+                "assignment-close",
+                "assignment-panel-active",
+                "assignment-panel",
+                "assignment-panel-close",
+                "assignment-DEFAULT-normal",
+                "assignment-DEFAULT-hover",
+                "assignment-DEFAULT-active",
+                "assignment-AI_LAUNCHER-normal",
+                "assignment-AI_LAUNCHER-hover",
+                "assignment-AI_LAUNCHER-active",
+                "assignment-KEYBOARD_FUNCTION-normal",
+                "assignment-KEYBOARD_FUNCTION-hover",
+                "assignment-KEYBOARD_FUNCTION-active",
+                "assignment-MOUSE_FUNCTION-normal",
+                "assignment-MOUSE_FUNCTION-hover",
+                "assignment-MOUSE_FUNCTION-active",
+                "assignment-SENSITIVITY-normal",
+                "assignment-SENSITIVITY-hover",
+                "assignment-SENSITIVITY-active",
+                "assignment-MACRO-normal",
+                "assignment-MACRO-hover",
+                "assignment-MACRO-active",
+                "assignment-INTERDEVICE-normal",
+                "assignment-INTERDEVICE-hover",
+                "assignment-INTERDEVICE-active",
+                "assignment-SWITCH_PROFILE-normal",
+                "assignment-SWITCH_PROFILE-hover",
+                "assignment-SWITCH_PROFILE-active",
+                "assignment-SWITCH_LIGHTING-normal",
+                "assignment-SWITCH_LIGHTING-hover",
+                "assignment-SWITCH_LIGHTING-active",
+                "assignment-DEVICE_BRIGHTNESS-normal",
+                "assignment-DEVICE_BRIGHTNESS-hover",
+                "assignment-DEVICE_BRIGHTNESS-active",
+                "assignment-RAZER_HYPERSHIFT-normal",
+                "assignment-RAZER_HYPERSHIFT-hover",
+                "assignment-RAZER_HYPERSHIFT-active",
+                "assignment-LAUNCH_PROGRAM-normal",
+                "assignment-LAUNCH_PROGRAM-hover",
+                "assignment-LAUNCH_PROGRAM-active",
+                "assignment-MULTIMEDIA-normal",
+                "assignment-MULTIMEDIA-hover",
+                "assignment-MULTIMEDIA-active",
+                "assignment-WINDOWS_SHORTCUT-normal",
+                "assignment-WINDOWS_SHORTCUT-hover",
+                "assignment-WINDOWS_SHORTCUT-active",
+                "assignment-TEXT_FUNCTION-normal",
+                "assignment-TEXT_FUNCTION-hover",
+                "assignment-TEXT_FUNCTION-active",
+                "assignment-DISABLE-normal",
+                "assignment-DISABLE-hover",
+                "assignment-DISABLE-active",
+                "assignment-DIAL_MULTI_FUNCTION-normal",
+                "assignment-DIAL_MULTI_FUNCTION-hover",
+                "assignment-DIAL_MULTI_FUNCTION-active",
             ]
             .into_iter()
             .filter_map(|name| {
@@ -4416,6 +4618,30 @@ fn run_window(
                 }
             }
             let control_id = GetDlgCtrlID(message.hwnd) as u16;
+            if control_id == assignment_view::SPEED {
+                if message.message == WM_KEYDOWN && matches!(message.wParam, 13 | 27) {
+                    SetFocus(hwnd);
+                    continue;
+                }
+                let step = if message.message == WM_KEYDOWN && matches!(message.wParam, 38 | 40) {
+                    Some(if message.wParam == 38 { 1 } else { -1 })
+                } else if message.message == WM_MOUSEWHEEL {
+                    Some(if ((message.wParam >> 16) as u16 as i16) > 0 {
+                        1
+                    } else {
+                        -1
+                    })
+                } else {
+                    None
+                };
+                if let Some(step) = step {
+                    let mut current = state.borrow_mut();
+                    if !current.restricted_actions {
+                        assignment_view::action(&mut current, assignment_view::Control::Step(step));
+                    }
+                    continue;
+                }
+            }
             if (lighting_view::HEX..=lighting_view::BOOST).contains(&control_id)
                 && message.message == WM_KEYDOWN
                 && matches!(message.wParam, 13 | 27)

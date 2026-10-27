@@ -107,10 +107,11 @@ pub(super) fn popup_left(
 }
 
 /// Normal non-two-tap callback positioning. The parent must supply the actual
-/// key anchor; command-dial and panel transitions have additional source states.
+/// key anchor. The source config-wrapper includes mouse label rows as well as
+/// keyboard SVG keys; command-dial and panel transitions have additional source states.
 pub(super) fn popup_inline_top(
     from_panel: bool,
-    within_keyboard_or_special_tip: bool,
+    within_config_wrapper: bool,
     body_scroll_top: f64,
     key_viewport_top: f64,
     command_dial_viewport_top: Option<f64>,
@@ -118,7 +119,7 @@ pub(super) fn popup_inline_top(
     if from_panel {
         return 36.0;
     }
-    if within_keyboard_or_special_tip {
+    if within_config_wrapper {
         return 36.0 - body_scroll_top;
     }
     match command_dial_viewport_top {
