@@ -2,6 +2,41 @@ use super::*;
 use crate::buttons::{Action, Layer};
 use crate::features::DpiStages;
 
+#[test]
+fn source_effect_edits_preserve_opaque_members_of_the_same_preset() {
+    let mut profile = new_native_profile(605,"Effect").unwrap();
+    set_source_quick_effect(&mut profile,605,"Effect",1,
+        &json!({"color1":"#112233","future":{"value":7}})).unwrap();
+    set_source_quick_effect(&mut profile,605,"Effect",1,
+        &json!({"color1":"#445566"})).unwrap();
+    let effects = source_quick_effects(&profile).unwrap();
+    assert_eq!(effects["selectedEffectSetting"],json!({"color1":"#445566","future":{"value":7}}));
+    set_source_quick_effect(&mut profile,605,"Effect",3,&json!({})).unwrap();
+    assert_eq!(source_quick_effects(&profile).unwrap()["selectedEffectSetting"],json!({}));
+}
+
+#[test]
+fn custom_palette_preserves_opaque_imports_but_rejects_new_malformed_drafts() {
+    let mut profile = new_native_profile(605, "Palette").unwrap();
+    let opaque = json!({"color":"future-color-space(1 2 3)","extension":{"v":2}});
+    source_quick_effects_mut(&mut profile, 605, "Palette").unwrap()
+        .insert("customColors".into(), json!([opaque.clone()]));
+    let mut slots = vec![json!({"color":"#111","picked":false});16];
+    slots[0] = opaque.clone();
+    slots[1] = json!({"color":"#44d62c","picked":false,"future":7});
+    set_source_custom_colors(&mut profile, 605, "Palette", &slots).unwrap();
+    assert_eq!(source_quick_effects(&profile).unwrap()["customColors"],
+        json!([opaque,slots[1].clone()]));
+    let before = serde_json::to_value(&profile).unwrap();
+    slots[2] = json!({"color":"#12345z","picked":false});
+    assert!(set_source_custom_colors(&mut profile,605,"Palette",&slots).is_err());
+    assert_eq!(serde_json::to_value(&profile).unwrap(), before);
+    slots[2] = json!({"color":"#111","picked":false});
+    slots[0] = json!({"color":"#111","picked":false});
+    set_source_custom_colors(&mut profile,605,"Palette",&slots).unwrap();
+    assert_eq!(source_quick_effects(&profile).unwrap()["customColors"],json!([slots[1].clone()]));
+}
+
 fn document(profile: Value, pid: u16) -> Vec<u8> {
     let mut envelope = settings::default_envelope(pid).unwrap();
     envelope["profiles"] = json!([{

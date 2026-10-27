@@ -19,6 +19,123 @@ mod settings;
 mod expanded_tests;
 
 const SOURCE: &str = "_synapseLiteSynapse4";
+
+/// Retained source settings for an editor, not a live firmware/engine read.
+pub fn source_quick_effects(profile: &Profile) -> Option<&Value> {
+    profile
+        .extra
+        .get(SOURCE)?
+        .get("decoded")?
+        .get("quickEffects")
+        .filter(|value| value.is_object())
+}
+
+fn source_quick_effects_mut<'a>(
+    profile: &'a mut Profile,
+    pid: u16,
+    name: &str,
+) -> Result<&'a mut Map<String, Value>> {
+    if pid != 605 {
+        return Err(invalid(
+            "source quick-effect editing is verified only for Ornata V2",
+        ));
+    }
+    if !profile.extra.contains_key(SOURCE) {
+        let mut source = new_native_profile(pid, name)?;
+        profile.extra.insert(
+            SOURCE.into(),
+            source
+                .extra
+                .remove(SOURCE)
+                .expect("source default has metadata"),
+        );
+    }
+    let decoded = profile
+        .extra
+        .get_mut(SOURCE)
+        .and_then(|value| value.get_mut("decoded"))
+        .and_then(Value::as_object_mut)
+        .ok_or_else(|| invalid("source profile metadata cannot be edited"))?;
+    decoded
+        .entry("quickEffects")
+        .or_insert_with(|| json!({}))
+        .as_object_mut()
+        .ok_or_else(|| invalid("source quick-effects metadata cannot be edited"))
+}
+
+/// Update the profile's selected source effect while preserving palette/opaque
+/// members. Callers must validate/implement the effect before committing a store.
+pub fn set_source_quick_effect(
+    profile: &mut Profile,
+    pid: u16,
+    name: &str,
+    source_id: u8,
+    setting: &Value,
+) -> Result<()> {
+    if !matches!(source_id, 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 11 | 12 | 13 | 19)
+        || !setting.is_object()
+    {
+        return Err(invalid("source quick-effect choice or setting is invalid"));
+    }
+    let effects = source_quick_effects_mut(profile, pid, name)?;
+    let mut merged = if effects.get("selectedEffectId") == Some(&json!(source_id)) {
+        effects.get("selectedEffectSetting").filter(|v| v.is_object()).cloned()
+            .unwrap_or_else(||json!({}))
+    } else {
+        json!({})
+    };
+    merge_object(&mut merged, setting.clone())?;
+    effects.insert("selectedEffectId".into(), json!(source_id));
+    effects.insert("selectedEffectSetting".into(), merged);
+    Ok(())
+}
+
+/// Source palette persistence replaces the complete16-slot cache, filtering its
+/// '#111' empty sentinel. Unknown members of filled slots remain intact.
+pub fn set_source_custom_colors(
+    profile: &mut Profile,
+    pid: u16,
+    name: &str,
+    slots: &[Value],
+) -> Result<()> {
+    if pid != 605 || slots.len() != 16 {
+        return Err(invalid(
+            "Ornata custom colors require the complete 16-slot palette",
+        ));
+    }
+    let retained = source_quick_effects(profile)
+        .and_then(|effects| effects.get("customColors"))
+        .and_then(Value::as_array);
+    let mut filled = Vec::new();
+    for slot in slots {
+        // Imported future formats are opaque. Permit retaining an exact value,
+        // while still validating every newly authored slot before mutation.
+        if retained.is_some_and(|values| values.contains(slot)) {
+            filled.push(slot.clone());
+            continue;
+        }
+        let object = slot
+            .as_object()
+            .ok_or_else(|| invalid("custom color slot must be an object"))?;
+        let color = object
+            .get("color")
+            .and_then(Value::as_str)
+            .ok_or_else(|| invalid("custom color needs a color string"))?;
+        if !object.get("picked").is_some_and(Value::is_boolean) {
+            return Err(invalid("custom color needs a picked flag"));
+        }
+        if color == "#111" {
+            continue;
+        }
+        if color.len() != 7 || !color.starts_with('#') || color[1..].parse::<Rgb>().is_err() {
+            return Err(invalid("custom color must be a six-digit RGB hex value; malformed source drafts cannot be saved"));
+        }
+        filled.push(slot.clone());
+    }
+    let effects = source_quick_effects_mut(profile, pid, name)?;
+    effects.insert("customColors".into(), Value::Array(filled));
+    Ok(())
+}
 const MAX_DOCUMENT_BYTES: usize = 2 * 1024 * 1024;
 const MAX_DECODED_BYTES: usize = 1024 * 1024;
 const MAX_JSON_TOKENS: usize = 32_768;
@@ -283,7 +400,14 @@ fn translate_profile(
         .contains(&key.as_str())
             || (matches!(pid, 196 | 197)
                 && ["dpiStages", "powerSavingValue"].contains(&key.as_str()))
-            || (pid == 605 && ["brightness", "quickEffects", "gamingMode", "switchOffLighting"].contains(&key.as_str()))
+            || (pid == 605
+                && [
+                    "brightness",
+                    "quickEffects",
+                    "gamingMode",
+                    "switchOffLighting",
+                ]
+                .contains(&key.as_str()))
         {
             continue;
         }
@@ -431,7 +555,8 @@ pub fn export_synapse4(store: &Store, device_key: &str) -> Result<ExportReport> 
         mappings::export(profile, decoded_object, pid)?;
         if pid == 605 {
             settings::export_game_mode(profile, decoded_object)?;
-            let source_lighting = settings::export_keyboard_lighting(profile, decoded_object, source.is_none())?;
+            let source_lighting =
+                settings::export_keyboard_lighting(profile, decoded_object, source.is_none())?;
             if profile.dpi.is_some()
                 || profile.polling.is_some()
                 || profile.dpi_stages.is_some()
@@ -443,9 +568,10 @@ pub fn export_synapse4(store: &Store, device_key: &str) -> Result<ExportReport> 
                 )));
             }
             if let Some(zone) = profile.lighting.get("backlight") {
-                if !source_lighting && (zone.brightness.is_some()
-                    || zone.off
-                    || decoded_object.get("brightness").is_some())
+                if !source_lighting
+                    && (zone.brightness.is_some()
+                        || zone.off
+                        || decoded_object.get("brightness").is_some())
                 {
                     let brightness = decoded_object.entry("brightness").or_insert(json!({}));
                     let object = brightness
@@ -468,8 +594,10 @@ pub fn export_synapse4(store: &Store, device_key: &str) -> Result<ExportReport> 
                 if source_lighting && zone.off {
                     // Source brightness-off is a zero brightness projection;
                     // Zone.off is reserved for an explicitly disabled effect.
-                    quick_object.insert("selectedEffectId".into(),json!(0));
-                } else if let Some((id, settings)) = export_effect(zone.color, zone.effect.as_ref())? {
+                    quick_object.insert("selectedEffectId".into(), json!(0));
+                } else if let Some((id, settings)) =
+                    export_effect(zone.color, zone.effect.as_ref())?
+                {
                     quick_object.insert("selectedEffectId".into(), json!(id));
                     if let Some(settings) = settings {
                         let original = quick_object
@@ -479,7 +607,9 @@ pub fn export_synapse4(store: &Store, device_key: &str) -> Result<ExportReport> 
                     }
                 }
             } else if source.is_some() {
-                if !source_lighting { decoded_object.remove("brightness"); }
+                if !source_lighting {
+                    decoded_object.remove("brightness");
+                }
                 decoded_object.remove("quickEffects");
             }
             if profile.lighting.keys().any(|key| key != "backlight") || !profile.keys.is_empty() {
