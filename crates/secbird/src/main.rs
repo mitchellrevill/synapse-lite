@@ -1,6 +1,9 @@
 use secbird_core::{actions, config_dir, discover, hidapi::HidApi, Db, Device, Error, Rgb, Store};
 use std::process::ExitCode;
 
+#[cfg(windows)]
+mod control_probe;
+
 const USAGE: &str = "\
 Synapse Lite - device controls based on Secretarybird beta
 
@@ -16,6 +19,10 @@ DEVICE:
                             (apps.razer.com); never installs anything
   report [--json]           Read-only description of connected Razer hardware, to share
                             when a device is missing or misbehaves (serials shortened)
+  driver-control list       List installed RZCONTROL interfaces (Windows, read-only)
+  driver-control probe N [LIMIT]
+                            Read up to LIMIT hook selectors on interface N (1..64)
+                            in a supervised child; no hooks or input writes
   dock-test <red|spectrum|battery|off>
                             Test: set a Mouse Dock Pro's own light once (#39)
 
@@ -157,6 +164,11 @@ Download: {}", r.version, secbird_core::update::CURRENT, r.url),
     }
     if command == "debloat" {
         return debloat_cmd(&args[1..]);
+    }
+    #[cfg(windows)]
+    if command == "driver-control" || command == "--driver-control-child" {
+        if selector.is_some() { return Err(Error::InvalidArg("driver-control uses the interface index from its list command, without -d".into())); }
+        return control_probe::run(&args[1..], command == "--driver-control-child");
     }
     if command == "export" || command == "import" || command == "export-synapse4" {
         let file = args.get(1).ok_or_else(|| Error::InvalidArg(format!("usage: {command} <file>")))?;

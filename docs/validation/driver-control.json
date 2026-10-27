@@ -1,0 +1,47 @@
+{
+  "timestamp_utc": "2026-10-27T02:52:33.074159+00:00",
+  "command": "secbird driver-control probe <index> 4",
+  "scope": "Read-only EnumInputHook, with stock Synapse and installed services/drivers running. No hooks, subscriptions, redirection or injected inputs were written.",
+  "binary_sha256": "b045028d9251e2c8c0f90fb0634ddf50712ad55f3bcbc4697fd615756f5d1d9a",
+  "interfaces": [
+    {
+      "product_id": "025D",
+      "interface_number": 0,
+      "records_returned": 4,
+      "returned_record_bytes": [
+        292,
+        292,
+        292,
+        292
+      ],
+      "kind_counts": {
+        "1": 2,
+        "2": 2
+      },
+      "stop": {
+        "complete": false,
+        "reason": "limit-reached"
+      },
+      "complete_enumeration_proven": false
+    },
+    {
+      "product_id": "00C4",
+      "interface_number": 0,
+      "records_returned": 1,
+      "returned_record_bytes": [
+        292
+      ],
+      "kind_counts": {
+        "2": 1
+      },
+      "stop": {
+        "complete": false,
+        "index": 1,
+        "message": "A device attached to the system is not functioning. (os error 31)",
+        "os_error": 31,
+        "reason": "query-failed"
+      },
+      "complete_enumeration_proven": false
+    }
+  ]
+}
