@@ -46,11 +46,21 @@ impl Device {
         if self.pid != MOUSE_DOCK_PRO {
             return;
         }
-        let Ok(reply) = self.get(cmd::WIRELESS_DEVICES, cmd::WIRELESS_DEVICES_SIZE, &[]) else { return };
-        let Some(pid) = connected_mouse_pid(reply.args()).filter(|p| DOCK_PRO_MICE.contains(p)) else { return };
-        let Some(mouse) = db.get(pid).filter(|s| s.kind == Kind::Mouse) else { return };
+        let Ok(reply) = self.get(cmd::WIRELESS_DEVICES, cmd::WIRELESS_DEVICES_SIZE, &[]) else {
+            return;
+        };
+        let Some(pid) = connected_mouse_pid(reply.args()).filter(|p| DOCK_PRO_MICE.contains(p))
+        else {
+            return;
+        };
+        let Some(mouse) = db.get(pid).filter(|s| s.kind == Kind::Mouse) else {
+            return;
+        };
         if let Some(spec) = &mut self.spec {
-            spec.name = format!("{} on Mouse Dock Pro", mouse.name.trim_end_matches(" (Wireless)"));
+            spec.name = format!(
+                "{} on Mouse Dock Pro",
+                mouse.name.trim_end_matches(" (Wireless)")
+            );
             spec.dpi = mouse.dpi.clone();
             spec.lighting = mouse.lighting;
             spec.leds = mouse.leds.clone();
@@ -67,11 +77,20 @@ impl Device {
         if self.pid != HYPERPOLLING_DONGLE {
             return;
         }
-        let Ok(reply) = self.get(cmd::WIRELESS_DEVICES, cmd::WIRELESS_DEVICES_SIZE, &[]) else { return };
-        let Some(pid) = connected_mouse_pid(reply.args()) else { return };
-        let Some(mouse) = db.get(pid).filter(|s| s.kind == Kind::Mouse) else { return };
+        let Ok(reply) = self.get(cmd::WIRELESS_DEVICES, cmd::WIRELESS_DEVICES_SIZE, &[]) else {
+            return;
+        };
+        let Some(pid) = connected_mouse_pid(reply.args()) else {
+            return;
+        };
+        let Some(mouse) = db.get(pid).filter(|s| s.kind == Kind::Mouse) else {
+            return;
+        };
         if let Some(spec) = &mut self.spec {
-            spec.name = format!("{} (via HyperPolling)", mouse.name.trim_end_matches(" (Wireless)"));
+            spec.name = format!(
+                "{} (via HyperPolling)",
+                mouse.name.trim_end_matches(" (Wireless)")
+            );
         }
     }
 
@@ -87,8 +106,15 @@ impl Device {
         if !self.is_mouse_dock() {
             return;
         }
-        if let Some(spec) = self.spec.as_mut().filter(|s| !s.leds.iter().any(|l| l.id == DOCK_LED)) {
-            spec.leds.push(crate::db::Led { name: "dock".into(), id: DOCK_LED });
+        if let Some(spec) = self
+            .spec
+            .as_mut()
+            .filter(|s| !s.leds.iter().any(|l| l.id == DOCK_LED))
+        {
+            spec.leds.push(crate::db::Led {
+                name: "dock".into(),
+                id: DOCK_LED,
+            });
         }
     }
 
@@ -99,7 +125,13 @@ impl Device {
     }
 
     /// [`Device::transact`] for a lighting command to `led`, sent to the dock for its light.
-    pub(crate) fn transact_led(&self, led: u8, command: Command, size: u8, args: &[u8]) -> Result<Report> {
+    pub(crate) fn transact_led(
+        &self,
+        led: u8,
+        command: Command,
+        size: u8,
+        args: &[u8],
+    ) -> Result<Report> {
         if self.is_dock_led(led) {
             self.transact_as(DOCK_TXID, command, size, args)
         } else {
@@ -110,17 +142,38 @@ impl Device {
     /// Send one command and wait for its reply. `size` is the argument length the
     /// device expects for this command.
     pub fn transact(&self, command: Command, size: u8, args: &[u8]) -> Result<Report> {
-        transact(self.transport.as_ref(), self.txid, command, size, args, READ_RETRIES, false)
+        transact(
+            self.transport.as_ref(),
+            self.txid,
+            command,
+            size,
+            args,
+            READ_RETRIES,
+        )
     }
 
     /// [`Device::transact`] for commands that write flash and answer slowly.
     pub(crate) fn transact_slow(&self, command: Command, size: u8, args: &[u8]) -> Result<Report> {
-        transact(self.transport.as_ref(), self.txid, command, size, args, FLASH_RETRIES, false)
+        transact(
+            self.transport.as_ref(),
+            self.txid,
+            command,
+            size,
+            args,
+            FLASH_RETRIES,
+        )
     }
 
     /// [`Device::transact`] with another transaction id (see [`DOCK_TXID`]).
     pub fn transact_as(&self, txid: u8, command: Command, size: u8, args: &[u8]) -> Result<Report> {
-        transact(self.transport.as_ref(), txid, command, size, args, READ_RETRIES, true)
+        transact(
+            self.transport.as_ref(),
+            txid,
+            command,
+            size,
+            args,
+            READ_RETRIES,
+        )
     }
 
     /// Whether this is a mouse dock, whose own settings take [`DOCK_TXID`].
@@ -148,11 +201,21 @@ impl Device {
 fn parse_serial(args: &[u8]) -> String {
     let raw = &args[..(cmd::SERIAL_SIZE as usize).min(args.len())];
     let end = raw.iter().position(|&b| b == 0).unwrap_or(raw.len());
-    let s: String = raw[..end].iter().map(|&b| b as char).collect::<String>().trim().to_string();
+    let s: String = raw[..end]
+        .iter()
+        .map(|&b| b as char)
+        .collect::<String>()
+        .trim()
+        .to_string();
     let usable = !s.is_empty()
-        && s.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+        && s.chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
         && s.chars().any(|c| c != '0' && c != 'F' && c != 'f');
-    if usable { s } else { String::new() }
+    if usable {
+        s
+    } else {
+        String::new()
+    }
 }
 
 pub(crate) const MOUSE_DOCK_PRO: u16 = 0x00A4;
@@ -169,8 +232,9 @@ pub const DOCK_LED: u8 = 0x0F;
 pub(crate) const HYPERPOLLING_DONGLE: u16 = 0x00B3;
 
 /// Mice that pair with the Mouse Dock Pro (Synapse's `DualDongleCompatibleDevices.json`).
-const DOCK_PRO_MICE: [u16; 11] =
-    [0x00A8, 0x00AB, 0x00B0, 0x00CD, 0x00D7, 0x00DB, 0x00DF, 0x00E3, 0x00E8, 0x00EA, 0xB00B];
+const DOCK_PRO_MICE: [u16; 11] = [
+    0x00A8, 0x00AB, 0x00B0, 0x00CD, 0x00D7, 0x00DB, 0x00DF, 0x00E3, 0x00E8, 0x00EA, 0xB00B,
+];
 
 /// The one connected mouse in a paired-mice reply. `None` if there is none, or more than one.
 fn connected_mouse_pid(args: &[u8]) -> Option<u16> {
@@ -184,10 +248,17 @@ fn connected_mouse_pid(args: &[u8]) -> Option<u16> {
     connected.next().is_none().then_some(pid)
 }
 
-/// `exact`: only accept a reply carrying our txid. A dock forwards the docked mouse's
-/// replies, which would otherwise pass for the dock's own.
-fn transact(hid: &dyn Transport, txid: u8, command: Command, size: u8, args: &[u8], retries: u32, exact: bool) -> Result<Report> {
-    let req = Report::request(txid, command, size, args);
+/// Accept only a complete, correlated reply. Another lighting controller may
+/// overwrite the shared response buffer between our write and read.
+fn transact(
+    hid: &dyn Transport,
+    txid: u8,
+    command: Command,
+    size: u8,
+    args: &[u8],
+    retries: u32,
+) -> Result<Report> {
+    let req = Report::checked_request(txid, command, size, args)?;
     let mut buf = [0u8; REPORT_LEN + 1]; // byte 0 is the HID report id (0)
     buf[1..].copy_from_slice(&req.0);
     hid.send_feature_report(&buf)?;
@@ -196,19 +267,31 @@ fn transact(hid: &dyn Transport, txid: u8, command: Command, size: u8, args: &[u
         sleep(hid.read_delay());
         let mut reply = [0u8; REPORT_LEN + 1];
         let n = hid.get_feature_report(&mut reply)?;
-        if n < REPORT_LEN {
+        if n != REPORT_LEN && n != REPORT_LEN + 1 {
             continue;
         }
         let mut body = [0u8; REPORT_LEN];
         body.copy_from_slice(&reply[n - REPORT_LEN..n]);
         let rep = Report(body);
-        if rep.command() != command || (exact && rep.txid() != txid) {
+        // Match the complete frame before trusting status or feature values.
+        // No transaction alias has been verified for the attached devices.
+        let minimum_args = if rep.status() == Status::Success {
+            size
+        } else {
+            0
+        };
+        if !rep.valid_reply(txid, command, minimum_args) {
             continue;
         }
         match rep.status() {
             Status::Success => return Ok(rep),
             Status::Busy | Status::New => continue,
-            status => return Err(Error::Device { cmd: command, status }),
+            status => {
+                return Err(Error::Device {
+                    cmd: command,
+                    status,
+                })
+            }
         }
     }
     Err(Error::NoReply(command))
@@ -268,10 +351,13 @@ fn discover_hid(api: &HidApi, db: &Db) -> Vec<Device> {
                 None => TXID_CANDIDATES.to_vec(),
             };
             let mut iter = ifaces.into_iter();
-            let first = iter.by_ref().find_map(|c| probe(api, c, &txids, spec.clone()))?;
+            let first = iter
+                .by_ref()
+                .find_map(|c| probe(api, c, &txids, spec.clone()))?;
             // More units of the same model answer on the same interface number.
             let mut units = vec![first];
-            let rest: Vec<&Candidate> = iter.filter(|c| c.interface == units[0].interface).collect();
+            let rest: Vec<&Candidate> =
+                iter.filter(|c| c.interface == units[0].interface).collect();
             for c in rest {
                 if let Some(dev) = probe(api, c, &[units[0].txid], spec.clone()) {
                     if !dev.serial.is_empty() && units.iter().all(|u| u.serial != dev.serial) {
@@ -287,7 +373,14 @@ fn discover_hid(api: &HidApi, db: &Db) -> Vec<Device> {
 
 fn probe(api: &HidApi, c: &Candidate, txids: &[u8], spec: Option<DeviceSpec>) -> Option<Device> {
     let hid = api.open_path(&c.path).ok()?;
-    Device::open(Box::new(hid), c.pid, c.interface, c.path.clone(), txids, spec)
+    Device::open(
+        Box::new(hid),
+        c.pid,
+        c.interface,
+        c.path.clone(),
+        txids,
+        spec,
+    )
 }
 
 impl Device {
@@ -301,17 +394,38 @@ impl Device {
         spec: Option<DeviceSpec>,
     ) -> Option<Device> {
         let (txid, reply) = txids.iter().copied().find_map(|t| {
-            transact(transport.as_ref(), t, cmd::SERIAL.get(), cmd::SERIAL_SIZE, &[], READ_RETRIES, false).ok().map(|r| (t, r))
+            transact(
+                transport.as_ref(),
+                t,
+                cmd::SERIAL.get(),
+                cmd::SERIAL_SIZE,
+                &[],
+                READ_RETRIES,
+            )
+            .ok()
+            .map(|r| (t, r))
         })?;
         let serial = parse_serial(reply.args());
-        Some(Device { transport, pid, serial, interface, path, txid, spec })
+        Some(Device {
+            transport,
+            pid,
+            serial,
+            interface,
+            path,
+            txid,
+            spec,
+        })
     }
 }
 
 /// Razer products that are plugged in but didn't answer Protocol 2.5 (e.g. Kraken
 /// headsets), so the user sees them instead of wondering where they went.
 pub fn unanswered(api: &HidApi, found: &[Device]) -> Vec<u16> {
-    let mut pids: Vec<u16> = candidates(api).iter().map(|c| c.pid).filter(|p| !found.iter().any(|d| d.pid == *p)).collect();
+    let mut pids: Vec<u16> = candidates(api)
+        .iter()
+        .map(|c| c.pid)
+        .filter(|p| !found.iter().any(|d| d.pid == *p))
+        .collect();
     pids.dedup();
     pids
 }
@@ -319,13 +433,122 @@ pub fn unanswered(api: &HidApi, found: &[Device]) -> Vec<u16> {
 #[cfg(test)]
 mod tests {
     use super::{connected_mouse_pid, parse_serial};
+    use crate::proto::{checksum, Command, Report, Status};
+    use crate::{Error, Transport};
+    use std::collections::VecDeque;
+    use std::sync::{
+        atomic::{AtomicUsize, Ordering},
+        Mutex,
+    };
+
+    struct QueuedTransport {
+        replies: Mutex<VecDeque<Vec<u8>>>,
+        writes: AtomicUsize,
+        reads: AtomicUsize,
+    }
+
+    impl QueuedTransport {
+        fn new(replies: Vec<Vec<u8>>) -> Self {
+            Self {
+                replies: Mutex::new(replies.into()),
+                writes: AtomicUsize::new(0),
+                reads: AtomicUsize::new(0),
+            }
+        }
+    }
+
+    impl Transport for QueuedTransport {
+        fn send_feature_report(&self, _: &[u8]) -> crate::Result<()> {
+            self.writes.fetch_add(1, Ordering::Relaxed);
+            Ok(())
+        }
+
+        fn get_feature_report(&self, buffer: &mut [u8]) -> crate::Result<usize> {
+            self.reads.fetch_add(1, Ordering::Relaxed);
+            let reply = self.replies.lock().unwrap().pop_front().unwrap_or_default();
+            buffer[..reply.len()].copy_from_slice(&reply);
+            Ok(reply.len())
+        }
+
+        fn read_delay(&self) -> std::time::Duration {
+            std::time::Duration::ZERO
+        }
+    }
+
+    fn wire(txid: u8, command: Command, args: &[u8]) -> Vec<u8> {
+        let mut response = Report::request(txid, command, args.len() as u8, args);
+        response.0[0] = 2;
+        let mut wire = vec![0];
+        wire.extend_from_slice(&response.0);
+        wire
+    }
+
+    #[test]
+    fn stale_transaction_cannot_supply_a_feature_value() {
+        let command = Command::new(0x0f, 0x84);
+        let pipe = QueuedTransport::new(vec![
+            wire(0x16, command, &[1, 5, 22]),
+            wire(0x1f, command, &[1, 5, 128]),
+        ]);
+        let reply = super::transact(&pipe, 0x1f, command, 3, &[1, 5], 2).unwrap();
+        assert_eq!(reply.args()[2], 128);
+        assert_eq!(pipe.reads.load(Ordering::Relaxed), 2);
+        assert_eq!(pipe.writes.load(Ordering::Relaxed), 1);
+    }
+
+    #[test]
+    fn malformed_frames_are_skipped_before_decoding() {
+        let command = Command::new(4, 0x85);
+        let mut corrupt = wire(0x1f, command, &[0, 0, 100, 0, 100, 0, 0]);
+        corrupt[9] ^= 0x80;
+        let short = wire(0x1f, command, &[0]);
+        let good = wire(0x1f, command, &[0, 3, 32, 3, 32, 0, 0]);
+        let pipe = QueuedTransport::new(vec![corrupt, short, good]);
+        let reply = super::transact(&pipe, 0x1f, command, 7, &[], 3).unwrap();
+        assert_eq!(&reply.args()[1..5], &[3, 32, 3, 32]);
+        assert_eq!(pipe.reads.load(Ordering::Relaxed), 3);
+    }
+
+    #[test]
+    fn invalid_requests_never_touch_the_transport() {
+        let pipe = QueuedTransport::new(vec![]);
+        assert!(matches!(
+            super::transact(&pipe, 0x1f, Command::new(4, 5), 7, &[0; 81], 1),
+            Err(Error::InvalidArg(_))
+        ));
+        assert_eq!(pipe.writes.load(Ordering::Relaxed), 0);
+    }
+
+    #[test]
+    fn unsupported_reply_may_have_no_arguments() {
+        let command = Command::new(4, 0x85);
+        let mut body = Report::request(0x1f, command, 0, &[]);
+        body.0[0] = 5;
+        body.0[88] = checksum(&body.0);
+        let pipe = QueuedTransport::new(vec![body.0.to_vec()]);
+        assert!(matches!(
+            super::transact(&pipe, 0x1f, command, 7, &[], 1),
+            Err(Error::Device {
+                status: Status::NotSupported,
+                ..
+            })
+        ));
+    }
 
     #[test]
     fn paired_mice_reply_needs_exactly_one_connected_mouse() {
-        assert_eq!(connected_mouse_pid(&[2, 1, 0, 0xAB, 0, 0xFF, 0xFF]), Some(0x00AB));
+        assert_eq!(
+            connected_mouse_pid(&[2, 1, 0, 0xAB, 0, 0xFF, 0xFF]),
+            Some(0x00AB)
+        );
         for args in [
-            &[][..], &[0], &[2, 1, 0, 0xAB], &[255, 1, 0, 0xAB],
-            &[1, 0, 0, 0xAB], &[1, 1, 0xFF, 0xFF], &[1, 1, 0, 0],
+            &[][..],
+            &[0],
+            &[2, 1, 0, 0xAB],
+            &[255, 1, 0, 0xAB],
+            &[1, 0, 0, 0xAB],
+            &[1, 1, 0xFF, 0xFF],
+            &[1, 1, 0, 0],
             &[2, 1, 0, 0xAB, 1, 0, 0xA8],
         ] {
             assert_eq!(connected_mouse_pid(args), None, "{args:?}");
@@ -334,7 +557,10 @@ mod tests {
 
     #[test]
     fn serials_are_cleaned() {
-        assert_eq!(parse_serial(b"AB1234C56789012\0\0\0\0\0\0\0"), "AB1234C56789012");
+        assert_eq!(
+            parse_serial(b"AB1234C56789012\0\0\0\0\0\0\0"),
+            "AB1234C56789012"
+        );
         assert_eq!(parse_serial(b"  ABC123  \0"), "ABC123");
         assert_eq!(parse_serial(&[0u8; 22]), "");
         assert_eq!(parse_serial(b"000000000000\0"), "");
