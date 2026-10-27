@@ -1,0 +1,15 @@
+# Uniform controller checkpoint
+
+This unit adds Engine-side uniform state, guards and simulator coverage. There is still no production worker or endpoint wiring; worker-enabled defaults tofalse. The public UI does not start Spectrum/Breathing streams yet. The next unit owns that off-UI lifecycle.
+
+The controller consumes the existing pure `Program`/`Playback` and bounded frame adapter from `UNIFORM-PROGRAMS.md`. Native-only opt-in remains required. Default/imported/unmarked profiles do not acquire a stream. A current native effect/color projection is authoritative; marker changes bind the exact program. Driver3 has no firmware fallback. Normal0 is detected before polling a LUT ticket and remains dormant in the streaming controller.
+
+Per-device sessions bind the full device key, effective profile and program. Configurations are parsed/budget-checked when file path/mtime/length changes or an explicit action invalidates the cache. Known owner/input/policy state is sampled freshly before each attempted batch; no cached owner-clear lease is created. The local no-catch-up/freeze policy remains uncertified against the unrecovered native scheduler.
+
+The Engine brightness hook holds a positive LIVE resume until a first matching frame has completed. It submits no frame on the UI thread. Suppression can still darken output, and the existing one-shot configured-LIVE mechanism applies brightness after preparation. Shutdown bypasses the frame-readiness gate and releases only the existing brightness-policy lease; it never waits for exact previous RGB/animation phase or repaints a failed frame.
+
+Failures are device-bound, not merely program-bound. A partial new program or failed save cannot cause the older saved program to resume automatically on the next tick. Every explicit retry/reselection creates fresh generation/playback state, including the same program. Reconnect clears handle-bound faults. An action trace carries real Uniform accepted/attempted counts; Static bridge failures retain unknown counts rather than parsing strings. Invalid/unsupported choices before any output leave the prior stream alone.
+
+Controller status exposes the error/fault latch, packet counts, accepted frames, program IDs, palette index, cached-configuration reload count and measured per-call gate/submission times. Timing fields are observations only. There is no certified25fps, optical proof, cross-process exclusive ownership or stock phase synchronization claim.
+
+Nine focused simulator/spy tests pass: first-frame-before-LIVE ordering/cache reuse; default/unmarked/suppression behavior; failed same-program reselection recovery; Normal0 dormant→explicitDriver3 recovery; storedA→partialB→no old repaint; SpectrumA→partialStaticB→no repaint with unknown counts; no-I/O invalid choice retaining old stream; budget/owner no-output guards; shutdown release without frame retry. Full current tray regressions also pass. Logs are `work/uniform-controller-tests.log` and `work/uniform-controller-regressions.log` in the task workspace. No real HID or stock process work was performed for this unit.

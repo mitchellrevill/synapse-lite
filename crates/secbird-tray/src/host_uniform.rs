@@ -129,6 +129,15 @@ pub(crate) struct Completion {
     pub attempted_packets: usize,
     pub error: Option<String>,
 }
+/// Internal action diagnostics; packet counts come from the transport outcome,
+/// never from parsing a human-readable error message.
+#[derive(Debug,Default,Clone)]
+pub(crate) struct ActionTrace {
+    pub output_attempted:bool,
+    pub requested:Option<Program>,
+    pub completion:Option<Completion>,
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct Playback {
     program: Program,

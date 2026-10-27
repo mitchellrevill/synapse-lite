@@ -6,6 +6,7 @@ use std::cell::RefCell;
 use crate::lighting_runtime::{Config as LightingConfig, DeviceIo, Runtime as LightingRuntime};
 use std::time::{Duration, Instant, SystemTime};
 mod source_static;
+mod source_uniform;
 
 pub struct Engine {
     #[cfg(test)]
@@ -30,6 +31,7 @@ pub struct Engine {
     /// Devices that didn't answer [`Engine::lights_back`], and until when to keep trying.
     relight: HashMap<String, Instant>,
     lighting_runtime: RefCell<LightingRuntime>,
+    uniform: source_uniform::UniformState,
     host_static_results: RefCell<HashMap<String, (String, secbird_core::Rgb, serde_json::Value)>>,
     #[cfg(test)]
     runtime_store_path: Option<std::path::PathBuf>,
@@ -96,6 +98,7 @@ impl Engine {
             away: None,
             relight: HashMap::new(),
             lighting_runtime: RefCell::new(LightingRuntime::default()),
+            uniform: source_uniform::UniformState::default(),
             host_static_results: RefCell::new(HashMap::new()),
             #[cfg(test)]
             runtime_store_path: None,
@@ -438,6 +441,7 @@ impl Engine {
         if self.simulated_only { return Vec::new(); }
         let before: HashSet<String> = self.devices.iter().map(|d| d.key()).collect();
         self.host_static_results.borrow_mut().clear();
+        self.reset_uniform_handles();
         self.devices.clear(); // close stale handles before reopening
         let _ = self.api.refresh_devices();
         let db = Db::load(Some(&config_dir().join("devices.json")))
@@ -558,7 +562,7 @@ impl Engine {
                                 self.record_host_static(&key, &name, color, &result);
                             }
                         }
-                        Ok(crate::host_static::Gate::NeedsBaseline{..}) | Err(_) => {}
+                        Ok(crate::host_static::Gate::NeedsBaseline { .. }) | Err(_) => {}
                     }
                 }
                 if let Some((p, c, value)) = self.host_static_results.borrow().get(&key) {
@@ -580,6 +584,19 @@ impl Engine {
                     value["live_policy_reconcile_pending"] = serde_json::json!(false);
                 }
             }
+            let uniform_profile = store.for_device(&self.devices[index]).profiles[&name].clone();
+            if crate::host_uniform::Program::from_profile(&uniform_profile, self.devices[index].pid)
+                .ok()
+                .flatten()
+                .is_some()
+            {
+                if let Err(error) = secbird_core::profile_compat::validate_store_budget(&store) {
+                    config.error = Some(error.to_string());
+                }
+            }
+            if config.error.is_none() {
+                self.uniform_before_brightness(index, &uniform_profile, &name, &mut config);
+            }
             self.lighting_runtime.borrow_mut().reconcile(
                 &key,
                 &config,
@@ -590,6 +607,7 @@ impl Engine {
     /// Re-sample input immediately after an action; do not leave a new saved value
     /// visible until the next timer when display/idle suppression is still active.
     pub fn request_lighting_refresh(&mut self) {
+        self.invalidate_uniform();
         self.lighting_runtime.borrow_mut().invalidate_all();
         self.refresh_lighting_runtime();
     }
@@ -604,6 +622,14 @@ impl Engine {
         for (key, (_, _, value)) in self.host_static_results.borrow().iter() {
             if let Some(state) = status.get_mut(key) {
                 state["host_static"] = value.clone();
+            }
+        }
+        let uniforms = self.uniform_status();
+        if let Some(map) = uniforms.as_object() {
+            for (key, value) in map {
+                if let Some(target) = status.get_mut(key) {
+                    target["uniform_host"] = value.clone();
+                }
             }
         }
         status
@@ -686,12 +712,20 @@ impl Engine {
                     let color = profiles.profiles[&name].source_static_color(dev.pid);
                     let host_gate = self.host_static_gate(&key, store, &name);
                     profiles.lighting_off |= self.away.is_some() || blocked;
-                    if color.is_some() {
+                    let uniform_candidate = crate::host_uniform::Program::from_profile(
+                        &profiles.profiles[&name],
+                        dev.pid,
+                    )
+                    .ok()
+                    .flatten();
+                    if color.is_some() || uniform_candidate.is_some() {
                         if let Err(error) =
                             secbird_core::profile_compat::validate_store_budget(store)
                         {
                             let result = Err(error);
-                            self.record_host_static(&key, &name, color.unwrap(), &result);
+                            if let Some(color) = color {
+                                self.record_host_static(&key, &name, color, &result);
+                            }
                             reports.push(ApplyReport {
                                 device: dev.name(),
                                 profile: name,
@@ -721,6 +755,8 @@ impl Engine {
                             }
                         }
                     }
+                    let uniform_failures =
+                        self.uniform_shadow(&self.devices[index], &mut profiles, &name);
                     let dev = &mut self.devices[index];
                     let mut failures: Vec<String> = profiles
                         .apply(&name, dev)
@@ -736,6 +772,7 @@ impl Engine {
                             }
                         })
                         .collect();
+                    failures.extend(uniform_failures);
                     if let Some(color) = color {
                         if !profiles.lighting_off {
                             let result=match static_mode.expect("unblocked source Static was queried") {
