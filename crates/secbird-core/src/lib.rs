@@ -27,6 +27,7 @@ pub mod lighting;
 pub mod lighting_readback;
 pub mod log;
 pub mod macros;
+pub mod mouse_symbolic_bridge;
 pub mod net;
 pub mod ornata_frame;
 pub mod ornata_identity;
