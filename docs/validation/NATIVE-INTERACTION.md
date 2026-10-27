@@ -23,3 +23,17 @@ cargo test -p secbird-tray native_power_pointer_routes --locked -- --ignored --t
 `SYNAPSE_LITE_ASSETS` may point to locally provisioned source fonts/assets. The fixture prints the location of its temporary frame, synthetic profiles and final result. The recorded [result](native-power-interaction.json) binds the test executable and test source by SHA-256.
 
 This proves the listed native-message and simulated-transport paths. It does not prove OS pointer transfer, keyboard/accessibility behavior, all resize/DPI/modal transitions, native rasterization parity, physical writes, sleep/wake or wireless behavior.
+
+## Lighting window
+
+The Lighting test uses an isolated simulated605/interface2 device and the actual native window/EDIT notifications. It verifies capture, no saved brightness write before release, 45% release reading raw114, cancellation without a later write, color-editor draft isolation between two filled slots, saved custom color, preserved opaque imported slot and unchanged other profile. Color actions issue no brightness writes. The actual resized client is1307.2 CSS pixels at125% DPI.
+
+This test found and now exercises a production resize fix: WM_WINDOWPOSCHANGED must reach DefWindowProc before borrowing editor state, because it synchronously delivers WM_SIZE. Nested size callbacks from editor actions are deferred and reconcile the current client rectangle. Otherwise the old stacked layout remains active after widening the real window.
+
+The generic simulated keyboard does not model the installed region0 brightness alias. Test readiness requires presented source controls and retained profile intent; it explicitly does not claim physical raw readback. Physical smoke coverage continues to require matching selectors, available readback and the locally provisioned source fonts/icons. No OS pointer was injected or physical HID opened.
+
+```powershell
+cargo test -p secbird-tray native_lighting_messages --locked -- --ignored --test-threads=1 --nocapture
+```
+
+See [the scoped Lighting result](native-lighting-interaction.json). Native color raster parity and complete input/modal/DPI behavior remain unverified.

@@ -43,6 +43,8 @@ See [the pinned baseline](docs/BASELINE.json), [acceptance criteria](docs/ACCEPT
 
 The source-derived mouse [Performance](docs/PERFORMANCE.md) and [Power](docs/POWER.md) controls are connected to shared device actions. Their reports distinguish source reconstruction, simulator checks, physical setting/readback/restoration checks and memory observations from the remaining visual and interaction gates.
 
+The keyboard [Lighting editor](docs/LIGHTING.md) includes recovered brightness/policy controls, palettes and the color editor. The tray runs idle/display brightness policies. Firmware effects have a guarded subset; the installed keyboard's Driver Mode currently prevents their application. Host animations and pixel parity remain unfinished.
+
 Raw proprietary application bundles, recovered fonts/images and private user profiles are local research material and are not committed to this repository. Local visual assets are provisioned separately into an ignored directory.
 
 ## Attribution

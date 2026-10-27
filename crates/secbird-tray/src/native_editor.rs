@@ -27,8 +27,12 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
+mod color_editor_layout;
+mod color_editor_view;
 #[cfg(test)]
 mod interaction_tests;
+mod lighting_layout;
+mod lighting_view;
 mod performance_layout;
 mod performance_view;
 mod power_layout;
@@ -42,6 +46,7 @@ const SMOKE_TIMER: usize = 72;
 const PROFILE_DIALOG: u32 = WM_APP + 91;
 const PROFILE_RENAME: u32 = WM_APP + 92;
 const PERFORMANCE_REPEAT: usize = 73;
+const LIGHTING_REPEAT: usize = 74;
 const BG: u32 = 0x222222;
 const PANEL: u32 = 0x111111;
 const TEXT: u32 = 0xcccccc;
@@ -185,6 +190,31 @@ mod form_tests {
     }
 
     #[test]
+    fn lighting_queue_keeps_preset_and_device_boundaries() {
+        let mut queue = VecDeque::new();
+        for (device, effect, value) in [
+            ("one", 1, 10),
+            ("one", 1, 20),
+            ("one", 2, 30),
+            ("two", 2, 40),
+        ] {
+            enqueue_setting(
+                &mut queue,
+                Job::Action(
+                    "/api/source-effect",
+                    json!({"id":"same","expected_device":device,"expected_profile":"Work",
+                    "source_effect_id":effect,"value":value}),
+                ),
+            )
+            .unwrap();
+        }
+        assert_eq!(queue.len(), 3);
+        assert!(matches!(&queue[0],Job::Action(_,body) if body["value"]==20));
+        assert!(matches!(&queue[1],Job::Action(_,body) if body["source_effect_id"]==2));
+        assert!(matches!(&queue[2],Job::Action(_,body) if body["expected_device"]=="two"));
+    }
+
+    #[test]
     fn queue_bound_refuses_work_without_discarding_accepted_operations() {
         let mut queue = VecDeque::new();
         for _ in 0..16 {
@@ -309,6 +339,7 @@ enum Action {
     Effect(&'static str),
     Sleep,
     PowerSlider(power_view::Kind, power_layout::Rect),
+    Lighting(lighting_view::Control),
     ReadButtons,
     SelectButton(String),
     Assign,
@@ -374,10 +405,16 @@ fn enqueue_setting(queue: &mut VecDeque<Job>, job: Job) -> Result<(), &'static s
                 "/api/sleep",
                 "/api/device-sleep",
                 "/api/critical-threshold",
+                "/api/lighting-settings",
+                "/api/lighting-policy",
+                "/api/source-custom-colors",
+                "/api/source-effect",
             ]
             .contains(previous)
             && a["id"] == b["id"]
             && a["expected_profile"] == b["expected_profile"]
+            && a["expected_device"] == b["expected_device"]
+            && (next != &"/api/source-effect" || a["source_effect_id"] == b["source_effect_id"])
         {
             *queue.back_mut().unwrap() = job;
             return Ok(());
@@ -682,6 +719,8 @@ struct State {
     performance_hover_hit: Option<usize>,
     performance_gesture: Option<PerformanceGesture>,
     power_gesture: Option<power_view::Gesture>,
+    lighting: lighting_view::View,
+    lighting_capture: bool,
     status: String,
     failed: bool,
     smoke_view: Option<String>,
@@ -708,6 +747,63 @@ impl Drop for State {
 }
 
 impl State {
+    fn lighting_point(&self, point: POINT) -> lighting_view::Point {
+        lighting_view::Point {
+            x: f64::from(point.x) / f64::from(self.scale),
+            y: f64::from(point.y) / f64::from(self.scale),
+        }
+    }
+
+    unsafe fn lighting_update(&mut self, update: lighting_view::Update) -> bool {
+        match update.capture {
+            lighting_view::Capture::None => {}
+            lighting_view::Capture::Start => {
+                self.lighting_capture = true;
+                SetCapture(self.hwnd);
+                SetTimer(self.hwnd, LIGHTING_REPEAT, 300, None);
+            }
+            lighting_view::Capture::Release => {
+                self.lighting_capture = false;
+                KillTimer(self.hwnd, LIGHTING_REPEAT);
+                ReleaseCapture();
+            }
+        }
+        for command in update.commands {
+            match command {
+                lighting_view::Command::CommitIntent {
+                    owner,
+                    settings,
+                    scope,
+                } => {
+                    let path = match scope {
+                        lighting_view::Scope::Brightness => "/api/lighting-settings",
+                        lighting_view::Scope::Policy => "/api/lighting-policy",
+                    };
+                    self.queue(Job::Action(path,json!({"id":owner.device,"expected_device":owner.device,"expected_profile":owner.profile,"lighting_settings":settings})));
+                }
+                lighting_view::Command::ApplyEffect {
+                    owner,
+                    source_id,
+                    setting,
+                } => {
+                    self.queue(Job::Action("/api/source-effect",json!({"id":owner.device,"expected_device":owner.device,"expected_profile":owner.profile,"source_effect_id":source_id,"source_effect_setting":setting})));
+                }
+                lighting_view::Command::PersistCustomColors { owner, slots } => {
+                    self.queue(Job::Action("/api/source-custom-colors",json!({"id":owner.device,"expected_device":owner.device,"expected_profile":owner.profile,"custom_colors":slots})));
+                }
+                lighting_view::Command::Eyedropper => {
+                    self.error("The source eyedropper is not implemented yet")
+                }
+            }
+        }
+        if update.rebuild_fields {
+            self.rebuild_fields();
+        }
+        if update.handled {
+            InvalidateRect(self.hwnd, null(), 0);
+        }
+        update.handled
+    }
     unsafe fn sync_performance(&mut self, force: bool) {
         let device = self.device().cloned();
         let owner = device.as_ref().map(|d| {
@@ -1032,7 +1128,24 @@ impl State {
                     && self.tab == Tab::Performance
                     && performance_view::layout(self).is_some()
             }
-            "keyboard-lighting" => kind == Some("keyboard") && self.tab == Tab::Lighting,
+            "keyboard-lighting" => {
+                kind == Some("keyboard")
+                    && self.tab == Tab::Lighting
+                    && self.device().is_some_and(|d| {
+                        d["pid"] == "025D"
+                            && d["lighting_readback"]["available"] == true
+                            && d["lighting_readback"]["selectors_match"] == true
+                    })
+                    && self.lighting.owner.is_some()
+                    && self.lighting.intent.brightness.is_some()
+                    && self
+                        .icons
+                        .keys()
+                        .filter(|name| name.starts_with("lighting-"))
+                        .count()
+                        == 17
+                    && self.fonts.loaded.len() == 3
+            }
             "mouse-power" => {
                 kind == Some("mouse")
                     && power_view::layout(self).is_some()
@@ -1070,6 +1183,10 @@ impl State {
             "keyboard_source_assignment_options": self.keyboard_layout.as_ref().map(|layout| layout.keys.iter().map(|key| key.function_list.len()).sum::<usize>()),
             "source_performance_view": performance_view::layout(self).is_some(),
             "source_power_view": power_view::layout(self).is_some(),
+            "source_lighting_view": self.tab == Tab::Lighting && self.lighting.owner.is_some(),
+            "lighting_brightness_readback": self.device().map(|d|d["lighting_readback"].clone()),
+            "lighting_intent_origin": self.device().map(|d|d["lighting_settings_origin"].clone()),
+            "lighting_source_icons": self.icons.keys().filter(|name|name.starts_with("lighting-")).count(),
             "power_sleep_available": self.device().map(|d|d["device_sleep"]["available"].clone()),
             "power_threshold_available": self.device().map(|d|d["critical_threshold"]["available"].clone()),
             "performance_configured_rows": self.performance.as_ref().map(|p|p.stages.len()),
@@ -1174,6 +1291,18 @@ impl State {
                 self.buttons.clear();
             }
             self.sync_performance(false);
+            if let Some(device) = self.device().cloned() {
+                let preserve=self.pending_jobs.iter().any(|job|matches!(job,Job::Action(path,_) if path.starts_with("/api/lighting-")||path.starts_with("/api/source-")));
+                let owner = self.lighting.owner.clone();
+                lighting_view::sync(&mut self.lighting, &device, preserve);
+                if owner != self.lighting.owner && self.lighting_capture {
+                    self.lighting_capture = false;
+                    KillTimer(self.hwnd, LIGHTING_REPEAT);
+                    ReleaseCapture();
+                }
+            } else {
+                self.lighting = lighting_view::View::default();
+            }
             if !self.smoke_reported {
                 if self.smoke_requested.as_deref() == Some("mouse-performance-independent") {
                     if let Some(p) = &mut self.performance {
@@ -1271,6 +1400,10 @@ impl State {
         self.retained_fields =
             dirty_fields(owner == self.field_owner, &current, &self.field_defaults);
         self.field_owner = owner;
+        // The child owns dialog drafts; generic retained fields must not leak
+        // an old color editor's text into a different custom slot.
+        self.retained_fields
+            .retain(|id, _| !(lighting_view::HEX..=lighting_view::BOOST).contains(id));
         self.field_defaults.clear();
         self.performance_input_text.clear();
         let focused = GetFocus();
@@ -1296,7 +1429,8 @@ impl State {
             return;
         };
         let center = ((self.width as f32 / self.scale) as i32 / 2).max(420);
-        match self.tab {
+        let tab = self.tab;
+        match tab {
             Tab::Performance if self.performance.is_some() => {
                 if let Some((geometry, indices)) = performance_view::layout(self) {
                     for (g, row) in geometry.stages.iter().zip(indices) {
@@ -1332,6 +1466,7 @@ impl State {
                     110,
                 );
             }
+            Tab::Lighting if lighting_view::rebuild_fields(self) => {}
             Tab::Lighting if device["leds"].as_array().is_some_and(|v| !v.is_empty()) => {
                 let zone = device["leds"][0]["name"].as_str().unwrap_or("backlight");
                 let saved = &device["profile"]["lighting"][zone];
@@ -1621,6 +1756,10 @@ impl State {
                 }
             }
             Action::PowerSlider(..) => {}
+            Action::Lighting(control) => {
+                let update = lighting_view::action(self, control);
+                self.lighting_update(update);
+            }
             Action::ReadButtons => self.queue(Job::Buttons(self.id())),
             Action::SelectButton(name) => {
                 self.selected_button = name;
@@ -2248,31 +2387,14 @@ unsafe fn paint(state: &mut State, dc: HDC) {
                 }
             }
             Tab::Lighting => {
-                p.text(
-                    "BRIGHTNESS",
-                    center - 310,
-                    187,
-                    300,
-                    30,
-                    p.fonts.heading,
-                    GREEN,
-                    DT_LEFT,
-                );
-                if device["leds"].as_array().is_some_and(|v| !v.is_empty()) {
+                let saved = SaveDC(p.dc);
+                IntersectClipRect(p.dc, 0, p.px(128), state.width, state.height - p.px(35));
+                let source = lighting_view::paint(state, &mut p, &device);
+                RestoreDC(p.dc, saved);
+                if !source {
                     p.text(
-                        "PERCENT",
+                        "BRIGHTNESS",
                         center - 310,
-                        222,
-                        130,
-                        22,
-                        p.fonts.small,
-                        MUTED,
-                        DT_LEFT,
-                    );
-                    p.button("APPLY", center - 310, 298, 115, Action::Brightness, true);
-                    p.text(
-                        "QUICK EFFECTS",
-                        center + 70,
                         187,
                         300,
                         30,
@@ -2280,44 +2402,67 @@ unsafe fn paint(state: &mut State, dc: HDC) {
                         GREEN,
                         DT_LEFT,
                     );
-                    p.text(
-                        "STATIC COLOR (HEX)",
-                        center + 70,
-                        222,
-                        210,
-                        22,
-                        p.fonts.small,
-                        MUTED,
-                        DT_LEFT,
-                    );
-                    p.button("APPLY COLOR", center + 70, 298, 150, Action::Color, true);
-                    p.button(
-                        "SPECTRUM CYCLING",
-                        center + 70,
-                        352,
-                        185,
-                        Action::Effect("spectrum"),
-                        false,
-                    );
-                    p.button(
-                        "BREATHING",
-                        center + 70,
-                        394,
-                        185,
-                        Action::Effect("breathing:44D62C"),
-                        false,
-                    );
-                } else {
-                    p.text(
-                        "This device has no supported lighting zones",
-                        center - 310,
-                        237,
-                        620,
-                        30,
-                        p.fonts.normal,
-                        MUTED,
-                        DT_LEFT,
-                    );
+                    if device["leds"].as_array().is_some_and(|v| !v.is_empty()) {
+                        p.text(
+                            "PERCENT",
+                            center - 310,
+                            222,
+                            130,
+                            22,
+                            p.fonts.small,
+                            MUTED,
+                            DT_LEFT,
+                        );
+                        p.button("APPLY", center - 310, 298, 115, Action::Brightness, true);
+                        p.text(
+                            "QUICK EFFECTS",
+                            center + 70,
+                            187,
+                            300,
+                            30,
+                            p.fonts.heading,
+                            GREEN,
+                            DT_LEFT,
+                        );
+                        p.text(
+                            "STATIC COLOR (HEX)",
+                            center + 70,
+                            222,
+                            210,
+                            22,
+                            p.fonts.small,
+                            MUTED,
+                            DT_LEFT,
+                        );
+                        p.button("APPLY COLOR", center + 70, 298, 150, Action::Color, true);
+                        p.button(
+                            "SPECTRUM CYCLING",
+                            center + 70,
+                            352,
+                            185,
+                            Action::Effect("spectrum"),
+                            false,
+                        );
+                        p.button(
+                            "BREATHING",
+                            center + 70,
+                            394,
+                            185,
+                            Action::Effect("breathing:44D62C"),
+                            false,
+                        );
+                    } else {
+                        p.text(
+                            "This device has no supported lighting zones",
+                            center - 310,
+                            237,
+                            620,
+                            30,
+                            p.fonts.normal,
+                            MUTED,
+                            DT_LEFT,
+                        );
+                    }
                 }
             }
             Tab::Power => {
@@ -2560,6 +2705,11 @@ unsafe extern "system" fn window_proc(
     // Win32 calls can synchronously reenter a window procedure. Never create
     // overlapping mutable references to its state during those callbacks.
     match message {
+        WM_WINDOWPOSCHANGED => {
+            // DefWindowProc synchronously delivers WM_SIZE/WM_MOVE. Forward
+            // before borrowing State so the new layout is actually retained.
+            return DefWindowProcW(hwnd, message, wparam, lparam);
+        }
         WM_CLOSE => {
             let pointer = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut RefCell<State>;
             if !pointer.is_null() {
@@ -2631,9 +2781,32 @@ unsafe extern "system" fn window_proc(
         return 0;
     }
     let Ok(mut state) = (*pointer).try_borrow_mut() else {
+        if message == WM_SIZE {
+            // ShowWindow/SetWindowPos can also run inside an editor action.
+            // Reconcile after that borrow ends; WM_SIZE reads the current
+            // client rect so a deferred older notification cannot undo a resize.
+            PostMessageW(hwnd, WM_SIZE, wparam, 0);
+            return 0;
+        }
         return DefWindowProcW(hwnd, message, wparam, lparam);
     };
     match message {
+        WM_COMMAND
+            if (lighting_view::HEX..=lighting_view::BOOST)
+                .contains(&((wparam & 0xffff) as u16)) =>
+        {
+            let event = match (wparam >> 16) as u32 {
+                EN_SETFOCUS => Some(lighting_view::InputEvent::Focus),
+                EN_CHANGE => Some(lighting_view::InputEvent::Change),
+                EN_KILLFOCUS => Some(lighting_view::InputEvent::Blur),
+                _ => None,
+            };
+            if let Some(event) = event {
+                let update = lighting_view::input(&mut state, (wparam & 0xffff) as u16, event);
+                state.lighting_update(update);
+            }
+            0
+        }
         WM_COMMAND
             if (PERFORMANCE_INPUT..PERFORMANCE_INPUT + 10)
                 .contains(&((wparam & 0xffff) as u16))
@@ -2679,11 +2852,15 @@ unsafe extern "system" fn window_proc(
             0
         }
         WM_SIZE => {
+            let update = lighting_view::cancel(&mut state);
+            state.lighting_update(update);
             if state.power_gesture.take().is_some() {
                 ReleaseCapture();
             }
-            state.width = (lparam as u32 & 0xffff) as i32;
-            state.height = ((lparam as u32 >> 16) & 0xffff) as i32;
+            let mut client: RECT = std::mem::zeroed();
+            GetClientRect(hwnd, &mut client);
+            state.width = client.right;
+            state.height = client.bottom;
             state.hits.clear();
             state.rebuild_fields();
             InvalidateRect(hwnd, null(), 0);
@@ -2721,6 +2898,28 @@ unsafe extern "system" fn window_proc(
             }
             DefWindowProcW(hwnd, message, wparam, lparam)
         }
+        WM_MOUSEMOVE if state.lighting_capture => {
+            let point = state.lighting_point(POINT {
+                x: (lparam as u32 & 0xffff) as i16 as i32,
+                y: ((lparam as u32 >> 16) & 0xffff) as i16 as i32,
+            });
+            let update = lighting_view::pointer(&mut state, point);
+            state.lighting_update(update);
+            0
+        }
+        WM_MOUSEMOVE
+            if state.tab == Tab::Lighting && state.device().is_some_and(|d| d["pid"] == "025D") =>
+        {
+            let mut tracking = TRACKMOUSEEVENT {
+                cbSize: std::mem::size_of::<TRACKMOUSEEVENT>() as u32,
+                dwFlags: TME_LEAVE,
+                hwndTrack: hwnd,
+                dwHoverTime: 0,
+            };
+            TrackMouseEvent(&mut tracking);
+            InvalidateRect(hwnd, null(), 0);
+            0
+        }
         WM_MOUSEMOVE if state.tab == Tab::Performance && state.performance.is_some() => {
             let mut tracking = TRACKMOUSEEVENT {
                 cbSize: std::mem::size_of::<TRACKMOUSEEVENT>() as u32,
@@ -2751,6 +2950,8 @@ unsafe extern "system" fn window_proc(
             0
         }
         WM_CANCELMODE => {
+            let update = lighting_view::cancel(&mut state);
+            state.lighting_update(update);
             // DefWindowProc can synchronously send WM_CAPTURECHANGED while
             // this state is borrowed. Cancel explicitly before releasing it.
             state.power_gesture = None;
@@ -2761,6 +2962,13 @@ unsafe extern "system" fn window_proc(
             }
             ReleaseCapture();
             InvalidateRect(hwnd, null(), 0);
+            0
+        }
+        WM_CAPTURECHANGED if state.lighting_capture => {
+            let update = lighting_view::cancel(&mut state);
+            state.lighting_update(update);
+            state.lighting_capture = false;
+            KillTimer(hwnd, LIGHTING_REPEAT);
             0
         }
         WM_CAPTURECHANGED if state.power_gesture.is_some() => {
@@ -2781,6 +2989,9 @@ unsafe extern "system" fn window_proc(
                 x: (lparam as u32 & 0xffff) as i16 as i32,
                 y: ((lparam as u32 >> 16) & 0xffff) as i16 as i32,
             };
+            let logical = state.lighting_point(point);
+            let update = lighting_view::outside(&mut state, logical);
+            state.lighting_update(update);
             let action = state
                 .hits
                 .iter()
@@ -2801,6 +3012,11 @@ unsafe extern "system" fn window_proc(
                     if id == PROFILE_NAME {
                         PostMessageW(hwnd, PROFILE_RENAME, 0, 0);
                     }
+                    if (lighting_view::HEX..=lighting_view::BOOST).contains(&id) {
+                        let update =
+                            lighting_view::input(&mut state, id, lighting_view::InputEvent::Blur);
+                        state.lighting_update(update);
+                    }
                 }
                 SetFocus(hwnd);
             }
@@ -2810,6 +3026,9 @@ unsafe extern "system" fn window_proc(
             {
                 state.action(action);
                 state.performance_pointer(point);
+            } else if let Some(Action::Lighting(control)) = action {
+                let update = lighting_view::begin(&mut state, control, logical);
+                state.lighting_update(update);
             } else if let Some(Action::PowerSlider(kind, shape)) = action {
                 power_view::begin(&mut state, kind, shape);
                 power_view::pointer(&mut state, point);
@@ -2829,6 +3048,13 @@ unsafe extern "system" fn window_proc(
             InvalidateRect(hwnd, null(), 0);
             0
         }
+        WM_MOUSEWHEEL
+            if state.tab == Tab::Lighting && state.device().is_some_and(|d| d["pid"] == "025D") =>
+        {
+            let update = lighting_view::scroll(&mut state, (wparam >> 16) as u16 as i16);
+            state.lighting_update(update);
+            0
+        }
         WM_MOUSEWHEEL if state.tab == Tab::Performance && state.performance.is_some() => {
             if let Some((g, _)) = performance_view::layout(&state) {
                 let bottom = (g.sensitivity_widget.y + g.sensitivity_widget.height)
@@ -2846,6 +3072,17 @@ unsafe extern "system" fn window_proc(
             0
         }
         WM_LBUTTONUP => {
+            if state.lighting_capture {
+                let logical = state.lighting_point(POINT {
+                    x: (lparam as u32 & 0xffff) as i16 as i32,
+                    y: ((lparam as u32 >> 16) & 0xffff) as i16 as i32,
+                });
+                let update = lighting_view::pointer(&mut state, logical);
+                state.lighting_update(update);
+                let update = lighting_view::finish(&mut state);
+                state.lighting_update(update);
+                return 0;
+            }
             if state.power_gesture.is_some() {
                 power_view::pointer(
                     &mut state,
@@ -3008,6 +3245,20 @@ unsafe extern "system" fn window_proc(
             state.collect();
             0
         }
+        WM_RBUTTONUP if state.tab == Tab::Lighting => {
+            let logical = state.lighting_point(POINT {
+                x: (lparam as u32 & 0xffff) as i16 as i32,
+                y: ((lparam as u32 >> 16) & 0xffff) as i16 as i32,
+            });
+            let update = lighting_view::context(&mut state, logical);
+            state.lighting_update(update);
+            0
+        }
+        WM_TIMER if wparam == LIGHTING_REPEAT => {
+            let update = lighting_view::tick(&mut state);
+            state.lighting_update(update);
+            0
+        }
         WM_TIMER if wparam == PERFORMANCE_REPEAT => {
             if let Some(PerformanceGesture::Spinner { row, axis, delta }) =
                 state.performance_gesture
@@ -3127,6 +3378,8 @@ fn run_window(
             performance_hover_hit: None,
             performance_gesture: None,
             power_gesture: None,
+            lighting: lighting_view::View::default(),
+            lighting_capture: false,
             status: "Reading connected devices…".into(),
             failed: false,
             smoke_view: smoke_requested.clone(),
@@ -3173,6 +3426,23 @@ fn run_window(
                 "dpi-stage-4-active",
                 "dpi-stage-5-default",
                 "dpi-stage-5-active",
+                "lighting-ccw-active",
+                "lighting-ccw",
+                "lighting-cw-active",
+                "lighting-cw",
+                "lighting-eyedropper-hover",
+                "lighting-eyedropper",
+                "lighting-in-active",
+                "lighting-in",
+                "lighting-left-active",
+                "lighting-left",
+                "lighting-no-color",
+                "lighting-out-active",
+                "lighting-out",
+                "lighting-plus",
+                "lighting-right-active",
+                "lighting-right",
+                "lighting-sync",
             ]
             .into_iter()
             .filter_map(|name| {
@@ -3265,6 +3535,43 @@ fn run_window(
                 }
             }
             let control_id = GetDlgCtrlID(message.hwnd) as u16;
+            if (lighting_view::HEX..=lighting_view::BOOST).contains(&control_id)
+                && message.message == WM_KEYDOWN
+                && matches!(message.wParam, 13 | 27)
+            {
+                let mut current = state.borrow_mut();
+                let event = if message.wParam == 13 {
+                    lighting_view::InputEvent::Enter
+                } else {
+                    lighting_view::InputEvent::Escape
+                };
+                let update = lighting_view::input(&mut current, control_id, event);
+                current.lighting_update(update);
+                SetFocus(hwnd);
+                continue;
+            }
+            if control_id == lighting_view::BOOST
+                && ((message.message == WM_KEYDOWN && matches!(message.wParam, 38 | 40))
+                    || message.message == WM_MOUSEWHEEL)
+            {
+                let mut current = state.borrow_mut();
+                let update = lighting_view::action(
+                    &mut current,
+                    lighting_view::Control::BoostStep(if message.message == WM_MOUSEWHEEL {
+                        if ((message.wParam >> 16) as u16 as i16) > 0 {
+                            1
+                        } else {
+                            -1
+                        }
+                    } else if message.wParam == 38 {
+                        1
+                    } else {
+                        -1
+                    }),
+                );
+                current.lighting_update(update);
+                continue;
+            }
             if (PERFORMANCE_INPUT..PERFORMANCE_INPUT + 10).contains(&control_id) {
                 if message.message == WM_KEYDOWN && matches!(message.wParam, 13 | 27) {
                     SetFocus(hwnd);

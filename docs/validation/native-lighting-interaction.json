@@ -1,0 +1,18 @@
+{
+  "brightness_cancel_no_write": true,
+  "brightness_capture_verified": true,
+  "brightness_no_write_before_release": true,
+  "brightness_release_raw": 114,
+  "cancelled_color_retained": true,
+  "color_actions_did_not_write_brightness": true,
+  "edited_slot_saved": "#a1b2c3",
+  "evidence": "actual HWND mouse/EDIT notifications and worker persistence; no OS pointer injection or hardware proof",
+  "native_edit_draft_switch_isolated": true,
+  "opaque_slot_preserved": true,
+  "physical_discovery_disabled": true,
+  "scale": 1.25,
+  "source_layout_client_css_width": 1307.2,
+  "source_region0_readback_not_modeled": true,
+  "transport": "simulated only",
+  "test_source_sha256": "0336549d1f2de20358d27232988e5c73698af50d602848651dc2918dbc4f294c"
+}

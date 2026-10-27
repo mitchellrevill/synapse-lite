@@ -145,6 +145,8 @@ impl Engine {
     /// collection 5 (usage 0001:0000, 16-byte reports); its sibling with the same usage
     /// stays silent, so listening to both costs nothing.
     pub fn event_paths(&self) -> Vec<(String, std::ffi::CString)> {
+        #[cfg(test)]
+        if self.simulated_only { return Vec::new(); }
         self.devices
             .iter()
             .flat_map(|dev| {
