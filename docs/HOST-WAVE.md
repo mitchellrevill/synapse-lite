@@ -65,3 +65,35 @@ constructor supplies numeric fixture maps; it is unavailable to production
 callers. No manifest file or hardware was read during these tests. The unit is
 registered as a Windows tray module, but has no production runtime caller in
 this checkpoint.
+
+## Explicit playback intent
+
+The existing pure host playback now accepts an explicit
+`host_uniform::Program::Wave(host_wave::Program)`. Its source/native effect IDs
+are4/2. Cycle metadata comes from the same bounded23x7 zero-offset WaveCycle
+constructor, yielding25 indices at a40ms nominal sample interval. A ticket is
+typed `FrameContent::SpatialIndex`; `palette_index` supplies the requested
+spatial index. Uniform programs instead emit `FrameContent::Uniform(Rgb)`.
+Wave never fabricates a uniform RGB value or advances the WaveCycle's hidden
+frame counter; the existing playback index owns the local intent sequence.
+
+Both direct and streaming uniform-only submission wrappers reject spatial
+tickets before any GET/OUT or admission callback, with zero accepted/attempted
+frame packets and an explicit error. The generic prepared-physical-frame seams
+remain unchanged. A later caller must use PreparedWave with an authenticated
+layout and pass its prepared physical frame to that separate guarded seam.
+
+Playback retains generation/sequence ticket checks, stale/duplicate completion
+refusal, partial-failure latching with real counts, local phase freezing while
+suppressed/blocked, and one next index after a late pump without catchup bursts.
+This is our declared scheduling policy; it is not newly established native
+outer-clock or pause parity. Existing Spectrum/Breathing vector fixtures remain
+unchanged.
+
+Explicit Wave opt-in delegates to the profile-bound Wave marker, and clearing
+host opt-in removes both uniform and Wave markers. Import/default profile
+discovery through Program::from_profile deliberately remains **uniform-only**,
+even for a profile with an explicit Wave marker. Engine/server/worker integration
+has not been added. Four additional tests cover every index and wrap for both
+directions, typed zero-I/O refusal, phase/fault/generation behavior, and delegated
+opt-in without automatic Wave discovery.

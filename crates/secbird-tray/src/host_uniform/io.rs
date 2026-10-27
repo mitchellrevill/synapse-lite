@@ -3,7 +3,7 @@
 //! policy immediately before calling; each batch still freshly checks mode3.
 //! Deadline/cancellation are cooperative. Postflight GETs can extend the nominal
 //! batch budget and no in-flight HID syscall can be interrupted here.
-use super::{Completion, FrameTicket};
+use super::{Completion, FrameContent, FrameTicket};
 use secbird_core::{ornata_frame::PreparedOrnataFrame, Device, Error, Result};
 use std::time::{Duration, Instant};
 
@@ -23,11 +23,36 @@ pub(crate) struct Submission {
     pub usb_out_elapsed: Duration,
 }
 impl Submission {
+    fn refused(error: Error) -> Self {
+        Self {
+            completion: Completion {
+                accepted_packets: 0,
+                attempted_packets: 0,
+                error: Some(error.to_string()),
+            },
+            control_verified: false,
+            observed_mode: None,
+            observed_parameter: None,
+            mode_after: None,
+            parameter_after: None,
+            elapsed: Duration::ZERO,
+            mode_query_elapsed: Duration::ZERO,
+            usb_out_elapsed: Duration::ZERO,
+        }
+    }
     pub(crate) fn parameter_unchanged(&self) -> Option<bool> {
         match (self.observed_parameter, self.parameter_after) {
             (Some(before), Some(after)) => Some(before == after),
             _ => None,
         }
+    }
+}
+fn uniform_frame(ticket: FrameTicket) -> Result<PreparedOrnataFrame> {
+    match ticket.content {
+        FrameContent::Uniform(color) => PreparedOrnataFrame::new(&[color; 132]),
+        FrameContent::SpatialIndex => Err(Error::Unsupported(
+            "Uniform-only submission refuses a spatial frame index; authenticate and prepare its physical frame first".into(),
+        )),
     }
 }
 fn custom_frame(device: &Device) -> Result<()> {
@@ -73,8 +98,10 @@ pub(crate) fn submit(
     deadline: Instant,
     cancelled: impl FnMut() -> bool,
 ) -> Submission {
-    let frame =
-        PreparedOrnataFrame::new(&[ticket.color; 132]).expect("fixed physical frame geometry");
+    let frame = match uniform_frame(ticket) {
+        Ok(frame) => frame,
+        Err(error) => return Submission::refused(error),
+    };
     submit_prepared(device, &frame, deadline, cancelled)
 }
 
@@ -207,6 +234,48 @@ mod tests {
             Poll::Frame(t) => t,
             _ => unreachable!(),
         }
+    }
+    #[test]
+    fn uniform_adapters_reject_spatial_tickets_before_any_get_or_out() {
+        let mut playback = Playback::new(
+            Program::Wave(crate::host_wave::Program::Left),
+            1,
+            Duration::ZERO,
+        );
+        let Poll::Frame(ticket) = playback.poll(Duration::ZERO, Availability::Ready) else {
+            panic!("Wave ticket")
+        };
+        let (mut device, spy) = test_support::fixture();
+        let mut stream = StreamState::default();
+        let rejected = [
+            submit(&mut device, ticket, Instant::now(), || {
+                panic!("no admission callback needed")
+            }),
+            stream.submit(&mut device, ticket, Instant::now(), || {
+                panic!("no stream callback needed")
+            }),
+        ];
+        for result in rejected {
+            assert_eq!(
+                (
+                    result.completion.accepted_packets,
+                    result.completion.attempted_packets
+                ),
+                (0, 0)
+            );
+            assert!(result
+                .completion
+                .error
+                .unwrap()
+                .contains("spatial frame index"));
+            assert!(!result.control_verified);
+            assert_eq!(result.observed_mode, None);
+            assert_eq!(result.mode_after, None);
+        }
+        assert_eq!(spy.state.lock().unwrap().attempts, 0);
+        assert!(spy.state.lock().unwrap().commands.is_empty());
+        assert!(spy.sim.state().log.is_empty());
+        assert_eq!(stream.status()["completed_control_checkpoints"], 0);
     }
     #[test]
     fn accepted_uniform_frame_has_only_profile0_outs_and_control_not_optical_verification() {

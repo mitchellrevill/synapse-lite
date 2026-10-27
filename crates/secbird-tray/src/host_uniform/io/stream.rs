@@ -46,8 +46,10 @@ impl StreamState {
         deadline: Instant,
         cancelled: impl FnMut() -> bool,
     ) -> Submission {
-        let frame =
-            PreparedOrnataFrame::new(&[ticket.color; 132]).expect("fixed physical frame geometry");
+        let frame = match uniform_frame(ticket) {
+            Ok(frame) => frame,
+            Err(error) => return Submission::refused(error),
+        };
         self.submit_frame(device, &frame, deadline, cancelled)
     }
     #[cfg(test)]
@@ -59,8 +61,10 @@ impl StreamState {
         cancelled: impl FnMut() -> bool,
         now: impl FnMut() -> Instant,
     ) -> Submission {
-        let frame =
-            PreparedOrnataFrame::new(&[ticket.color; 132]).expect("fixed physical frame geometry");
+        let frame = match uniform_frame(ticket) {
+            Ok(frame) => frame,
+            Err(error) => return Submission::refused(error),
+        };
         self.submit_frame_with_clock(device, &frame, deadline, cancelled, now)
     }
     /// The caller supplies physical RGB ordering; this boundary does not choose

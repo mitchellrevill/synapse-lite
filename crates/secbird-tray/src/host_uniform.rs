@@ -1,11 +1,17 @@
-//! Bounded uniform programs and a local submission scheduler.
+//! Bounded uniform/spatial-index programs and a local submission scheduler.
 //!
 //! RGB tables are derived from the shipped native renderer, not observed optical
 //! output. Source Spectrum is UI3/native4; Breathing is UI2/native5 (native3 is
-//! Reactive). The native outer scheduler is unknown. Our policy emits at most one
+//! Reactive). Explicit Wave is UI4/native2 and emits an index, never a dummy RGB
+//! color. The native outer scheduler is unknown. Our policy emits at most one
 //! frame per poll, never catches up in a burst, and freezes phase while suppressed.
 //! Program/scheduler logic is pure; the separate io child is a bounded adapter.
-use secbird_core::{effects::Effect, uniform_lighting::UniformCycle, Error, Profile, Result, Rgb};
+use secbird_core::{
+    effects::Effect,
+    uniform_lighting::UniformCycle,
+    wave_lighting::{CardinalDirection, WaveCycle, WaveRegion},
+    Error, Profile, Result, Rgb,
+};
 use serde_json::{json, Value};
 use std::time::Duration;
 
@@ -17,19 +23,27 @@ const OPT_IN: &str = "uniformHostIntent";
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Program {
     Spectrum,
-    Breathing { first: Rgb, second: Option<Rgb> },
+    Breathing {
+        first: Rgb,
+        second: Option<Rgb>,
+    },
+    /// Explicit frame-index intent only. Discovery remains uniform-only until
+    /// the Engine can authenticate and map a selected physical layout.
+    Wave(crate::host_wave::Program),
 }
 impl Program {
     pub(crate) fn source_id(self) -> u8 {
         match self {
             Self::Spectrum => 3,
             Self::Breathing { .. } => 2,
+            Self::Wave(_) => 4,
         }
     }
     pub(crate) fn native_id(self) -> u8 {
         match self {
             Self::Spectrum => 4,
             Self::Breathing { .. } => 5,
+            Self::Wave(_) => 2,
         }
     }
     pub(crate) fn from_profile(profile: &Profile, pid: u16) -> Result<Option<Self>> {
@@ -56,8 +70,19 @@ impl Program {
             _=>Ok(None),
         }
     }
-    fn cycle(self) -> UniformCycle {
-        match self {
+    fn cycle(self) -> Cycle {
+        if let Self::Wave(program) = self {
+            let direction = match program {
+                crate::host_wave::Program::Left => CardinalDirection::Left,
+                crate::host_wave::Program::Right => CardinalDirection::Right,
+            };
+            let region =
+                WaveRegion::new(7, 23, 0, 0, 23, 7).expect("verified fixed logical geometry");
+            return Cycle::Wave(
+                WaveCycle::source_quick(region, direction).expect("bounded source Quick Wave"),
+            );
+        }
+        Cycle::Uniform(match self {
             Self::Spectrum => UniformCycle::spectrum(),
             Self::Breathing {
                 first,
@@ -67,22 +92,30 @@ impl Program {
                 first,
                 second: Some(second),
             } => UniformCycle::breathing_two_colors(first, second),
-        }
+            Self::Wave(_) => unreachable!("spatial variant handled before uniform construction"),
+        })
     }
-    fn marker(self) -> Value {
+    fn marker(self) -> Option<Value> {
         match self {
-            Self::Spectrum => json!({"version":1,"source_id":3}),
-            Self::Breathing { first, second } => {
-                json!({"version":1,"source_id":2,"first":first.to_string(),"second":second.map(|c|c.to_string())})
-            }
+            Self::Spectrum => Some(json!({"version":1,"source_id":3})),
+            Self::Breathing { first, second } => Some(
+                json!({"version":1,"source_id":2,"first":first.to_string(),"second":second.map(|c|c.to_string())}),
+            ),
+            Self::Wave(_) => None,
         }
     }
     /// Native opt-in binds the current projection, not stale retained vendor colors.
     /// The marker is outside decoded: exporting cannot alter the vendor payload.
     pub(crate) fn opted_in(self, profile: &Profile) -> bool {
-        profile.extra.get(SOURCE).and_then(|v| v.get(OPT_IN)) == Some(&self.marker())
+        if let Self::Wave(program) = self {
+            return program.opted_in(profile);
+        }
+        profile.extra.get(SOURCE).and_then(|v| v.get(OPT_IN)) == self.marker().as_ref()
     }
     pub(crate) fn opt_in(self, profile: &mut Profile) -> Result<()> {
+        if let Self::Wave(program) = self {
+            return program.opt_in(profile);
+        }
         let metadata = profile
             .extra
             .get_mut(SOURCE)
@@ -90,12 +123,42 @@ impl Program {
             .ok_or_else(|| {
                 Error::InvalidArg("Source metadata is required before uniform host opt-in".into())
             })?;
-        metadata.insert(OPT_IN.into(), self.marker());
+        metadata.insert(
+            OPT_IN.into(),
+            self.marker().expect("uniform variant has marker"),
+        );
         Ok(())
     }
     pub(crate) fn clear_opt_in(profile: &mut Profile) {
         if let Some(metadata) = profile.extra.get_mut(SOURCE).and_then(Value::as_object_mut) {
             metadata.remove(OPT_IN);
+        }
+        crate::host_wave::Program::clear_opt_in(profile);
+    }
+}
+
+#[derive(Debug, Clone)]
+enum Cycle {
+    Uniform(UniformCycle),
+    Wave(WaveCycle),
+}
+impl Cycle {
+    fn frame_count(&self) -> usize {
+        match self {
+            Self::Uniform(cycle) => cycle.frame_count(),
+            Self::Wave(cycle) => cycle.frame_count(),
+        }
+    }
+    fn frame_interval(&self) -> Duration {
+        match self {
+            Self::Uniform(cycle) => cycle.frame_interval(),
+            Self::Wave(cycle) => cycle.frame_interval(),
+        }
+    }
+    fn next_content(&mut self) -> FrameContent {
+        match self {
+            Self::Uniform(cycle) => FrameContent::Uniform(cycle.next_color()),
+            Self::Wave(_) => FrameContent::SpatialIndex,
         }
     }
 }
@@ -107,11 +170,17 @@ pub(crate) enum Availability {
     Blocked,
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum FrameContent {
+    Uniform(Rgb),
+    /// palette_index selects the logical spatial frame. It is not an RGB color.
+    SpatialIndex,
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct FrameTicket {
     pub generation: u64,
     pub sequence: u64,
     pub palette_index: usize,
-    pub color: Rgb,
+    pub content: FrameContent,
     started_at: Duration,
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -131,18 +200,18 @@ pub(crate) struct Completion {
 }
 /// Internal action diagnostics; packet counts come from the transport outcome,
 /// never from parsing a human-readable error message.
-#[derive(Debug,Default,Clone)]
+#[derive(Debug, Default, Clone)]
 pub(crate) struct ActionTrace {
-    pub output_attempted:bool,
-    pub requested:Option<Program>,
-    pub completion:Option<Completion>,
+    pub output_attempted: bool,
+    pub requested: Option<Program>,
+    pub completion: Option<Completion>,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct Playback {
     program: Program,
     generation: u64,
-    cycle: UniformCycle,
+    cycle: Cycle,
     palette_index: usize,
     next_sequence: u64,
     next_due: Option<Duration>,
@@ -205,7 +274,7 @@ impl Playback {
             generation: self.generation,
             sequence: self.next_sequence,
             palette_index: self.palette_index,
-            color: self.cycle.next_color(),
+            content: self.cycle.next_content(),
             started_at: now,
         };
         self.next_sequence = self.next_sequence.wrapping_add(1);
@@ -313,7 +382,10 @@ mod tests {
                 let now = index as u64 * 40;
                 let t = due(&mut playback, now);
                 assert_eq!(t.palette_index, index);
-                output.extend([t.color.0, t.color.1, t.color.2]);
+                let FrameContent::Uniform(color) = t.content else {
+                    panic!("uniform fixture emitted a spatial index")
+                };
+                output.extend([color.0, color.1, color.2]);
                 playback
                     .complete(t, Duration::from_millis(now + 1), accepted())
                     .unwrap();
@@ -325,7 +397,10 @@ mod tests {
             assert_eq!(playback.accepted_frames(), count as u64);
             let wrap = due(&mut playback, count as u64 * 40);
             assert_eq!(wrap.palette_index, 0);
-            assert_eq!([wrap.color.0, wrap.color.1, wrap.color.2], bytes[..3]);
+            let FrameContent::Uniform(color) = wrap.content else {
+                panic!("uniform wrap emitted a spatial index")
+            };
+            assert_eq!([color.0, color.1, color.2], bytes[..3]);
         }
     }
     #[test]
@@ -489,5 +564,134 @@ mod tests {
         profile.extra.remove(SOURCE);
         assert!(Program::from_profile(&profile, 605).unwrap().is_none());
         assert!(Program::from_profile(&profile, 196).unwrap().is_none());
+    }
+
+    #[test]
+    fn explicit_wave_tickets_are_indices_for_all_25_frames_then_wrap() {
+        for direction in [
+            crate::host_wave::Program::Left,
+            crate::host_wave::Program::Right,
+        ] {
+            let program = Program::Wave(direction);
+            assert_eq!((program.source_id(), program.native_id()), (4, 2));
+            let mut playback = Playback::new(program, 17, Duration::ZERO);
+            assert_eq!(playback.frame_count(), 25);
+            assert_eq!(playback.interval(), Duration::from_millis(40));
+            for index in 0..25 {
+                let ticket = due(&mut playback, index * 40);
+                assert_eq!(ticket.palette_index, index as usize);
+                assert_eq!(ticket.content, FrameContent::SpatialIndex);
+                assert_eq!(ticket.generation, 17);
+                playback
+                    .complete(ticket, Duration::from_millis(index * 40 + 1), accepted())
+                    .unwrap();
+            }
+            assert_eq!(playback.accepted_frames(), 25);
+            let wrap = due(&mut playback, 1000);
+            assert_eq!(
+                (wrap.palette_index, wrap.content),
+                (0, FrameContent::SpatialIndex)
+            );
+        }
+    }
+
+    #[test]
+    fn wave_keeps_local_freeze_no_catchup_stale_completion_and_fault_contracts() {
+        let program = Program::Wave(crate::host_wave::Program::Left);
+        let mut playback = Playback::new(program, 1, Duration::ZERO);
+        let first = due(&mut playback, 0);
+        let mut fake_color = first;
+        fake_color.content = FrameContent::Uniform(Rgb(1, 2, 3));
+        assert!(playback
+            .complete(fake_color, Duration::from_millis(1), accepted())
+            .is_err());
+        assert_eq!(
+            playback.poll(Duration::from_millis(1), Availability::Ready),
+            Poll::InFlight
+        );
+        playback
+            .complete(first, Duration::from_millis(55), accepted())
+            .unwrap();
+        assert_eq!(
+            playback.poll(Duration::from_secs(1), Availability::Suppressed),
+            Poll::Suppressed
+        );
+        assert_eq!(
+            playback.poll(Duration::from_secs(100), Availability::Blocked),
+            Poll::Blocked
+        );
+        let second = due(&mut playback, 100_001);
+        assert_eq!(second.palette_index, 1, "suppression must not skip phase");
+        playback
+            .complete(second, Duration::from_millis(100_060), accepted())
+            .unwrap();
+        let late = due(&mut playback, 200_000);
+        assert_eq!(
+            late.palette_index, 2,
+            "late pump emits one next index, not catchup"
+        );
+        playback
+            .complete(
+                late,
+                Duration::from_millis(200_001),
+                Completion {
+                    accepted_packets: 2,
+                    attempted_packets: 3,
+                    error: Some("partial spatial OUT".into()),
+                },
+            )
+            .unwrap();
+        assert_eq!(
+            playback.poll(Duration::from_secs(999), Availability::Ready),
+            Poll::Faulted
+        );
+        assert_eq!(
+            (
+                playback.failure().unwrap().accepted_packets,
+                playback.failure().unwrap().attempted_packets
+            ),
+            (2, 3)
+        );
+        let mut replacement = Playback::new(program, 2, Duration::ZERO);
+        let current = due(&mut replacement, 0);
+        assert_eq!(current.palette_index, 0);
+        assert!(replacement
+            .complete(first, Duration::from_millis(1), accepted())
+            .is_err());
+        replacement
+            .complete(current, Duration::from_millis(1), accepted())
+            .unwrap();
+        assert!(replacement
+            .complete(current, Duration::from_millis(2), accepted())
+            .is_err());
+    }
+
+    #[test]
+    fn explicit_wave_opt_in_delegates_but_uniform_discovery_never_autoactivates_it() {
+        let mut profile =
+            secbird_core::profile_compat::new_native_profile(605, "Synthetic").unwrap();
+        Program::Spectrum.opt_in(&mut profile).unwrap();
+        secbird_core::profile_compat::set_source_quick_effect(
+            &mut profile,
+            605,
+            "Synthetic",
+            4,
+            &json!({"direction":1}),
+        )
+        .unwrap();
+        profile.lighting.get_mut("backlight").unwrap().effect =
+            Some(crate::host_wave::Program::Left.native_projection());
+        let decoded = profile.extra[SOURCE]["decoded"].clone();
+        let program = Program::Wave(crate::host_wave::Program::Left);
+        assert!(!program.opted_in(&profile));
+        assert_eq!(Program::from_profile(&profile, 605).unwrap(), None);
+        program.opt_in(&mut profile).unwrap();
+        assert!(program.opted_in(&profile));
+        assert_eq!(profile.extra[SOURCE]["decoded"], decoded);
+        assert_eq!(Program::from_profile(&profile, 605).unwrap(), None);
+        Program::clear_opt_in(&mut profile);
+        assert!(!program.opted_in(&profile));
+        assert!(profile.extra[SOURCE].get(OPT_IN).is_none());
+        assert!(profile.extra[SOURCE].get("waveHostIntent").is_none());
     }
 }

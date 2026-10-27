@@ -1234,6 +1234,7 @@ mod tests {
                 Program::Breathing { first, .. } => {
                     secbird_core::effects::Effect::Breathing(vec![first])
                 }
+                Program::Wave(_) => unreachable!("uniform fixture"),
             });
             program.opt_in(profile).unwrap();
             store.save().unwrap();
