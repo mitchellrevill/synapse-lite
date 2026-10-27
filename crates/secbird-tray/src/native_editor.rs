@@ -7,9 +7,10 @@
 //! No vendor JavaScript or CSS is embedded or executed here.
 
 use crate::{engine::Engine, server};
+use secbird_core::performance::Performance;
 use serde_json::{json, Value};
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::path::{Path, PathBuf};
 use std::ptr::{null, null_mut};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
@@ -18,10 +19,16 @@ use std::time::Duration;
 use windows_sys::Win32::Foundation::*;
 use windows_sys::Win32::Graphics::Gdi::*;
 use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
-use windows_sys::Win32::UI::Controls::{EM_GETSEL, EM_SETLIMITTEXT, EM_SETSEL};
-use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetFocus, SetFocus};
+use windows_sys::Win32::UI::Controls::{
+    EM_GETSEL, EM_SETLIMITTEXT, EM_SETMARGINS, EM_SETSEL, WM_MOUSELEAVE,
+};
+use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
+    GetFocus, ReleaseCapture, SetCapture, SetFocus, TrackMouseEvent, TME_LEAVE, TRACKMOUSEEVENT,
+};
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
+mod performance_layout;
+mod performance_view;
 mod profile_files;
 mod source_layout;
 
@@ -30,6 +37,7 @@ const RESPONSE_TIMER: usize = 71;
 const SMOKE_TIMER: usize = 72;
 const PROFILE_DIALOG: u32 = WM_APP + 91;
 const PROFILE_RENAME: u32 = WM_APP + 92;
+const PERFORMANCE_REPEAT: usize = 73;
 const BG: u32 = 0x222222;
 const PANEL: u32 = 0x111111;
 const TEXT: u32 = 0xcccccc;
@@ -44,6 +52,7 @@ const MINUTES: u16 = 105;
 const MAPPING: u16 = 106;
 const PROFILE_NAME: u16 = 107;
 const COMPAT_NOTICES: u16 = 108;
+const PERFORMANCE_INPUT: u16 = 120;
 static WINDOW: AtomicUsize = AtomicUsize::new(0);
 static OPENING: AtomicBool = AtomicBool::new(false);
 
@@ -120,8 +129,67 @@ fn available_profile_name(base: &str, existing: &[String], duplicate: bool) -> O
 
 #[cfg(test)]
 mod form_tests {
-    use super::{available_profile_name, dirty_fields};
+    use super::{available_profile_name, dirty_fields, enqueue_setting, Job};
+    use serde_json::json;
     use std::collections::HashMap;
+    use std::collections::VecDeque;
+
+    #[test]
+    fn rapid_settings_coalesce_without_crossing_an_ordered_operation() {
+        let mut queue = VecDeque::new();
+        enqueue_setting(
+            &mut queue,
+            Job::Action(
+                "/api/performance",
+                json!({"id":"same","expected_profile":"Work","value":400}),
+            ),
+        )
+        .unwrap();
+        enqueue_setting(
+            &mut queue,
+            Job::Action(
+                "/api/performance",
+                json!({"id":"same","expected_profile":"Work","value":800}),
+            ),
+        )
+        .unwrap();
+        assert_eq!(queue.len(), 1);
+        assert!(matches!(&queue[0],Job::Action(_,body) if body["value"]==800));
+        enqueue_setting(
+            &mut queue,
+            Job::Action("/api/polling", json!({"id":"same","hz":500})),
+        )
+        .unwrap();
+        enqueue_setting(
+            &mut queue,
+            Job::Action(
+                "/api/performance",
+                json!({"id":"same","expected_profile":"Work","value":1200}),
+            ),
+        )
+        .unwrap();
+        enqueue_setting(
+            &mut queue,
+            Job::Action(
+                "/api/performance",
+                json!({"id":"same","expected_profile":"Other","value":1600}),
+            ),
+        )
+        .unwrap();
+        assert_eq!(queue.len(), 4);
+        assert!(matches!(&queue[1], Job::Action("/api/polling", _)));
+    }
+
+    #[test]
+    fn queue_bound_refuses_work_without_discarding_accepted_operations() {
+        let mut queue = VecDeque::new();
+        for _ in 0..16 {
+            enqueue_setting(&mut queue, Job::Refresh).unwrap();
+        }
+        assert!(enqueue_setting(&mut queue, Job::Rescan).is_err());
+        assert_eq!(queue.len(), 16);
+        assert!(queue.iter().all(|job| matches!(job, Job::Refresh)));
+    }
 
     #[test]
     fn resize_retains_edits_but_clean_fields_follow_hardware() {
@@ -224,6 +292,13 @@ enum Action {
     ImportProfile,
     ExportProfile,
     Dpi,
+    PerfEnabled,
+    PerfSelect(usize),
+    PerfIndependent(usize),
+    PerfVisible(usize),
+    PerfSlider(usize, Axis, performance_layout::Rect),
+    PerfDrag(usize),
+    PerfStep(usize, Axis, i16),
     Poll(u32),
     Brightness,
     Color,
@@ -236,6 +311,30 @@ enum Action {
     Minimize,
     Maximize,
     Close,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Axis {
+    X,
+    Y,
+}
+
+#[derive(Clone, Copy)]
+enum PerformanceGesture {
+    Slider {
+        row: usize,
+        axis: Axis,
+        rect: performance_layout::Rect,
+    },
+    Reorder {
+        row: usize,
+        target: usize,
+    },
+    Spinner {
+        row: usize,
+        axis: Axis,
+        delta: i16,
+    },
 }
 
 struct Hit {
@@ -257,6 +356,31 @@ enum Job {
         format: profile_files::Format,
         target: String,
     },
+}
+
+fn enqueue_setting(queue: &mut VecDeque<Job>, job: Job) -> Result<(), &'static str> {
+    if let (Some(Job::Action(previous, a)), Job::Action(next, b)) = (queue.back(), &job) {
+        if previous == next
+            && [
+                "/api/performance",
+                "/api/dpi",
+                "/api/polling",
+                "/api/brightness",
+                "/api/sleep",
+            ]
+            .contains(previous)
+            && a["id"] == b["id"]
+            && a["expected_profile"] == b["expected_profile"]
+        {
+            *queue.back_mut().unwrap() = job;
+            return Ok(());
+        }
+    }
+    if queue.len() >= 16 {
+        return Err("The device queue is full; wait for the current operation");
+    }
+    queue.push_back(job);
+    Ok(())
 }
 
 struct Reply {
@@ -402,6 +526,8 @@ struct Fonts {
     normal: HFONT,
     heading: HFONT,
     product: HFONT,
+    widget_heading: HFONT,
+    input: HFONT,
     loaded: Vec<PathBuf>,
 }
 
@@ -441,6 +567,8 @@ impl Fonts {
             normal: make("Roboto", 14, 400),
             heading: make("RazerF5", 20, 400),
             product: make("Roboto", 16, 400),
+            widget_heading: make("RazerF5", 16, 400),
+            input: make("Arial", 14, 400),
             loaded,
         }
     }
@@ -449,7 +577,14 @@ impl Fonts {
 impl Drop for Fonts {
     fn drop(&mut self) {
         unsafe {
-            for font in [self.small, self.normal, self.heading, self.product] {
+            for font in [
+                self.small,
+                self.normal,
+                self.heading,
+                self.product,
+                self.widget_heading,
+                self.input,
+            ] {
                 if !font.is_null() {
                     DeleteObject(font);
                 }
@@ -527,9 +662,18 @@ struct State {
     field_defaults: HashMap<u16, String>,
     field_owner: Option<(String, String, String)>,
     retained_fields: HashMap<u16, String>,
+    performance_input_text: HashMap<u16, String>,
     jobs: mpsc::Sender<Job>,
     replies: mpsc::Receiver<Reply>,
     pending: usize,
+    pending_jobs: VecDeque<Job>,
+    closing: bool,
+    performance: Option<Performance>,
+    performance_owner: Option<(String, String)>,
+    performance_scroll: f64,
+    performance_hover: Option<usize>,
+    performance_hover_hit: Option<usize>,
+    performance_gesture: Option<PerformanceGesture>,
     status: String,
     failed: bool,
     smoke_view: Option<String>,
@@ -543,17 +687,273 @@ struct State {
     keyboard_layout: Option<source_layout::SourceLayout>,
     icons: HashMap<&'static str, Bitmap>,
     edit_brush: HBRUSH,
+    dim_edit_brush: HBRUSH,
 }
 
 impl Drop for State {
     fn drop(&mut self) {
         unsafe {
             DeleteObject(self.edit_brush);
+            DeleteObject(self.dim_edit_brush);
         }
     }
 }
 
 impl State {
+    unsafe fn sync_performance(&mut self, force: bool) {
+        let device = self.device().cloned();
+        let owner = device.as_ref().map(|d| {
+            (
+                d["id"].as_str().unwrap_or_default().to_string(),
+                d["active"].as_str().unwrap_or_default().to_string(),
+            )
+        });
+        let same_owner = owner == self.performance_owner;
+        let editing = self.fields.iter().any(|(id, control)| {
+            (PERFORMANCE_INPUT..PERFORMANCE_INPUT + 10).contains(id) && *control == GetFocus()
+        });
+        let queued = self
+            .pending_jobs
+            .iter()
+            .any(|job| matches!(job, Job::Action("/api/performance", _)));
+        if !force && same_owner && (self.performance_gesture.is_some() || queued || editing) {
+            return;
+        }
+        if !same_owner {
+            self.hits.clear();
+            self.performance_scroll = 0.0;
+            self.performance_hover = None;
+            self.performance_gesture = None;
+            KillTimer(self.hwnd, PERFORMANCE_REPEAT);
+            ReleaseCapture();
+        }
+        self.performance_owner = owner;
+        let performance = device.as_ref().and_then(|d| {
+            if !matches!(d["pid"].as_str(), Some("00C4" | "00C5")) {
+                return None;
+            }
+            if d["profile"]["performance"].is_object() {
+                let intent: Performance =
+                    serde_json::from_value(d["profile"]["performance"].clone()).ok()?;
+                return intent.validate().ok().map(|_| intent);
+            }
+            let stages = if d["profile"]["dpi_stages"].is_object() {
+                d["profile"]["dpi_stages"].clone()
+            } else {
+                json!({"active":d["stages"]["active"],"stages":d["stages"]["list"]})
+            };
+            let stages = serde_json::from_value(stages).ok()?;
+            Performance::from_hardware(&stages).ok()
+        });
+        if self.performance != performance {
+            self.hits.clear();
+        }
+        self.performance = performance;
+    }
+
+    unsafe fn commit_performance(&mut self) {
+        if let (Some(intent), Some((device, profile))) =
+            (&self.performance, &self.performance_owner)
+        {
+            self.queue(Job::Action(
+                "/api/performance",
+                json!({"id":device,"expected_profile":profile,"performance":intent}),
+            ));
+        }
+    }
+
+    unsafe fn edit_performance(&mut self, row: usize, axis: Axis, value: u16, commit: bool) {
+        if !commit
+            && self
+                .performance
+                .as_ref()
+                .and_then(|p| p.stages.get(row))
+                .is_some_and(|r| {
+                    if axis == Axis::X {
+                        r.x == value
+                    } else {
+                        r.y == value
+                    }
+                })
+        {
+            return;
+        }
+        let result = self
+            .performance
+            .as_mut()
+            .ok_or("Performance data is unavailable".to_string())
+            .and_then(|p| {
+                let result = match axis {
+                    Axis::X => p.set_x(row, value),
+                    Axis::Y => p.set_y(row, value),
+                };
+                result.map_err(|e| e.to_string())?;
+                if commit && p.stages[row].visible {
+                    p.active = row as u8 + 1;
+                }
+                Ok(())
+            });
+        if let Err(error) = result {
+            self.error(&error);
+            return;
+        }
+        if let Some(p) = &self.performance {
+            for (axis, value) in [(Axis::X, p.stages[row].x), (Axis::Y, p.stages[row].y)] {
+                let id = PERFORMANCE_INPUT + row as u16 * 2 + u16::from(axis == Axis::Y);
+                if let Some(control) = self.fields.get(&id) {
+                    let text = value.to_string();
+                    SetWindowTextW(*control, wide(&text).as_ptr());
+                    self.field_defaults.insert(id, text.clone());
+                    self.performance_input_text.insert(id, text);
+                }
+            }
+        }
+        if commit {
+            self.commit_performance();
+        }
+        InvalidateRect(self.hwnd, null(), 0);
+    }
+
+    unsafe fn commit_performance_input(&mut self, id: u16) {
+        let Some(index) = id.checked_sub(PERFORMANCE_INPUT).filter(|v| *v < 10) else {
+            return;
+        };
+        let axis = if index % 2 == 0 { Axis::X } else { Axis::Y };
+        let value = performance_layout::normalize_input_value(self.text(id).parse::<i64>().ok());
+        self.edit_performance(index as usize / 2, axis, value as u16, true);
+    }
+
+    unsafe fn step_performance(&mut self, row: usize, axis: Axis, delta: i16) {
+        let id = PERFORMANCE_INPUT + row as u16 * 2 + u16::from(axis == Axis::Y);
+        let current = self.text(id).parse::<i64>().ok().or_else(|| {
+            self.performance
+                .as_ref()
+                .and_then(|p| p.stages.get(row))
+                .map(|r| i64::from(if axis == Axis::X { r.x } else { r.y }))
+        });
+        let value =
+            performance_layout::normalize_input_value(current.map(|v| v + i64::from(delta)));
+        let editing = self
+            .fields
+            .get(&id)
+            .is_some_and(|control| *control == GetFocus());
+        self.edit_performance(row, axis, value as u16, !editing);
+    }
+
+    unsafe fn performance_pointer(&mut self, point: POINT) {
+        let old_hover = self.performance_hover;
+        let old_hit = self.performance_hover_hit;
+        self.performance_hover_hit = self
+            .hits
+            .iter()
+            .rposition(|hit| PtInRect(&hit.rect, point) != 0);
+        let logical_x = f64::from(point.x) / f64::from(self.scale);
+        let logical_y = f64::from(point.y) / f64::from(self.scale);
+        if let Some((geometry, indices)) = performance_view::layout(self) {
+            self.performance_hover = geometry
+                .stages
+                .iter()
+                .zip(&indices)
+                .find(|(g, _)| {
+                    logical_x >= g.row.x
+                        && logical_x < g.row.x + g.row.width
+                        && logical_y >= g.row.y
+                        && logical_y < g.row.y + g.row.height
+                })
+                .map(|(_, row)| *row);
+        }
+        if logical_y < 128.0 || logical_y >= f64::from(self.height) / f64::from(self.scale) - 35.0 {
+            self.performance_hover = None;
+        }
+        match self.performance_gesture {
+            Some(PerformanceGesture::Slider { row, axis, rect }) => {
+                // Native range controls reserve half the 12px thumb at each end.
+                let percent =
+                    ((logical_x - rect.x - 6.0) / (rect.width - 12.0) * 100.0).clamp(0.0, 100.0);
+                if let Some(value) = performance_layout::percent_to_dpi(percent) {
+                    self.edit_performance(row, axis, value as u16, false);
+                }
+            }
+            Some(PerformanceGesture::Reorder { row, .. }) => {
+                if let Some(target) = self.performance_hover {
+                    self.performance_gesture = Some(PerformanceGesture::Reorder { row, target });
+                }
+            }
+            _ => {}
+        }
+        if old_hover != self.performance_hover
+            || old_hit != self.performance_hover_hit
+            || self.performance_gesture.is_some()
+        {
+            InvalidateRect(self.hwnd, null(), 0);
+        }
+    }
+
+    unsafe fn finish_performance_gesture(&mut self) {
+        let gesture = self.performance_gesture.take();
+        KillTimer(self.hwnd, PERFORMANCE_REPEAT);
+        ReleaseCapture();
+        match gesture {
+            Some(PerformanceGesture::Slider { row, axis, .. }) => {
+                if let Some(value) = self
+                    .performance
+                    .as_ref()
+                    .and_then(|p| p.stages.get(row))
+                    .map(|r| if axis == Axis::X { r.x } else { r.y })
+                {
+                    self.edit_performance(row, axis, value, true);
+                }
+            }
+            Some(PerformanceGesture::Reorder { row, target }) => {
+                if row != target && self.performance_hover == Some(target) {
+                    let result = self.performance.as_mut().map(|p| p.move_row(row, target));
+                    if let Some(Err(error)) = result {
+                        self.error(&error.to_string());
+                    } else {
+                        self.commit_performance();
+                        self.rebuild_fields();
+                    }
+                }
+            }
+            _ => {}
+        }
+        InvalidateRect(self.hwnd, null(), 0);
+    }
+
+    unsafe fn performance_field(&mut self, id: u16, value: u16, rect: performance_layout::Rect) {
+        let value = value.to_string();
+        self.field_defaults.insert(id, value.clone());
+        let shown = self.retained_fields.remove(&id).unwrap_or(value);
+        self.performance_input_text.insert(id, shown.clone());
+        let px = |v: f64| (v * f64::from(self.scale)).round() as i32;
+        let control = CreateWindowExW(
+            0,
+            wide("EDIT").as_ptr(),
+            wide(&shown).as_ptr(),
+            WS_VISIBLE | WS_CHILD | WS_TABSTOP | ES_AUTOHSCROLL as u32,
+            px(rect.x + 7.0),
+            px(rect.y + 1.0),
+            px(55.0),
+            px(24.0),
+            self.hwnd,
+            id as usize as HMENU,
+            GetModuleHandleW(null()),
+            null(),
+        );
+        if !control.is_null() {
+            SendMessageW(control, WM_SETFONT, self.fonts.input as usize, 1);
+            SendMessageW(control, EM_SETLIMITTEXT, 6, 0);
+            SendMessageW(control, EM_SETMARGINS, 3, 0);
+            let top = (self.px(128) - px(rect.y + 1.0)).clamp(0, px(24.0));
+            let bottom = (self.height - self.px(35) - px(rect.y + 1.0)).clamp(0, px(24.0));
+            let region = CreateRectRgn(0, top.min(bottom), px(41.0), bottom);
+            if !region.is_null() && SetWindowRgn(control, region, 1) == 0 {
+                DeleteObject(region);
+            }
+            self.fields.insert(id, control);
+        }
+    }
+
     unsafe fn create_profile(&mut self, base: &str, duplicate: bool) {
         self.profile_actions = false;
         let names = self
@@ -598,7 +998,29 @@ impl State {
         let kind = self.device().and_then(|d| d["kind"].as_str());
         let matched = match requested.as_str() {
             "dashboard" => self.selected.is_none(),
-            "mouse-performance" => kind == Some("mouse") && self.tab == Tab::Performance,
+            "mouse-performance-hidden" => {
+                kind == Some("mouse")
+                    && self.tab == Tab::Performance
+                    && performance_view::layout(self).is_some()
+                    && self
+                        .performance
+                        .as_ref()
+                        .is_some_and(|p| p.visible_count() < p.stages.len())
+            }
+            "mouse-performance-independent" => {
+                kind == Some("mouse")
+                    && self.tab == Tab::Performance
+                    && performance_view::layout(self).is_some()
+                    && self
+                        .performance
+                        .as_ref()
+                        .is_some_and(|p| p.stages.iter().any(|r| r.independent))
+            }
+            "mouse-performance" | "mouse-performance-polling" => {
+                kind == Some("mouse")
+                    && self.tab == Tab::Performance
+                    && performance_view::layout(self).is_some()
+            }
             "keyboard-lighting" => kind == Some("keyboard") && self.tab == Tab::Lighting,
             "keyboard-customize" => {
                 kind == Some("keyboard")
@@ -627,6 +1049,13 @@ impl State {
             "keyboard_source_inputs": self.keyboard_layout.as_ref().map(|layout| layout.keys.len()),
             "keyboard_named_source_inputs": self.keyboard_layout.as_ref().map(|layout| layout.keys.iter().filter(|key| !key.button_key.is_empty()).count()),
             "keyboard_source_assignment_options": self.keyboard_layout.as_ref().map(|layout| layout.keys.iter().map(|key| key.function_list.len()).sum::<usize>()),
+            "source_performance_view": performance_view::layout(self).is_some(),
+            "performance_configured_rows": self.performance.as_ref().map(|p|p.stages.len()),
+            "performance_visible_rows": self.performance.as_ref().map(|p|p.visible_count()),
+            "performance_independent_rows": self.performance.as_ref().map(|p|p.stages.iter().filter(|r|r.independent).count()),
+            "performance_inputs": self.fields.keys().filter(|id|(PERFORMANCE_INPUT..PERFORMANCE_INPUT+10).contains(id)).count(),
+            "performance_scroll_css": self.performance_scroll,
+            "presentation_only_override": matches!(requested.as_str(),"mouse-performance-independent"|"mouse-performance-hidden"),
             "failed": self.failed,
             "fidelity": "partial source-derived native port; pixel identity unproven"
         });
@@ -658,8 +1087,11 @@ impl State {
     }
 
     unsafe fn queue(&mut self, job: Job) {
-        // A duplicate click must not build an unbounded queue of device writes.
         if self.pending > 0 {
+            if let Err(error) = enqueue_setting(&mut self.pending_jobs, job) {
+                self.error(error);
+            }
+            InvalidateRect(self.hwnd, null(), 0);
             return;
         }
         if self.jobs.send(job).is_ok() {
@@ -680,7 +1112,10 @@ impl State {
             // Smoke-only selection follows the real read-only device snapshot.
             if let Some(view) = self.smoke_view.take() {
                 let target = match view.as_str() {
-                    "mouse-performance" => Some(("mouse", Tab::Performance)),
+                    "mouse-performance"
+                    | "mouse-performance-polling"
+                    | "mouse-performance-independent"
+                    | "mouse-performance-hidden" => Some(("mouse", Tab::Performance)),
                     "keyboard-lighting" => Some(("keyboard", Tab::Lighting)),
                     "keyboard-customize" => Some(("keyboard", Tab::Customize)),
                     _ => None,
@@ -715,11 +1150,42 @@ impl State {
                 self.selected = None;
                 self.buttons.clear();
             }
+            self.sync_performance(false);
+            if !self.smoke_reported {
+                if self.smoke_requested.as_deref() == Some("mouse-performance-independent") {
+                    if let Some(p) = &mut self.performance {
+                        p.stages[usize::from(p.active - 1)].independent = true;
+                    }
+                }
+                if self.smoke_requested.as_deref() == Some("mouse-performance-hidden") {
+                    if let Some(p) = &mut self.performance {
+                        if p.stages.len() > 2 {
+                            let row = (usize::from(p.active - 1) + 1) % p.stages.len();
+                            p.set_visible(row, false).ok();
+                        }
+                    }
+                }
+                if self.smoke_requested.as_deref() == Some("mouse-performance-polling") {
+                    if let Some((g, _)) = performance_view::layout(self) {
+                        self.performance_scroll =
+                            (g.polling_widget.y + g.polling_widget.height + 20.0
+                                - (f64::from(self.height) / f64::from(self.scale) - 35.0))
+                                .max(0.0);
+                    }
+                }
+            }
             self.rebuild_fields();
             InvalidateRect(self.hwnd, null(), 0);
         }
         if self.pending == 0 {
-            KillTimer(self.hwnd, RESPONSE_TIMER);
+            if let Some(job) = self.pending_jobs.pop_front() {
+                self.queue(job);
+            } else {
+                KillTimer(self.hwnd, RESPONSE_TIMER);
+                if self.closing {
+                    PostMessageW(self.hwnd, WM_CLOSE, 0, 0);
+                }
+            }
         }
     }
 
@@ -783,6 +1249,7 @@ impl State {
             dirty_fields(owner == self.field_owner, &current, &self.field_defaults);
         self.field_owner = owner;
         self.field_defaults.clear();
+        self.performance_input_text.clear();
         let focused = GetFocus();
         let focus = self
             .fields
@@ -807,6 +1274,25 @@ impl State {
         };
         let center = ((self.width as f32 / self.scale) as i32 / 2).max(420);
         match self.tab {
+            Tab::Performance if self.performance.is_some() => {
+                if let Some((geometry, indices)) = performance_view::layout(self) {
+                    for (g, row) in geometry.stages.iter().zip(indices) {
+                        let values = self.performance.as_ref().unwrap().stages[row].clone();
+                        self.performance_field(
+                            PERFORMANCE_INPUT + row as u16 * 2,
+                            values.x,
+                            g.x_input,
+                        );
+                        if let Some(rect) = g.y_input {
+                            self.performance_field(
+                                PERFORMANCE_INPUT + row as u16 * 2 + 1,
+                                values.y,
+                                rect,
+                            );
+                        }
+                    }
+                }
+            }
             Tab::Performance if device["dpi"].is_object() => {
                 self.field(
                     DPI_X,
@@ -924,6 +1410,7 @@ impl State {
                 self.selected = None;
                 self.profile_open = false;
                 self.buttons.clear();
+                self.sync_performance(true);
                 self.rebuild_fields();
             }
             Action::Device(id) => {
@@ -933,6 +1420,7 @@ impl State {
                 self.tab = Tab::Customize;
                 self.profile_open = false;
                 self.buttons.clear();
+                self.sync_performance(true);
                 self.rebuild_fields();
             }
             Action::Tab(tab) => {
@@ -940,6 +1428,11 @@ impl State {
                 self.profile_actions = false;
                 self.tab = tab;
                 self.profile_open = false;
+                self.performance_scroll = 0.0;
+                self.performance_gesture = None;
+                KillTimer(self.hwnd, PERFORMANCE_REPEAT);
+                ReleaseCapture();
+                self.sync_performance(true);
                 self.rebuild_fields();
             }
             Action::Refresh => self.queue(Job::Rescan),
@@ -1014,6 +1507,63 @@ impl State {
                 "/api/polling",
                 json!({"id":self.selected,"hz":hz}),
             )),
+            Action::PerfEnabled => {
+                if let Some(p) = &mut self.performance {
+                    p.enabled = !p.enabled;
+                }
+                self.commit_performance();
+                self.rebuild_fields();
+            }
+            Action::PerfSelect(row) => {
+                if let Some(p) = &mut self.performance {
+                    if p.active != row as u8 + 1 && p.stages.get(row).is_some_and(|r| r.visible) {
+                        p.active = row as u8 + 1;
+                        self.commit_performance();
+                    }
+                }
+            }
+            Action::PerfIndependent(row) => {
+                let result = self.performance.as_mut().and_then(|p| {
+                    let next = !p.stages.get(row)?.independent;
+                    Some(p.set_independent(row, next))
+                });
+                match result {
+                    Some(Ok(())) => {
+                        self.commit_performance();
+                        self.rebuild_fields();
+                    }
+                    Some(Err(error)) => self.error(&error.to_string()),
+                    None => self.error("The stage changed; refresh before editing"),
+                }
+            }
+            Action::PerfVisible(row) => {
+                let result = self.performance.as_mut().and_then(|p| {
+                    let next = !p.stages.get(row)?.visible;
+                    Some(p.set_visible(row, next))
+                });
+                match result {
+                    Some(Ok(())) => {
+                        self.commit_performance();
+                        self.rebuild_fields();
+                    }
+                    Some(Err(error)) => self.error(&error.to_string()),
+                    None => self.error("The stage changed; refresh before editing"),
+                }
+            }
+            Action::PerfSlider(row, axis, rect) => {
+                self.performance_gesture = Some(PerformanceGesture::Slider { row, axis, rect });
+                SetCapture(self.hwnd);
+            }
+            Action::PerfDrag(row) => {
+                self.performance_gesture = Some(PerformanceGesture::Reorder { row, target: row });
+                SetCapture(self.hwnd);
+            }
+            Action::PerfStep(row, axis, delta) => {
+                self.performance_gesture = Some(PerformanceGesture::Spinner { row, axis, delta });
+                SetCapture(self.hwnd);
+                self.step_performance(row, axis, delta);
+                SetTimer(self.hwnd, PERFORMANCE_REPEAT, 300, None);
+            }
             Action::Brightness => {
                 if let Some(value) = self
                     .text(BRIGHTNESS)
@@ -1558,99 +2108,119 @@ unsafe fn paint(state: &mut State, dc: HDC) {
                 }
             }
             Tab::Performance => {
-                p.text(
-                    "SENSITIVITY",
-                    center - 310,
-                    187,
-                    300,
-                    30,
-                    p.fonts.heading,
-                    GREEN,
-                    DT_LEFT,
-                );
-                if let Some(dpi) = device["dpi"].as_object() {
-                    p.text(
-                        "X AXIS",
-                        center - 310,
-                        225,
-                        110,
-                        22,
-                        p.fonts.small,
-                        MUTED,
-                        DT_LEFT,
-                    );
-                    p.text(
-                        "Y AXIS",
-                        center - 170,
-                        225,
-                        110,
-                        22,
-                        p.fonts.small,
-                        MUTED,
-                        DT_LEFT,
-                    );
-                    p.button("APPLY", center - 310, 304, 115, Action::Dpi, true);
-                    p.text(
-                        &format!(
-                            "{}–{} DPI",
-                            dpi.get("min").unwrap_or(&Value::Null),
-                            dpi.get("max").unwrap_or(&Value::Null)
-                        ),
-                        center - 310,
-                        347,
-                        270,
-                        24,
-                        p.fonts.small,
-                        MUTED,
-                        DT_LEFT,
-                    );
-                } else {
-                    p.text(
-                        "Sensitivity is unavailable for this device",
-                        center - 310,
-                        232,
-                        340,
-                        28,
-                        p.fonts.normal,
-                        MUTED,
-                        DT_LEFT,
-                    );
+                let saved = SaveDC(p.dc);
+                IntersectClipRect(p.dc, 0, p.px(128), state.width, state.height - p.px(35));
+                let previous_hits = p.hits.len();
+                let source_view = performance_view::paint(state, &mut p, &device);
+                for hit in p.hits.iter_mut().skip(previous_hits) {
+                    hit.rect.top = hit.rect.top.max((128.0 * state.scale).round() as i32);
+                    hit.rect.bottom = hit
+                        .rect
+                        .bottom
+                        .min(state.height - (35.0 * state.scale).round() as i32);
                 }
-                p.text(
-                    "POLLING RATE",
-                    center + 70,
-                    187,
-                    300,
-                    30,
-                    p.fonts.heading,
-                    GREEN,
-                    DT_LEFT,
-                );
-                if let Some(options) = device["polling"]["options"].as_array() {
-                    let active = device["polling"]["hz"].as_u64().unwrap_or(0);
-                    for (index, option) in
-                        options.iter().filter_map(Value::as_u64).take(5).enumerate()
-                    {
-                        p.button(
-                            &format!("{option} HZ"),
-                            center + 70,
-                            237 + index as i32 * 42,
-                            150,
-                            Action::Poll(option as u32),
-                            active == option,
+                let mut index = 0usize;
+                p.hits.retain(|hit| {
+                    let keep = index < previous_hits || hit.rect.bottom > hit.rect.top;
+                    index += 1;
+                    keep
+                });
+                RestoreDC(p.dc, saved);
+                if !source_view {
+                    p.text(
+                        "SENSITIVITY",
+                        center - 310,
+                        187,
+                        300,
+                        30,
+                        p.fonts.heading,
+                        GREEN,
+                        DT_LEFT,
+                    );
+                    if let Some(dpi) = device["dpi"].as_object() {
+                        p.text(
+                            "X AXIS",
+                            center - 310,
+                            225,
+                            110,
+                            22,
+                            p.fonts.small,
+                            MUTED,
+                            DT_LEFT,
+                        );
+                        p.text(
+                            "Y AXIS",
+                            center - 170,
+                            225,
+                            110,
+                            22,
+                            p.fonts.small,
+                            MUTED,
+                            DT_LEFT,
+                        );
+                        p.button("APPLY", center - 310, 304, 115, Action::Dpi, true);
+                        p.text(
+                            &format!(
+                                "{}–{} DPI",
+                                dpi.get("min").unwrap_or(&Value::Null),
+                                dpi.get("max").unwrap_or(&Value::Null)
+                            ),
+                            center - 310,
+                            347,
+                            270,
+                            24,
+                            p.fonts.small,
+                            MUTED,
+                            DT_LEFT,
+                        );
+                    } else {
+                        p.text(
+                            "Sensitivity is unavailable for this device",
+                            center - 310,
+                            232,
+                            340,
+                            28,
+                            p.fonts.normal,
+                            MUTED,
+                            DT_LEFT,
                         );
                     }
-                } else {
                     p.text(
-                        "Polling controls unavailable",
+                        "POLLING RATE",
                         center + 70,
-                        234,
+                        187,
                         300,
-                        28,
-                        p.fonts.normal,
-                        MUTED,
+                        30,
+                        p.fonts.heading,
+                        GREEN,
                         DT_LEFT,
                     );
+                    if let Some(options) = device["polling"]["options"].as_array() {
+                        let active = device["polling"]["hz"].as_u64().unwrap_or(0);
+                        for (index, option) in
+                            options.iter().filter_map(Value::as_u64).take(5).enumerate()
+                        {
+                            p.button(
+                                &format!("{option} HZ"),
+                                center + 70,
+                                237 + index as i32 * 42,
+                                150,
+                                Action::Poll(option as u32),
+                                active == option,
+                            );
+                        }
+                    } else {
+                        p.text(
+                            "Polling controls unavailable",
+                            center + 70,
+                            234,
+                            300,
+                            28,
+                            p.fonts.normal,
+                            MUTED,
+                            DT_LEFT,
+                        );
+                    }
                 }
             }
             Tab::Lighting => {
@@ -1965,6 +2535,28 @@ unsafe extern "system" fn window_proc(
     // overlapping mutable references to its state during those callbacks.
     match message {
         WM_CLOSE => {
+            let pointer = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut RefCell<State>;
+            if !pointer.is_null() {
+                if let Ok(mut state) = (*pointer).try_borrow_mut() {
+                    let focused = GetFocus();
+                    let input = state
+                        .fields
+                        .iter()
+                        .find(|(_, control)| **control == focused)
+                        .map(|(id, _)| *id);
+                    if let Some(id) = input.filter(|id| {
+                        !state.closing && (PERFORMANCE_INPUT..PERFORMANCE_INPUT + 10).contains(id)
+                    }) {
+                        state.commit_performance_input(id);
+                    }
+                    if state.pending > 0 || !state.pending_jobs.is_empty() {
+                        state.closing = true;
+                        ShowWindow(hwnd, SW_HIDE);
+                        SetTimer(hwnd, RESPONSE_TIMER, 40, None);
+                        return 0;
+                    }
+                }
+            }
             DestroyWindow(hwnd);
             return 0;
         }
@@ -2016,6 +2608,37 @@ unsafe extern "system" fn window_proc(
         return DefWindowProcW(hwnd, message, wparam, lparam);
     };
     match message {
+        WM_COMMAND
+            if (PERFORMANCE_INPUT..PERFORMANCE_INPUT + 10)
+                .contains(&((wparam & 0xffff) as u16))
+                && (wparam >> 16) as u32 == EN_CHANGE =>
+        {
+            let id = (wparam & 0xffff) as u16;
+            let text = state.raw_text(id);
+            let digits = text.strip_prefix('-').unwrap_or(&text);
+            if text.is_empty()
+                || text == "-"
+                || (!digits.is_empty() && digits.bytes().all(|c| c.is_ascii_digit()))
+            {
+                state.performance_input_text.insert(id, text);
+            } else if let (Some(previous), Some(control)) =
+                (state.performance_input_text.get(&id), state.fields.get(&id))
+            {
+                SetWindowTextW(*control, wide(previous).as_ptr());
+                SendMessageW(*control, EM_SETSEL, previous.len(), previous.len() as isize);
+            }
+            0
+        }
+        WM_COMMAND
+            if (PERFORMANCE_INPUT..PERFORMANCE_INPUT + 10)
+                .contains(&((wparam & 0xffff) as u16))
+                && (wparam >> 16) as u32 == EN_KILLFOCUS =>
+        {
+            if !state.closing {
+                state.commit_performance_input((wparam & 0xffff) as u16);
+            }
+            0
+        }
         PROFILE_RENAME => {
             state.finish_rename(wparam != 0);
             0
@@ -2032,6 +2655,7 @@ unsafe extern "system" fn window_proc(
         WM_SIZE => {
             state.width = (lparam as u32 & 0xffff) as i32;
             state.height = ((lparam as u32 >> 16) & 0xffff) as i32;
+            state.hits.clear();
             state.rebuild_fields();
             InvalidateRect(hwnd, null(), 0);
             0
@@ -2060,6 +2684,78 @@ unsafe extern "system" fn window_proc(
             state.record_smoke_frame(presented);
             0
         }
+        WM_SETCURSOR if state.tab == Tab::Performance && state.performance.is_some() => {
+            let mut point: POINT = std::mem::zeroed();
+            if GetCursorPos(&mut point) != 0 {
+                ScreenToClient(hwnd, &mut point);
+                state.performance_pointer(point);
+            }
+            DefWindowProcW(hwnd, message, wparam, lparam)
+        }
+        WM_MOUSEMOVE if state.tab == Tab::Performance && state.performance.is_some() => {
+            let mut tracking = TRACKMOUSEEVENT {
+                cbSize: std::mem::size_of::<TRACKMOUSEEVENT>() as u32,
+                dwFlags: TME_LEAVE,
+                hwndTrack: hwnd,
+                dwHoverTime: 0,
+            };
+            TrackMouseEvent(&mut tracking);
+            state.performance_pointer(POINT {
+                x: (lparam as u32 & 0xffff) as i16 as i32,
+                y: ((lparam as u32 >> 16) & 0xffff) as i16 as i32,
+            });
+            0
+        }
+        WM_MOUSELEAVE => {
+            state.performance_hover = None;
+            InvalidateRect(hwnd, null(), 0);
+            0
+        }
+        WM_CAPTURECHANGED if state.performance_gesture.is_some() => {
+            state.performance_gesture = None;
+            KillTimer(hwnd, PERFORMANCE_REPEAT);
+            state.sync_performance(true);
+            state.rebuild_fields();
+            InvalidateRect(hwnd, null(), 0);
+            0
+        }
+        WM_LBUTTONDOWN => {
+            let point = POINT {
+                x: (lparam as u32 & 0xffff) as i16 as i32,
+                y: ((lparam as u32 >> 16) & 0xffff) as i16 as i32,
+            };
+            let action = state
+                .hits
+                .iter()
+                .rev()
+                .find(|hit| PtInRect(&hit.rect, point) != 0)
+                .map(|hit| hit.action.clone());
+            if !matches!(action, Some(Action::PerfStep(..))) {
+                let focused = GetFocus();
+                if let Some(id) = state
+                    .fields
+                    .iter()
+                    .find(|(_, control)| **control == focused)
+                    .map(|(id, _)| *id)
+                {
+                    if (PERFORMANCE_INPUT..PERFORMANCE_INPUT + 10).contains(&id) {
+                        state.commit_performance_input(id);
+                    }
+                    if id == PROFILE_NAME {
+                        PostMessageW(hwnd, PROFILE_RENAME, 0, 0);
+                    }
+                }
+                SetFocus(hwnd);
+            }
+            if let Some(
+                action @ (Action::PerfSlider(..) | Action::PerfDrag(..) | Action::PerfStep(..)),
+            ) = action
+            {
+                state.action(action);
+                state.performance_pointer(point);
+            }
+            0
+        }
         WM_MOUSEWHEEL if state.profile_open => {
             let count = state
                 .device()
@@ -2073,7 +2769,32 @@ unsafe extern "system" fn window_proc(
             InvalidateRect(hwnd, null(), 0);
             0
         }
+        WM_MOUSEWHEEL if state.tab == Tab::Performance && state.performance.is_some() => {
+            if let Some((g, _)) = performance_view::layout(&state) {
+                let bottom = (g.sensitivity_widget.y + g.sensitivity_widget.height)
+                    .max(g.polling_widget.y + g.polling_widget.height)
+                    + state.performance_scroll
+                    + 20.0;
+                let viewport = f64::from(state.height) / f64::from(state.scale) - 35.0;
+                let delta = f64::from((wparam >> 16) as u16 as i16) / 120.0 * 60.0;
+                state.performance_scroll =
+                    (state.performance_scroll - delta).clamp(0.0, (bottom - viewport).max(0.0));
+                state.performance_hover = None;
+                state.rebuild_fields();
+                InvalidateRect(hwnd, null(), 0);
+            }
+            0
+        }
         WM_LBUTTONUP => {
+            if state.performance_gesture.is_some() {
+                let point = POINT {
+                    x: (lparam as u32 & 0xffff) as i16 as i32,
+                    y: ((lparam as u32 >> 16) & 0xffff) as i16 as i32,
+                };
+                state.performance_pointer(point);
+                state.finish_performance_gesture();
+                return 0;
+            }
             let point = POINT {
                 x: (lparam as u32 & 0xffff) as i16 as i32,
                 y: ((lparam as u32 >> 16) & 0xffff) as i16 as i32,
@@ -2172,13 +2893,56 @@ unsafe extern "system" fn window_proc(
             }
             0
         }
+        WM_KEYUP
+            if matches!(wparam, 13 | 32)
+                && matches!(
+                    state.performance_gesture,
+                    Some(PerformanceGesture::Spinner { .. })
+                ) =>
+        {
+            state.finish_performance_gesture();
+            0
+        }
         WM_CTLCOLOREDIT | WM_CTLCOLORSTATIC => {
+            let row = state
+                .fields
+                .iter()
+                .find(|(_, control)| **control == lparam as HWND)
+                .map(|(id, _)| *id)
+                .and_then(|id| id.checked_sub(PERFORMANCE_INPUT))
+                .filter(|n| *n < 10)
+                .map(|n| n as usize / 2);
+            if let Some(row) = row.filter(|row| {
+                state
+                    .performance
+                    .as_ref()
+                    .and_then(|p| p.stages.get(*row))
+                    .is_some_and(|r| !r.visible)
+            }) {
+                let hover = state.performance_hover == Some(row);
+                SetTextColor(wparam as HDC, rgb(if hover { 0x555555 } else { 0x494949 }));
+                SetBkColor(wparam as HDC, rgb(if hover { 0x1d1d1d } else { PANEL }));
+                return (if hover {
+                    state.dim_edit_brush
+                } else {
+                    state.edit_brush
+                }) as isize;
+            }
+
             SetTextColor(wparam as HDC, rgb(TEXT));
             SetBkColor(wparam as HDC, rgb(PANEL));
             state.edit_brush as isize
         }
         WM_TIMER if wparam == RESPONSE_TIMER => {
             state.collect();
+            0
+        }
+        WM_TIMER if wparam == PERFORMANCE_REPEAT => {
+            if let Some(PerformanceGesture::Spinner { row, axis, delta }) =
+                state.performance_gesture
+            {
+                state.step_performance(row, axis, delta);
+            }
             0
         }
         WM_TIMER if wparam == SMOKE_TIMER => {
@@ -2279,9 +3043,18 @@ fn run_window(
             field_defaults: HashMap::new(),
             field_owner: None,
             retained_fields: HashMap::new(),
+            performance_input_text: HashMap::new(),
             jobs: jobs_tx,
             replies: replies_rx,
             pending: 0,
+            pending_jobs: VecDeque::new(),
+            closing: false,
+            performance: None,
+            performance_owner: None,
+            performance_scroll: 0.0,
+            performance_hover: None,
+            performance_hover_hit: None,
+            performance_gesture: None,
             status: "Reading connected devices…".into(),
             failed: false,
             smoke_view: smoke_requested.clone(),
@@ -2312,6 +3085,22 @@ fn run_window(
                 "expand",
                 "profile-default",
                 "more",
+                "dpi-xy",
+                "dpi-xy-active",
+                "dpi-xy-disabled",
+                "dpi-drag",
+                "dpi-stepper-up",
+                "dpi-stepper-down",
+                "dpi-stage-1-default",
+                "dpi-stage-1-active",
+                "dpi-stage-2-default",
+                "dpi-stage-2-active",
+                "dpi-stage-3-default",
+                "dpi-stage-3-active",
+                "dpi-stage-4-default",
+                "dpi-stage-4-active",
+                "dpi-stage-5-default",
+                "dpi-stage-5-active",
             ]
             .into_iter()
             .filter_map(|name| {
@@ -2320,6 +3109,7 @@ fn run_window(
             .collect(),
             assets,
             edit_brush: CreateSolidBrush(rgb(PANEL)),
+            dim_edit_brush: CreateSolidBrush(rgb(0x1d1d1d)),
         }));
         let instance = GetModuleHandleW(null());
         let class = wide(CLASS);
@@ -2399,6 +3189,33 @@ fn run_window(
                 let rename_edit = state.borrow().fields.get(&PROFILE_NAME).copied();
                 if rename_edit == Some(message.hwnd) {
                     PostMessageW(hwnd, PROFILE_RENAME, usize::from(message.wParam == 27), 0);
+                    continue;
+                }
+            }
+            let control_id = GetDlgCtrlID(message.hwnd) as u16;
+            if (PERFORMANCE_INPUT..PERFORMANCE_INPUT + 10).contains(&control_id) {
+                if message.message == WM_KEYDOWN && matches!(message.wParam, 13 | 27) {
+                    SetFocus(hwnd);
+                    continue;
+                }
+                let step = if message.message == WM_KEYDOWN && matches!(message.wParam, 38 | 40) {
+                    Some(if message.wParam == 38 { 50 } else { -50 })
+                } else if message.message == WM_MOUSEWHEEL {
+                    Some(if ((message.wParam >> 16) as u16 as i16) > 0 {
+                        50
+                    } else {
+                        -50
+                    })
+                } else {
+                    None
+                };
+                if let Some(delta) = step {
+                    let index = control_id - PERFORMANCE_INPUT;
+                    state.borrow_mut().step_performance(
+                        index as usize / 2,
+                        if index % 2 == 0 { Axis::X } else { Axis::Y },
+                        delta,
+                    );
                     continue;
                 }
             }
