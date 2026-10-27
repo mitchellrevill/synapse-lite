@@ -241,3 +241,98 @@ mod tests {
         assert!(geometry(1280.0, 86.0, 0.0, 255).is_none());
     }
 }
+
+/// Generic source dropdown (module27734): 25px rows, 180px border-box,
+/// chosen-row scrollTo(offsetTop), and up/down collision against innerHeight.
+/// CSS main.f65da71b.css .s3-options / global WebKit scrollbar.
+#[derive(Clone, Copy, Debug)]
+pub struct EffectDropdown {
+    pub panel: Rect,
+    pub viewport: Rect,
+    pub track: Rect,
+    pub thumb: Rect,
+    pub scroll: f64,
+    pub max_scroll: f64,
+}
+pub fn effect_dropdown(trigger: Rect, height: f64, scroll: f64) -> EffectDropdown {
+    let top = if trigger.y + trigger.height + 2.0 + 180.0 > height {
+        trigger.y - 180.0 - 1.0
+    } else {
+        trigger.y + 28.0
+    };
+    let panel = at(trigger.x, top, trigger.width, 180.0);
+    let viewport = at(panel.x + 1.0, top + 1.0, panel.width - 2.0, 178.0);
+    let max_scroll = 12.0 * 25.0 - viewport.height;
+    let scroll = scroll.clamp(0.0, max_scroll);
+    let track = at(
+        viewport.x + viewport.width - 8.0,
+        viewport.y,
+        8.0,
+        viewport.height,
+    );
+    let thumb_height = track.height * viewport.height / 300.0;
+    let thumb = at(
+        track.x,
+        track.y + scroll / max_scroll * (track.height - thumb_height),
+        8.0,
+        thumb_height,
+    );
+    EffectDropdown {
+        panel,
+        viewport,
+        track,
+        thumb,
+        scroll,
+        max_scroll,
+    }
+}
+pub fn effect_selected_scroll(selected: Option<u8>) -> f64 {
+    QUICK_EFFECTS
+        .iter()
+        .position(|(id, _)| Some(*id) == selected)
+        .map_or(0.0, |i| (i as f64 * 25.0).min(122.0))
+}
+/// Source q_=Z_ invokes toggleTab for either half (also for outer pill).
+/// OI Wave, mI Wheel both select the second tab unless direction == 1.
+pub fn direction_toggle(selected: u8, direction: Option<i64>) -> i64 {
+    if selected == 19 {
+        if direction == Some(1) {
+            0
+        } else {
+            1
+        }
+    } else if direction == Some(1) {
+        2
+    } else {
+        1
+    }
+}
+#[cfg(test)]
+mod effect_dropdown_tests {
+    use super::*;
+    #[test]
+    fn replayed_source_dropdown_preserves_partial_rows_and_selected_wave() {
+        let d = effect_dropdown(
+            at(660.0, 300.0, 150.0, 27.0),
+            720.0,
+            effect_selected_scroll(Some(4)),
+        );
+        assert_eq!(d.panel, at(660.0, 328.0, 150.0, 180.0));
+        assert_eq!(d.viewport.height, 178.0);
+        assert_eq!(d.scroll, 122.0);
+        assert_eq!(300.0 - d.scroll, d.viewport.height);
+        assert!((d.thumb.height - 105.6133333333).abs() < 0.0001);
+        assert_eq!(effect_selected_scroll(Some(12)), 25.0);
+        let up = effect_dropdown(at(660.0, 550.0, 150.0, 27.0), 720.0, 0.0);
+        assert_eq!(up.panel.y, 369.0);
+    }
+    #[test]
+    fn shared_source_direction_pill_toggles_instead_of_selecting_clicked_half() {
+        assert_eq!(direction_toggle(4, Some(2)), 1);
+        assert_eq!(direction_toggle(4, Some(1)), 2);
+        assert_eq!(direction_toggle(4, None), 1);
+        assert_eq!(direction_toggle(13, Some(2)), 1);
+        assert_eq!(direction_toggle(19, Some(1)), 0);
+        assert_eq!(direction_toggle(19, Some(0)), 1);
+    }
+}

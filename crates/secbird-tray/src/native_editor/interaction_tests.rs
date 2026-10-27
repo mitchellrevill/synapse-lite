@@ -1829,3 +1829,188 @@ fn native_assignment_mouse_labels_and_drawer_have_source_hit_targets() {
 }
 #[path="frame_interaction_tests.rs"]
 mod frame;
+
+#[test]
+#[ignore = "opens a bounded native Wave dropdown; simulated transport only, run alone"]
+fn native_wave_dropdown_reopens_selected_scrolls_drags_and_toggles_source_direction() {
+    let directory = std::env::temp_dir().join(format!(
+        "synapse-native-wave-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(&directory).unwrap();
+    let frame = directory.join("frame.json");
+    let _environment = Environment::set(&[
+        ("SYNAPSE_LITE_CONFIG_DIR", &directory),
+        ("SYNAPSE_LITE_SMOKE_REPORT", &frame),
+        ("SYNAPSE_LITE_SMOKE_VIEW", Path::new("keyboard-lighting")),
+    ]);
+    let sim = Sim::keyboard();
+    let engine = Engine::with_simulated_keyboard(&sim, directory.join("profiles.json")).unwrap();
+    let mut profile = secbird_core::profile_compat::new_native_profile(605, "Fixture").unwrap();
+    secbird_core::lighting::LightingSettings::default()
+        .store_in_profile(&mut profile)
+        .unwrap();
+    secbird_core::profile_compat::set_source_quick_effect(
+        &mut profile,
+        605,
+        "Fixture",
+        4,
+        &json!({"direction":2,"future":{"keep":7}}),
+    )
+    .unwrap();
+    let mut store = Store::load(&directory.join("profiles.json")).unwrap();
+    let d = store.for_device(&engine.devices()[0]);
+    d.active = "Fixture".into();
+    d.profiles.clear();
+    d.profiles.insert("Fixture".into(), profile);
+    store.save().unwrap();
+    let before = std::fs::read(directory.join("profiles.json")).unwrap();
+    let controller_sim = sim.clone();
+    let controller_directory = directory.clone();
+    let controller = std::thread::spawn(move || {
+        let result = (|| -> Result<Value, String> {
+            unsafe {
+                wait_for(
+                    || {
+                        std::fs::read(&frame)
+                            .ok()
+                            .and_then(|b| serde_json::from_slice::<Value>(&b).ok())
+                            .is_some_and(|v| v["presented"] == true)
+                    },
+                    "Wave presented",
+                )?;
+                let hwnd = WINDOW.load(Ordering::Acquire) as HWND;
+                let scale = f64::from(GetDpiForWindow(hwnd).max(96)) / 96.0;
+                let query = |enable: bool| {
+                    let mut value = Value::Null;
+                    SendMessageW(
+                        hwnd,
+                        LIGHTING_DROPDOWN_TEST,
+                        usize::from(enable),
+                        &mut value as *mut Value as isize,
+                    );
+                    value
+                };
+                let click = |r: &Value| {
+                    lighting_click(
+                        hwnd,
+                        r["x"].as_f64().unwrap() + r["width"].as_f64().unwrap() / 2.0,
+                        r["y"].as_f64().unwrap() + r["height"].as_f64().unwrap() / 2.0,
+                        scale,
+                    )
+                };
+                let initial = query(true);
+                let log = controller_sim.state().log.len();
+                click(&initial["trigger"]);
+                let opened = query(false);
+                if opened["open"] != true || opened["scroll"] != 122.0 {
+                    return Err(format!("Wave not auto-visible: {opened}"));
+                }
+                let thumb = &opened["thumb"];
+                let track = &opened["track"];
+                let x = thumb["x"].as_f64().unwrap() + 4.0;
+                let y = thumb["y"].as_f64().unwrap() + 10.0;
+                SendMessageW(hwnd, WM_LBUTTONDOWN, 1, position(x, y, scale));
+                SendMessageW(
+                    hwnd,
+                    WM_MOUSEMOVE,
+                    1,
+                    position(x, track["y"].as_f64().unwrap() + 10.0, scale),
+                );
+                SendMessageW(
+                    hwnd,
+                    WM_LBUTTONUP,
+                    0,
+                    position(x, track["y"].as_f64().unwrap() + 10.0, scale),
+                );
+                redraw(hwnd);
+                if query(false)["scroll"] != 0.0 {
+                    return Err("Thumb drag did not reach start".into());
+                }
+                click(&initial["trigger"]);
+                click(&initial["trigger"]);
+                let reopened = query(false);
+                if reopened["scroll"] != 122.0 {
+                    return Err("Reopen did not restore selected-row scroll".into());
+                }
+                // Choose the actual Wave row, which starts 250px into source content.
+                lighting_click(
+                    hwnd,
+                    reopened["panel"]["x"].as_f64().unwrap() + 30.0,
+                    reopened["panel"]["y"].as_f64().unwrap() + 1.0 + 250.0 - 122.0 + 12.0,
+                    scale,
+                );
+                let selected = query(false);
+                if selected["open"] != false || selected["selected"] != 4 {
+                    return Err(format!("Wave row did not select: {selected}"));
+                }
+                // Clicking the already-active right tab must toggle left, per Z_.
+                click(&selected["directions"][1]);
+                let left = query(false);
+                click(&left["directions"][0]);
+                let right = query(false);
+                let commands = right["commands"].as_array().unwrap();
+                if commands.len() != 3
+                    || commands
+                        .iter()
+                        .map(|c| c["setting"]["direction"].as_i64())
+                        .collect::<Vec<_>>()
+                        != vec![Some(2), Some(1), Some(2)]
+                    || commands.iter().any(|c| {
+                        c["source_id"] != 4
+                            || c["profile"] != "Fixture"
+                            || c["setting"]["future"]["keep"] != 7
+                    })
+                {
+                    return Err(format!("Wrong source requests: {commands:?}"));
+                }
+                // The source single-column view places Effects below the two
+                // left cards. Scroll it into view, then exercise upward opening.
+                SetWindowPos(hwnd, null_mut(), 0, 0, (1000.0 * scale).round() as i32, (650.0 * scale).round() as i32, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+                redraw(hwnd);
+                for _ in 0..6 {
+                    SendMessageW(hwnd, WM_MOUSEWHEEL, (-120i16 as u16 as usize) << 16, 0);
+                }
+                redraw(hwnd);
+                let narrow = query(false);
+                click(&narrow["trigger"]);
+                let upward = query(false);
+                if upward["open"] != true || upward["panel"]["y"].as_f64().unwrap() >= upward["trigger"]["y"].as_f64().unwrap() {
+                    return Err(format!("Narrow dropdown did not open upwards: {upward}"));
+                }
+                click(&upward["trigger"]);
+                if controller_sim.state().log.len() != log
+                    || std::fs::read(controller_directory.join("profiles.json")).unwrap() != before
+                {
+                    return Err("Presentation test dispatched I/O or persisted".into());
+                }
+                Ok(
+                    json!({"actual_hwnd":true,"source_wave_requests":[2,1,2],"selected_row_scroll":122,"thumb_drag_start":0,"narrow_upward_opening":true,"opaque_setting_preserved":true,"effect_command_sink":"cfg-test only","physical_io":false,"backend_or_pixel_parity_proof":false}),
+                )
+            }
+        })();
+        unsafe {
+            let hwnd = WINDOW.load(Ordering::Acquire) as HWND;
+            PostMessageW(hwnd, WM_CANCELMODE, 0, 0);
+            PostMessageW(hwnd, WM_CLOSE, 0, 0);
+        }
+        result
+    });
+    run_window(
+        Arc::new(Mutex::new(engine)),
+        Some(Duration::from_secs(12)),
+        None,
+    )
+    .unwrap();
+    let evidence = controller.join().unwrap().unwrap();
+    std::fs::write(
+        directory.join("interaction.json"),
+        serde_json::to_vec_pretty(&evidence).unwrap(),
+    )
+    .unwrap();
+    eprintln!("Wave HWND evidence: {}", directory.display());
+}

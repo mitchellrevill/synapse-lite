@@ -90,6 +90,7 @@ pub(super) enum Control {
     IdleSlider(source::Rect),
     Mode(bool),
     EffectMenu,
+    EffectScroll(source::Rect),
     SelectEffect(u8),
     ColorMenu(usize),
     Preset(usize),
@@ -97,7 +98,7 @@ pub(super) enum Control {
     EditCustom,
     DeleteCustom,
     Random,
-    Direction(i64),
+    Direction,
     Screen(&'static str),
     Duration(source::Rect),
     BoostStep(i16),
@@ -116,6 +117,7 @@ enum GestureKind {
     Duration(source::Rect),
     Plane(color::Rect),
     Value(color::Rect),
+    EffectScroll { track: source::Rect, grab: f64 },
 }
 struct Gesture {
     kind: GestureKind,
@@ -136,7 +138,9 @@ pub(super) struct View {
     slots: Vec<Value>,
     advanced: bool,
     effect_menu: bool,
-    effect_offset: usize,
+    effect_offset: f64,
+    #[cfg(test)]
+    test_commands: Option<Vec<Value>>,
     palette: Option<usize>,
     palette_up: bool,
     context_slot: Option<usize>,
@@ -166,7 +170,9 @@ impl Default for View {
             slots: empty_slots(),
             advanced: false,
             effect_menu: false,
-            effect_offset: 0,
+            effect_offset: 0.0,
+            #[cfg(test)]
+            test_commands: None,
             palette: None,
             palette_up: false,
             context_slot: None,
@@ -361,6 +367,11 @@ fn effect_command(view: &mut View) -> Update {
         view.cache.insert(id, view.setting.clone());
         view.effect_dirty = true;
         view.notice = "Effect preview; backend application must be confirmed.".into();
+        #[cfg(test)]
+        if let Some(commands) = &mut view.test_commands {
+            commands.push(json!({"device":owner.device,"profile":owner.profile,"source_id":id,"setting":view.setting}));
+            return u;
+        }
         u.commands.push(Command::ApplyEffect {
             owner,
             source_id: id,
@@ -546,6 +557,10 @@ pub(super) unsafe fn action(state: &mut State, control: Control) -> Update {
         }
         Control::EffectMenu => {
             state.lighting.effect_menu = !state.lighting.effect_menu;
+            if state.lighting.effect_menu {
+                state.lighting.effect_offset =
+                    source::effect_selected_scroll(state.lighting.selected);
+            }
             state.lighting.palette = None;
             state.lighting.editor = None;
             Update::rebuild()
@@ -640,7 +655,13 @@ pub(super) unsafe fn action(state: &mut State, control: Control) -> Update {
             u.rebuild_fields = true;
             u
         }
-        Control::Direction(value) => set_setting(&mut state.lighting, "direction", json!(value)),
+        Control::Direction => {
+            let next = source::direction_toggle(
+                state.lighting.selected.unwrap_or(4),
+                state.lighting.setting["direction"].as_i64(),
+            );
+            set_setting(&mut state.lighting, "direction", json!(next))
+        }
         Control::Screen(value) => set_setting(&mut state.lighting, "screen", json!(value)),
         Control::BoostStep(delta) => {
             let value = state
@@ -694,6 +715,7 @@ pub(super) unsafe fn action(state: &mut State, control: Control) -> Update {
         }
         Control::BrightnessSlider(_)
         | Control::IdleSlider(_)
+        | Control::EffectScroll(_)
         | Control::Duration(_)
         | Control::EditorPlane(_)
         | Control::EditorValue(_) => Update::handled(),
@@ -711,6 +733,28 @@ pub(super) unsafe fn begin(state: &mut State, control: Control, point: Point) ->
         return update;
     }
     let kind = match control {
+        Control::EffectScroll(track) => {
+            let g = geometry(state).unwrap();
+            let d = source::effect_dropdown(
+                g.effect_dropdown,
+                f64::from(state.height) / f64::from(state.scale),
+                state.lighting.effect_offset,
+            );
+            // This 12-row list has less than one page of scroll range, so a
+            // Chromium track page-step always reaches the corresponding end.
+            if point.y < d.thumb.y || point.y >= d.thumb.y + d.thumb.height {
+                state.lighting.effect_offset = if point.y < d.thumb.y {
+                    0.0
+                } else {
+                    d.max_scroll
+                };
+                return Update::handled();
+            }
+            Some(GestureKind::EffectScroll {
+                track,
+                grab: point.y - d.thumb.y,
+            })
+        }
         Control::BrightnessSlider(r) => Some(GestureKind::Brightness(r)),
         Control::IdleSlider(r) if state.lighting.intent.idle_slider_enabled() => {
             Some(GestureKind::Idle(r))
@@ -748,6 +792,11 @@ pub(super) unsafe fn pointer(state: &mut State, point: Point) -> Update {
         return Update::handled();
     };
     match kind {
+        GestureKind::EffectScroll { track, grab } => {
+            let thumb = track.height * 178.0 / 300.0;
+            state.lighting.effect_offset =
+                ((point.y - track.y - grab) / (track.height - thumb) * 122.0).clamp(0.0, 122.0);
+        }
         GestureKind::Brightness(r) => {
             let value = slider_value(point, r, 0.0, 100.0) as u8;
             let b = state
@@ -829,9 +878,9 @@ pub(super) fn scroll(state: &mut State, delta: i16) -> Update {
     }
     if state.lighting.effect_menu {
         state.lighting.effect_offset = if delta < 0 {
-            (state.lighting.effect_offset + 1).min(5)
+            (state.lighting.effect_offset + 25.0).min(122.0)
         } else {
-            state.lighting.effect_offset.saturating_sub(1)
+            (state.lighting.effect_offset - 25.0).max(0.0)
         };
         return Update::handled();
     }
@@ -861,13 +910,21 @@ pub(super) fn outside(state: &mut State, point: Point) -> Update {
         }
     }
     if let Some(g) = geometry(state) {
-        if state.lighting.effect_menu
-            && point.x >= g.effect_dropdown.x
-            && point.x < g.effect_dropdown.x + g.effect_dropdown.width
-            && point.y >= g.effect_dropdown.y
-            && point.y < g.effect_dropdown.y + 207.0
-        {
-            return Update::default();
+        if state.lighting.effect_menu {
+            let d = source::effect_dropdown(
+                g.effect_dropdown,
+                f64::from(state.height) / f64::from(state.scale),
+                state.lighting.effect_offset,
+            );
+            let within = |r: source::Rect| {
+                point.x >= r.x
+                    && point.x < r.x + r.width
+                    && point.y >= r.y
+                    && point.y < r.y + r.height
+            };
+            if within(d.panel) || within(g.effect_dropdown) {
+                return Update::default();
+            }
         }
         if let Some(which) = state.lighting.palette {
             let r = g.colors[which].dropdown;
@@ -1558,7 +1615,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, _device: &Value) 
             } else {
                 [base, 2]
             };
-            let selected = v.setting["direction"].as_i64().unwrap_or(base);
+            let selected = v.setting["direction"].as_i64();
             draw::text(
                 p,
                 "Direction",
@@ -1580,8 +1637,17 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, _device: &Value) 
                 BORDER,
                 20.0,
             );
+            h(
+                p,
+                at(first.x - 6.0, first.y - 6.0, 97.0, 42.0),
+                Control::Direction,
+            );
             for (i, r) in g.direction_tabs.iter().enumerate() {
-                let active = selected == values[i];
+                let active = if i == 0 {
+                    selected == Some(values[0])
+                } else {
+                    selected != Some(values[0])
+                };
                 draw::rounded(
                     p,
                     pr(*r),
@@ -1597,7 +1663,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, _device: &Value) 
                     20,
                     20,
                 );
-                h(p, pr(*r), Control::Direction(values[i]));
+                h(p, pr(*r), Control::Direction);
             }
         }
         if !g.ambient_screens.is_empty() {
@@ -1690,26 +1756,30 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, _device: &Value) 
         );
     }
     if v.effect_menu {
-        let top = g.effect_dropdown.y + 28.0;
-        draw::rounded(
-            p,
-            at(g.effect_dropdown.x, top, 150.0, 180.0),
-            0,
-            0x515151,
-            0.0,
+        let d = source::effect_dropdown(
+            g.effect_dropdown,
+            f64::from(state.height) / f64::from(state.scale),
+            v.effect_offset,
         );
-        for (i, (id, label)) in source::QUICK_EFFECTS
-            .iter()
-            .enumerate()
-            .skip(v.effect_offset)
-            .take(7)
-        {
+        draw::rounded(p, pr(d.panel), 0, 0x515151, 0.0);
+        let saved = SaveDC(p.dc);
+        let clip = p.rect(
+            d.viewport.x.round() as i32,
+            d.viewport.y.round() as i32,
+            d.viewport.width.round() as i32,
+            d.viewport.height.round() as i32,
+        );
+        IntersectClipRect(p.dc, clip.left, clip.top, clip.right, clip.bottom);
+        for (i, (id, label)) in source::QUICK_EFFECTS.iter().enumerate() {
             let r = at(
-                g.effect_dropdown.x + 1.0,
-                top + 1.0 + (i - v.effect_offset) as f64 * 25.0,
-                148.0,
+                d.viewport.x,
+                d.viewport.y + i as f64 * 25.0 - d.scroll,
+                d.viewport.width - 8.0,
                 25.0,
             );
+            if r.y + r.height <= d.viewport.y || r.y >= d.viewport.y + d.viewport.height {
+                continue;
+            }
             if hover(state, p, r) {
                 draw::rounded(p, r, 0x1a1a1a, 0x1a1a1a, 0.0);
             }
@@ -1721,8 +1791,35 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, _device: &Value) 
                 if v.selected == Some(*id) { GREEN } else { TEXT },
                 DT_LEFT,
             );
-            h(p, r, Control::SelectEffect(*id));
+            let top = r.y.max(d.viewport.y);
+            let bottom = (r.y + r.height).min(d.viewport.y + d.viewport.height);
+            h(
+                p,
+                at(r.x, top, r.width, bottom - top),
+                Control::SelectEffect(*id),
+            );
         }
+        RestoreDC(p.dc, saved);
+        draw::rounded(p, pr(d.track), 0x222222, 0x222222, 0.0);
+        let dragging = matches!(
+            v.gesture.as_ref().map(|g| &g.kind),
+            Some(GestureKind::EffectScroll { .. })
+        );
+        let thumb_color = if dragging {
+            0x2f941e
+        } else if hover(state, p, pr(d.thumb)) {
+            GREEN
+        } else {
+            0x656565
+        };
+        draw::rounded(
+            p,
+            at(d.thumb.x + 1.0, d.thumb.y + 1.0, 6.0, d.thumb.height - 2.0),
+            thumb_color,
+            thumb_color,
+            4.0,
+        );
+        h(p, pr(d.track), Control::EffectScroll(d.track));
     }
     if let Some(pg) = palette_geometry(state) {
         if let Some(editor) = &v.editor {
@@ -1962,4 +2059,24 @@ mod tests {
         assert!(view.slots[2].get("picked").is_none());
         assert_eq!(view.slots.len(), 16);
     }
+}
+
+/// Test-only sink at the effect-command boundary: real HWND/hit/capture paths,
+/// no backend invocation. It cannot be enabled in a production executable.
+#[cfg(test)]
+pub(super) fn test_dropdown(state: &mut State, enable: bool) -> Value {
+    if enable {
+        state.lighting.test_commands = Some(Vec::new());
+    }
+    let g = geometry(state).unwrap();
+    let d = source::effect_dropdown(
+        g.effect_dropdown,
+        f64::from(state.height) / f64::from(state.scale),
+        state.lighting.effect_offset,
+    );
+    let rect = |r: source::Rect| json!({"x":r.x,"y":r.y,"width":r.width,"height":r.height});
+    json!({"open":state.lighting.effect_menu,"selected":state.lighting.selected,"setting":state.lighting.setting,
+        "trigger":rect(g.effect_dropdown),"panel":rect(d.panel),"track":rect(d.track),"thumb":rect(d.thumb),
+        "scroll":d.scroll,"directions":g.direction_tabs.iter().copied().map(rect).collect::<Vec<_>>(),
+        "commands":state.lighting.test_commands})
 }

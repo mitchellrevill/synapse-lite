@@ -1,0 +1,155 @@
+{
+  "schema": "synapse-wave-ui-source-v1",
+  "source": {
+    "product": 605,
+    "js_sha256": "307e2b199037ed53a8fde90d76fc67a9a3766a9361fb152e7820d8bf05f19c65",
+    "css_sha256": "d8038bcd55d84e4f57b6c09057fe78e5c4a2495def92e0e259b2b72f861746e4",
+    "js_url": "https://apps.razer.com/synapse/products/605/ui/static/js/main.fcf07de2.js",
+    "css_url": "https://apps.razer.com/synapse/products/605/ui/static/css/main.f65da71b.css"
+  },
+  "rea_summary_id": "ev_7678ea5230f3a37291e75cc25f040b4d95d73d7936ab3dd814b1ab93a4a2ab52",
+  "rea_coverage": {
+    "projected_js_files": 4,
+    "bytes": 16824,
+    "parse_failures": 0,
+    "semantic_unknowns": 949
+  },
+  "projections": [
+    {
+      "class": "Z_",
+      "start_utf8": 8190946,
+      "end_utf8": 8192407,
+      "sha256": "9bb39db36b10ae1ab8e837a6e7fa83e2b4e87c1a44ac3cccf10d155d46d589a6"
+    },
+    {
+      "class": "OI",
+      "start_utf8": 8227903,
+      "end_utf8": 8229733,
+      "sha256": "a87d6137fb7a802384b7e76dfca1d564abae80514b099dcaf019af6721cc7865"
+    },
+    {
+      "class": "ZI",
+      "start_utf8": 8244007,
+      "end_utf8": 8250833,
+      "sha256": "409268ecdb54d5c3c43d76d454cf22b568ef104d01507304628ff6b2f8215f94"
+    },
+    {
+      "module": 27734,
+      "start_utf8": 1783906,
+      "end_utf8": 1790584,
+      "projection_sha256": "e9c3d42d00b20be460058ec2b717a8ebe765163870aa573b951ab27c385c8643",
+      "synthetic_wrapper": true
+    }
+  ],
+  "css_rules": [
+    {
+      "selector": "::-webkit-scrollbar",
+      "offset_utf8": 11707,
+      "rule": "::-webkit-scrollbar{height:8px;width:8px}"
+    },
+    {
+      "selector": "::-webkit-scrollbar-track",
+      "offset_utf8": 11797,
+      "rule": "::-webkit-scrollbar-track{background-color:#222;height:8px;width:8px}"
+    },
+    {
+      "selector": "::-webkit-scrollbar-thumb",
+      "offset_utf8": 11866,
+      "rule": "::-webkit-scrollbar-thumb{background:#ffffff4d;background-clip:padding-box;border:1px solid #0000;border-radius:4px;box-sizing:border-box;height:6px;width:6px}"
+    },
+    {
+      "selector": "::-webkit-scrollbar-thumb:hover",
+      "offset_utf8": 12025,
+      "rule": "::-webkit-scrollbar-thumb:hover{background:#44d62c;background-clip:padding-box;border:1px solid #0000}"
+    },
+    {
+      "selector": "::-webkit-scrollbar-thumb:active",
+      "offset_utf8": 12127,
+      "rule": "::-webkit-scrollbar-thumb:active{background:#2f941e;background-clip:padding-box;border:1px solid #0000}"
+    },
+    {
+      "selector": ".s3-options",
+      "offset_utf8": 34796,
+      "rule": ".s3-options{background-color:#000;border:none;flex-direction:column;height:0;left:0;margin-top:1px;max-height:0;min-width:100%;overflow-x:hidden;overflow-y:auto;position:absolute;transition:height .2s,max-height .2s,border-bottom .1s;width:-webkit-fit-content;width:fit-content;will-change:height,max-height,border-bottom;z-index:2}"
+    },
+    {
+      "selector": ".s3-options.expand",
+      "offset_utf8": 35213,
+      "rule": ".s3-options.expand{border:1px solid #515151;height:auto;max-height:180px}"
+    },
+    {
+      "selector": ".s3-options .option",
+      "offset_utf8": 35286,
+      "rule": ".s3-options .option{font-size:14px;height:25px;max-width:100%;min-height:25px;overflow:hidden;padding:4px;text-overflow:ellipsis;text-transform:none;white-space:nowrap;width:100%}"
+    }
+  ],
+  "inert_replay": {
+    "rect": {
+      "x": 660,
+      "y": 328,
+      "width": 150,
+      "height": 180
+    },
+    "clientHeight": 178,
+    "scrollHeight": 300,
+    "scrollTop": 122,
+    "selectedOffset": 250,
+    "boxSizing": "border-box",
+    "rows": [
+      {
+        "top": 250,
+        "height": 25
+      },
+      {
+        "top": 275,
+        "height": 25
+      }
+    ]
+  },
+  "geometry": {
+    "rows": 12,
+    "row_height": 25,
+    "panel_height": 180,
+    "client_height": 178,
+    "content_height": 300,
+    "max_scroll": 122,
+    "scrollbar_width": 8,
+    "thumb_visible_width": 6,
+    "radius": 4,
+    "down_offset": 28,
+    "up_bottom": 28,
+    "open_collision": "trigger.bottom+2+180 > innerHeight",
+    "selected_scroll": "clamp(selectedIndex*25,0,122)"
+  },
+  "wave": {
+    "source_id": 4,
+    "uncached_default_direction": 2,
+    "left": 1,
+    "right": 2,
+    "either_tab_or_pill_click": "direction==1 ? 2 : 1",
+    "preserve_other_setting_keys": true
+  },
+  "native_validation": {
+    "transport": "simulated only",
+    "request_sink": "cfg(test), before backend invocation",
+    "direction_requests": [
+      2,
+      1,
+      2
+    ],
+    "selected_row_scroll": 122,
+    "thumb_drag_to_start": true,
+    "narrow_upward_opening": true,
+    "opaque_setting_preserved": true,
+    "store_unchanged": true,
+    "no_additional_simulator_commands": true,
+    "hwnd_suite_passed": 8,
+    "regular_tray_tests_passed": 192
+  },
+  "limits": [
+    "No physical Wave output test or additional RAM measurement",
+    "No screenshot or pixel comparison; GDI glyph/raster and scrollbar fractional rounding parity unproven",
+    "Native wheel remains one source row per notch; OS/Chromium wheel acceleration parity unverified",
+    "REA analyzes synthetic bounded projections, not complete application behavior"
+  ]
+}

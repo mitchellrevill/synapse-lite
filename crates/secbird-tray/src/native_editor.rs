@@ -75,6 +75,8 @@ const RUNTIME_TEST_INJECT: u32 = WM_APP + 104;
 #[cfg(test)]
 const RUNTIME_TEST_QUERY: u32 = WM_APP + 105;
 #[cfg(test)]
+const LIGHTING_DROPDOWN_TEST: u32 = WM_APP + 109;
+#[cfg(test)]
 const READ_ONLY_TEST_SET: u32 = WM_APP + 106;
 #[cfg(test)]
 const ASSIGNMENT_TEST_QUERY: u32 = WM_APP + 107;
@@ -3571,6 +3573,13 @@ unsafe extern "system" fn window_proc(
                 let response = state.runtime_observer.test_response(binding, value);
                 state.collect_cached_lighting(response);
             }
+        }
+        return 0;
+    }
+    #[cfg(test)]
+    if message == LIGHTING_DROPDOWN_TEST {
+        if let Ok(mut state) = (*pointer).try_borrow_mut() {
+            *(lparam as *mut Value) = lighting_view::test_dropdown(&mut state, wparam == 1);
         }
         return 0;
     }
