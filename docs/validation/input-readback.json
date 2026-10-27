@@ -1,0 +1,225 @@
+{
+  "scope": "Bounded read-only probes; no assignment, input event, mode or profile writes",
+  "runs": [
+    {
+      "probe_binary_sha256": "740EF48CD03D3B76750C9B7361277516620D90F0E707F9867A8E74DE4F23399B",
+      "observation": {
+        "device_serials_or_paths_included": false,
+        "devices": [
+          {
+            "interface": 2,
+            "pid": 605,
+            "queries": [
+              {
+                "command_class": 2,
+                "elapsed_ms": 12,
+                "get_command_id": 141,
+                "input": 31,
+                "layer": 0,
+                "observation": {
+                  "device_status": "NotSupported",
+                  "status": "device-rejected"
+                },
+                "slot": 0
+              },
+              {
+                "command_class": 2,
+                "elapsed_ms": 11,
+                "get_command_id": 141,
+                "input": 31,
+                "layer": 1,
+                "observation": {
+                  "device_status": "NotSupported",
+                  "status": "device-rejected"
+                },
+                "slot": 0
+              },
+              {
+                "command_class": 2,
+                "elapsed_ms": 11,
+                "get_command_id": 141,
+                "input": 31,
+                "layer": 0,
+                "observation": {
+                  "device_status": "NotSupported",
+                  "status": "device-rejected"
+                },
+                "slot": 1
+              },
+              {
+                "command_class": 2,
+                "elapsed_ms": 12,
+                "get_command_id": 141,
+                "input": 31,
+                "layer": 1,
+                "observation": {
+                  "device_status": "NotSupported",
+                  "status": "device-rejected"
+                },
+                "slot": 1
+              }
+            ],
+            "status": "queried"
+          },
+          {
+            "candidate_count": 3,
+            "interface": 0,
+            "pid": 196,
+            "status": "not-tested"
+          }
+        ],
+        "profiles_or_drivers_changed": false,
+        "readonly": true,
+        "remapping_or_recovery_verified": false,
+        "scope": "two exact installed interfaces; one physical input each; slots0/1 and layers0/1",
+        "setters_called": false
+      },
+      "stock_session": {
+        "stock_before": 11,
+        "stock_isolated": 0,
+        "stock_after_restart": 15,
+        "services_changed": false,
+        "timed_out": false,
+        "exit_code": 0,
+        "error": null
+      }
+    },
+    {
+      "probe_binary_sha256": "AC3456815B3DEFE06ED6471A19AB8F64C29511B189B220DCF21864078D98197A",
+      "observation": {
+        "device_serials_or_paths_included": false,
+        "devices": [
+          {
+            "interface": 0,
+            "pid": 196,
+            "queries": [
+              {
+                "command_class": 2,
+                "elapsed_ms": 12,
+                "get_command_id": 140,
+                "input": 4,
+                "layer": 0,
+                "observation": {
+                  "declared_args": [
+                    0,
+                    4,
+                    1,
+                    1,
+                    1,
+                    4,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "declared_size": 10,
+                  "selectors_match": false,
+                  "status": "success"
+                },
+                "slot": 0
+              },
+              {
+                "command_class": 2,
+                "elapsed_ms": 11,
+                "get_command_id": 140,
+                "input": 4,
+                "layer": 1,
+                "observation": {
+                  "declared_args": [
+                    0,
+                    4,
+                    1,
+                    1,
+                    1,
+                    4,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "declared_size": 10,
+                  "selectors_match": true,
+                  "status": "success"
+                },
+                "slot": 0
+              },
+              {
+                "command_class": 2,
+                "elapsed_ms": 11,
+                "get_command_id": 140,
+                "input": 4,
+                "layer": 0,
+                "observation": {
+                  "declared_args": [
+                    1,
+                    4,
+                    1,
+                    1,
+                    1,
+                    4,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "declared_size": 10,
+                  "selectors_match": false,
+                  "status": "success"
+                },
+                "slot": 1
+              },
+              {
+                "command_class": 2,
+                "elapsed_ms": 11,
+                "get_command_id": 140,
+                "input": 4,
+                "layer": 1,
+                "observation": {
+                  "declared_args": [
+                    1,
+                    4,
+                    1,
+                    1,
+                    1,
+                    4,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "declared_size": 10,
+                  "selectors_match": true,
+                  "status": "success"
+                },
+                "slot": 1
+              }
+            ],
+            "status": "queried"
+          }
+        ],
+        "profiles_or_drivers_changed": false,
+        "readonly": true,
+        "remapping_or_recovery_verified": false,
+        "scope": "installed025D/MI02 and/or wired00C4/MI00, usage1/2; one physical input each; slots0/1 and layers0/1",
+        "setters_called": false
+      },
+      "stock_session": {
+        "stock_before": 11,
+        "stock_isolated": 0,
+        "stock_after_restart": 15,
+        "services_changed": false,
+        "timed_out": false,
+        "exit_code": 0,
+        "error": null
+      }
+    }
+  ],
+  "limits": [
+    "Only key31 and mouse input4 were queried",
+    "Numerical selector match for layer1 does not prove source normal/Hypershift semantics",
+    "No remapping or recovery execution",
+    "First run skipped three ambiguous mouse collections; second selected usage1/2 explicitly"
+  ],
+  "current_example_sha256": "4f40606fa158887c93fb286e0d55e3eba84dfe53a55f34ee4a9ee80456936e80",
+  "source_hash_scope": "Current source matches second executed probe; first probe preceded usage filtering and mouse-only option"
+}
