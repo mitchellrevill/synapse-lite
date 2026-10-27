@@ -136,6 +136,7 @@ fn rows(store: &Store, target: Option<&str>) -> Result<Vec<Row>> {
             continue;
         }
         let records = macro_records(device).unwrap_or_default();
+        let first = out.len();
         for (name, p) in &device.profiles {
             let decoded = p.extra.get(SOURCE).and_then(|v| v.get("decoded"));
             let mut ids = BTreeMap::new();
@@ -168,6 +169,26 @@ fn rows(store: &Store, target: Option<&str>) -> Result<Vec<Row>> {
                 macros,
             });
         }
+        // Retained source records contain list order even though native storage
+        // uses a name-sorted map. Bind by GUID so a rename cannot reorder a row.
+        let mut order = BTreeMap::new();
+        for envelope in envelopes(device) {
+            for record in envelope["profiles"].as_array().into_iter().flatten() {
+                if let Ok(decoded) = decode_record(record) {
+                    if let Some(guid) = decoded["guid"].as_str() {
+                        let next = order.len();
+                        order.entry(guid.to_string()).or_insert(next);
+                    }
+                }
+            }
+        }
+        out[first..].sort_by_key(|row| {
+            row.guid
+                .as_ref()
+                .and_then(|guid| order.get(guid))
+                .copied()
+                .unwrap_or(usize::MAX)
+        });
     }
     Ok(out)
 }
@@ -641,6 +662,15 @@ pub fn selected_export(preview: &Preview, choices: &[Choice]) -> Result<ExportRe
     let mut report = export_synapse4(&store, target)?;
     let mut envelope: Value =
         serde_json::from_slice(&report.bytes).map_err(|e| invalid(e.to_string()))?;
+    if let Some(profiles) = envelope.get_mut("profiles").and_then(Value::as_array_mut) {
+        profiles.sort_by_key(|record| {
+            preview
+                .rows
+                .iter()
+                .position(|row| record["name"].as_str() == Some(&row.name))
+                .unwrap_or(usize::MAX)
+        });
+    }
     let ids: BTreeSet<_> = choices
         .iter()
         .filter(|c| c.selected)
@@ -785,6 +815,45 @@ mod tests {
             vec!["Zulu", "Alpha"]
         );
         assert_eq!(preview.full_native_backup(), bytes);
+    }
+    #[test]
+    fn native_export_retains_source_order_across_rename_delete_and_new_profile() {
+        let mut store = import_document(&source_document(&["Zulu", "Alpha", "Removed"], false))
+            .unwrap()
+            .store;
+        let device = store.devices.get_mut("025D").unwrap();
+        device.rename("Zulu", "Omega").unwrap();
+        device.profiles.remove("Removed");
+        device.profiles.insert(
+            "Aardvark".into(),
+            new_native_profile(605, "Aardvark").unwrap(),
+        );
+        let backup = serde_json::to_vec(&store).unwrap();
+        let preview = preview_export(&backup, "025D:unit", "Omega").unwrap();
+        assert_eq!(
+            preview
+                .rows
+                .iter()
+                .map(|row| row.name.as_str())
+                .collect::<Vec<_>>(),
+            ["Omega", "Alpha", "Aardvark"]
+        );
+        let output = selected_export(&preview, &preview.initial_choices(None)).unwrap();
+        let document: Value = serde_json::from_slice(&output.bytes).unwrap();
+        assert_eq!(
+            document["profiles"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|record| record["name"].as_str().unwrap())
+                .collect::<Vec<_>>(),
+            ["Omega", "Alpha", "Aardvark"]
+        );
+        assert_eq!(
+            decode_record(&document["profiles"][0]).unwrap()["opaque"],
+            json!({"retain":[1,2]})
+        );
+        assert_eq!(preview.full_native_backup(), backup);
     }
     #[test]
     fn source_preview_is_read_only_and_import_copies_identity_without_activating() {
