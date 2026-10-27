@@ -23,6 +23,7 @@ const TRACE_CAP: usize = 64;
 struct Request {
     txid: u8,
     command: Command,
+    request_size: u8,
     minimum: u8,
 }
 #[derive(Default)]
@@ -53,10 +54,11 @@ impl Trace {
                 _ => None,
             };
             size.filter(|size| report.0 == Report::request(report.txid(), command, *size, &[]).0)
-                .map(|minimum| Request {
+                .map(|request_size| Request {
                     txid: report.txid(),
                     command,
-                    minimum,
+                    request_size,
+                    minimum: if command == EDITION { 2 } else { request_size },
                 })
         } else {
             None
@@ -83,7 +85,8 @@ impl Trace {
         if self.request_headers.len() < TRACE_CAP {
             self.request_headers.push(json!({
                 "transaction":request.txid,"command_class":request.command.class,
-                "command_id":request.command.id,"declared_size":request.minimum,
+                "command_id":request.command.id,"declared_size":request.request_size,
+                "required_success_minimum":request.minimum,
                 "hid_report_id":0,"packet_bytes":91,"canonical_zero_payload":true,
                 "checksum_valid":true
             }));
@@ -211,7 +214,7 @@ fn probe(
     let success = error.is_none();
     (
         json!({"success":success,"device_scope":{"vendor_id":0x1532,"product_id":605,"interface":2},
-        "protocol":{"class":0,"get_id":0x86,"declared_request_size":3,"input_selectors":[],"hid_report_id":0,"body_bytes":90},
+        "protocol":{"class":0,"get_id":0x86,"declared_request_size":3,"minimum_success_response_size":2,"firmware_id_optional":true,"input_selectors":[],"hid_report_id":0,"body_bytes":90},
         "provenance":{"source_release":"aef3665b36baca6993b26cdc296cda8bdab28bbd",
             "source_sha256":"0a463302ecaf113705ebb648f71f377d90d37d7194d6d73578644af080c12a7f",
             "source_evidence":"ev_5be7f3ba9bd58ae2b835c1a4a739dfb209cea9dbcfd175629a86868a4915ac31",
@@ -337,6 +340,7 @@ mod tests {
         state.active = Some(Request {
             txid: 0xff,
             command: SERIAL,
+            request_size: 22,
             minimum: 22,
         });
         let mut packet = vec![0];
@@ -356,6 +360,7 @@ mod tests {
         sim: secbird_core::sim::Sim,
         last: Mutex<Option<Report>>,
         unsupported: bool,
+        declared_size: u8,
     }
     impl Transport for Fake {
         fn send_feature_report(&self, data: &[u8]) -> secbird_core::Result<()> {
@@ -363,7 +368,11 @@ mod tests {
                 let mut report = Report::request(
                     data[2],
                     EDITION,
-                    if self.unsupported { 0 } else { 3 },
+                    if self.unsupported {
+                        0
+                    } else {
+                        self.declared_size
+                    },
                     if self.unsupported {
                         &[]
                     } else {
@@ -392,11 +401,12 @@ mod tests {
     }
     #[test]
     fn full_probe_guards_baseline_then_one_get_and_omits_private_identity() {
-        for unsupported in [false, true] {
+        for (unsupported, declared_size) in [(false, 2), (false, 3), (true, 0)] {
             let fake = Fake {
                 sim: secbird_core::sim::Sim::keyboard(),
                 last: Mutex::new(None),
                 unsupported,
+                declared_size,
             };
             let (report, success) = probe(
                 Box::new(fake),
@@ -411,6 +421,26 @@ mod tests {
             assert!(report["query_only_device_handle"].as_bool().unwrap());
             if success {
                 assert_eq!(report["identity"]["layout_id"], 255);
+                assert_eq!(
+                    report["identity"]["firmware_id"],
+                    if declared_size >= 3 {
+                        json!(9)
+                    } else {
+                        Value::Null
+                    }
+                );
+                assert_eq!(
+                    report["trace"]["correlated_edition_response"]["declared_args"]
+                        .as_array()
+                        .unwrap()
+                        .len(),
+                    usize::from(declared_size)
+                );
+                assert_eq!(report["trace"]["request_headers"][3]["declared_size"], 3);
+                assert_eq!(
+                    report["trace"]["request_headers"][3]["required_success_minimum"],
+                    2
+                );
             }
             let encoded = report.to_string();
             assert!(!encoded.contains("SIMKEYBOARD1"));

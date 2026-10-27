@@ -55,14 +55,18 @@ feature packet is report ID0 followed by the90-byte protocol body:
 | 88 | XOR of body bytes2..87;85hex for this request |
 | 89 | zero |
 
-The three successful response bytes are independent unsigned bytes:
-`[layout_id, edition_id, firmware_id]`. No multibyte byte-order conversion is
-involved. firmware_id is a raw ID, not a decoded firmware version.
+The shipped source decodes three independent unsigned response bytes:
+`[layout_id, edition_id, firmware_id]`. The installed firmware's observed reply
+declares only two bytes. Layout and edition are required; `firmware_id()` returns
+`None` with two declared bytes and `Some(raw_id)` with at least three. It is a
+raw ID, not a firmware version. No multibyte byte-order conversion is involved.
 
-The getter uses ordinary core GET transport validation: complete90/91-byte
+The getter retains ordinary core transport checks: complete90/91-byte
 carrier, checksum, transaction/class/command correlation, protocol framing,
-success status, and at least three declared response bytes within the80-byte
-capacity. Undeclared padding cannot supply missing identity bytes. Additional
+success status, and declared data within the80-byte capacity. A narrow exception
+for this025D/interface2 GET allows a two-byte minimum response to the unchanged
+three-byte request. Ordinary `Device::get` still requires its request-sized
+minimum. Undeclared padding cannot supply firmware ID or other identity bytes. Additional
 declared bytes remain available as uninterpreted data. Query-only Device handles
 permit this GET; there is no SET path or new outer retry transaction.
 
@@ -81,18 +85,29 @@ edition0/layout6 cannot establish what the current device reports.
 
 ## Verification and limits
 
-Five scoped simulator/spy tests cover raw baseline/unknown tuples and extensions;
+Seven scoped simulator/spy tests cover raw baseline/unknown tuples and extensions;
 short declared replies despite matching padding; malformed headers/checksum;
 the exact91-byte zero-selector request on a query-only handle with90/91-byte
 response carriers; wrong PID/interface with zero I/O; and unsupported versus
-bounded invalid-response behavior with one GET and no fallback or resend.
+bounded invalid-response behavior with one GET and no fallback or resend;
+two-byte firmware absence/three-byte presence; and unchanged ordinary GET
+strictness on the same simulated device.
 The existing ordinary transport bounds invalid-response reads at30.
 
-This checkpoint performed no physical hardware query, DLL execution, process
-changes, or production runtime integration. It does not certify the installed
-firmware's returned declared size, current layout, or optical/key geometry.
-A future explicitly scoped GET-only probe should retain the raw correlated
-response and declared size, and report manifest resolution separately.
+The implementation tests performed no physical hardware query, DLL execution,
+process changes, or production runtime integration. A separate root-operated
+GET-only probe using the previous strict-three-byte binary returned one serial
+baseline success and30 correlated successful edition headers declaring two
+bytes after one00:86 OUT, with no SET. Their transaction1F, command00:86, and
+checksum were valid; strict minimum3 correctly rejected the replies. The retained
+report SHA-256 is
+`4f2c86f4b2e0a30da26c4b9b876891007875e702fbf352bbee5500b9b1797567`.
+It captured headers, not edition arguments: it does not establish layout0/6 or
+any firmware ID. This observation grounds the narrow minimum2 response handling.
+No new physical execution of the revised getter is included here. The next
+explicit GET-only probe must retain the raw correlated response and declared
+data, and report manifest resolution separately. Optical/key geometry remains
+unverified.
 
 ## Opt-in diagnostic example
 
@@ -109,7 +124,8 @@ edition00:86/size3 packet. SETs, other GETs, modified arguments/headers, excess
 baseline attempts, and a second edition request are denied before reaching the
 underlying transport. The opened Device is additionally restricted to query-only.
 
-The requested JSON file contains raw identity IDs, protocol/source provenance,
+The requested JSON file contains raw layout/edition IDs and optional firmware
+ID (`null` when absent), protocol/source provenance,
 GET/OUT/read/denial counts, bounded request/response header traces, and the raw
 correlated successful edition response. Serial argument bytes and device paths
 are omitted. Up to64 response headers are retained, with omitted-read counts;

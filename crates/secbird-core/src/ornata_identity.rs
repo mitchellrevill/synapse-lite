@@ -8,7 +8,7 @@ use crate::{Device, Error, Result};
 
 const PRODUCT_ID: u16 = 0x025d;
 const GET_EDITION: Command = Command::new(0x00, 0x86);
-const EDITION_SIZE: u8 = 3;
+const MINIMUM_EDITION_SIZE: u8 = 2;
 
 /// A correlated device observation. A successful unknown tuple is distinct
 /// from an unsupported GET or a malformed response. firmware_id is a raw ID,
@@ -22,7 +22,7 @@ pub struct OrnataEditionReadback {
 impl OrnataEditionReadback {
     pub fn from_reply(txid: u8, reply: &Report) -> Result<Self> {
         let minimum = if reply.status() == Status::Success {
-            EDITION_SIZE
+            MINIMUM_EDITION_SIZE
         } else {
             0
         };
@@ -49,8 +49,8 @@ impl OrnataEditionReadback {
     pub fn edition_id(&self) -> u8 {
         self.raw_args[1]
     }
-    pub fn firmware_id(&self) -> u8 {
-        self.raw_args[2]
+    pub fn firmware_id(&self) -> Option<u8> {
+        (self.declared_size >= 3).then_some(self.raw_args[2])
     }
     pub fn declared_size(&self) -> u8 {
         self.declared_size
@@ -76,14 +76,15 @@ impl OrnataEditionReadback {
 impl Device {
     /// Query only this Ornata V2 control interface. Errors remain explicit;
     /// cached UI identity and historical physical observations are not consulted.
-    /// Uses ordinary strict GET correlation/checksum/declared-length validation.
+    /// Retains strict GET correlation/checksum validation. The local response
+    /// minimum is two bytes; the source request still declares three bytes.
     pub fn ornata_edition_readback(&self) -> Result<OrnataEditionReadback> {
         if self.pid != PRODUCT_ID || self.interface != 2 {
             return Err(Error::Unsupported(
                 "Edition/layout GET is verified only for Ornata V2 interface2".into(),
             ));
         }
-        let reply = self.get(GET_EDITION, EDITION_SIZE, &[])?;
+        let reply = self.get_ornata_edition_register()?;
         OrnataEditionReadback::from_reply(self.txid, &reply)
     }
 }
@@ -110,7 +111,7 @@ mod tests {
             let value = OrnataEditionReadback::from_reply(0x1f, &reply(4, &args)).unwrap();
             assert_eq!(
                 (value.layout_id(), value.edition_id(), value.firmware_id()),
-                (args[0], args[1], args[2])
+                (args[0], args[1], Some(args[2]))
             );
             assert_eq!(value.declared_args(), args);
             assert_eq!(value.declared_size(), 4);
@@ -124,7 +125,7 @@ mod tests {
 
     #[test]
     fn short_declared_data_never_uses_matching_padding_and_malformed_headers_fail() {
-        for size in [0, 1, 2, 81, 255] {
+        for size in [0, 1, 81, 255] {
             assert!(OrnataEditionReadback::from_reply(0x1f, &reply(size, &[6, 0, 9])).is_err());
         }
         for byte in [0, 1, 2, 3, 4, 6, 7, 88, 89] {
@@ -147,6 +148,20 @@ mod tests {
                 ..
             })
         ));
+    }
+
+    #[test]
+    fn declared_two_has_no_firmware_id_even_when_padding_matches_a_known_value() {
+        let value = OrnataEditionReadback::from_reply(0x1f, &reply(2, &[6, 0, 9])).unwrap();
+        assert_eq!((value.layout_id(), value.edition_id()), (6, 0));
+        assert_eq!(value.firmware_id(), None);
+        assert_eq!(value.declared_args(), [6, 0]);
+        assert_eq!(
+            OrnataEditionReadback::from_reply(0x1f, &reply(3, &[6, 0, 9]))
+                .unwrap()
+                .firmware_id(),
+            Some(9)
+        );
     }
 
     struct State {
@@ -222,13 +237,12 @@ mod tests {
 
     #[test]
     fn query_only_get_has_exact_zero_selector_packet_and_accepts_both_hid_lengths() {
-        for length in [90, 91] {
-            let (mut dev, state) = fixture(reply(3, &[6, 0, 9]), length);
+        for (length, size) in [(90, 3), (91, 3), (91, 2)] {
+            let (mut dev, state) = fixture(reply(size, &[6, 0, 9]), length);
             dev.enforce_query_only();
-            assert_eq!(
-                dev.ornata_edition_readback().unwrap().declared_args(),
-                [6, 0, 9]
-            );
+            let readback = dev.ornata_edition_readback().unwrap();
+            assert_eq!(readback.declared_args(), &[6, 0, 9][..usize::from(size)]);
+            assert_eq!(readback.firmware_id(), (size >= 3).then_some(9));
             let state = state.lock().unwrap();
             let mut expected = [0u8; 91];
             expected[2] = 0x1f;
@@ -271,7 +285,7 @@ mod tests {
         assert_eq!(state.lock().unwrap().requests.len(), 1);
         assert_eq!(state.lock().unwrap().reads, 1);
         for (mut response, length) in [
-            (reply(2, &[6, 0, 9]), 91),
+            (reply(1, &[6, 0, 9]), 91),
             (reply(3, &[6, 0, 9]), 89),
             (reply(3, &[6, 0, 9]), 91),
         ] {
@@ -291,5 +305,16 @@ mod tests {
             );
             assert_eq!(state.reads, 30, "existing bounded GET reads only");
         }
+    }
+
+    #[test]
+    fn ordinary_get_keeps_request_sized_minimum_on_the_same_device() {
+        let (dev, state) = fixture(reply(2, &[6, 0, 9]), 91);
+        assert!(matches!(
+            dev.get(GET_EDITION, 3, &[]),
+            Err(Error::NoReply(_))
+        ));
+        assert_eq!(state.lock().unwrap().reads, 30);
+        assert_eq!(state.lock().unwrap().requests.len(), 1);
     }
 }

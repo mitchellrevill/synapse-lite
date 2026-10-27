@@ -243,6 +243,27 @@ impl Device {
         self.transact(command.get(), size, args)
     }
 
+    /// The installed Ornata returns two declared edition/layout bytes to the
+    /// shipped three-byte GET00:86 request. Firmware ID is then unavailable.
+    /// Keep the measured minimum exception local; ordinary GET stays strict.
+    pub(crate) fn get_ornata_edition_register(&self) -> Result<Report> {
+        if self.pid != 0x025d || self.interface != 2 {
+            return Err(Error::Unsupported(
+                "edition/layout readback is verified only for Ornata V2 interface2".into(),
+            ));
+        }
+        self.permit_command(Command::new(0, 0x86))?;
+        transact_with_response_minimum(
+            self.transport.as_ref(),
+            self.txid,
+            Command::new(0, 0x86),
+            3,
+            &[],
+            READ_RETRIES,
+            2,
+        )
+    }
+
     /// The installed Ornata returns one mode byte to the source's two-byte
     /// GET00:84 request. Keep this measured exception local to that interface.
     pub(crate) fn get_ornata_mode_register(&self) -> Result<Report> {
