@@ -93,3 +93,34 @@ changes, or production runtime integration. It does not certify the installed
 firmware's returned declared size, current layout, or optical/key geometry.
 A future explicitly scoped GET-only probe should retain the raw correlated
 response and declared size, and report manifest resolution separately.
+
+## Opt-in diagnostic example
+
+The separate `ornata_identity_readback` example accepts exactly
+`<report.json> --read-only` and refuses any presence of `SECBIRD_SIM`. Building
+or testing it does not execute hardware discovery; running the compiled example
+with the explicit flag does. It selects exactly one025D/interface2 candidate and
+uses the configured/bounded transaction-ID candidates for the serial GET opening
+baseline, then performs one edition GET with no outer retry transaction.
+
+A strict transport allowlist is installed **before** Device construction. It
+accepts only canonical zero-payload serial00:82/size22 baseline packets and one
+edition00:86/size3 packet. SETs, other GETs, modified arguments/headers, excess
+baseline attempts, and a second edition request are denied before reaching the
+underlying transport. The opened Device is additionally restricted to query-only.
+
+The requested JSON file contains raw identity IDs, protocol/source provenance,
+GET/OUT/read/denial counts, bounded request/response header traces, and the raw
+correlated successful edition response. Serial argument bytes and device paths
+are omitted. Up to64 response headers are retained, with omitted-read counts;
+the existing transport still controls its bounded read attempts. A valid unknown
+tuple remains raw data and does not select a spatial map. A baseline or edition
+failure is reported without cache/default/dock fallback. Private HID error text
+is omitted. Discovery/open failure stops before any identity query.
+
+Four example tests use synthetic transports only: explicit argument/simulator
+guards, canonical-command allowlisting and single-query enforcement, denied
+commands reaching no inner transport with bounded private traces, and complete
+baseline/query reporting with unknown IDs or unsupported status. No physical
+execution of this example is included in its implementation checkpoint. It does
+not modify the older lighting_readback example or its recorded binary evidence.
