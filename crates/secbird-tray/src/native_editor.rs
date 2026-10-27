@@ -27,6 +27,8 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
+#[cfg(test)]
+mod assignment_layout;
 mod color_editor_layout;
 mod color_editor_view;
 mod feedback;
