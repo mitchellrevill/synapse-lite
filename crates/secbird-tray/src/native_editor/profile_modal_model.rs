@@ -34,8 +34,8 @@ pub(super) struct View {
     pub filename: String,
     pub data: Option<Arc<Preview>>,
     pub choices: Vec<Choice>,
-    // Source $i owns a checkbox state separate from isMacroSelected. A parent
-    // selection transition resets only the mark; select-all retains action data.
+    // Keep the source checkbox presentation, but synchronize available macro
+    // action data when a parent transition checks or clears its visible marks.
     pub macro_marks: Vec<BTreeSet<String>>,
     pub scroll_grab: Option<f64>,
     pub cloud: bool,
@@ -164,6 +164,16 @@ impl View {
                             self.data.as_ref().unwrap().rows[i]
                                 .macros
                                 .iter()
+                                .map(|m| m.guid.clone())
+                                .collect()
+                        } else {
+                            BTreeSet::new()
+                        };
+                        c.macros = if select {
+                            self.data.as_ref().unwrap().rows[i]
+                                .macros
+                                .iter()
+                                .filter(|m| m.available)
                                 .map(|m| m.guid.clone())
                                 .collect()
                         } else {

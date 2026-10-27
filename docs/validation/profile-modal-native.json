@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "scope": "synthetic Ornata native profile modal; actual HWND messages and worker paths",
+  "scope": "synthetic Ornata native profile modal; actual HWND messages and worker paths; updated macro Select all regression",
   "physical_discovery_disabled": true,
   "physical_hardware_tested": false,
   "os_picker_test_seam": "synchronous local test path messages; profile controls use actual mouse messages",
@@ -12,10 +12,20 @@
     ],
     "passed": 3,
     "failed": 0,
-    "elapsed_seconds": 2.04,
-    "after_asset_correction": true
+    "execution_context": "default sandbox; interaction/persistence checks, not font fidelity",
+    "after_macro_selection_fix": true,
+    "additional_overlay_test": {
+      "passed": 1,
+      "failed": 0,
+      "elapsed_seconds": 1.36,
+      "execution_context": "desktop context outside sandbox; isolated simulator, physical discovery disabled",
+      "scenarios": 4,
+      "all_source_fonts_loaded": 3
+    },
+    "sandbox_overlay_failure": "Private font registration returned zero loaded fonts; overlay test passed in desktop context without changing readiness criteria"
   },
   "checks": {
+    "available_macro_marks_match_action_selection": true,
     "browse_cancel_read_only": true,
     "fresh_guid_inactive_import": true,
     "full_backup_retains_foreign_and_opaque": true,
@@ -25,7 +35,6 @@
     "selected_export": true,
     "sim_only": true,
     "source_checkbox_events": true,
-    "source_macro_visual_data_quirk": true,
     "source_scrollbar_drag": true,
     "stale_owner_refused": true
   },
@@ -104,5 +113,7 @@
     "CSS animation/shadow/GDI font raster parity",
     "held-track scrollbar repeat or snap-back"
   ],
-  "private_paths_names_serials_included": false
+  "private_paths_names_serials_included": false,
+  "source_checkpoint_before_checkbox_fix": "e31a7e4",
+  "intentional_behavior_correction": "Available macro action selections now follow the source visible checks after parent Select all transitions; no silent omission of checked macros"
 }

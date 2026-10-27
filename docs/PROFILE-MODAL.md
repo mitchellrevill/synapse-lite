@@ -4,11 +4,11 @@ The native modal for Ornata V2 (605) and DeathAdder (196/197) follows the recove
 
 ## Source layout and behavior
 
-The modal is 602 × 481 CSS pixels, at x=viewportWidth/2-300 and product-local y104. The separate native host contributes 42 px, giving native y146. The source intentionally differs by 1 px from centering a 602 px box. Border #515151, radius 5 and product backdrop black alpha 179/255 follow the source.
+The modal is 602 Ã— 481 CSS pixels, at x=viewportWidth/2-300 and product-local y104. The separate native host contributes 42 px, giving native y146. The source intentionally differs by 1 px from centering a 602 px box. Border #515151, radius 5 and product backdrop black alpha 179/255 follow the source.
 
 Export has a 40 px selection header,317 px list and86 px footer. Import has a 49 px Local/Cloud switch,47 px browse row,40 px selection header,247 px list and60 px footer. Profile checkboxes are 20 px; expanded macro rows are 31 px. The source custom scrollbar uses an 8 px track,6 px minimum thumb and 1 px transparent border; thumb capture/drag, wheel and track paging are connected. Browser thumb rounding/page behavior uses [Chromium implementation evidence](https://chromium.googlesource.com/chromium/src/+/5246ef8d724d69e63169a4ac8733a056738091bd/third_party/blink/renderer/core/scroll/scrollbar_theme.cc) alongside shipped CSS.
 
-Cloud is disabled as in the source. Its measured English Roboto 16 message box is 352.953125 × 80, at modal-relative (124.515625, 236.5); text is 260.953125 × 19. Source checkbox state is also preserved: Select all can reset visible macro marks while retaining separate macro action-selection flags. This unusual behavior is deliberate parity with the recovered component.
+Cloud is disabled as in the source. Its measured English Roboto 16 message box is 352.953125 Ã— 80, at modal-relative (124.515625, 236.5); text is 260.953125 Ã— 19. The recovered source can reset visible macro checks through Select all while retaining stale action-selection flags. The native modal preserves the visible transition and synchronizes available macro action flags, so checked macros are actually included. This fixes a source behavior defect without changing the layout.
 
 ## Bounded profile operations
 

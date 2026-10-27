@@ -878,17 +878,17 @@ fn native_profile_modal_preview_selection_commit_and_full_backup() {
             let (layout, _) = profile_modal_layout::rows(&g, &expanded, 0.0);
             let r = layout[work].macros[0];
             lighting_click(hwnd, r.x + 10.0, r.y + 10.0, scale);
-            // Reproduce the shipped component quirk: select-all changes parent
-            // props/visible marks, but does not reset isMacroSelected action data.
+            // Preserve the visible source transition while correcting its stale
+            // macro action flags: checked available macros must be included.
             redraw(hwnd);
             lighting_click(hwnd, g.all.x + 30.0, g.all.y + 20.0, scale);
             redraw(hwnd);
             lighting_click(hwnd, g.all.x + 30.0, g.all.y + 20.0, scale);
             let snap = modal_snapshot(hwnd);
             if snap["rows"][work]["macros"][0]["mark"] != true
-                || snap["rows"][work]["macros"][0]["selected"] != false
+                || snap["rows"][work]["macros"][0]["selected"] != true
             {
-                return Err(format!("Source visual/data checkbox quirk lost: {snap}"));
+                return Err(format!("Select-all macro mark/action mismatch: {snap}"));
             }
             let expanded: Vec<_> = snap["rows"]
                 .as_array()
@@ -902,9 +902,25 @@ fn native_profile_modal_preview_selection_commit_and_full_backup() {
             lighting_click(hwnd, r.x + 10.0, r.y + 10.0, scale);
             let snap = modal_snapshot(hwnd);
             if snap["rows"][other]["selected"] != false
-                || snap["rows"][work]["macros"][0]["selected"] != false
+                || snap["rows"][work]["macros"][0]["selected"] != true
             {
                 return Err(format!("Checkbox events missed: {snap}"));
+            }
+            let expanded: Vec<_> = snap["rows"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|r| (r["selected"] == true, r["macros"].as_array().unwrap().len()))
+                .collect();
+            let (layout, _) = profile_modal_layout::rows(&g, &expanded, 0.0);
+            let r = layout[work].macros[0];
+            redraw(hwnd);
+            lighting_click(hwnd, r.x + 10.0, r.y + 10.0, scale);
+            let snap = modal_snapshot(hwnd);
+            if snap["rows"][work]["macros"][0]["selected"] != false
+                || snap["rows"][work]["macros"][0]["mark"] != false
+            {
+                return Err(format!("Explicit macro exclusion missed: {snap}"));
             }
             redraw(hwnd);
             lighting_click(hwnd, g.commit.x + 20.0, g.commit.y + 13.0, scale);
@@ -1021,7 +1037,7 @@ fn native_profile_modal_preview_selection_commit_and_full_backup() {
                 "Profile editor closed",
             )?;
             Ok(
-                json!({"browse_cancel_read_only":true,"partial_record_warning_and_empty_disabled_preview":true,"source_checkbox_events":true,"source_macro_visual_data_quirk":true,"source_scrollbar_drag":true,"fresh_guid_inactive_import":true,"macro_binding_removed":true,"selected_export":true,"full_backup_retains_foreign_and_opaque":true,"stale_owner_refused":true,"no_simulated_set_commands":true,"sim_only":true}),
+                json!({"browse_cancel_read_only":true,"partial_record_warning_and_empty_disabled_preview":true,"source_checkbox_events":true,"available_macro_marks_match_action_selection":true,"source_scrollbar_drag":true,"fresh_guid_inactive_import":true,"macro_binding_removed":true,"selected_export":true,"full_backup_retains_foreign_and_opaque":true,"stale_owner_refused":true,"no_simulated_set_commands":true,"sim_only":true}),
             )
         }
     });
