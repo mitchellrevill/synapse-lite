@@ -37,6 +37,8 @@ secbird -d 00C4 export-synapse4 profile.synapse4
 
 Synapse 4 export retains opaque imported settings and supports source-verified default profiles for the installed keyboard and mouse models. Unsupported settings are reported or cause export to fail. Device-wide Power intent is retained in native backups and explicitly reported when a profile-only export cannot represent it. Synapse 3 ZIP profiles are not yet implemented.
 
+Both [actual installed profile payloads](docs/ACTUAL-PROFILES.md) round-trip unchanged through the CLI with independently verified hashes. Live import acceptance in Synapse remains unverified.
+
 ## Evidence and remaining work
 
 See [the pinned baseline](docs/BASELINE.json), [acceptance criteria](docs/ACCEPTANCE.md), and the [original upstream documentation](docs/UPSTREAM-README.md).

@@ -8,7 +8,7 @@ Keyboard kind 1 contains the 12-byte keyboard input structure at offset 8; mouse
 
 ## Evidence
 
-The inspected AppEngine 4.0.827 `mapping_engine.dll` SHA-256 is `6eabdfdedf797e042738b630d827c06f7a45dbe560ebaec96c66698f88f3320a`. Installed `RzCommon.sys` 1.0.0.76 SHA-256 is `64b72ef9ce409bb17d31096c119b68c4a6a02ab35b7535d763157a4e1a587e59`. Microsoft dumpbin disassembly supplied the native evidence because REA's native decompiler provider was unavailable. No invented REA Evidence ID is assigned to those results.
+The inspected AppEngine 4.0.827 `mapping_engine.dll` SHA-256 is `6eabdfdedf797e042738b630d827c06f7a45dbe560ebaec96c66698f88f3320a`. Installed `RzCommon.sys` 1.0.0.76 SHA-256 is `64b72ef9ce409bb17d31096c119b68c4a6a02ab35b7535d763157a4e1a587e59`. The original native evidence came from Microsoft dumpbin while REA's native decompiler was unavailable; those original results have no invented REA Evidence IDs. Later decompilation is identified separately below.
 
 | Contract | Caller / kernel RVAs |
 | --- | --- |
@@ -19,6 +19,10 @@ The inspected AppEngine 4.0.827 `mapping_engine.dll` SHA-256 is `6eabdfdedf797e0
 | Selector lifetime | Device hook manager at context +570; constructor694C–6B1E; allocation7630–7745 parents selector storage to the collection |
 
 The inspected close path removes per-file notification subscriptions but does not clear the device-scoped selector collection or recompute its cached mode flags. Selectors can therefore outlive their installing client in the observed architecture. This does not prove all crash/fallback behavior; it means a writer must implement explicit, ownership-aware cleanup and key-release recovery rather than relying on handle destruction. Unrelated selectors must be preserved.
+
+Portable Ghidra12.1.4 and the existing JDK now provide working REA native decompilation without global registration or target execution. Inventory evidence ev_1a68f2a1573d13c0735e22cf77babc4068e195f009e0bfa3aec9dbb0000300c6 identifies137 procedures in the exact driver above. Selector cleanup at0x14000622c decompiled under ev_a5fe5061cf4acc503f71a7fd5eface694ea19ac50cc9510370d6bcca16c6d833, corroborating descriptor comparisons without client/file identity in that function. Receive helper0x140005a54 decompiled under ev_89c7ff72ead1d753ab7e54b22775f567f00a9287163f510b1eac1823796b4b7e and returns STATUS_PENDING after queueing notification work.
+
+Decompiler signatures are estimates: its one-byte estimate for a receive request parameter is not an independently established Windows-handle ABI. Assembly, callers and WDF prototypes remain necessary for widths and indirect calls. These two functions and the inventory do not establish full driver coverage, input safety or a replacement kernel driver. No installed driver, service or global setting changed during this static analysis.
 
 ## Runtime status
 
