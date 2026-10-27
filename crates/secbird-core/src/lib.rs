@@ -29,6 +29,7 @@ pub mod log;
 pub mod macros;
 pub mod net;
 pub mod ornata_frame;
+pub mod ornata_identity;
 pub mod ornata_spatial;
 pub mod performance;
 pub mod power;
