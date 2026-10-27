@@ -1,5 +1,7 @@
 # Uniform program checkpoint
 
+Later production integration and bounded hardware results are documented in [the uniform runtime](UNIFORM-RUNTIME.md). Statements below describe this earlier checkpoint.
+
 This checkpoint is not running animation playback. It adds pure program/scheduler logic and a separately callable bounded frame adapter. There is no worker, timer, endpoint integration or automatic default-profile playback yet. No physical HID or stock process was accessed by these tests.
 
 The existing core `UniformCycle` supplies ordinary RGB table math recovered from the installed native engine. Evidence, native addresses and limitations are in `UNIFORM-LIGHTING.md` and `outputs/research/native-spectrum-breathing-math.md` in the task workspace. Derived fixtures are not vendor execution or optical observations.

@@ -174,15 +174,45 @@ pub(super) fn apply(
     store: &mut Store,
     body: &Body,
     host_gate: Result<crate::host_static::Gate, Error>,
+    worker_ready: bool,
+    trace: &mut crate::host_uniform::ActionTrace,
 ) -> Result<Value, Error> {
-    apply_with_gates(dev, store, body, process_owner_gate, host_gate)
+    apply_traced(
+        dev,
+        store,
+        body,
+        process_owner_gate,
+        host_gate,
+        worker_ready,
+        trace,
+    )
 }
+#[cfg(test)]
 fn apply_with_gates(
     dev: &mut Device,
     store: &mut Store,
     body: &Body,
     gate: impl FnOnce() -> Result<(), Error>,
     host_gate: Result<crate::host_static::Gate, Error>,
+) -> Result<Value, Error> {
+    apply_traced(
+        dev,
+        store,
+        body,
+        gate,
+        host_gate,
+        true,
+        &mut crate::host_uniform::ActionTrace::default(),
+    )
+}
+fn apply_traced(
+    dev: &mut Device,
+    store: &mut Store,
+    body: &Body,
+    gate: impl FnOnce() -> Result<(), Error>,
+    host_gate: Result<crate::host_static::Gate, Error>,
+    worker_ready: bool,
+    trace: &mut crate::host_uniform::ActionTrace,
 ) -> Result<Value, Error> {
     let id = body
         .source_effect_id
@@ -199,29 +229,42 @@ fn apply_with_gates(
         let profiles = owner(dev, store, body)?;
         let name = profiles.active.clone();
         let profile = profiles.active_mut();
-        secbird_core::profile_compat::set_source_quick_effect(profile, 605, &name, id, setting)?;
+        secbird_core::profile_compat::set_source_quick_effect(
+            profile, 605, &name, id, setting,
+        )?;
         plan.project(profile);
+        crate::host_uniform::Program::clear_opt_in(profile);
+        if matches!(id, 2 | 3) {
+            let program = crate::host_uniform::Program::from_profile(profile, 605)?
+                .ok_or_else(|| Error::Unsupported("Effect has no uniform projection".into()))?;
+            program.opt_in(profile)?;
+            trace.requested = Some(program);
+        }
         secbird_core::profile_compat::validate_store_budget(store)?;
         gate()?;
         // Mode GET is read-only; failures before it must never mutate resolution keys.
         let mode = dev.ornata_mode_readback()?;
         let execution=match mode.mode() {
-            0=>{attempted=true;plan.write_verified(dev)?;json!({"execution":"firmware","verified":true,"host_animation_parity":false})},
-            3 if id==1=>{
-                let gate=host_gate?;
-                let gate=if matches!(&gate,crate::host_static::Gate::NeedsBaseline{..}) {
-                    initialize_brightness_baseline(dev,store,body)?;initialized_baseline=true;
-                    let profiles=owner(dev,store,body)?;
-                    gate.with_brightness(&profiles.active,profiles.active())?
-                } else {gate};
+        0=>{attempted=true;trace.output_attempted=true;plan.write_verified(dev)?;json!({"execution":"firmware","verified":true,"host_animation_parity":false})},
+        3 if matches!(id,1|2|3)=>{
+            let gate=host_gate?;
+            let gate=if matches!(&gate,crate::host_static::Gate::NeedsBaseline{..}) {
+                initialize_brightness_baseline(dev,store,body)?;initialized_baseline=true;
+                let profiles=owner(dev,store,body)?;gate.with_brightness(&profiles.active,profiles.active())?
+            } else {gate};
+            if id==1 {
                 match gate {
-                    crate::host_static::Gate::Ready=>{attempted=true;crate::host_static::send_uniform(dev,plan.color.expect("Static plan has color"))?},
+                    crate::host_static::Gate::Ready=>{attempted=true;trace.output_attempted=true;crate::host_static::send_uniform(dev,plan.color.expect("Static plan has color"))?},
                     crate::host_static::Gate::Deferred(reason)=>{crate::host_static::preflight(dev)?;json!({"execution":"host-static","deferred":true,"rendered":false,"reason":reason,"accepted_packets":0,"attempted_packets":0,"optically_verified":false})},
                     crate::host_static::Gate::NeedsBaseline{..}=>return Err(Error::InvalidArg("Brightness baseline was not initialized".into())),
                 }
-            },
-            value=>return Err(Error::Unsupported(format!("Source effect {id} has no implemented host path in mode{value}; no effect was applied"))),
-        };
+            } else {
+                let result=super::uniform::apply(dev,store,body,gate,worker_ready,trace);
+                attempted|=trace.output_attempted;result?
+            }
+        },
+        value=>return Err(Error::Unsupported(format!("Source effect {id} has no implemented host path in mode{value}; no effect was applied"))),
+    };
         store.save()?;
         let mut response = execution;
         response["saved"] = json!(true);
@@ -616,7 +659,7 @@ mod tests {
         assert!(apply_fixture(&mut f, &b)
             .unwrap_err()
             .to_string()
-            .contains("no implemented host path"));
+            .contains("CustomFrame8"));
         assert!(f.sim.state().log.is_empty());
         *f.mode.lock().unwrap() = 0;
         *f.wrong.lock().unwrap() = true;
@@ -743,6 +786,150 @@ mod host_dispatch_tests {
                 std::fs::remove_dir_all(&self.folder).unwrap();
             }
         }
+    }
+    fn uniform_body(f: &Fixture, id: u8) -> Body {
+        let setting = if id == 3 {
+            json!({})
+        } else {
+            json!({"isRandom":false,"color1":"#123456","color2":"no-color"})
+        };
+        serde_json::from_value(json!({
+            "id":f.dev.key(), "expected_device":f.dev.key(),
+            "expected_profile":"Default", "source_effect_id":id,
+            "source_effect_setting":setting
+        }))
+        .unwrap()
+    }
+    #[test]
+    fn uniform_source_actions_persist_exact_opt_in_only_after_complete_frame() {
+        for id in [2, 3] {
+            let mut f = Fixture::new();
+            let body = uniform_body(&f, id);
+            let mut trace = crate::host_uniform::ActionTrace::default();
+            let result = apply_traced(
+                &mut f.dev,
+                &mut f.store,
+                &body,
+                || Ok(()),
+                Ok(Gate::Ready),
+                true,
+                &mut trace,
+            )
+            .unwrap();
+            assert_eq!(result["execution"], "host-uniform");
+            assert_eq!(result["accepted_packets"], 7);
+            assert_eq!(result["control_state_verified"], true);
+            assert_eq!(result["optically_verified"], false);
+            assert_eq!(trace.completion.as_ref().unwrap().attempted_packets, 7);
+            let profile = f.store.for_device(&f.dev).active();
+            let program = crate::host_uniform::Program::from_profile(profile, 605)
+                .unwrap()
+                .unwrap();
+            assert!(program.opted_in(profile));
+            let foreign =
+                secbird_core::profile_compat::export_synapse4(&f.store, &f.dev.key()).unwrap();
+            let imported = secbird_core::profile_compat::import_document(&foreign.bytes).unwrap();
+            assert!(!program.opted_in(imported.store.devices.values().next().unwrap().active()));
+            assert!(!f
+                .spy
+                .state
+                .lock()
+                .unwrap()
+                .commands
+                .contains(&secbird_core::commands::MATRIX_BRIGHTNESS));
+            assert!(!f.spy.sim.state().effects.contains_key(&5));
+        }
+    }
+    #[test]
+    fn uniform_worker_refusal_and_partial_frame_do_not_save_intent() {
+        for worker in [false, true] {
+            let mut f = Fixture::new();
+            if worker {
+                f.spy.state.lock().unwrap().fail_at = Some(2);
+            }
+            let body = uniform_body(&f, 3);
+            let before = serde_json::to_value(&f.store).unwrap();
+            let mut trace = crate::host_uniform::ActionTrace::default();
+            let result = apply_traced(
+                &mut f.dev,
+                &mut f.store,
+                &body,
+                || Ok(()),
+                Ok(Gate::Ready),
+                worker,
+                &mut trace,
+            );
+            assert!(result.is_err());
+            assert_eq!(serde_json::to_value(&f.store).unwrap(), before);
+            assert!(!f.folder.exists());
+            assert_eq!(
+                f.spy.state.lock().unwrap().attempts,
+                if worker { 3 } else { 0 }
+            );
+            if worker {
+                assert_eq!(trace.completion.unwrap().accepted_packets, 2);
+            } else {
+                assert!(!trace.output_attempted);
+            }
+        }
+    }
+    #[test]
+    fn uniform_off_selection_and_brightness_edit_save_without_output_or_saved_register_write() {
+        let mut f = Fixture::new();
+        let mut settings = f
+            .store
+            .for_device(&f.dev)
+            .active()
+            .lighting_settings
+            .clone()
+            .unwrap();
+        settings.brightness.as_mut().unwrap().enabled = false;
+        settings
+            .store_in_profile(f.store.for_device(&f.dev).active_mut())
+            .unwrap();
+        let body = uniform_body(&f, 3);
+        let response = apply_with_gates(
+            &mut f.dev,
+            &mut f.store,
+            &body,
+            || Ok(()),
+            Ok(Gate::Deferred("brightness-off".into())),
+        )
+        .unwrap();
+        assert_eq!(response["deferred"], true);
+        let program =
+            crate::host_uniform::Program::from_profile(f.store.for_device(&f.dev).active(), 605)
+                .unwrap()
+                .unwrap();
+        assert!(program.opted_in(f.store.for_device(&f.dev).active()));
+        settings.brightness.as_mut().unwrap().value = 49;
+        let body: Body = serde_json::from_value(json!({
+            "id":f.dev.key(), "expected_device":f.dev.key(), "expected_profile":"Default",
+            "lighting_settings":settings
+        }))
+        .unwrap();
+        let (candidate, _) = super::super::uniform_settings_candidate(&f.dev, &f.store, &body)
+            .unwrap()
+            .unwrap();
+        let response = super::super::host_uniform_settings(
+            &f.dev,
+            &mut f.store,
+            candidate,
+            &settings,
+            Ok(Gate::Deferred("brightness-off".into())),
+            true,
+        )
+        .unwrap();
+        assert_eq!(response["configured_intent"]["brightness"]["value"], 49);
+        assert_eq!(response["saved_hardware_unchanged"], true);
+        assert_eq!(f.spy.state.lock().unwrap().attempts, 0);
+        assert!(!f
+            .spy
+            .state
+            .lock()
+            .unwrap()
+            .commands
+            .contains(&secbird_core::commands::MATRIX_BRIGHTNESS));
     }
     #[test]
     fn driver_static_endpoint_renders_and_saves_only_after_verified_out() {

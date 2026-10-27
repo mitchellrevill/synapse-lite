@@ -45,7 +45,7 @@ See [the pinned baseline](docs/BASELINE.json), [acceptance criteria](docs/ACCEPT
 
 The source-derived mouse [Performance](docs/PERFORMANCE.md) and [Power](docs/POWER.md) controls are connected to shared device actions. Their reports distinguish source reconstruction, simulator checks, physical setting/readback/restoration checks and memory observations from the remaining visual and interaction gates.
 
-The keyboard [Lighting editor](docs/LIGHTING.md) includes recovered brightness/policy controls, palettes and the color editor. The tray runs idle/display brightness policies. A guarded [host Static path](docs/HOST-STATIC.md) supports the installed keyboard's existing Driver Mode; other firmware effects require Normal Mode. Host animations and pixel parity remain unfinished.
+The keyboard [Lighting editor](docs/LIGHTING.md) includes recovered brightness/policy controls, palettes and the color editor. The tray runs idle/display brightness policies. A guarded [host Static path](docs/HOST-STATIC.md) and [Spectrum/fixed Breathing worker](docs/UNIFORM-RUNTIME.md) support the keyboard's existing Driver Mode. The first bounded animation test achieved about11fps; cadence improvement, other host effects and pixel parity remain unfinished.
 
 The native [profile Import/Export modal](docs/PROFILE-MODAL.md) provides worker-backed previews, profile/macro selection, inactive imports, partial corrupt-record warnings and explicit full native backups. Source geometry and converted icon pixels are verified separately from whole-UI parity; the simulated HWND tests do not establish real Synapse re-import acceptance.
 

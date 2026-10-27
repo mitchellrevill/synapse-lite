@@ -1,0 +1,322 @@
+{
+  "after_shutdown": {
+    "brightness": [
+      {
+        "profile": 0,
+        "raw": 255
+      },
+      {
+        "profile": 1,
+        "raw": 255
+      }
+    ],
+    "effects": [
+      {
+        "declared_args": [
+          0,
+          0,
+          8,
+          0,
+          0,
+          0
+        ],
+        "declared_size": 6,
+        "profile": 0
+      },
+      {
+        "declared_args": [
+          1,
+          0,
+          3,
+          0,
+          0,
+          0
+        ],
+        "declared_size": 6,
+        "profile": 1
+      }
+    ],
+    "mode": 3,
+    "mode_declared_size": 1,
+    "mode_parameter": null
+  },
+  "before": {
+    "brightness": [
+      {
+        "profile": 0,
+        "raw": 255
+      },
+      {
+        "profile": 1,
+        "raw": 255
+      }
+    ],
+    "effects": [
+      {
+        "declared_args": [
+          0,
+          0,
+          8,
+          0,
+          0,
+          0
+        ],
+        "declared_size": 6,
+        "profile": 0
+      },
+      {
+        "declared_args": [
+          1,
+          0,
+          3,
+          0,
+          0,
+          0
+        ],
+        "declared_size": 6,
+        "profile": 1
+      }
+    ],
+    "mode": 3,
+    "mode_declared_size": 1,
+    "mode_parameter": null
+  },
+  "breathing": {
+    "accepted_frames_including_initial": 56,
+    "initial_action_ms": 104,
+    "initial_response": {
+      "accepted_packets": 7,
+      "attempted_packets": 7,
+      "cadence_certified": false,
+      "control_state_verified": true,
+      "deferred": false,
+      "execution": "host-uniform",
+      "frame_count": 175,
+      "frame_submitted": true,
+      "last_submit_us": 75845,
+      "mode_after": 3,
+      "mode_before": 3,
+      "native_effect_id": 5,
+      "nominal_interval_ms": 40,
+      "optically_verified": false,
+      "palette_index": 0,
+      "parameter_after": null,
+      "parameter_before": null,
+      "parameter_unchanged": null,
+      "phase_policy": "local-start-zero-freeze-no-catchup",
+      "profile_name": "Default",
+      "saved": true,
+      "source_effect_id": 2
+    },
+    "observation_window_seconds": 5.0510559,
+    "optically_verified": false,
+    "registers": {
+      "brightness": [
+        {
+          "profile": 0,
+          "raw": 255
+        },
+        {
+          "profile": 1,
+          "raw": 255
+        }
+      ],
+      "effects": [
+        {
+          "declared_args": [
+            0,
+            0,
+            8,
+            0,
+            0,
+            0
+          ],
+          "declared_size": 6,
+          "profile": 0
+        },
+        {
+          "declared_args": [
+            1,
+            0,
+            3,
+            0,
+            0,
+            0
+          ],
+          "declared_size": 6,
+          "profile": 1
+        }
+      ],
+      "mode": 3,
+      "mode_declared_size": 1,
+      "mode_parameter": null
+    },
+    "source_effect_id": 2,
+    "status": {
+      "accepted_frames": 56,
+      "accepted_packets": 7,
+      "attempted_packets": 7,
+      "automatic_retry": false,
+      "cadence_certified": false,
+      "configuration_reloads": 3,
+      "custom_frame_control_verified": true,
+      "error": null,
+      "frame_count": 175,
+      "last_gate_us": 9154,
+      "last_submit_us": 74630,
+      "mode_after": 3,
+      "mode_before": 3,
+      "native_id": 5,
+      "nominal_interval_ms": 40,
+      "opted_in": true,
+      "optically_verified": false,
+      "palette_index": 55,
+      "parameter_after": null,
+      "parameter_before": null,
+      "parameter_unchanged": null,
+      "phase_policy": "local-freeze-no-catchup",
+      "profile": "Default",
+      "session_elapsed_us": 5093097,
+      "source_id": 2,
+      "state": "playing",
+      "streaming": true,
+      "worker_enabled": true
+    },
+    "subsequent_frames_per_second": 10.888812376833922
+  },
+  "cadence_certified": false,
+  "controls_unchanged": true,
+  "input_recovery_verified": false,
+  "optically_verified": false,
+  "scope": "bounded physical source API and actual off-UI worker; no tray/window",
+  "shutdown_errors": [],
+  "spectrum": {
+    "accepted_frames_including_initial": 23,
+    "initial_action_ms": 131,
+    "initial_response": {
+      "accepted_packets": 7,
+      "attempted_packets": 7,
+      "brightness_baseline_initialized": true,
+      "cadence_certified": false,
+      "control_state_verified": true,
+      "deferred": false,
+      "execution": "host-uniform",
+      "frame_count": 943,
+      "frame_submitted": true,
+      "last_submit_us": 75626,
+      "live_hardware_unchanged": true,
+      "live_policy_reconcile_pending": false,
+      "mode_after": 3,
+      "mode_before": 3,
+      "native_effect_id": 4,
+      "nominal_interval_ms": 40,
+      "optically_verified": false,
+      "palette_index": 0,
+      "parameter_after": null,
+      "parameter_before": null,
+      "parameter_unchanged": null,
+      "phase_policy": "local-start-zero-freeze-no-catchup",
+      "profile_name": "Default",
+      "retained_brightness_intent_known": false,
+      "saved": true,
+      "saved_hardware_unchanged": true,
+      "source_effect_id": 3
+    },
+    "observation_window_seconds": 2.0296508,
+    "optically_verified": false,
+    "registers": {
+      "brightness": [
+        {
+          "profile": 0,
+          "raw": 255
+        },
+        {
+          "profile": 1,
+          "raw": 255
+        }
+      ],
+      "effects": [
+        {
+          "declared_args": [
+            0,
+            0,
+            8,
+            0,
+            0,
+            0
+          ],
+          "declared_size": 6,
+          "profile": 0
+        },
+        {
+          "declared_args": [
+            1,
+            0,
+            3,
+            0,
+            0,
+            0
+          ],
+          "declared_size": 6,
+          "profile": 1
+        }
+      ],
+      "mode": 3,
+      "mode_declared_size": 1,
+      "mode_parameter": null
+    },
+    "source_effect_id": 3,
+    "status": {
+      "accepted_frames": 23,
+      "accepted_packets": 7,
+      "attempted_packets": 7,
+      "automatic_retry": false,
+      "cadence_certified": false,
+      "configuration_reloads": 2,
+      "custom_frame_control_verified": true,
+      "error": null,
+      "frame_count": 943,
+      "last_gate_us": 5889,
+      "last_submit_us": 74816,
+      "mode_after": 3,
+      "mode_before": 3,
+      "native_id": 4,
+      "nominal_interval_ms": 40,
+      "opted_in": true,
+      "optically_verified": false,
+      "palette_index": 22,
+      "parameter_after": null,
+      "parameter_before": null,
+      "parameter_unchanged": null,
+      "phase_policy": "local-freeze-no-catchup",
+      "profile": "Default",
+      "session_elapsed_us": 2035885,
+      "source_id": 3,
+      "state": "playing",
+      "streaming": true,
+      "worker_enabled": true
+    },
+    "subsequent_frames_per_second": 10.839302997343188
+  },
+  "stock_restore": {
+    "stock_before": 11,
+    "stock_isolated": 0,
+    "stock_after_restart": 15,
+    "services_changed": false,
+    "timed_out": false,
+    "exit_code": 0,
+    "error": null
+  },
+  "worker_stopped": true,
+  "probe_binary_sha256": "35824FCCDFA76EA335CF054E1101A12DAD386742714B8F28B9E1B343341596FB",
+  "probe_source_sha256": "95fa4153a5c00fa619c6b5308ceb35aec282dd78c7ac916e618dc4563b56107e",
+  "scope_note": "Actual production backend/worker, fresh isolated native profile, 2s Spectrum and5s fixed one-color Breathing; no tray or native window",
+  "not_proven": [
+    "Optical RGB",
+    "Normal/HyperShift input behavior or recovery",
+    "Full animation cycle duration",
+    "25fps cadence",
+    "Final release memory budget",
+    "Exclusive third-party ownership"
+  ]
+}

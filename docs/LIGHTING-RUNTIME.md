@@ -1,6 +1,6 @@
 # Host lighting policies
 
-The tray implements retained Ornata V2 brightness intent with display-off and idle suppression. It writes live brightness only, keeps the configured enable flag and value in the profile, and restores the latest effective profile value when suppression ends. Global away dimming caps that value. The verified bridge is PID025D/interface2; standalone editor/serve modes report that the policy service is unavailable.
+The tray implements retained Ornata V2 brightness intent with display-off and idle suppression. It writes live brightness only, keeps the configured enable flag and value in the profile, and restores the latest effective profile value when suppression ends. Global away dimming scales that value. The verified bridge is PID025D/interface2; standalone editor/serve modes report that the policy service is unavailable.
 
 The existing three-second tray timer samples session input with GetLastInputInfo and reconciles changes. Display notifications reconcile immediately. Unchanged ticks do not repeat HID commands. Input timestamp wrap and ambiguous future values are handled explicitly. Failed operations retry with bounded backoff; a disconnected pending restoration survives reconnection. Normal shutdown attempts restoration and reports failures.
 

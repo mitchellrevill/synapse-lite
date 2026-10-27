@@ -112,6 +112,86 @@ pub(super) fn static_settings_candidate(
     Ok(Some((candidate, name, color)))
 }
 
+/// Candidate-only staging for opted-in Spectrum/fixed Breathing brightness.
+/// It preserves the saved register; the runtime prepares a frame before LIVE resume.
+pub(super) fn uniform_settings_candidate(
+    dev: &Device,
+    store: &Store,
+    body: &Body,
+) -> Result<Option<(Store, String)>, Error> {
+    let want = body
+        .lighting_settings
+        .as_ref()
+        .ok_or_else(|| Error::InvalidArg("lighting_settings is required".into()))?;
+    want.validate()?;
+    let mut candidate = Store::default();
+    candidate.devices = store.devices.clone();
+    candidate.extra = store.extra.clone();
+    let profiles = owner(dev, &mut candidate, body)?;
+    let name = profiles.active.clone();
+    let Some(_) = crate::host_uniform::Program::from_profile(profiles.active(), dev.pid)?
+    else {
+        return Ok(None);
+    };
+    want.store_in_profile(profiles.active_mut())?;
+    secbird_core::profile_compat::clear_source_brightness_baseline(profiles.active_mut());
+    secbird_core::profile_compat::validate_store_budget(&candidate)?;
+    Ok(Some((candidate, name)))
+}
+
+pub(super) fn host_uniform_settings(
+    dev: &Device,
+    store: &mut Store,
+    candidate: Store,
+    want: &LightingSettings,
+    gate: Result<crate::host_static::Gate, Error>,
+    worker_ready: bool,
+) -> Result<Value, Error> {
+    if !worker_ready {
+        return Err(Error::Unsupported(
+            "Uniform brightness requires the running off-UI worker".into(),
+        ));
+    }
+    let profiles = candidate
+        .devices
+        .get(&dev.key())
+        .ok_or_else(|| Error::InvalidArg("Uniform candidate has no exact device".into()))?;
+    let program = crate::host_uniform::Program::from_profile(profiles.active(), dev.pid)?
+        .ok_or_else(|| {
+            Error::Unsupported("Uniform candidate has no supported program".into())
+        })?;
+    if !program.opted_in(profiles.active()) {
+        return Err(Error::Unsupported(
+            "Uniform brightness requires explicit effect selection before Driver3 playback"
+                .into(),
+        ));
+    }
+    let reason = match gate? {
+        crate::host_static::Gate::Ready => {
+            "LIVE reconciliation is pending the prepared-frame gate".to_owned()
+        }
+        crate::host_static::Gate::Deferred(reason) => reason,
+        crate::host_static::Gate::NeedsBaseline { .. } => {
+            return Err(Error::InvalidArg(
+                "Explicit brightness candidate lacks a baseline".into(),
+            ))
+        }
+    };
+    crate::host_uniform::io::preflight(dev)?;
+    let before = std::mem::replace(&mut store.devices, candidate.devices);
+    if let Err(error) = store.save() {
+        store.devices = before;
+        return Err(error);
+    }
+    Ok(json!({
+        "execution":"host-uniform", "saved":true, "deferred":true,
+        "reason":reason, "configured_intent":want,
+        "saved_hardware_unchanged":true, "live_policy_reconcile_pending":true,
+        "accepted_packets":0, "attempted_packets":0,
+        "optically_verified":false, "cadence_certified":false
+    }))
+}
+
 pub(super) fn host_static_settings(
     dev: &mut Device,
     store: &mut Store,
@@ -180,14 +260,17 @@ pub(super) fn custom_colors(dev: &Device, store: &mut Store, body: &Body) -> Res
 }
 
 mod effects;
+mod uniform;
 
 pub(super) fn effect(
     dev: &mut Device,
     store: &mut Store,
     body: &Body,
     host_gate: Result<crate::host_static::Gate, Error>,
+    worker_ready: bool,
+    trace: &mut crate::host_uniform::ActionTrace,
 ) -> Result<Value, Error> {
-    effects::apply(dev, store, body, host_gate)
+    effects::apply(dev, store, body, host_gate, worker_ready, trace)
 }
 
 fn source_percent(raw: u8) -> u8 {

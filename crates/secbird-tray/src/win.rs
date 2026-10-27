@@ -6,7 +6,7 @@ use crate::{apps, osd, native_editor};
 use std::ffi::CString;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use secbird_core::update::Release;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::ffi::c_void;
 use std::mem::{size_of, zeroed};
 use std::ptr::{null, null_mut};
@@ -98,6 +98,8 @@ struct App {
     icon: HICON,
     /// Shared with the editor's server thread.
     engine: Arc<Mutex<Engine>>,
+    uniform_worker: RefCell<Option<crate::uniform_worker::Worker>>,
+    uniform_shutdown_blocked: Cell<bool>,
     /// Menu id offset -> (device key, profile name).
     profile_items: Vec<(String, String)>,
     /// Apply to every device on the next rescan, not just newly arrived ones.
@@ -289,6 +291,8 @@ pub fn run() {
                 hwnd,
                 icon,
                 engine: Arc::new(Mutex::new(engine)),
+                uniform_worker: RefCell::new(None),
+                uniform_shutdown_blocked: Cell::new(false),
                 profile_items: Vec::new(),
                 apply_all_pending: true,
                 retry_step: 0,
@@ -313,6 +317,13 @@ pub fn run() {
             })
         });
         with_app(|app| app.engine().start_lighting_runtime());
+        // Smoke/serve/native-smoke runs never opt into a scheduling worker.
+        if !std::env::args().any(|arg| arg == "--runtime-smoke") {
+            with_app(|app| match crate::uniform_worker::Worker::start(app.engine.clone()) {
+                Ok(worker) => *app.uniform_worker.borrow_mut() = Some(worker),
+                Err(error) => log::append(&error),
+            });
+        }
         // Register only after App exists, so the initial display-state message is
         // retained instead of being discarded during window construction.
         WTSRegisterSessionNotification(hwnd, NOTIFY_FOR_THIS_SESSION);
@@ -555,7 +566,22 @@ impl App {
     }
 
     fn shutdown_lighting(&self) {
-        for failure in self.engine().shutdown_lighting_runtime() {
+        // WM_ENDSESSION and WM_DESTROY can both arrive. A prior timeout must
+        // not make the second callback block on the still-running worker.
+        if self.uniform_shutdown_blocked.get() {
+            return;
+        }
+        // Never join while holding Engine: the worker may be finishing one batch.
+        if let Some(mut worker) = self.uniform_worker.borrow_mut().take() {
+            if !worker.stop(std::time::Duration::from_secs(2)) {
+                self.uniform_shutdown_blocked.set(true);
+                log::append("uniform worker did not stop cleanly within2s (timeout or panic); an in-flight HID call cannot be interrupted, lighting cleanup was not claimed");
+                return;
+            }
+        }
+        let mut engine = self.engine();
+        engine.set_uniform_worker(false, None, None);
+        for failure in engine.shutdown_lighting_runtime() {
             log::append(&format!("lighting restoration on shutdown: {failure}"));
         }
     }

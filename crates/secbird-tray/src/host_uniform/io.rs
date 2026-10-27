@@ -38,6 +38,30 @@ fn custom_frame(device: &Device) -> Result<()> {
     }
     Ok(())
 }
+/// Read-only admission for a deferred source choice; no frame is submitted.
+pub(crate) fn preflight(device: &Device) -> Result<()> {
+    if device.pid != 605
+        || device.interface != 2
+        || !device
+            .spec
+            .as_ref()
+            .and_then(|s| s.matrix)
+            .is_some_and(|m| m.rows == 6 && m.cols == 22)
+    {
+        return Err(Error::Unsupported(
+            "Uniform playback requires Ornata025D/interface2 physical6x22".into(),
+        ));
+    }
+    let mode = device.ornata_mode_readback()?;
+    if mode.mode() != 3 {
+        return Err(Error::Unsupported(format!(
+            "Uniform playback requires existing Driver_Mode3, observed{}",
+            mode.mode()
+        )));
+    }
+    custom_frame(device)
+}
+
 pub(crate) fn submit(
     device: &mut Device,
     ticket: FrameTicket,

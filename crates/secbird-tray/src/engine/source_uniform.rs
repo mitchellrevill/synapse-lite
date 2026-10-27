@@ -15,6 +15,7 @@ struct Session {
     pending_live: bool,
     mode: Option<u8>,
     status: Value,
+    started: Instant,
 }
 #[derive(Default)]
 struct StoreCache {
@@ -67,6 +68,7 @@ struct Fault {
 }
 pub(super) struct UniformState {
     pub enabled: bool,
+    alive: Option<std::sync::Arc<crate::uniform_worker::Signal>>,
     epoch: Instant,
     generation: u64,
     sessions: HashMap<String, Session>,
@@ -79,6 +81,7 @@ impl Default for UniformState {
     fn default() -> Self {
         Self {
             enabled: false,
+            alive: None,
             epoch: Instant::now(),
             generation: 0,
             sessions: HashMap::new(),
@@ -107,6 +110,7 @@ impl UniformState {
                     pending_live: true,
                     mode: None,
                     status: json!({"state":"pending-first-frame"}),
+                    started: Instant::now(),
                 },
             );
         }
@@ -135,8 +139,14 @@ impl Engine {
         }
         config_dir().join("profiles.json")
     }
-    pub(crate) fn set_uniform_worker(&mut self, enabled: bool, wake: Option<std::thread::Thread>) {
+    pub(crate) fn set_uniform_worker(
+        &mut self,
+        enabled: bool,
+        wake: Option<std::thread::Thread>,
+        alive: Option<std::sync::Arc<crate::uniform_worker::Signal>>,
+    ) {
         self.uniform.enabled = enabled;
+        self.uniform.alive = if enabled { alive } else { None };
         self.uniform.wake = wake;
         self.uniform.invalidate();
         if !enabled {
@@ -153,6 +163,17 @@ impl Engine {
     }
     pub(crate) fn uniform_is_enabled(&self) -> bool {
         self.uniform.enabled
+            && self
+                .uniform
+                .alive
+                .as_ref()
+                .is_some_and(|signal| signal.running())
+    }
+    pub(crate) fn uniform_settings_changed(&mut self, key: &str) {
+        if let Some(session) = self.uniform.sessions.get_mut(key) {
+            session.pending_live = true;
+        }
+        self.uniform.invalidate();
     }
     pub(crate) fn clear_uniform_action(&mut self, key: &str) {
         self.uniform.sessions.remove(key);
@@ -273,7 +294,7 @@ impl Engine {
     }
     /// Worker-only entry point. No catch-up burst; at most one frame per device.
     pub(crate) fn tick_uniform(&mut self, stopped: &AtomicBool) -> Duration {
-        if !self.uniform.enabled || stopped.load(Ordering::Acquire) {
+        if !self.uniform_is_enabled() || stopped.load(Ordering::Acquire) {
             return Duration::from_millis(250);
         }
         let mut state = std::mem::take(&mut self.uniform);
@@ -481,7 +502,7 @@ impl Engine {
         if !self.lighting_runtime.borrow().owner_clear() {
             return;
         }
-        if !self.uniform.enabled || !program.opted_in(profile) {
+        if !self.uniform_is_enabled() || !program.opted_in(profile) {
             match dev.ornata_mode_readback() {
                 Ok(mode) if mode.mode() == 0 => return,
                 Ok(_) => config.error = Some(
@@ -538,12 +559,36 @@ impl Engine {
             let mut value = session.status.clone();
             value["profile"] = json!(session.profile);
             value["opted_in"] = json!(true);
-            value["worker_enabled"] = json!(self.uniform.enabled);
+            value["worker_enabled"] = json!(self.uniform_is_enabled());
+            if !self.uniform_is_enabled() {
+                value["streaming"] = json!(false);
+                value["worker_stopped"] = json!(true);
+            }
             value["configuration_reloads"] = json!(self.uniform.cache.reloads);
+            value["session_elapsed_us"] = json!(session.started.elapsed().as_micros() as u64);
+            value["accepted_frames"] = json!(session.playback.accepted_frames());
             result.insert(key.clone(), value);
         }
         for (key, fault) in &self.uniform.faults {
-            result.insert(key.clone(),json!({"state":"faulted","streaming":false,"error":fault.error,"accepted_packets":fault.completion.as_ref().map(|c|c.accepted_packets),"attempted_packets":fault.completion.as_ref().map(|c|c.attempted_packets),"automatic_retry":false,"device_bound_latch":true}));
+            let profile = self
+                .uniform
+                .sessions
+                .get(key)
+                .map(|session| session.profile.as_str());
+            result.insert(
+                key.clone(),
+                json!({
+                    "profile": profile,
+                    "state": "faulted",
+                    "streaming": false,
+                    "worker_enabled": self.uniform_is_enabled(),
+                    "error": fault.error,
+                    "accepted_packets": fault.completion.as_ref().map(|c| c.accepted_packets),
+                    "attempted_packets": fault.completion.as_ref().map(|c| c.attempted_packets),
+                    "automatic_retry": false,
+                    "device_bound_latch": true
+                }),
+            );
         }
         if let Some(error) = &self.uniform.error {
             for value in result.values_mut() {
@@ -588,7 +633,7 @@ impl Engine {
             }
             _ => unreachable!(),
         };
-        if !self.uniform.enabled || !program.opted_in(profile) {
+        if !self.uniform_is_enabled() || !program.opted_in(profile) {
             profiles.lighting_off = true;
             return vec!["Select Spectrum or fixed Breathing explicitly in Lighting to authorize the host worker".into()];
         }
@@ -662,7 +707,11 @@ mod tests {
                 owner: Owner::Clear,
             });
             engine.lighting_runtime.borrow_mut().start();
-            engine.set_uniform_worker(true, None);
+            engine.set_uniform_worker(
+                true,
+                None,
+                Some(crate::uniform_worker::Signal::running_for_test()),
+            );
             Self {
                 engine,
                 spy,
@@ -769,6 +818,168 @@ mod tests {
         f.tick();
         assert_eq!(f.spy.state.lock().unwrap().attempts, 7);
         assert_eq!(f.spy.sim.state().live_brightness[&5], 255);
+    }
+    #[test]
+    fn inferred_raw_baseline_survives_effect_changes_and_policy_resume() {
+        let mut f = Fixture::new(true);
+        f.spy.sim.state().brightness.insert(5, 128);
+        f.spy.sim.state().live_brightness.insert(5, 128);
+        let mut store = Store::load(&f.path).unwrap();
+        let profile = store.for_device(&f.engine.devices[0]).active_mut();
+        let mut settings = profile.lighting_settings.clone().unwrap();
+        settings.brightness.as_mut().unwrap().value = 51;
+        settings.store_in_profile(profile).unwrap();
+        secbird_core::profile_compat::record_ornata_brightness_baseline(profile, 128, 128).unwrap();
+        let zone = profile.lighting.get_mut("backlight").unwrap();
+        zone.color = Some(secbird_core::Rgb(1, 2, 3));
+        zone.effect = None;
+        secbird_core::profile_compat::set_source_quick_effect(
+            profile,
+            605,
+            "Default",
+            1,
+            &json!({"color1":"#010203"}),
+        )
+        .unwrap();
+        store.save().unwrap();
+        let mut initial =
+            crate::host_static::send_uniform(&mut f.engine.devices[0], secbird_core::Rgb(1, 2, 3))
+                .unwrap();
+        initial["live_policy_reconcile_pending"] = json!(false);
+        f.engine
+            .record_host_static(&f.key, "Default", secbird_core::Rgb(1, 2, 3), &Ok(initial));
+        f.engine.request_lighting_refresh();
+        let mut observed = vec![f.spy.sim.state().live_brightness[&5]];
+        store
+            .for_device(&f.engine.devices[0])
+            .active_mut()
+            .lighting
+            .get_mut("backlight")
+            .unwrap()
+            .color = Some(secbird_core::Rgb(4, 5, 6));
+        store.save().unwrap();
+        f.engine.request_lighting_refresh();
+        observed.push(f.spy.sim.state().live_brightness[&5]);
+        for program in [
+            Program::Spectrum,
+            Program::Breathing {
+                first: secbird_core::Rgb(1, 2, 3),
+                second: None,
+            },
+        ] {
+            let profile = store.for_device(&f.engine.devices[0]).active_mut();
+            let zone = profile.lighting.get_mut("backlight").unwrap();
+            zone.color = None;
+            zone.effect = Some(match program {
+                Program::Spectrum => secbird_core::effects::Effect::Spectrum,
+                Program::Breathing { first, .. } => {
+                    secbird_core::effects::Effect::Breathing(vec![first])
+                }
+            });
+            program.opt_in(profile).unwrap();
+            store.save().unwrap();
+            f.engine.uniform_settings_changed(&f.key);
+            f.engine.request_lighting_refresh();
+            f.tick();
+            observed.push(f.spy.sim.state().live_brightness[&5]);
+        }
+        f.engine
+            .lighting_runtime
+            .borrow_mut()
+            .test_environment
+            .as_mut()
+            .unwrap()
+            .display_off = Some(true);
+        f.engine.refresh_lighting_runtime();
+        assert_eq!(f.spy.sim.state().live_brightness[&5], 0);
+        f.engine
+            .lighting_runtime
+            .borrow_mut()
+            .test_environment
+            .as_mut()
+            .unwrap()
+            .display_off = Some(false);
+        f.engine.refresh_lighting_runtime();
+        observed.push(f.spy.sim.state().live_brightness[&5]);
+        assert_eq!(observed, vec![128; 5]);
+        assert_eq!(f.spy.sim.state().brightness[&5], 128);
+        // An explicit brightness edit clears bootstrap provenance, even when
+        // the user chooses the same displayed51%. It now means configured51%.
+        secbird_core::profile_compat::clear_source_brightness_baseline(
+            store.for_device(&f.engine.devices[0]).active_mut(),
+        );
+        store.save().unwrap();
+        f.engine.uniform_settings_changed(&f.key);
+        f.engine.request_lighting_refresh();
+        assert_eq!(f.spy.sim.state().live_brightness[&5], 130);
+        assert_eq!(f.spy.sim.state().brightness[&5], 128);
+    }
+    #[test]
+    fn suppressed_intent_change_prepares_latest_program_before_brightness_resume() {
+        let mut f = Fixture::new(true);
+        f.engine
+            .lighting_runtime
+            .borrow_mut()
+            .test_environment
+            .as_mut()
+            .unwrap()
+            .display_off = Some(true);
+        f.tick();
+        assert_eq!(f.spy.state.lock().unwrap().attempts, 0);
+        let mut store = Store::load(&f.path).unwrap();
+        let profile = store.for_device(&f.engine.devices[0]).active_mut();
+        profile.lighting.get_mut("backlight").unwrap().effect =
+            Some(secbird_core::effects::Effect::Breathing(vec![
+                secbird_core::Rgb(0, 0, 255),
+            ]));
+        let mut settings = profile.lighting_settings.clone().unwrap();
+        settings.brightness.as_mut().unwrap().value = 49;
+        settings.store_in_profile(profile).unwrap();
+        let program = Program::Breathing {
+            first: secbird_core::Rgb(0, 0, 255),
+            second: None,
+        };
+        program.opt_in(profile).unwrap();
+        store.save().unwrap();
+        f.engine.uniform_settings_changed(&f.key);
+        f.engine
+            .lighting_runtime
+            .borrow_mut()
+            .test_environment
+            .as_mut()
+            .unwrap()
+            .display_off = Some(false);
+        f.engine.request_lighting_refresh();
+        assert_eq!(f.spy.sim.state().live_brightness[&5], 0);
+        f.tick();
+        assert_eq!(f.spy.state.lock().unwrap().attempts, 7);
+        assert_eq!(f.spy.sim.state().live_brightness[&5], 124);
+        assert!(f
+            .spy
+            .sim
+            .state()
+            .matrix
+            .as_ref()
+            .unwrap()
+            .2
+            .iter()
+            .all(|rgb| *rgb == [0, 0, 0]));
+        // Source one-color Breathing retains black for its first25% of175
+        // entries. Advance actual accepted frames rather than skipping that phase.
+        for _ in 0..45 {
+            f.advance();
+            f.tick();
+        }
+        assert!(f
+            .spy
+            .sim
+            .state()
+            .matrix
+            .as_ref()
+            .unwrap()
+            .2
+            .iter()
+            .all(|rgb| rgb[0] == 0 && rgb[1] == 0 && rgb[2] > 0));
     }
     #[test]
     fn explicit_same_program_success_replaces_a_failed_playback() {
@@ -911,10 +1122,24 @@ mod tests {
             .display_off = Some(true);
         f.engine.refresh_lighting_runtime();
         assert_eq!(f.spy.sim.state().live_brightness[&5], 0);
-        f.engine.set_uniform_worker(false, None);
+        f.engine.set_uniform_worker(false, None, None);
         assert!(f.engine.shutdown_lighting_runtime().is_empty());
         assert_eq!(f.spy.state.lock().unwrap().attempts, 10);
         assert_eq!(f.spy.sim.state().live_brightness[&5], 255);
+    }
+    #[test]
+    fn stale_enabled_flag_does_not_resurrect_a_stopped_worker() {
+        let mut f = Fixture::new(true);
+        f.tick();
+        f.engine.uniform.alive.as_ref().unwrap().stop_for_test();
+        assert!(f.engine.uniform.enabled);
+        assert!(!f.engine.uniform_is_enabled());
+        let status = f.engine.uniform_status();
+        assert_eq!(status[&f.key]["worker_enabled"], false);
+        assert_eq!(status[&f.key]["streaming"], false);
+        f.advance();
+        f.tick();
+        assert_eq!(f.spy.state.lock().unwrap().attempts, 7);
     }
     #[test]
     fn aggregate_budget_failure_and_owner_block_do_no_frame_io() {

@@ -14,6 +14,8 @@ mod host_static;
 #[cfg(windows)]
 mod host_uniform;
 #[cfg(windows)]
+mod uniform_worker;
+#[cfg(windows)]
 mod osd;
 #[cfg(windows)]
 mod native_editor;

@@ -19,6 +19,8 @@ use std::time::{Duration, SystemTime};
 mod lighting;
 #[cfg(test)]
 mod physical_static_probe;
+#[cfg(test)]
+mod physical_uniform_probe;
 
 const PAGE: &str = include_str!("editor.html");
 const LOGO_PNG: &[u8] = include_bytes!("../../../assets/logo-64.png");
@@ -417,9 +419,37 @@ fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
             .iter()
             .find(|d| d.key() == target)
             .ok_or_else(|| Error::NotFound(format!("device {target}")))?;
-        // Only source Static uses deferred LIVE-only brightness. Other effects
-        // and Normal_Mode0 preserve the established brightness action path.
+        // Source host programs retain brightness intent for LIVE reconciliation.
+        // Normal_Mode0 preserves the established brightness action path.
         if dev.pid == 605 {
+            // Keep Normal0 brightness semantics. Driver3 uses a saved intent and
+            // a frame-before-LIVE gate, never a firmware brightness SET here.
+            if let Some((candidate, name)) = lighting::uniform_settings_candidate(dev, &store, &b)?
+            {
+                engine.validate_static_context(&target, &candidate, &name)?;
+                let gate = engine.host_static_gate(&target, &candidate, &name);
+                let worker_ready = engine.uniform_is_enabled();
+                let mode = dev.ornata_mode_readback()?;
+                if mode.mode() == 3 {
+                    let result = lighting::host_uniform_settings(
+                        dev,
+                        &mut store,
+                        candidate,
+                        b.lighting_settings.as_ref().unwrap(),
+                        gate,
+                        worker_ready,
+                    );
+                    if result.is_ok() {
+                        engine.uniform_settings_changed(&target);
+                    }
+                    return result;
+                } else if mode.mode() != 0 {
+                    return Err(Error::Unsupported(format!(
+                        "Uniform brightness mode{} is unsupported; intent was not saved",
+                        mode.mode()
+                    )));
+                }
+            }
             if let Some((candidate, name, color)) =
                 lighting::static_settings_candidate(dev, &store, &b)?
             {
@@ -454,10 +484,34 @@ fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
         let mut store = Store::load(&config_dir().join("profiles.json"))?;
         let gate =
             engine.host_static_gate(&target, &store, b.expected_profile.as_deref().unwrap_or(""));
+        let worker_ready = engine.uniform_is_enabled();
+        let mut trace = crate::host_uniform::ActionTrace::default();
         let dev = engine
             .device_mut(&target)
             .ok_or_else(|| Error::NotFound(format!("device {target}")))?;
-        let response = lighting::effect(dev, &mut store, &b, gate);
+        let response = lighting::effect(dev, &mut store, &b, gate, worker_ready, &mut trace);
+        match &response {
+            Ok(_) if matches!(b.source_effect_id, Some(2 | 3)) => {
+                let profiles = store
+                    .devices
+                    .get(&target)
+                    .or_else(|| store.devices.get("025D"))
+                    .unwrap();
+                if let Some(program) =
+                    crate::host_uniform::Program::from_profile(profiles.active(), 605)?
+                {
+                    engine.uniform_action_record(
+                        &target,
+                        &profiles.active,
+                        program,
+                        &response,
+                        Some(&trace),
+                    );
+                }
+            }
+            Ok(_) => engine.clear_uniform_action(&target),
+            Err(error) => engine.latch_uniform_action_failure(&target, error, &trace),
+        }
         if b.source_effect_id == Some(1) {
             if let Some(profiles) = store.devices.get(&target) {
                 if let Some(color) = profiles.active().source_static_color(605) {

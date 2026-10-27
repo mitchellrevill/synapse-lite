@@ -78,6 +78,9 @@ pub(crate) struct Config {
     pub source_known: bool,
     pub enabled: bool,
     pub value: Option<u8>,
+    /// Original observed LIVE byte, only while unedited bootstrap provenance
+    /// still agrees with the typed enabled/value projection.
+    pub inferred_live_raw: Option<u8>,
     pub idle_enabled: bool,
     pub idle_minutes: u16,
     pub display_enabled: bool,
@@ -95,12 +98,27 @@ impl Config {
         let brightness = source.and_then(|s| s.brightness.as_ref());
         let policy = source.and_then(|s| s.switch_off.as_ref());
         let legacy = profile.lighting.get("backlight").and_then(|z| z.brightness);
+        let inferred_live_raw = (|| {
+            let baseline = secbird_core::profile_compat::source_brightness_baseline(profile)?;
+            if baseline.get("origin")?.as_str()? != "hardware-register-baseline"
+                || baseline.get("retained_intent_known")?.as_bool()?
+            {
+                return None;
+            }
+            let saved = u8::try_from(baseline.get("saved_raw")?.as_u64()?).ok()?;
+            let live = u8::try_from(baseline.get("live_raw")?.as_u64()?).ok()?;
+            let retained = if saved != 0 { saved } else { live };
+            let projected = ((u16::from(retained) * 100 + 254) / 255) as u8;
+            let brightness = brightness?;
+            (brightness.enabled == (live != 0) && brightness.value == projected).then_some(live)
+        })();
         Self {
             profile: profile_name.into(),
             owned,
             source_known: brightness.is_some(),
             enabled: brightness.map_or(legacy.is_some_and(|v| v > 0), |v| v.enabled),
             value: brightness.map(|v| v.value).or(legacy),
+            inferred_live_raw,
             idle_enabled: policy.is_some_and(|p| p.idle_enabled),
             idle_minutes: policy.map_or(1, |p| p.idle_minutes),
             display_enabled: policy.is_some_and(|p| p.display_off),
@@ -205,6 +223,7 @@ pub(crate) fn plan(config: &Config, env: &Environment, running: bool, stopping: 
 pub(crate) trait BrightnessIo {
     fn read_saved(&mut self) -> Result<u8, String>;
     fn write_live(&mut self, percent: u8) -> Result<(), String>;
+    fn write_live_raw(&mut self, raw: u8) -> Result<(), String>;
 }
 pub(crate) struct DeviceIo<'a>(pub &'a Device);
 impl BrightnessIo for DeviceIo<'_> {
@@ -222,12 +241,24 @@ impl BrightnessIo for DeviceIo<'_> {
             .set_brightness_live(5, percent)
             .map_err(|e| e.to_string())
     }
+    fn write_live_raw(&mut self, raw: u8) -> Result<(), String> {
+        if self.0.pid != 605 || self.0.interface != 2 {
+            return Err("raw LIVE bridge is verified only for Ornata V2/interface2".into());
+        }
+        // Same verified LIVE selector/LED5 ABI as set_brightness_live, without
+        // percentage quantization. Neither saved brightness nor mode is changed.
+        self.0
+            .transact(secbird_core::commands::MATRIX_BRIGHTNESS, 3, &[0, 5, raw])
+            .map(|_| ())
+            .map_err(|error| error.to_string())
+    }
 }
 
 #[derive(Default)]
 struct Session {
     config: Option<Config>,
     applied: Option<u8>,
+    applied_raw: Option<u8>,
     apply_configured: bool,
     modified: bool,
     read_ready: bool,
@@ -306,9 +337,21 @@ impl Session {
                     }
                 }
                 if let Some(target) = target {
-                    match io.write_live(target) {
+                    let raw_target = config.inferred_live_raw.map(|raw| {
+                        if !config.enabled || (!stopping && desired.target == Some(0)) {
+                            0
+                        } else {
+                            (u16::from(raw) * u16::from(scale) / 100) as u8
+                        }
+                    });
+                    let write = match raw_target {
+                        Some(raw) => io.write_live_raw(raw),
+                        None => io.write_live(target),
+                    };
+                    match write {
                         Ok(()) => {
                             self.applied = Some(target);
+                            self.applied_raw = raw_target;
                             self.apply_configured = false;
                             self.modified = desired.suppressed;
                             self.dirty = false;
@@ -334,6 +377,9 @@ impl Session {
             "configured_percent":config.baseline(),
             "desired_live_percent":desired.target,
             "acknowledged_live_percent":self.applied,
+            "inferred_live_raw":config.inferred_live_raw,
+            "acknowledged_live_raw":self.applied_raw,
+            "raw_baseline_origin":config.inferred_live_raw.map(|_| "hardware-register-baseline"),
             "restoration_pending":self.modified,
             "retry_at_ms":(self.error.is_some()).then_some(self.retry_at),
             "idle_ms":env.idle_ms.as_ref().ok(),
@@ -596,6 +642,7 @@ mod tests {
         live: u8,
         reads: usize,
         writes: Vec<u8>,
+        raw_writes: Vec<u8>,
         fail_read: usize,
         fail_write: usize,
     }
@@ -618,6 +665,15 @@ mod tests {
             self.writes.push(value);
             Ok(())
         }
+        fn write_live_raw(&mut self, value: u8) -> Result<(), String> {
+            if self.fail_write > 0 {
+                self.fail_write -= 1;
+                return Err("transient raw live write".into());
+            }
+            self.live = value;
+            self.raw_writes.push(value);
+            Ok(())
+        }
     }
     fn config() -> Config {
         Config {
@@ -626,6 +682,7 @@ mod tests {
             source_known: true,
             enabled: true,
             value: Some(73),
+            inferred_live_raw: None,
             idle_enabled: true,
             idle_minutes: 1,
             display_enabled: true,
@@ -886,6 +943,93 @@ mod tests {
         assert_eq!(clock.sample(now + 180_000, future).unwrap(), 0);
         assert_eq!(clock.sample(now + 183_000, future).unwrap(), 3000);
         assert!(clock.sample(now, future).is_err());
+    }
+    #[test]
+    fn raw_bootstrap_scales_suppresses_retries_and_releases_without_percent_rounding() {
+        let mut r = runtime();
+        let mut cfg = config();
+        cfg.value = Some(51);
+        cfg.inferred_live_raw = Some(128);
+        let mut io = FakeIo {
+            saved: 50,
+            live: 128,
+            ..Default::default()
+        };
+        r.request_configured_live("device");
+        r.environment.owner = Owner::Competing(vec!["RazerAppEngine.exe".into()]);
+        r.reconcile("device", &cfg, &mut io);
+        assert!(io.raw_writes.is_empty());
+        assert_eq!(io.reads, 0);
+        r.environment.owner = Owner::Clear;
+        io.fail_write = 1;
+        r.reconcile("device", &cfg, &mut io);
+        assert!(io.raw_writes.is_empty());
+        r.environment.now_ms += 1000;
+        r.reconcile("device", &cfg, &mut io);
+        assert_eq!(io.live, 128);
+        cfg.away_percent = Some(50);
+        r.reconcile("device", &cfg, &mut io);
+        assert_eq!(io.live, 64);
+        r.environment.display_off = Some(true);
+        r.reconcile("device", &cfg, &mut io);
+        assert_eq!(io.live, 0);
+        r.environment.display_off = Some(false);
+        r.reconcile("device", &cfg, &mut io);
+        assert_eq!(io.live, 64);
+        r.stopping = true;
+        r.reconcile("device", &cfg, &mut io);
+        assert_eq!(io.live, 128);
+        assert_eq!(io.raw_writes, [128, 64, 0, 64, 128]);
+        assert!(io.writes.is_empty());
+        assert_eq!(r.status()["device"]["acknowledged_live_raw"], 128);
+    }
+    #[test]
+    fn raw_bootstrap_requires_matching_projection_and_is_not_an_imported_intent() {
+        for (saved, live, enabled, value) in [
+            (128, 128, true, 51),
+            (186, 0, false, 73),
+            (0, 186, true, 73),
+        ] {
+            let mut profile =
+                secbird_core::profile_compat::new_native_profile(605, "Default").unwrap();
+            let mut settings = profile.lighting_settings.clone().unwrap();
+            let brightness = settings.brightness.as_mut().unwrap();
+            brightness.enabled = enabled;
+            brightness.value = value;
+            settings.store_in_profile(&mut profile).unwrap();
+            assert_eq!(
+                Config::from_profile("Default", &profile, true, None).inferred_live_raw,
+                None
+            );
+            secbird_core::profile_compat::record_ornata_brightness_baseline(
+                &mut profile,
+                saved,
+                live,
+            )
+            .unwrap();
+            assert_eq!(
+                Config::from_profile("Default", &profile, true, None).inferred_live_raw,
+                Some(live)
+            );
+            profile
+                .lighting_settings
+                .as_mut()
+                .unwrap()
+                .brightness
+                .as_mut()
+                .unwrap()
+                .value = 49;
+            assert_eq!(
+                Config::from_profile("Default", &profile, true, None).inferred_live_raw,
+                None
+            );
+            settings.store_in_profile(&mut profile).unwrap();
+            secbird_core::profile_compat::clear_source_brightness_baseline(&mut profile);
+            assert_eq!(
+                Config::from_profile("Default", &profile, true, None).inferred_live_raw,
+                None
+            );
+        }
     }
     #[test]
     fn configured_live_request_is_one_shot_and_uses_latest_intent_after_failure_and_ownership_block(

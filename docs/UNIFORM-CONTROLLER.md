@@ -1,5 +1,7 @@
 # Uniform controller checkpoint
 
+Later production integration and bounded hardware results are documented in [the uniform runtime](UNIFORM-RUNTIME.md). Statements below describe this earlier checkpoint.
+
 This unit adds Engine-side uniform state, guards and simulator coverage. There is still no production worker or endpoint wiring; worker-enabled defaults tofalse. The public UI does not start Spectrum/Breathing streams yet. The next unit owns that off-UI lifecycle.
 
 The controller consumes the existing pure `Program`/`Playback` and bounded frame adapter from `UNIFORM-PROGRAMS.md`. Native-only opt-in remains required. Default/imported/unmarked profiles do not acquire a stream. A current native effect/color projection is authoritative; marker changes bind the exact program. Driver3 has no firmware fallback. Normal0 is detected before polling a LUT ticket and remains dormant in the streaming controller.
@@ -12,4 +14,4 @@ Failures are device-bound, not merely program-bound. A partial new program or fa
 
 Controller status exposes the error/fault latch, packet counts, accepted frames, program IDs, palette index, cached-configuration reload count and measured per-call gate/submission times. Timing fields are observations only. There is no certified25fps, optical proof, cross-process exclusive ownership or stock phase synchronization claim.
 
-Nine focused simulator/spy tests pass: first-frame-before-LIVE ordering/cache reuse; default/unmarked/suppression behavior; failed same-program reselection recovery; Normal0 dormant→explicitDriver3 recovery; storedA→partialB→no old repaint; SpectrumA→partialStaticB→no repaint with unknown counts; no-I/O invalid choice retaining old stream; budget/owner no-output guards; shutdown release without frame retry. Full current tray regressions also pass. Logs are `work/uniform-controller-tests.log` and `work/uniform-controller-regressions.log` in the task workspace. No real HID or stock process work was performed for this unit.
+Nine focused simulator/spy tests pass: first-frame-before-LIVE ordering/cache reuse; default/unmarked/suppression behavior; failed same-program reselection recovery; Normal0 dormantâ†’explicitDriver3 recovery; storedAâ†’partialBâ†’no old repaint; SpectrumAâ†’partialStaticBâ†’no repaint with unknown counts; no-I/O invalid choice retaining old stream; budget/owner no-output guards; shutdown release without frame retry. Full current tray regressions also pass. Logs are `work/uniform-controller-tests.log` and `work/uniform-controller-regressions.log` in the task workspace. No real HID or stock process work was performed for this unit.
