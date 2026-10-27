@@ -29,6 +29,8 @@ use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
 mod performance_layout;
 mod performance_view;
+mod power_layout;
+mod power_view;
 mod profile_files;
 mod source_layout;
 
@@ -304,6 +306,7 @@ enum Action {
     Color,
     Effect(&'static str),
     Sleep,
+    PowerSlider(power_view::Kind, power_layout::Rect),
     ReadButtons,
     SelectButton(String),
     Assign,
@@ -367,6 +370,8 @@ fn enqueue_setting(queue: &mut VecDeque<Job>, job: Job) -> Result<(), &'static s
                 "/api/polling",
                 "/api/brightness",
                 "/api/sleep",
+                "/api/device-sleep",
+                "/api/critical-threshold",
             ]
             .contains(previous)
             && a["id"] == b["id"]
@@ -674,6 +679,7 @@ struct State {
     performance_hover: Option<usize>,
     performance_hover_hit: Option<usize>,
     performance_gesture: Option<PerformanceGesture>,
+    power_gesture: Option<power_view::Gesture>,
     status: String,
     failed: bool,
     smoke_view: Option<String>,
@@ -1025,6 +1031,14 @@ impl State {
                     && performance_view::layout(self).is_some()
             }
             "keyboard-lighting" => kind == Some("keyboard") && self.tab == Tab::Lighting,
+            "mouse-power" => {
+                kind == Some("mouse")
+                    && power_view::layout(self).is_some()
+                    && self.device().is_some_and(|d| {
+                        d["device_sleep"]["available"] == true
+                            && d["critical_threshold"]["available"] == true
+                    })
+            }
             "keyboard-customize" => {
                 kind == Some("keyboard")
                     && self.tab == Tab::Customize
@@ -1053,6 +1067,9 @@ impl State {
             "keyboard_named_source_inputs": self.keyboard_layout.as_ref().map(|layout| layout.keys.iter().filter(|key| !key.button_key.is_empty()).count()),
             "keyboard_source_assignment_options": self.keyboard_layout.as_ref().map(|layout| layout.keys.iter().map(|key| key.function_list.len()).sum::<usize>()),
             "source_performance_view": performance_view::layout(self).is_some(),
+            "source_power_view": power_view::layout(self).is_some(),
+            "power_sleep_available": self.device().map(|d|d["device_sleep"]["available"].clone()),
+            "power_threshold_available": self.device().map(|d|d["critical_threshold"]["available"].clone()),
             "performance_configured_rows": self.performance.as_ref().map(|p|p.stages.len()),
             "performance_visible_rows": self.performance.as_ref().map(|p|p.visible_count()),
             "performance_independent_rows": self.performance.as_ref().map(|p|p.stages.iter().filter(|r|r.independent).count()),
@@ -1120,6 +1137,7 @@ impl State {
                     | "mouse-performance-independent"
                     | "mouse-performance-hidden" => Some(("mouse", Tab::Performance)),
                     "keyboard-lighting" => Some(("keyboard", Tab::Lighting)),
+                    "mouse-power" => Some(("mouse", Tab::Power)),
                     "keyboard-customize" => Some(("keyboard", Tab::Customize)),
                     _ => None,
                 };
@@ -1323,7 +1341,7 @@ impl State {
                 self.field(BRIGHTNESS, &brightness, center - 310, 250, 110);
                 self.field(COLOR, color, center + 70, 250, 130);
             }
-            Tab::Power if device["sleep"].is_object() => {
+            Tab::Power if device["sleep"].is_object() && power_view::layout(self).is_none() => {
                 self.field(
                     MINUTES,
                     &device["sleep"]["minutes"].as_u64().unwrap_or(5).to_string(),
@@ -1600,6 +1618,7 @@ impl State {
                     self.error("Enter a sleep interval in whole minutes");
                 }
             }
+            Action::PowerSlider(..) => {}
             Action::ReadButtons => self.queue(Job::Buttons(self.id())),
             Action::SelectButton(name) => {
                 self.selected_button = name;
@@ -2300,51 +2319,53 @@ unsafe fn paint(state: &mut State, dc: HDC) {
                 }
             }
             Tab::Power => {
-                p.text(
-                    "WIRELESS POWER SAVING",
-                    center - 310,
-                    187,
-                    620,
-                    30,
-                    p.fonts.heading,
-                    GREEN,
-                    DT_LEFT,
-                );
-                if device["sleep"].is_object() {
+                if !power_view::paint(state, &mut p, &device) {
                     p.text(
-                        "ENTER SLEEP MODE AFTER (MINUTES)",
+                        "WIRELESS POWER SAVING",
                         center - 310,
-                        224,
-                        370,
-                        25,
-                        p.fonts.small,
-                        MUTED,
-                        DT_LEFT,
-                    );
-                    p.button("APPLY", center - 310, 304, 115, Action::Sleep, true);
-                } else {
-                    p.text(
-                        "Power controls are unavailable for this connection",
-                        center - 310,
-                        235,
+                        187,
                         620,
                         30,
-                        p.fonts.normal,
-                        MUTED,
+                        p.fonts.heading,
+                        GREEN,
                         DT_LEFT,
                     );
-                }
-                if let Some(battery) = device["battery"].as_u64() {
-                    p.text(
-                        &format!("BATTERY  {battery}%"),
-                        center + 70,
-                        240,
-                        250,
-                        38,
-                        p.fonts.product,
-                        TEXT,
-                        DT_LEFT,
-                    );
+                    if device["sleep"].is_object() {
+                        p.text(
+                            "ENTER SLEEP MODE AFTER (MINUTES)",
+                            center - 310,
+                            224,
+                            370,
+                            25,
+                            p.fonts.small,
+                            MUTED,
+                            DT_LEFT,
+                        );
+                        p.button("APPLY", center - 310, 304, 115, Action::Sleep, true);
+                    } else {
+                        p.text(
+                            "Power controls are unavailable for this connection",
+                            center - 310,
+                            235,
+                            620,
+                            30,
+                            p.fonts.normal,
+                            MUTED,
+                            DT_LEFT,
+                        );
+                    }
+                    if let Some(battery) = device["battery"].as_u64() {
+                        p.text(
+                            &format!("BATTERY  {battery}%"),
+                            center + 70,
+                            240,
+                            250,
+                            38,
+                            p.fonts.product,
+                            TEXT,
+                            DT_LEFT,
+                        );
+                    }
                 }
             }
             Tab::Calibration | Tab::Advanced | Tab::Help => {}
@@ -2656,6 +2677,9 @@ unsafe extern "system" fn window_proc(
             0
         }
         WM_SIZE => {
+            if state.power_gesture.take().is_some() {
+                ReleaseCapture();
+            }
             state.width = (lparam as u32 & 0xffff) as i32;
             state.height = ((lparam as u32 >> 16) & 0xffff) as i32;
             state.hits.clear();
@@ -2709,8 +2733,23 @@ unsafe extern "system" fn window_proc(
             });
             0
         }
+        WM_MOUSEMOVE if state.power_gesture.is_some() => {
+            power_view::pointer(
+                &mut state,
+                POINT {
+                    x: (lparam as u32 & 0xffff) as i16 as i32,
+                    y: ((lparam as u32 >> 16) & 0xffff) as i16 as i32,
+                },
+            );
+            0
+        }
         WM_MOUSELEAVE => {
             state.performance_hover = None;
+            InvalidateRect(hwnd, null(), 0);
+            0
+        }
+        WM_CAPTURECHANGED if state.power_gesture.is_some() => {
+            state.power_gesture = None;
             InvalidateRect(hwnd, null(), 0);
             0
         }
@@ -2756,6 +2795,9 @@ unsafe extern "system" fn window_proc(
             {
                 state.action(action);
                 state.performance_pointer(point);
+            } else if let Some(Action::PowerSlider(kind, shape)) = action {
+                power_view::begin(&mut state, kind, shape);
+                power_view::pointer(&mut state, point);
             }
             0
         }
@@ -2789,6 +2831,17 @@ unsafe extern "system" fn window_proc(
             0
         }
         WM_LBUTTONUP => {
+            if state.power_gesture.is_some() {
+                power_view::pointer(
+                    &mut state,
+                    POINT {
+                        x: (lparam as u32 & 0xffff) as i16 as i32,
+                        y: ((lparam as u32 >> 16) & 0xffff) as i16 as i32,
+                    },
+                );
+                power_view::finish(&mut state);
+                return 0;
+            }
             if state.performance_gesture.is_some() {
                 let point = POINT {
                     x: (lparam as u32 & 0xffff) as i16 as i32,
@@ -3058,6 +3111,7 @@ fn run_window(
             performance_hover: None,
             performance_hover_hit: None,
             performance_gesture: None,
+            power_gesture: None,
             status: "Reading connected devices…".into(),
             failed: false,
             smoke_view: smoke_requested.clone(),

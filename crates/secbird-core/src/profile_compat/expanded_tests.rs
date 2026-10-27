@@ -24,7 +24,7 @@ fn payload(store: &Store, key: &str, name: &str) -> Value {
 }
 
 #[test]
-fn dpi_stages_and_sleep_translate_and_preserve_inactive_axis_and_unknown_fields() {
+fn dpi_stages_translate_and_source_sleep_stays_opaque() {
     let source = json!({
         "guid":"stage-fixture", "name":"Fixture", "dpi":{"x":800,"y":800}, "powerSavingValue":7,
         "dpiStages":{"active":2,"enable":true,"count":2,"futureStages":"retain", "stages":[
@@ -35,7 +35,7 @@ fn dpi_stages_and_sleep_translate_and_preserve_inactive_axis_and_unknown_fields(
     let mut report = import_document(&document(source.clone(), 196)).unwrap();
     assert!(report.warnings.is_empty());
     let profile = &report.store.devices["00C4"].profiles["Fixture"];
-    assert_eq!(profile.sleep_minutes, Some(7));
+    assert_eq!(profile.sleep_minutes, None);
     assert_eq!(profile.dpi_stages.as_ref().unwrap().active, 2);
     assert_eq!(
         profile.dpi_stages.as_ref().unwrap().stages,
@@ -252,9 +252,10 @@ fn native_profiles_export_using_observed_templates_and_unique_v4_guids() {
     let profile = &imported.store.devices["00C4"].profiles["Default"];
     assert_eq!(profile.dpi, Some((1600, 3200)));
     assert_eq!(profile.polling, Some(500));
-    assert_eq!(profile.sleep_minutes, Some(9));
+    assert_eq!(profile.sleep_minutes, None);
     assert_eq!(profile.dpi_stages.as_ref().unwrap().active, 2);
     let decoded = payload(&imported.store, "00C4", "Default");
+    assert_eq!(decoded["powerSavingValue"], 9);
     let guid = decoded["guid"].as_str().unwrap();
     assert_eq!(guid.len(), 36);
     assert_eq!(&guid[14..15], "4");
@@ -293,7 +294,7 @@ fn add_profile_constructor_matches_observed_defaults_and_retains_opaque_fields()
     let mouse = new_native_profile(196, "Computer-Default").unwrap();
     assert_eq!(mouse.dpi, Some((800, 800)));
     assert_eq!(mouse.polling, Some(1000));
-    assert_eq!(mouse.sleep_minutes, Some(5));
+    assert_eq!(mouse.sleep_minutes, None);
     assert_eq!(mouse.dpi_stages.as_ref().unwrap().active, 3);
     assert_eq!(
         mouse.dpi_stages.as_ref().unwrap().stages,
@@ -385,12 +386,19 @@ fn aggregate_store_budget_rejects_many_individually_valid_imports() {
 }
 
 #[test]
-fn invalid_stage_counts_and_sleep_bounds_are_rejected() {
+fn invalid_stage_counts_and_explicit_native_sleep_bounds_are_rejected() {
     let mut profile = settings::default_profile(196, "Fixture").unwrap();
     profile["dpiStages"]["count"] = json!(4);
     assert!(import_document(&document(profile, 196)).is_err());
-    let profile = json!({"guid":"bad-sleep","name":"Fixture","powerSavingValue":16});
-    assert!(import_document(&document(profile, 196)).is_err());
+    let source = json!({"guid":"opaque-sleep","name":"Fixture","powerSavingValue":16});
+    let imported = import_document(&document(source, 196)).unwrap();
+    assert_eq!(
+        payload(&imported.store, "00C4", "Fixture")["powerSavingValue"],
+        16
+    );
+    let mut native = Store::default();
+    native.device(196).active_mut().sleep_minutes = Some(16);
+    assert!(export_synapse4(&native, "00C4").is_err());
 }
 
 #[test]
@@ -487,5 +495,146 @@ fn hidden_rows_and_independent_edit_round_trip_without_losing_foreign_fields() {
             .performance
             .as_ref(),
         Some(&intent)
+    );
+}
+
+#[test]
+fn device_wide_power_is_retained_in_native_backup_and_explicitly_omitted_from_foreign_profiles() {
+    let mut store = Store::default();
+    store.device(196).profiles.insert(
+        "Fixture".into(),
+        new_native_profile(196, "Fixture").unwrap(),
+    );
+    store.device(196).power = Some(crate::DevicePower {
+        critical_threshold_percent: Some(45),
+        ..Default::default()
+    });
+    let exported = export_synapse4(&store, "00C4").unwrap();
+    assert!(exported
+        .warnings
+        .iter()
+        .any(|w| w.contains("Device-wide Power")));
+    let source = payload(&store, "00C4", "Fixture");
+    assert_eq!(
+        source["lowPowerMode"], 30,
+        "global45 must not overwrite an unrelated original profile field"
+    );
+    let native = import_document(&serde_json::to_vec(&store).unwrap()).unwrap();
+    assert_eq!(
+        native.store.devices["00C4"]
+            .power
+            .as_ref()
+            .unwrap()
+            .critical_threshold_percent,
+        Some(45)
+    );
+}
+
+#[test]
+fn source_sleep_provenance_prevents_activation_writes_and_retains_original_payload() {
+    use crate::sim::Sim;
+    for pid in [196, 197] {
+        let source = json!({"guid":"source-sleep","name":"Fixture","powerSavingValue":5,"future":"keep","mappings":[]});
+        let key = format!("{pid:04X}");
+        let imported = import_document(&document(source.clone(), pid)).unwrap();
+        let p = &imported.store.devices[&key].profiles["Fixture"];
+        assert!(p.sleep_minutes.is_none());
+        assert_eq!(p.extra[SOURCE]["deviceSleepScope"], true);
+        assert_eq!(payload(&imported.store, &key, "Fixture"), source);
+        let native = import_document(&serde_json::to_vec(&imported.store).unwrap()).unwrap();
+        assert_eq!(payload(&native.store, &key, "Fixture"), source);
+        let sim = Sim::wireless_mouse();
+        sim.state().idle_seconds = Some(240);
+        let dev = sim
+            .open(pid, Sim::spec_for(crate::sim::WIRELESS_MOUSE_PID))
+            .unwrap();
+        assert!(p.apply(&dev).iter().all(|r| r.result.is_ok()));
+        assert_eq!(sim.state().idle_seconds, Some(240));
+        assert!(!sim.state().log.contains(&crate::commands::IDLE_TIME));
+        let default = new_native_profile(pid, "Computer-Default").unwrap();
+        // Stage settings are supported for the source default too.
+        sim.state().dpi_stages = Some((1, vec![(800, 800)]));
+        assert!(default.apply(&dev).iter().all(|r| r.result.is_ok()));
+        assert_eq!(sim.state().idle_seconds, Some(240));
+        assert!(!sim.state().log.contains(&crate::commands::IDLE_TIME));
+    }
+}
+
+#[test]
+fn explicit_legacy_sleep_override_and_old_source_deletion_are_unchanged() {
+    let source = json!({"guid":"sleep-overlay","name":"Fixture","powerSavingValue":5});
+    let mut report = import_document(&document(source, 196)).unwrap();
+    let p = report
+        .store
+        .devices
+        .get_mut("00C4")
+        .unwrap()
+        .profiles
+        .get_mut("Fixture")
+        .unwrap();
+    p.sleep_minutes = Some(7);
+    assert_eq!(
+        payload(&report.store, "00C4", "Fixture")["powerSavingValue"],
+        7
+    );
+    let p = report
+        .store
+        .devices
+        .get_mut("00C4")
+        .unwrap()
+        .profiles
+        .get_mut("Fixture")
+        .unwrap();
+    p.sleep_minutes = None;
+    assert_eq!(
+        payload(&report.store, "00C4", "Fixture")["powerSavingValue"],
+        5,
+        "new scope marker retains opaque original when override removed"
+    );
+    let p = report
+        .store
+        .devices
+        .get_mut("00C4")
+        .unwrap()
+        .profiles
+        .get_mut("Fixture")
+        .unwrap();
+    p.extra
+        .get_mut(SOURCE)
+        .unwrap()
+        .as_object_mut()
+        .unwrap()
+        .remove("deviceSleepScope");
+    p.sleep_minutes = Some(7);
+    let native = import_document(&serde_json::to_vec(&report.store).unwrap()).unwrap();
+    let p = &native.store.devices["00C4"].profiles["Fixture"];
+    assert_eq!(
+        p.sleep_minutes,
+        Some(7),
+        "native JSON does not reinterpret old source metadata"
+    );
+    let sim = crate::sim::Sim::wireless_mouse();
+    let dev = sim
+        .open(
+            196,
+            crate::sim::Sim::spec_for(crate::sim::WIRELESS_MOUSE_PID),
+        )
+        .unwrap();
+    assert!(p.apply(&dev).iter().all(|r| r.result.is_ok()));
+    assert_eq!(sim.state().idle_seconds, Some(420));
+    let p = report
+        .store
+        .devices
+        .get_mut("00C4")
+        .unwrap()
+        .profiles
+        .get_mut("Fixture")
+        .unwrap();
+    p.sleep_minutes = None;
+    assert!(
+        payload(&report.store, "00C4", "Fixture")
+            .get("powerSavingValue")
+            .is_none(),
+        "older no-flag known-field deletion remains deletion"
     );
 }

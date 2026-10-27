@@ -35,11 +35,13 @@ secbird export secretarybird-backup.json
 secbird -d 00C4 export-synapse4 profile.synapse4
 ```
 
-Synapse 4 export currently requires a profile originally imported from Synapse, because opaque settings must be retained. Unsupported settings are reported or cause export to fail, rather than being silently discarded. Synapse 3 ZIP profiles are not yet implemented.
+Synapse 4 export retains opaque imported settings and supports source-verified default profiles for the installed keyboard and mouse models. Unsupported settings are reported or cause export to fail. Device-wide Power intent is retained in native backups and explicitly reported when a profile-only export cannot represent it. Synapse 3 ZIP profiles are not yet implemented.
 
 ## Evidence and remaining work
 
 See [the pinned baseline](docs/BASELINE.json), [acceptance criteria](docs/ACCEPTANCE.md), and the [original upstream documentation](docs/UPSTREAM-README.md).
+
+The source-derived mouse [Performance](docs/PERFORMANCE.md) and [Power](docs/POWER.md) controls are connected to shared device actions. Their reports distinguish source reconstruction, simulator checks, physical setting/readback/restoration checks and memory observations from the remaining visual and interaction gates.
 
 Raw proprietary application bundles, recovered fonts/images and private user profiles are local research material and are not committed to this repository. Local visual assets are provisioned separately into an ignored directory.
 

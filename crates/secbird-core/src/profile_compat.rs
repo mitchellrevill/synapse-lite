@@ -135,7 +135,7 @@ fn import_synapse4(envelope: Value) -> Result<ImportReport> {
         let mut profile = translate_profile(&decoded, pid as u16, name, &mut warnings)?;
         profile.extra.insert(
             SOURCE.into(),
-            json!({ "entry": record, "decoded": decoded }),
+            preserved_source(pid as u16, record.clone(), decoded),
         );
         device.profiles.insert(name.to_string(), profile);
     }
@@ -188,8 +188,18 @@ pub fn new_native_profile(product_id: u16, name: &str) -> Result<Profile> {
     });
     profile
         .extra
-        .insert(SOURCE.into(), json!({"entry":entry,"decoded":decoded}));
+        .insert(SOURCE.into(), preserved_source(product_id, entry, decoded));
     Ok(profile)
+}
+
+/// Provenance for newly translated source profiles only. Native JSON loading must
+/// never infer this policy from PID or retroactively reinterpret old sleep values.
+fn preserved_source(pid: u16, entry: Value, decoded: Value) -> Value {
+    let mut metadata = json!({"entry":entry,"decoded":decoded});
+    if matches!(pid, 196 | 197) {
+        metadata["deviceSleepScope"] = json!(true);
+    }
+    metadata
 }
 
 fn translate_profile(
@@ -359,6 +369,9 @@ pub fn export_synapse4(store: &Store, device_key: &str) -> Result<ExportReport> 
     settings::default_envelope(pid)?;
     let mut records = Vec::new();
     let mut warnings = Vec::new();
+    if device.power.is_some() {
+        warnings.push("Device-wide Power settings are retained only in the native JSON backup; the Synapse profile format has no verified device-global Power field".into());
+    }
     let mut exported_guids = std::collections::BTreeSet::new();
     let mut guid_owners: BTreeMap<String, String> = BTreeMap::new();
     for (name, profile) in &device.profiles {

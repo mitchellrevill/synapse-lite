@@ -11,9 +11,9 @@ pub(super) fn import_mouse(
     _name: &str,
     _warnings: &mut Vec<String>,
 ) -> Result<()> {
-    if let Some(value) = source.get("powerSavingValue") {
-        profile.sleep_minutes = Some(integer(Some(value), 1, 15, "powerSavingValue")? as u16);
-    }
+    // Installed196 reads sleep from hardware, independently of named profiles.
+    // Keep an exported powerSavingValue opaque in the original decoded payload;
+    // translating its template default would reset the device on profile activation.
     if let Some(stages) = source.get("dpiStages") {
         let mut object = stages
             .as_object()
@@ -86,7 +86,16 @@ pub(super) fn export_mouse(
             ));
         }
         decoded.insert("powerSavingValue".into(), json!(minutes));
-    } else if !preserve_defaults {
+    } else if !preserve_defaults
+        && profile
+            .extra
+            .get(super::SOURCE)
+            .and_then(|source| source.get("deviceSleepScope"))
+            .and_then(Value::as_bool)
+            != Some(true)
+    {
+        // No marker means an older native/source-backed profile: retain its
+        // existing explicit known-field deletion semantics.
         decoded.remove("powerSavingValue");
     }
     if let Some(intent) = &profile.performance {

@@ -39,7 +39,7 @@ pub use db::{Db, DeviceSpec, Kind, Lighting, Matrix};
 pub use device::{discover, Device};
 pub use error::{Error, Result};
 pub use features::{Dimming, DpiStages, GameMode, Rgb, SleepTimer};
-pub use profile::{Profile, Store, Zone};
+pub use profile::{DevicePower, Profile, Store, Zone};
 pub use transport::Transport;
 
 /// Use an isolated fork store; upstream exports remain compatible through import.

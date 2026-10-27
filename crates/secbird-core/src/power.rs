@@ -21,19 +21,50 @@ pub fn critical_raw_for_percent(percent: u8) -> Result<u8> {
 }
 
 impl Device {
-    fn require_critical_threshold(&self) -> Result<()> {
+    fn require_power_model(&self) -> Result<()> {
         if matches!(self.pid, 196 | 197) {
             Ok(())
         } else {
             Err(Error::Unsupported(
-                "low-power threshold is verified only for DeathAdder V3 HyperSpeed".into(),
+                "Power controls are verified only for DeathAdder V3 HyperSpeed".into(),
             ))
         }
     }
 
+    /// Exact device sleep seconds for this model, independent of a connection's
+    /// legacy wireless-device flag. The source Power page reads hardware directly.
+    pub fn device_sleep_seconds(&self) -> Result<u16> {
+        self.require_power_model()?;
+        let report = self.get(cmd::IDLE_TIME, cmd::IDLE_TIME_SIZE, &[])?;
+        if report.0[5] != cmd::IDLE_TIME_SIZE {
+            return Err(Error::Unsupported(
+                "unexpected device sleep response length".into(),
+            ));
+        }
+        Ok(u16::from_be_bytes([report.args()[0], report.args()[1]]))
+    }
+
+    /// Source Power-page sleep action. It does not alter any named profile.
+    pub fn set_device_sleep_minutes(&self, minutes: u16) -> Result<()> {
+        self.require_power_model()?;
+        if !(1..=15).contains(&minutes) {
+            return Err(Error::InvalidArg(
+                "device sleep must be 1-15 minutes".into(),
+            ));
+        }
+        let seconds = minutes * 60;
+        self.transact(cmd::IDLE_TIME, cmd::IDLE_TIME_SIZE, &seconds.to_be_bytes())?;
+        if self.device_sleep_seconds()? != seconds {
+            return Err(Error::Unsupported(
+                "the device did not retain the requested sleep timer".into(),
+            ));
+        }
+        Ok(())
+    }
+
     /// Read the exact byte before a temporary change. No percent normalization.
     pub fn critical_threshold_raw(&self) -> Result<u8> {
-        self.require_critical_threshold()?;
+        self.require_power_model()?;
         let report = self.get(cmd::CRITICAL_LEVEL, cmd::CRITICAL_LEVEL_SIZE, &[])?;
         if report.0[5] != cmd::CRITICAL_LEVEL_SIZE {
             return Err(Error::Unsupported(
@@ -45,7 +76,7 @@ impl Device {
 
     /// Write and verify an exact byte, suitable for restoring a captured register.
     pub fn set_critical_threshold_raw(&self, raw: u8) -> Result<()> {
-        self.require_critical_threshold()?;
+        self.require_power_model()?;
         self.transact(cmd::CRITICAL_LEVEL, cmd::CRITICAL_LEVEL_SIZE, &[raw])?;
         if self.critical_threshold_raw()? != raw {
             return Err(Error::Unsupported(
@@ -63,7 +94,7 @@ impl Device {
     /// Set one of the twenty source UI values and verify the exact encoded byte.
     /// This does not persist a profile: Synapse keeps this in device configuration.
     pub fn set_critical_threshold_percent(&self, percent: u8) -> Result<u8> {
-        self.require_critical_threshold()?;
+        self.require_power_model()?;
         let raw = critical_raw_for_percent(percent)?;
         self.set_critical_threshold_raw(raw)?;
         Ok(critical_percent(raw))

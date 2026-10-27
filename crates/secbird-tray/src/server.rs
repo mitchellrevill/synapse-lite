@@ -307,6 +307,11 @@ struct Body {
     performance: Option<secbird_core::performance::Performance>,
     #[serde(default)]
     expected_profile: Option<String>,
+    /// Source Power actions require an exact physical-device identity.
+    #[serde(default)]
+    expected_device: Option<String>,
+    #[serde(default)]
+    critical_threshold_percent: Option<u8>,
     /// Sleep timer in minutes (0 = leave it), and the auto-sleep switch.
     #[serde(default)]
     minutes: u16,
@@ -383,6 +388,9 @@ fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
     if let Some(answer) = app_post(engine, path, &b) {
         return answer;
     }
+    if matches!(path, "/api/critical-threshold" | "/api/device-sleep") {
+        validate_power_identity(&b)?;
+    }
     let target = if b.id.is_empty() { b.pid.to_ascii_uppercase() } else { b.id.clone() };
 
     // A device can disappear between requests; rescan once and retry before giving up.
@@ -426,6 +434,8 @@ fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
                 actions::set_game_mode(dev, &mut store, b.game_mode.parse()?)?;
                 Ok(json!({ "game_mode": dev.game_mode().ok().flatten().map(|g| g.to_string()) }))
             }
+            "/api/critical-threshold" => critical_threshold_post(dev, &mut store, &b),
+            "/api/device-sleep" => device_sleep_post(dev, &b),
             "/api/sleep" => {
                 if let Some(on) = b.auto {
                     actions::set_auto_sleep(dev, &mut store, on)?;
@@ -763,6 +773,68 @@ fn macros_json(dev: &Device) -> Result<Value, Error> {
     }))
 }
 
+fn validate_power_identity(body: &Body) -> Result<(), Error> {
+    if body.id.is_empty() || body.expected_device.as_deref() != Some(body.id.as_str()) {
+        return Err(Error::InvalidArg(
+            "Power actions require id and expected_device to name the same physical device".into(),
+        ));
+    }
+    Ok(())
+}
+
+fn critical_threshold_post(dev: &Device, store: &mut Store, body: &Body) -> Result<Value, Error> {
+    validate_power_identity(body)?;
+    let percent = body
+        .critical_threshold_percent
+        .ok_or_else(|| Error::InvalidArg("critical_threshold_percent is required".into()))?;
+    actions::set_critical_threshold(
+        dev,
+        store,
+        body.expected_device.as_deref().unwrap(),
+        percent,
+    )?;
+    Ok(json!({"critical_threshold":critical_threshold_json(dev)}))
+}
+
+fn device_sleep_post(dev: &Device, body: &Body) -> Result<Value, Error> {
+    validate_power_identity(body)?;
+    actions::set_device_sleep_minutes(dev, body.expected_device.as_deref().unwrap(), body.minutes)?;
+    Ok(json!({"device_sleep":device_sleep_json(dev)}))
+}
+
+fn critical_threshold_json(dev: &Device) -> Value {
+    if !matches!(dev.pid, 196 | 197) {
+        return json!({"supported":false,"available":false,"enabled":false,"raw":null,"percent":null,"polling_hz":null,"error":"Low-power threshold is not verified for this model"});
+    }
+    let raw = dev.critical_threshold_raw();
+    let polling = dev.polling_rate();
+    let error = match (&raw, &polling) {
+        (Err(e), _) => Some(e.to_string()),
+        (_, Err(e)) => Some(format!("Cannot determine polling rate: {e}")),
+        (_, Ok(hz)) if *hz > 1000 => {
+            Some("Low Power Mode is not supported at polling rates of 2000 Hz and above".into())
+        }
+        _ => None,
+    };
+    json!({"supported":true,"available":raw.is_ok(),"enabled":raw.is_ok() && polling.as_ref().is_ok_and(|hz|*hz<=1000),
+        "raw":raw.as_ref().ok(),"percent":raw.ok().map(secbird_core::power::critical_percent),"polling_hz":polling.ok(),
+        "min":5,"max":100,"step":5,"error":error})
+}
+
+fn device_sleep_json(dev: &Device) -> Value {
+    if !matches!(dev.pid, 196 | 197) {
+        return json!({"supported":false,"available":false,"seconds":null,"minutes":null,"minutes_exact":null,"min":1,"max":15,"error":"Device sleep is not verified for this model"});
+    }
+    match dev.device_sleep_seconds() {
+        Ok(seconds) => {
+            json!({"supported":true,"available":true,"seconds":seconds,"minutes":seconds.div_ceil(60),"minutes_exact":f64::from(seconds)/60.0,"min":1,"max":15,"error":null})
+        }
+        Err(e) => {
+            json!({"supported":true,"available":false,"seconds":null,"minutes":null,"minutes_exact":null,"min":1,"max":15,"error":e.to_string()})
+        }
+    }
+}
+
 fn sleep_json(dev: &Device) -> Value {
     match dev.sleep_timer() {
         Ok(Some(t)) => json!({ "minutes": t.minutes, "max": t.max_minutes, "auto": t.auto_sleep }),
@@ -776,6 +848,7 @@ fn device_json(dev: &Device) -> Value {
     let all = Store::load(&config_dir().join("profiles.json")).ok().map(|mut s| s.for_device(dev).clone());
     let profile = all.as_ref().and_then(|p| serde_json::to_value(p.active()).ok()).unwrap_or(Value::Null);
     let lighting_control = all.as_ref().is_some_and(|p| !p.lighting_off);
+    let power_settings = all.as_ref().and_then(|p| p.power.as_ref()).and_then(|p| serde_json::to_value(p).ok());
     // Every profile's settings, so the editor can show them side by side.
     let profiles_data = all.and_then(|p| serde_json::to_value(p.profiles).ok()).unwrap_or(Value::Null);
     let dpi_range = spec.and_then(|s| s.dpi.as_ref());
@@ -829,6 +902,9 @@ fn device_json(dev: &Device) -> Value {
             .flatten()
             .map(|s| json!({ "active": s.active, "list": s.stages, "max": secbird_core::commands::MAX_DPI_STAGES })),
         "sleep": sleep_json(dev),
+        "device_sleep": device_sleep_json(dev),
+        "critical_threshold": critical_threshold_json(dev),
+        "power_settings": power_settings,
         "dimming": dev.dimming().ok().flatten().map(|d| d.to_string()),
         // Only keyboards that answer the read get the Gaming section.
         "game_mode": dev.game_mode().ok().flatten().map(|g| g.to_string()),
@@ -845,6 +921,82 @@ fn device_json(dev: &Device) -> Value {
 #[cfg(test)]
 mod tests {
     use super::base64;
+
+    use super::*;
+    use secbird_core::sim::Sim;
+    use std::sync::atomic::{AtomicUsize,Ordering};
+    static SEQUENCE:AtomicUsize=AtomicUsize::new(0);
+
+    fn power_device(high:bool)->(Sim,Device) {
+        let sim=Sim::wireless_mouse();
+        sim.state().critical_threshold=Some(78);
+        let mut spec=Sim::spec_for(secbird_core::sim::WIRELESS_MOUSE_PID).unwrap();
+        if high {spec.polling=Some(secbird_core::db::Polling::High);sim.state().polling_hs=Some(secbird_core::commands::polling_hs_code(2000).unwrap());}
+        let dev=sim.open(196,Some(spec)).unwrap();
+        (sim,dev)
+    }
+    #[test]
+    fn power_request_types_identity_and_snapshot_errors_are_explicit() {
+        assert!(serde_json::from_value::<Body>(json!({"critical_threshold_percent":"30"})).is_err());
+        assert!(serde_json::from_value::<Body>(json!({"critical_threshold_percent":30.5})).is_err());
+        let (sim,dev)=power_device(false);
+        let before=sim.state().log.len();
+        for value in [json!({}),json!({"id":dev.key()}),json!({"id":dev.key(),"expected_device":"other"})] {
+            let b:Body=serde_json::from_value(value).unwrap();
+            assert!(validate_power_identity(&b).is_err());
+        }
+        assert_eq!(sim.state().log.len(),before);
+        let snapshot=critical_threshold_json(&dev);
+        assert_eq!(snapshot["available"],true);
+        assert_eq!(snapshot["enabled"],true);
+        assert_eq!(snapshot["raw"],78);
+        assert_eq!(snapshot["percent"],30);
+        assert_eq!(snapshot["error"],Value::Null);
+        let (_,dev)=power_device(true);
+        let snapshot=critical_threshold_json(&dev);
+        assert_eq!(snapshot["available"],true);
+        assert_eq!(snapshot["enabled"],false);
+        assert!(snapshot["error"].as_str().unwrap().contains("2000 Hz"));
+        let sim=Sim::mouse();
+        let unsupported=sim.open(605,None).unwrap();
+        let before=sim.state().log.len();
+        assert_eq!(critical_threshold_json(&unsupported)["supported"],false);
+        assert_eq!(device_sleep_json(&unsupported)["supported"],false);
+        assert_eq!(sim.state().log.len(),before);
+        let missing=sim.open(196,None).unwrap();
+        assert_eq!(critical_threshold_json(&missing)["available"],false);
+        assert!(critical_threshold_json(&missing)["error"].is_string());
+    }
+    #[test]
+    fn source_power_handlers_persist_device_threshold_and_keep_sleep_out_of_profiles() {
+        let (sim,dev)=power_device(false);
+        let folder=std::env::temp_dir().join(format!("synapse-power-server-{}-{}",std::process::id(),SEQUENCE.fetch_add(1,Ordering::Relaxed)));
+        let mut store=Store::load(&folder.join("profiles.json")).unwrap();
+        let key=dev.key();
+        let b:Body=serde_json::from_value(json!({"id":key,"expected_device":key})).unwrap();
+        let before=sim.state().log.len();
+        assert!(critical_threshold_post(&dev,&mut store,&b).is_err());
+        assert_eq!(sim.state().log.len(),before);
+        let b:Body=serde_json::from_value(json!({"id":key,"expected_device":key,"critical_threshold_percent":45})).unwrap();
+        let response=critical_threshold_post(&dev,&mut store,&b).unwrap();
+        assert_eq!(response["critical_threshold"]["percent"],45);
+        assert_eq!(store.for_device(&dev).power.as_ref().unwrap().critical_threshold_percent,Some(45));
+        assert!(store.for_device(&dev).active().extra.is_empty());
+        let disk_before=std::fs::read(folder.join("profiles.json")).unwrap();
+        let b:Body=serde_json::from_value(json!({"id":key,"expected_device":key,"minutes":4})).unwrap();
+        let response=device_sleep_post(&dev,&b).unwrap();
+        assert_eq!(response["device_sleep"]["seconds"],240);
+        assert_eq!(response["device_sleep"]["minutes"],4);
+        assert!(store.for_device(&dev).active().sleep_minutes.is_none());
+        assert_eq!(std::fs::read(folder.join("profiles.json")).unwrap(),disk_before);
+        sim.state().idle_seconds=Some(301);
+        let snapshot=device_sleep_json(&dev);
+        assert_eq!(snapshot["seconds"],301);
+        assert_eq!(snapshot["minutes"],6);
+        assert!(snapshot["minutes_exact"].as_f64().unwrap()>5.0);
+        std::fs::remove_file(folder.join("profiles.json")).unwrap();
+        std::fs::remove_dir(folder).unwrap();
+    }
 
     #[test]
     fn base64_matches_rfc4648_vectors() {

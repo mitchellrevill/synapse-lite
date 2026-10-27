@@ -1,7 +1,7 @@
 //! Named settings profiles, kept per device and re-applied on demand.
 //!
-//! Every setting the user changes is recorded in the device's active profile, so the
-//! store always mirrors what was last sent to the hardware.
+//! Profile settings are recorded in the active profile. Device-wide Power preferences
+//! live beside the profiles and are not replayed when the active profile changes.
 
 use crate::device::Device;
 use crate::error::{Error, Result};
@@ -83,6 +83,15 @@ pub fn normalize_app(name: &str) -> String {
     }
 }
 
+/// Device-wide Power intent. It is not re-applied when the active profile changes.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct DevicePower {
+    #[serde(default, flatten)]
+    pub extra: BTreeMap<String, serde_json::Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub critical_threshold_percent: Option<u8>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceProfiles {
     #[serde(flatten)]
@@ -95,6 +104,9 @@ pub struct DeviceProfiles {
     /// Button remaps written into the mouse's own memory with "Save to mouse".
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub onboard: Option<OnboardSave>,
+    /// Power settings shared by every profile for this physical device.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub power: Option<DevicePower>,
 }
 
 /// A profile's button remaps saved in one of the mouse's on-board slots, so they work
@@ -123,6 +135,7 @@ impl Default for DeviceProfiles {
             profiles: BTreeMap::from([(DEFAULT_PROFILE.into(), Profile::default())]),
             lighting_off: false,
             onboard: None,
+            power: None,
         }
     }
 }
@@ -358,8 +371,30 @@ impl Store {
                 lighting_off: incoming.lighting_off,
                 // The only copy of what the mouse's slot held before a "Save to mouse".
                 onboard: incoming.onboard.clone(),
+                power: incoming.power.clone(),
             });
             crate::profile_compat::merge_extensions(&mut target.extra, incoming.extra);
+            if let Some(incoming_power) = incoming.power {
+                match target.power.as_mut() {
+                    None => target.power = Some(incoming_power),
+                    Some(current) => {
+                        if current.critical_threshold_percent.is_some()
+                            && current.critical_threshold_percent != incoming_power.critical_threshold_percent
+                            && incoming_power.critical_threshold_percent.is_some()
+                        {
+                            // Keep current device intent; retain conflicting imported
+                            // configuration in the native backup without applying it.
+                            crate::profile_compat::merge_extensions(&mut target.extra,
+                                BTreeMap::from([("_synapseLiteImported:power".into(), serde_json::to_value(&incoming_power).expect("DevicePower serializes"))]));
+                        }
+                        crate::profile_compat::merge_extensions(&mut current.extra, incoming_power.extra);
+                        if current.critical_threshold_percent.is_none() {
+                            current.critical_threshold_percent = incoming_power.critical_threshold_percent;
+                        }
+                    }
+                }
+            }
+
             for (name, profile) in incoming.profiles {
                 let mut unique = name.clone();
                 let mut n = 1;

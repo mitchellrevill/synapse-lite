@@ -58,7 +58,7 @@ fn at(x: f64, y: f64, width: f64, height: f64) -> SourceRect {
     }
 }
 
-fn faded(color: u32, background: u32, alpha: f64) -> u32 {
+pub(super) fn faded(color: u32, background: u32, alpha: f64) -> u32 {
     let channel = |shift: u32| {
         (((color >> shift) & 255u32) as f64 * alpha
             + ((background >> shift) & 255u32) as f64 * (1.0 - alpha))
@@ -73,7 +73,7 @@ unsafe fn fill(p: &Painter<'_>, r: SourceRect, color: u32) {
     DeleteObject(brush);
 }
 
-unsafe fn rounded(p: &Painter<'_>, r: SourceRect, color: u32, border: u32, radius: f64) {
+pub(super) unsafe fn rounded(p: &Painter<'_>, r: SourceRect, color: u32, border: u32, radius: f64) {
     let brush = CreateSolidBrush(rgb(color));
     let pen = CreatePen(PS_SOLID, (p.scale.round() as i32).max(1), rgb(border));
     let old_b = SelectObject(p.dc, brush);
@@ -87,7 +87,14 @@ unsafe fn rounded(p: &Painter<'_>, r: SourceRect, color: u32, border: u32, radiu
     DeleteObject(pen);
 }
 
-unsafe fn text(p: &Painter<'_>, value: &str, r: SourceRect, font: HFONT, color: u32, align: u32) {
+pub(super) unsafe fn text(
+    p: &Painter<'_>,
+    value: &str,
+    r: SourceRect,
+    font: HFONT,
+    color: u32,
+    align: u32,
+) {
     let old = SelectObject(p.dc, font);
     SetBkMode(p.dc, TRANSPARENT as i32);
     SetTextColor(p.dc, rgb(color));
@@ -102,7 +109,7 @@ unsafe fn text(p: &Painter<'_>, value: &str, r: SourceRect, font: HFONT, color: 
     SelectObject(p.dc, old);
 }
 
-fn hit(p: &mut Painter<'_>, r: SourceRect, action: Action) {
+pub(super) fn hit(p: &mut Painter<'_>, r: SourceRect, action: Action) {
     p.hits.push(Hit {
         rect: rect(p, r),
         action,

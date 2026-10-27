@@ -1,5 +1,5 @@
-//! User-facing changes: send a setting to the device, then record it in the active
-//! profile and save. The CLI and the editor both go through here, so they behave alike.
+//! User-facing changes with shared validation and persistence. Profile settings are
+//! recorded in the active profile; device-wide Power intent stays outside profiles.
 
 use crate::device::Device;
 use crate::error::Result;
@@ -78,6 +78,72 @@ pub fn set_performance(dev: &Device, store: &mut Store, want: &crate::performanc
     sent.store_in_profile(store.for_device(dev).active_mut())?;
     store.save()?;
     Ok(sent)
+}
+
+/// Change device-wide low-power intent, independent of the active profile.
+/// The expected physical identity is required even when a caller selected by PID.
+/// Validate the complete prospective native backup before any hardware request.
+pub fn set_critical_threshold(
+    dev: &Device,
+    store: &mut Store,
+    expected_device: &str,
+    percent: u8,
+) -> Result<u8> {
+    if expected_device != dev.key() {
+        return Err(crate::Error::InvalidArg(
+            "The selected device changed; refresh before changing Power settings".into(),
+        ));
+    }
+    if !matches!(dev.pid, 196 | 197) {
+        return Err(crate::Error::Unsupported(
+            "low-power threshold is verified only for DeathAdder V3 HyperSpeed".into(),
+        ));
+    }
+    crate::power::critical_raw_for_percent(percent)?;
+    let device_key = dev.key();
+    let previous_keys: Vec<String> = store.devices.keys().cloned().collect();
+    let previous = store.for_device(dev).power.clone();
+    let mut desired = previous.clone().unwrap_or_default();
+    desired.critical_threshold_percent = Some(percent);
+    store.for_device(dev).power = Some(desired.clone());
+    let validation = crate::profile_compat::validate_store_budget(store);
+    store.for_device(dev).power = previous;
+    // for_device can create a default entry or migrate its connection-mode key.
+    // Undo that temporary resolution too, so a refusal leaves the native state intact.
+    if !previous_keys.contains(&device_key) {
+        let candidate = store
+            .devices
+            .remove(&device_key)
+            .expect("candidate device exists");
+        if let Some(original_key) = previous_keys
+            .iter()
+            .find(|key| !store.devices.contains_key(*key))
+        {
+            store.devices.insert(original_key.clone(), candidate);
+        }
+    }
+    validation?;
+    if dev.polling_rate()? > 1000 {
+        return Err(crate::Error::InvalidArg(
+            "Low Power Mode is not supported at polling rates of 2000 Hz and above".into(),
+        ));
+    }
+    let sent = dev.set_critical_threshold_percent(percent)?;
+    desired.critical_threshold_percent = Some(sent);
+    store.for_device(dev).power = Some(desired);
+    store.save()?;
+    Ok(sent)
+}
+
+/// Installed-model Power page: hardware is the source of truth for sleep.
+/// Keep legacy profile-local sleep APIs available for existing native profiles.
+pub fn set_device_sleep_minutes(dev: &Device, expected_device: &str, minutes: u16) -> Result<()> {
+    if expected_device != dev.key() {
+        return Err(crate::Error::InvalidArg(
+            "The selected device changed; refresh before changing Power settings".into(),
+        ));
+    }
+    dev.set_device_sleep_minutes(minutes)
 }
 
 pub fn set_sleep_minutes(dev: &Device, store: &mut Store, minutes: u16) -> Result<()> {
@@ -416,5 +482,176 @@ mod performance_tests {
         assert_eq!(dev.dpi_stages().unwrap(),before);
         assert!(store.for_device(&dev).active().performance.is_none());
         assert!(!folder.exists());
+    }
+}
+
+#[cfg(test)]
+mod power_tests {
+    use super::*;
+    use crate::{profile::DeviceProfiles, sim::Sim, DevicePower};
+    use std::{
+        collections::BTreeMap,
+        sync::atomic::{AtomicUsize, Ordering},
+    };
+    static SEQUENCE: AtomicUsize = AtomicUsize::new(0);
+    fn setup(high: bool) -> (Sim, Device, Store, std::path::PathBuf) {
+        let sim = Sim::wireless_mouse();
+        sim.state().critical_threshold = Some(78);
+        let mut spec = Sim::spec_for(crate::sim::WIRELESS_MOUSE_PID).unwrap();
+        if high {
+            spec.polling = Some(crate::db::Polling::High);
+            sim.state().polling_hs = Some(crate::commands::polling_hs_code(2000).unwrap());
+        }
+        let dev = sim.open(196, Some(spec)).unwrap();
+        let folder = std::env::temp_dir().join(format!(
+            "synapse-power-actions-{}-{}",
+            std::process::id(),
+            SEQUENCE.fetch_add(1, Ordering::Relaxed)
+        ));
+        let mut store = Store::load(&folder.join("profiles.json")).unwrap();
+        store.for_device(&dev);
+        (sim, dev, store, folder)
+    }
+    fn cleanup(folder: &std::path::Path) {
+        std::fs::remove_file(folder.join("profiles.json")).unwrap();
+        std::fs::remove_dir(folder).unwrap();
+    }
+    #[test]
+    fn threshold_is_device_scoped_preserves_unknowns_and_profile_activation_does_not_apply_it() {
+        let (sim, dev, mut store, folder) = setup(false);
+        store.for_device(&dev).create("Second").unwrap();
+        store.for_device(&dev).power = Some(DevicePower {
+            extra: BTreeMap::from([("future".into(), serde_json::json!({"keep":true}))]),
+            ..Default::default()
+        });
+        let profiles = store.for_device(&dev).profiles.clone();
+        assert_eq!(
+            set_critical_threshold(&dev, &mut store, &dev.key(), 45).unwrap(),
+            45
+        );
+        assert_eq!(store.for_device(&dev).profiles, profiles);
+        let mut disk = Store::load(&folder.join("profiles.json")).unwrap();
+        let power = disk.for_device(&dev).power.as_ref().unwrap();
+        assert_eq!(power.critical_threshold_percent, Some(45));
+        assert_eq!(power.extra["future"], serde_json::json!({"keep":true}));
+        let count = sim
+            .state()
+            .log
+            .iter()
+            .filter(|c| **c == crate::commands::CRITICAL_LEVEL)
+            .count();
+        store.for_device(&dev).active = "Second".into();
+        assert!(store
+            .for_device(&dev)
+            .active()
+            .apply(&dev)
+            .iter()
+            .all(|r| r.result.is_ok()));
+        assert_eq!(
+            sim.state()
+                .log
+                .iter()
+                .filter(|c| **c == crate::commands::CRITICAL_LEVEL)
+                .count(),
+            count
+        );
+        assert_eq!(
+            store
+                .for_device(&dev)
+                .power
+                .as_ref()
+                .unwrap()
+                .critical_threshold_percent,
+            Some(45)
+        );
+        cleanup(&folder);
+    }
+    #[test]
+    fn high_polling_and_identity_mismatch_refuse_before_threshold_write() {
+        let (sim, dev, mut store, folder) = setup(true);
+        let before = sim.state().log.len();
+        assert!(set_critical_threshold(&dev, &mut store, "stale-device", 30).is_err());
+        assert_eq!(sim.state().log.len(), before);
+        assert!(set_critical_threshold(&dev, &mut store, &dev.key(), 30).is_err());
+        assert_eq!(sim.state().critical_threshold, Some(78));
+        assert!(!sim.state().log.contains(&crate::commands::CRITICAL_LEVEL));
+        assert!(store.for_device(&dev).power.is_none());
+        assert!(!folder.exists());
+        // Recovery remains unrestricted by the normal UI polling policy.
+        dev.set_critical_threshold_raw(78).unwrap();
+    }
+    #[test]
+    fn budget_and_invalid_ui_values_refuse_before_any_hardware_request() {
+        let (sim, dev, mut store, folder) = setup(false);
+        store.extra.insert(
+            "too-large".into(),
+            serde_json::json!("x".repeat(2 * 1024 * 1024)),
+        );
+        let before = sim.state().log.len();
+        assert!(set_critical_threshold(&dev, &mut store, &dev.key(), 30).is_err());
+        assert!(set_critical_threshold(&dev, &mut store, &dev.key(), 31).is_err());
+        assert_eq!(sim.state().log.len(), before);
+        assert!(store.for_device(&dev).power.is_none());
+        assert!(!folder.exists());
+        store.devices.clear();
+        let before_state = serde_json::to_value(&store).unwrap();
+        assert!(set_critical_threshold(&dev, &mut store, &dev.key(), 30).is_err());
+        assert_eq!(serde_json::to_value(&store).unwrap(), before_state);
+        assert_eq!(sim.state().log.len(), before);
+    }
+    #[test]
+    fn device_sleep_changes_hardware_only_and_legacy_profile_sleep_remains_usable() {
+        let (sim, dev, mut store, folder) = setup(false);
+        store.for_device(&dev).active_mut().sleep_minutes = Some(7);
+        store.for_device(&dev).create("Second").unwrap();
+        store.for_device(&dev).active = "Second".into();
+        let before = serde_json::to_value(&store).unwrap();
+        set_device_sleep_minutes(&dev, &dev.key(), 3).unwrap();
+        assert_eq!(sim.state().idle_seconds, Some(180));
+        assert_eq!(serde_json::to_value(&store).unwrap(), before);
+        assert!(!folder.exists());
+        assert!(store
+            .for_device(&dev)
+            .active()
+            .apply(&dev)
+            .iter()
+            .all(|r| r.result.is_ok()));
+        assert_eq!(sim.state().idle_seconds, Some(420));
+        let count = sim.state().log.len();
+        assert!(set_device_sleep_minutes(&dev, "other-device", 5).is_err());
+        assert!(set_device_sleep_minutes(&dev, &dev.key(), 0).is_err());
+        assert!(set_device_sleep_minutes(&dev, &dev.key(), 16).is_err());
+        assert_eq!(sim.state().log.len(), count);
+    }
+    #[test]
+    fn native_power_defaults_and_conflicting_imports_are_lossless_without_hardware() {
+        assert!(serde_json::to_value(DeviceProfiles::default())
+            .unwrap()
+            .get("power")
+            .is_none());
+        let mut store = Store::default();
+        store.device(196).power = Some(DevicePower {
+            critical_threshold_percent: Some(30),
+            ..Default::default()
+        });
+        let mut incoming = Store::default();
+        incoming.device(196).power = Some(DevicePower {
+            critical_threshold_percent: Some(45),
+            extra: BTreeMap::from([("future".into(), serde_json::json!(42))]),
+        });
+        store.import(incoming);
+        let device = store.device(196);
+        assert_eq!(
+            device.power.as_ref().unwrap().critical_threshold_percent,
+            Some(30)
+        );
+        assert_eq!(device.power.as_ref().unwrap().extra["future"], 42);
+        assert_eq!(
+            device.extra["_synapseLiteImported:power"]["critical_threshold_percent"],
+            45
+        );
+        let value = serde_json::to_value(&store).unwrap();
+        let restored: Store = serde_json::from_value(value.clone()).unwrap();
+        assert_eq!(serde_json::to_value(restored).unwrap(), value);
     }
 }
