@@ -51,6 +51,8 @@ An independent [Rust kernel forwarding candidate](docs/KERNEL-BUILD.md) compiled
 
 The native [profile Import/Export modal](docs/PROFILE-MODAL.md) provides worker-backed previews, profile/macro selection, inactive imports, partial corrupt-record warnings and explicit full native backups. Source geometry and converted icon pixels are verified separately from whole-UI parity; the simulated HWND tests do not establish real Synapse re-import acceptance.
 
+Six [active Lighting/color-editor measurements](docs/ACTIVE-LIGHTING-RUNTIME.md), including the actual fixed-Breathing worker, peaked at26,034,176 working-set bytes and11,468,800 sampled private bytes. Those scoped runs pass the100MB threshold; full-build/workflow acceptance is still open. Pure [source macro planning](docs/SOURCE-MACROS.md) and an [explicit keyboard packet bridge](docs/KEYBOARD-SYMBOLIC-BRIDGE.md) preserve recovered formats without sending input; macro execution remains unfinished.
+
 Raw proprietary application bundles, recovered fonts/images and private user profiles are local research material and are not committed to this repository. Local visual assets are provisioned separately into an ignored directory.
 
 ## Attribution
