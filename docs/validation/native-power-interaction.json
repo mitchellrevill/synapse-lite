@@ -1,0 +1,32 @@
+{
+  "timestamp_utc": "2026-10-27T05:15:44.4217304Z",
+  "test_binary_sha256": "30daa9fc62276680d77f494eb28eabbb4953b158f8fbf820108aebb66b9191a1",
+  "test_source_sha256": "985cb7ebce5eb8e4ca3d7d2b385bb34dd2e1f5d7474d6aa6e53c52e90f79d2c9",
+  "scope": "Real native window, Win32 messages, source geometry, worker and shared dispatcher with one simulated mouse. HID discovery disabled before context creation; rescan and event opening disabled in fixture. No screenshots, OS pointer injection, physical HID handles or real user profiles.",
+  "result": {
+    "cancelled_gesture_did_not_write": true,
+    "checks": [
+      {
+        "control": "sleep",
+        "no_write_before_release": true,
+        "value": 4,
+        "verified_simulated_write": true
+      },
+      {
+        "control": "threshold",
+        "no_write_before_release": true,
+        "value": 45,
+        "verified_simulated_write": true
+      }
+    ],
+    "closed_with_worker_blocked": true,
+    "evidence": "Win32 messages through real native window and serialized worker; not OS pointer injection or hardware proof",
+    "expected_final_threshold_percent": 55,
+    "final_sleep_seconds": 240,
+    "final_threshold_percent_persisted": 55,
+    "final_threshold_raw": 141,
+    "physical_discovery_disabled": true,
+    "profile_sleep_override_absent": true,
+    "transport": "simulated only"
+  }
+}

@@ -5,6 +5,8 @@ use std::collections::{HashMap, HashSet};
 use std::time::{Duration, Instant, SystemTime};
 
 pub struct Engine {
+    #[cfg(test)]
+    simulated_only: bool,
     api: HidApi,
     devices: Vec<Device>,
     unsupported: Vec<Unsupported>,
@@ -59,14 +61,22 @@ pub struct ApplyReport {
 impl Engine {
     /// The text of `secbird report`, for the tray's "Make a device report" item. Only reads.
     pub fn report_text(&mut self) -> String {
+        #[cfg(test)]
+        if self.simulated_only { return "Simulated native interaction test; physical discovery disabled".into(); }
         let _ = self.api.refresh_devices();
         let db = Db::load(Some(&config_dir().join("devices.json"))).unwrap_or_default();
         secbird_core::report::build(&self.api, &db).to_string()
     }
 
     pub fn new() -> Result<Self> {
-        Ok(Self {
-            api: HidApi::new()?,
+        Ok(Self::from_api(HidApi::new()?))
+    }
+
+    fn from_api(api: HidApi) -> Self {
+        Self {
+            #[cfg(test)]
+            simulated_only: false,
+            api,
             devices: Vec::new(),
             unsupported: Vec::new(),
             synapse: Vec::new(),
@@ -78,7 +88,21 @@ impl Engine {
             frames_paused_until: None,
             away: None,
             relight: HashMap::new(),
-        })
+        }
+    }
+
+    /// No enumeration, physical transports or later rescan in a native UI test.
+    #[cfg(test)]
+    pub(crate) fn with_simulated_mouse(sim: &secbird_core::sim::Sim) -> Result<Self> {
+        HidApi::disable_device_discovery();
+        let mut engine = Self::from_api(HidApi::new()?);
+        let db = Db::builtin()?;
+        let device = sim.open(196, db.get(196).cloned())
+            .ok_or_else(|| secbird_core::Error::InvalidArg("Simulated mouse did not answer".into()))?;
+        assert!(device.path.as_bytes().starts_with(b"sim:"));
+        engine.devices.push(device);
+        engine.simulated_only = true;
+        Ok(engine)
     }
 
     pub fn foreground(&self) -> Option<&str> {
@@ -107,6 +131,8 @@ impl Engine {
     }
 
     pub fn open_events(&self, path: &std::ffi::CStr) -> Option<secbird_core::hidapi::HidDevice> {
+        #[cfg(test)]
+        if self.simulated_only { return None; }
         self.api.open_path(path).ok()
     }
 
@@ -319,6 +345,8 @@ impl Engine {
 
     /// Re-enumerate devices. Returns the keys of devices that were not present before.
     pub fn rescan(&mut self) -> Vec<String> {
+        #[cfg(test)]
+        if self.simulated_only { return Vec::new(); }
         let before: HashSet<String> = self.devices.iter().map(|d| d.key()).collect();
         self.devices.clear(); // close stale handles before reopening
         let _ = self.api.refresh_devices();

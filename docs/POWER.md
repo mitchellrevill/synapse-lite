@@ -10,7 +10,9 @@ Four core tests cover all twenty displayed values on both scoped product IDs, ex
 
 The physical wired mouse passed eight setting checks, including a threshold change to 25% (raw 64), followed by byte-for-byte restoration of every captured register. The harness snapshots and saves the original raw threshold before any mutation; failure to capture it prevents the roundtrip. Stock user processes were temporarily closed, then restored, with ten processes observed after three seconds. Services, drivers, input mappings, macros and profile files were unchanged. See [the scoped hardware result](validation/power-hardware.json).
 
-This verifies command/readback/restoration on the installed wired mouse. Actual battery-triggered mode transitions, battery drain, sleep/wake, wireless behavior, editor event routing and the complete Power workflow remain unverified.
+This verifies command/readback/restoration on the installed wired mouse. Actual battery-triggered mode transitions, battery drain, sleep/wake, wireless behavior, physical editor interaction and the complete Power workflow remain unverified.
+
+The later [native interaction check](validation/NATIVE-INTERACTION.md) verifies real-window message routing, release-only writes, cancellation and closing with blocked queued work through a simulated device. Physical mouse interaction and OS pointer transfer remain unverified; the test opens no physical HID handle and does not modify actual profiles.
 
 Source provenance: cached product 196 UI `main.bbc961f9.js` SHA-256 `f99b1f88ca9496a77cab258d05814a312b876873cb5c586841c28a732db78c42`, middleware `6120.c553d3491acbb7a4bf09.js` SHA-256 `df8334aa3021d129893918cecb3c1d14b3727f476c42981bac3fb02f6736b633`. Focused REA parent evidence `ev_0f022e21e2163646817fe08fbfc7529c7d1521cd50c8c2484b260f69cf908503` covers an inert Power UI slice with no parse errors and 128 unresolved framework relationships. Narrow original-source reads establish the middleware joins; this does not imply complete runtime equivalence or execute vendor JavaScript.
 

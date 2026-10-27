@@ -27,6 +27,8 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
+#[cfg(test)]
+mod interaction_tests;
 mod performance_layout;
 mod performance_view;
 mod power_layout;
@@ -2745,6 +2747,19 @@ unsafe extern "system" fn window_proc(
         }
         WM_MOUSELEAVE => {
             state.performance_hover = None;
+            InvalidateRect(hwnd, null(), 0);
+            0
+        }
+        WM_CANCELMODE => {
+            // DefWindowProc can synchronously send WM_CAPTURECHANGED while
+            // this state is borrowed. Cancel explicitly before releasing it.
+            state.power_gesture = None;
+            if state.performance_gesture.take().is_some() {
+                KillTimer(hwnd, PERFORMANCE_REPEAT);
+                state.sync_performance(true);
+                state.rebuild_fields();
+            }
+            ReleaseCapture();
             InvalidateRect(hwnd, null(), 0);
             0
         }
