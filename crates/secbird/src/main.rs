@@ -2,7 +2,7 @@ use secbird_core::{actions, config_dir, discover, hidapi::HidApi, Db, Device, Er
 use std::process::ExitCode;
 
 const USAGE: &str = "\
-Secretarybird - minimal control for Razer peripherals
+Synapse Lite - device controls based on Secretarybird beta
 
 USAGE: secbird [-d PID] <command> [args]
 
@@ -89,7 +89,8 @@ PROFILES:
                             (e.g. cs2.exe); no programs clears the list
   apply                     Re-send the active profile to the device
   export <file>             Save all profiles of all devices to a file
-  import <file>             Add profiles from an exported file (keeps yours)
+  export-synapse4 <file>     Re-export a selected device's imported Synapse 4 profiles
+  import <file>             Import Secretarybird JSON or Synapse 4 (keeps yours)
 
 CLEANUP (Razer's background services and startup entries; drivers are never touched):
   debloat                   Show what Razer runs in the background (changes nothing)
@@ -107,7 +108,7 @@ OPTIONS:
 Set SECBIRD_SIM=all (or a list: mouse,wireless,keyboard,old-keyboard,naga,cobra,dock,blackwidow,
 goliathus,firefly,blade,base-station) to add simulated devices (no hardware needed).
 
-Files live in %APPDATA%\\Secretarybird (profiles.json, devices.json).
+Files live in %APPDATA%\\SynapseLite (profiles.json, devices.json).
 ";
 
 fn main() -> ExitCode {
@@ -156,11 +157,23 @@ Download: {}", r.version, secbird_core::update::CURRENT, r.url),
     if command == "debloat" {
         return debloat_cmd(&args[1..]);
     }
-    if command == "export" || command == "import" {
+    if command == "export" || command == "import" || command == "export-synapse4" {
         let file = args.get(1).ok_or_else(|| Error::InvalidArg(format!("usage: {command} <file>")))?;
         let path = std::path::Path::new(file);
         let mut store = Store::load(&config_dir().join("profiles.json"))?;
-        if command == "export" {
+        if command == "export-synapse4" {
+            let keys: Vec<_> = store.devices.keys().filter(|key| {
+                let (pid, serial) = key.split_once(':').unwrap_or((key, ""));
+                u16::from_str_radix(pid, 16).is_ok_and(|pid| selects(pid, key, serial))
+            }).collect();
+            if keys.len() != 1 {
+                return Err(Error::InvalidArg("choose exactly one saved device with -d PID or -d SERIAL".into()));
+            }
+            let report = secbird_core::profile_compat::export_synapse4(&store, keys[0])?;
+            std::fs::write(path, report.bytes).map_err(|e| Error::Db(format!("{file}: {e}")))?;
+            for warning in report.warnings { eprintln!("Preserved without translation: {warning}"); }
+            println!("Exported Synapse 4 profile document to {file}");
+        } else if command == "export" {
             let text = serde_json::to_string_pretty(&store).map_err(|e| Error::Db(e.to_string()))?;
             std::fs::write(path, text).map_err(|e| Error::Db(format!("{file}: {e}")))?;
             let count: usize = store.devices.values().map(|d| d.profiles.len()).sum();
@@ -169,13 +182,14 @@ Download: {}", r.version, secbird_core::update::CURRENT, r.url),
             if !path.exists() {
                 return Err(Error::NotFound(file.clone()));
             }
-            let incoming = Store::load(path)?;
+            let incoming = read_profile_document(path)?;
             let connected: Vec<String> = match (HidApi::new(), Db::load(Some(&config_dir().join("devices.json")))) {
                 (Ok(api), Ok(db)) => discover(&api, &db).iter().map(Device::key).collect(),
                 _ => Vec::new(),
             };
-            let added = store.import_for(incoming, &connected);
+            let added = store.import_for(incoming.store, &connected);
             store.save()?;
+            for warning in incoming.warnings { eprintln!("Preserved without translation: {warning}"); }
             println!("Imported {added} profile(s). Existing profiles were kept; clashing names got \"(imported)\".");
         }
         return Ok(());
@@ -363,7 +377,7 @@ Note: Razer Synapse is running ({}). It can overwrite these settings;", synapse.
                 None => 1,
             };
             let stages = values.iter().map(|v| parse_dpi(v)).collect::<Result<Vec<_>, _>>()?;
-            let sent = actions::set_dpi_stages(dev, &mut store, &secbird_core::DpiStages { active, stages })?;
+            let sent = actions::set_dpi_stages(dev, &mut store, &secbird_core::DpiStages { active, stages, ..Default::default() })?;
             let list: Vec<String> = sent.stages.iter().map(|(x, y)| if x == y { x.to_string() } else { format!("{x}x{y}") }).collect();
             println!("DPI stages set to {} (stage {} in use)", list.join(", "), sent.active);
             Ok(())
@@ -469,6 +483,18 @@ Note: Razer Synapse is running ({}). It can overwrite these settings;", synapse.
         "profile" => profile_cmd(dev, &mut store, rest),
         other => Err(Error::InvalidArg(format!("unknown command '{other}' (try --help)"))),
     }
+}
+
+fn read_profile_document(path: &std::path::Path) -> Result<secbird_core::profile_compat::ImportReport, Error> {
+    use std::io::Read;
+    let file = std::fs::File::open(path).map_err(|e| Error::Db(format!("{}: {e}", path.display())))?;
+    let mut bytes = Vec::new();
+    file.take(2 * 1024 * 1024 + 1).read_to_end(&mut bytes)
+        .map_err(|e| Error::Db(format!("{}: {e}", path.display())))?;
+    if bytes.len() > 2 * 1024 * 1024 {
+        return Err(Error::InvalidArg("Profile document exceeds 2 MiB".into()));
+    }
+    secbird_core::profile_compat::import_document(&bytes)
 }
 
 fn profile_cmd(dev: &Device, store: &mut Store, rest: &[String]) -> Result<(), Error> {

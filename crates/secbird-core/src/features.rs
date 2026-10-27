@@ -31,8 +31,10 @@ impl std::str::FromStr for Rgb {
 }
 
 /// The DPI values the mouse's DPI button cycles through.
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct DpiStages {
+    #[serde(flatten)]
+    pub extra: std::collections::BTreeMap<String, serde_json::Value>,
     /// 1-based index of the stage in use.
     pub active: u8,
     /// `(x, y)` per stage, at most [`cmd::MAX_DPI_STAGES`].
@@ -207,7 +209,7 @@ impl Device {
                 (u16::from_be_bytes([s[1], s[2]]), u16::from_be_bytes([s[3], s[4]]))
             })
             .collect();
-        Ok(DpiStages { active: a[1], stages })
+        Ok(DpiStages { active: a[1], stages, ..Default::default() })
     }
 
     /// Replace the DPI stages and store them in the device's memory. Values are rounded
@@ -227,7 +229,7 @@ impl Device {
             None if (100..=30000).contains(&v) => Ok(v),
             None => Err(Error::InvalidArg(format!("DPI {v} out of range"))),
         };
-        let mut sent = DpiStages { active: stages.active, stages: Vec::with_capacity(n) };
+        let mut sent = DpiStages { active: stages.active, stages: Vec::with_capacity(n), extra: stages.extra.clone() };
         let mut args = vec![cmd::VARSTORE, stages.active, n as u8];
         for (i, &(x, y)) in stages.stages.iter().enumerate() {
             let (x, y) = (fit(x)?, fit(y)?);

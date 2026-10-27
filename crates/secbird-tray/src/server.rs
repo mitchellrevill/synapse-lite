@@ -214,27 +214,33 @@ impl Server {
             Ok(e) => e,
             Err(poisoned) => poisoned.into_inner(),
         };
-        let result = match (req.method.as_str(), req.path.as_str()) {
-            ("GET", "/api/state") => Ok(state(&engine)),
-            ("GET", "/api/apps") => Ok(json!({ "apps": crate::apps::running() })),
-            ("GET", "/api/live") => {
-                let (seq, dpi) = engine.live_dpi();
-                Ok(json!({ "seq": seq, "dpi": dpi.iter().map(|(k, (x, y))| (k.clone(), json!([x, y]))).collect::<serde_json::Map<_, _>>() }))
-            }
-            ("POST", "/api/rescan") => {
-                engine.rescan();
-                Ok(state(&engine))
-            }
-            ("GET", "/api/settings") => Ok(settings_json(&engine)),
-            ("GET", "/api/export") => Store::load(&config_dir().join("profiles.json"))
-                .and_then(|s| serde_json::to_value(&s).map_err(|e| Error::Db(e.to_string()))),
-            ("POST", path) => post(&mut engine, path, &req.body),
-            _ => return Response::text("404 Not Found", "Not found"),
-        };
+        let result = dispatch(&mut engine, &req.method, &req.path, &req.body);
         match result {
             Ok(v) => Response::json(v),
             Err(e) => Response::error("400 Bad Request", e.to_string()),
         }
+    }
+}
+
+/// Shared device/profile boundary for the native editor and optional legacy
+/// browser editor. Calling this function opens no listener or browser process.
+pub(crate) fn dispatch(engine: &mut Engine, method: &str, path: &str, body: &[u8]) -> Result<Value, Error> {
+    match (method, path) {
+        ("GET", "/api/state") => Ok(state(engine)),
+        ("GET", "/api/apps") => Ok(json!({ "apps": crate::apps::running() })),
+        ("GET", "/api/live") => {
+            let (seq, dpi) = engine.live_dpi();
+            Ok(json!({ "seq": seq, "dpi": dpi.iter().map(|(k, (x, y))| (k.clone(), json!([x, y]))).collect::<serde_json::Map<_, _>>() }))
+        }
+        ("POST", "/api/rescan") => {
+            engine.rescan();
+            Ok(state(engine))
+        }
+        ("GET", "/api/settings") => Ok(settings_json(engine)),
+        ("GET", "/api/export") => Store::load(&config_dir().join("profiles.json"))
+            .and_then(|s| serde_json::to_value(&s).map_err(|e| Error::Db(e.to_string()))),
+        ("POST", path) => post(engine, path, body),
+        _ => Err(Error::NotFound(path.to_string())),
     }
 }
 
@@ -393,7 +399,7 @@ fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
             }
             "/api/polling" => actions::set_polling(dev, &mut store, b.hz).map(|_| json!({})),
             "/api/stages" => {
-                let want = secbird_core::DpiStages { active: b.active, stages: b.stages.clone() };
+                let want = secbird_core::DpiStages { active: b.active, stages: b.stages.clone(), ..Default::default() };
                 let sent = actions::set_dpi_stages(dev, &mut store, &want)?;
                 let (x, y) = sent.stages[sent.active as usize - 1];
                 Ok(json!({ "stages": { "active": sent.active, "list": sent.stages }, "dpi": [x, y] }))
@@ -641,12 +647,18 @@ fn app_post(engine: &mut Engine, path: &str, b: &Body) -> Option<Result<Value, E
             Ok(json!({ "version": r.version }))
         })(),
         "/api/import" => (|| {
-            let incoming: Store = serde_json::from_value(b.data.clone())
-                .map_err(|e| Error::InvalidArg(format!("not a Secretarybird export: {e}")))?;
+            let bytes = serde_json::to_vec(&b.data).map_err(|e| Error::InvalidArg(e.to_string()))?;
+            let incoming = secbird_core::profile_compat::import_document(&bytes)?;
             let mut store = Store::load(&config_dir().join("profiles.json"))?;
-            let added = store.import_for(incoming, &engine.all_keys());
+            let added = store.import_for(incoming.store, &engine.all_keys());
             store.save()?;
-            Ok(json!({ "added": added, "state": state(engine) }))
+            Ok(json!({ "added": added, "warnings": incoming.warnings, "state": state(engine) }))
+        })(),
+        "/api/export-synapse4" => (|| {
+            let store = Store::load(&config_dir().join("profiles.json"))?;
+            let exported = secbird_core::profile_compat::export_synapse4(&store, &b.id)?;
+            let document: Value = serde_json::from_slice(&exported.bytes).map_err(|e| Error::Db(e.to_string()))?;
+            Ok(json!({ "document": document, "warnings": exported.warnings }))
         })(),
         "/api/open-folder" => {
             crate::settings::open_config_folder();

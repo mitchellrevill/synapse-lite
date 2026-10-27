@@ -14,6 +14,9 @@ pub const DEFAULT_PROFILE: &str = "Default";
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Zone {
+    /// Fields introduced by a newer compatible editor are retained on every save.
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, serde_json::Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color: Option<Rgb>,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
@@ -27,6 +30,8 @@ pub struct Zone {
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Profile {
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, serde_json::Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dpi: Option<(u16, u16)>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -77,6 +82,8 @@ pub fn normalize_app(name: &str) -> String {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceProfiles {
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, serde_json::Value>,
     pub active: String,
     pub profiles: BTreeMap<String, Profile>,
     /// Leave this device's lighting to another app, across every profile.
@@ -91,6 +98,8 @@ pub struct DeviceProfiles {
 /// without Secretarybird (on another PC, on Linux, before the tray starts, after sleep).
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct OnboardSave {
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, serde_json::Value>,
     /// The on-board slot written: the one active when saving (1-5).
     pub slot: u8,
     /// The profile saved, and its remaps as saved, to tell when it changed since.
@@ -106,6 +115,7 @@ pub struct OnboardSave {
 impl Default for DeviceProfiles {
     fn default() -> Self {
         Self {
+            extra: BTreeMap::new(),
             active: DEFAULT_PROFILE.into(),
             profiles: BTreeMap::from([(DEFAULT_PROFILE.into(), Profile::default())]),
             lighting_off: false,
@@ -258,6 +268,8 @@ impl DeviceProfiles {
 /// All profiles on disk, keyed by device (`"0099:SERIAL"`, or `"0099"` without a serial).
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Store {
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, serde_json::Value>,
     #[serde(default)]
     pub devices: BTreeMap<String, DeviceProfiles>,
     #[serde(skip)]
@@ -279,7 +291,7 @@ impl Store {
     }
 
     /// Button 128 was saved as `top-extra` before 0.5; it is the extra side button (#54).
-    fn rename_old_buttons(&mut self) {
+    pub(crate) fn rename_old_buttons(&mut self) {
         let rename = |map: &mut BTreeMap<String, String>| {
             let old: Vec<String> = map.keys().filter(|k| k.split('/').next() == Some("top-extra")).cloned().collect();
             for key in old {
@@ -313,14 +325,17 @@ impl Store {
     /// profiles are left alone. Returns how many profiles were added.
     pub fn import(&mut self, other: Store) -> usize {
         let mut added = 0;
+        crate::profile_compat::merge_extensions(&mut self.extra, other.extra);
         for (key, incoming) in other.devices {
             let target = self.devices.entry(key).or_insert_with(|| DeviceProfiles {
+                extra: incoming.extra.clone(),
                 active: incoming.active.clone(),
                 profiles: BTreeMap::new(),
                 lighting_off: incoming.lighting_off,
                 // The only copy of what the mouse's slot held before a "Save to mouse".
                 onboard: incoming.onboard.clone(),
             });
+            crate::profile_compat::merge_extensions(&mut target.extra, incoming.extra);
             for (name, profile) in incoming.profiles {
                 let mut unique = name.clone();
                 let mut n = 1;
@@ -639,7 +654,7 @@ mod tests {
         dev.active_mut().polling = Some(500);
         dev.active_mut().lighting.insert(
             "logo".into(),
-            Zone { color: Some(Rgb(255, 0, 0)), off: false, brightness: Some(40), effect: None },
+            Zone { color: Some(Rgb(255, 0, 0)), off: false, brightness: Some(40), effect: None, ..Default::default() },
         );
         store.save().unwrap();
 

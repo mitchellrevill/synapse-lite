@@ -1018,19 +1018,19 @@ mod tests {
         let sim = Sim::mouse();
         let dev = open(&sim, MOUSE_PID);
         let read = dev.dpi_stages().unwrap();
-        assert_eq!(read, DpiStages { active: 2, stages: vec![(400, 400), (800, 800), (1000, 1000), (1300, 1300), (6400, 6400)] });
+        assert_eq!(read, DpiStages { active: 2, stages: vec![(400, 400), (800, 800), (1000, 1000), (1300, 1300), (6400, 6400)], ..Default::default() });
 
-        let want = DpiStages { active: 3, stages: vec![(450, 450), (1234, 1234), (30000, 26050)] };
+        let want = DpiStages { active: 3, stages: vec![(450, 450), (1234, 1234), (30000, 26050)], ..Default::default() };
         let sent = dev.set_dpi_stages(&want).unwrap();
         assert_eq!(sent.stages, [(450, 450), (1250, 1250), (26000, 26000)], "snapped to the 26000 max");
         assert_eq!(dev.dpi_stages().unwrap(), sent);
         assert_eq!(dev.dpi().unwrap(), (26000, 26000), "mouse moved to the active stage");
 
         for bad in [
-            DpiStages { active: 1, stages: vec![] },
-            DpiStages { active: 1, stages: vec![(800, 800); 6] },
-            DpiStages { active: 0, stages: vec![(800, 800)] },
-            DpiStages { active: 2, stages: vec![(800, 800)] },
+            DpiStages { active: 1, stages: vec![], ..Default::default() },
+            DpiStages { active: 1, stages: vec![(800, 800); 6], ..Default::default() },
+            DpiStages { active: 0, stages: vec![(800, 800)], ..Default::default() },
+            DpiStages { active: 2, stages: vec![(800, 800)], ..Default::default() },
         ] {
             assert!(matches!(dev.set_dpi_stages(&bad), Err(Error::InvalidArg(_))), "{bad:?}");
         }
@@ -1043,7 +1043,7 @@ mod tests {
         let sim = Sim::mouse();
         let dev = open(&sim, MOUSE_PID);
         let mut store = crate::Store::default();
-        let stages = DpiStages { active: 1, stages: vec![(500, 500), (1500, 1500)] };
+        let stages = DpiStages { active: 1, stages: vec![(500, 500), (1500, 1500)], ..Default::default() };
         // A store with no path can't save; record by hand what actions::set_dpi_stages would.
         let p = store.for_device(&dev).active_mut();
         p.dpi_stages = Some(stages.clone());
@@ -1616,8 +1616,8 @@ mod tests {
         let sim = Sim::mouse();
         let dev = open(&sim, MOUSE_PID);
         let mut p = Profile { dpi: Some((3200, 3200)), polling: Some(125), ..Default::default() };
-        p.lighting.insert("logo".into(), Zone { color: Some(Rgb(255, 0, 0)), off: false, brightness: Some(100), effect: None });
-        p.lighting.insert("underglow".into(), Zone { color: None, off: true, brightness: None, effect: None });
+        p.lighting.insert("logo".into(), Zone { color: Some(Rgb(255, 0, 0)), off: false, brightness: Some(100), effect: None, ..Default::default() });
+        p.lighting.insert("underglow".into(), Zone { color: None, off: true, brightness: None, effect: None, ..Default::default() });
         let results = p.apply(&dev);
         assert!(results.iter().all(|r| r.result.is_ok()), "{:?}", results.iter().map(|r| &r.result).collect::<Vec<_>>());
         let s = sim.state();
