@@ -825,14 +825,17 @@ impl State {
 
     unsafe fn step_performance(&mut self, row: usize, axis: Axis, delta: i16) {
         let id = PERFORMANCE_INPUT + row as u16 * 2 + u16::from(axis == Axis::Y);
-        let current = self.text(id).parse::<i64>().ok().or_else(|| {
+        let current = if self.fields.contains_key(&id) {
+            // Empty/minus are valid transient text states, not a request to
+            // restore the previous model value before stepping.
+            self.text(id).parse::<i64>().ok()
+        } else {
             self.performance
                 .as_ref()
                 .and_then(|p| p.stages.get(row))
                 .map(|r| i64::from(if axis == Axis::X { r.x } else { r.y }))
-        });
-        let value =
-            performance_layout::normalize_input_value(current.map(|v| v + i64::from(delta)));
+        };
+        let value = performance_layout::step_input_value(current, delta);
         let editing = self
             .fields
             .get(&id)

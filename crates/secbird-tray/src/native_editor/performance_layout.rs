@@ -88,6 +88,15 @@ pub fn normalize_input_value(parsed_integer: Option<i64>) -> u32 {
         .clamp(f64::from(MIN_DPI), f64::from(MAX_DPI)) as u32
 }
 
+/// Step transient empty/minus text from zero, then apply the input bounds.
+/// Arithmetic is intentional: the shipped JS concatenates typed strings on
+/// increment; reproducing that defect would turn typed800 +50 into26000.
+pub fn step_input_value(parsed_integer: Option<i64>, delta: i16) -> u32 {
+    normalize_input_value(Some(
+        parsed_integer.unwrap_or(0).saturating_add(i64::from(delta)),
+    ))
+}
+
 /// Source TA uses sizing-16 even with its 12px small thumb styling.
 pub fn source_fill_width(percent: f64, sizing: f64) -> f64 {
     percent / 100.0 * (sizing - 16.0) + 8.0
@@ -274,6 +283,17 @@ mod tests {
         assert_eq!(normalize_input_value(Some(26001)), 26000);
         assert_eq!(normalize_input_value(Some(-10)), 100);
         assert_eq!(normalize_input_value(None), 100);
+    }
+
+    #[test]
+    fn spinner_handles_transient_text_and_bounds() {
+        assert_eq!(step_input_value(None, 50), 100);
+        assert_eq!(step_input_value(None, -50), 100);
+        assert_eq!(step_input_value(Some(800), 50), 850);
+        assert_eq!(step_input_value(Some(800), -50), 750);
+        assert_eq!(step_input_value(Some(100), -50), 100);
+        assert_eq!(step_input_value(Some(26000), 50), 26000);
+        assert_eq!(step_input_value(Some(801), -50), 800);
     }
 
     #[test]
