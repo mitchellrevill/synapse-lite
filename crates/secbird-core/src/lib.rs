@@ -27,6 +27,7 @@ pub mod lighting_readback;
 pub mod log;
 pub mod macros;
 pub mod net;
+pub mod ornata_frame;
 pub mod performance;
 pub mod power;
 pub mod profile;

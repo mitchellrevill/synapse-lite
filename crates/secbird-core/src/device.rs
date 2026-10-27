@@ -139,6 +139,41 @@ impl Device {
         }
     }
 
+    /// Ornata's inspected frame path disables transfer-in checks. This private
+    /// seam sends one canonical row/commit HID wrapper, with no read or retry.
+    /// USB acceptance is not firmware acknowledgement or optical verification.
+    pub(crate) fn send_ornata_frame_packet(&mut self, packet: &[u8; 91]) -> Result<()> {
+        crate::ornata_frame::validate_device(self)?;
+        let report = Report(packet[1..].try_into().expect("fixed HID wrapper"));
+        let size = report.0[5];
+        let args = report.args();
+        let row = report.command() == cmd::MATRIX_FRAME
+            && size == 71
+            && args[0] == 0
+            && args[1] == 0
+            && args[2] < 6
+            && args[3] == 0
+            && args[4] == 21;
+        let commit =
+            report.command() == cmd::MATRIX_EFFECT && size == 6 && args[..6] == [0, 0, 8, 0, 0, 0];
+        if packet[0] != 0
+            || (!row && !commit)
+            || report.0
+                != Report::request(
+                    self.txid,
+                    report.command(),
+                    size,
+                    &args[..usize::from(size)],
+                )
+                .0
+        {
+            return Err(Error::InvalidArg(
+                "Noncanonical Ornata frame row/commit packet".into(),
+            ));
+        }
+        self.transport.send_feature_report(packet)
+    }
+
     /// Send one command and wait for its reply. `size` is the argument length the
     /// device expects for this command.
     pub fn transact(&self, command: Command, size: u8, args: &[u8]) -> Result<Report> {

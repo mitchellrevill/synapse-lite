@@ -1,0 +1,13 @@
+# Ornata host frame transport
+
+PreparedOrnataFrame accepts exactly132 RGB pixels in physical6×22 row-major order. It builds six SET0F:03 packets with71 declared argument bytes and a final SET0F:02 CustomFrame8 commit with exactly6 argument bytes. Each packet has the normal91-byte HID wrapper, zero padding and checksum. Logical7×23 layout mapping and animation algorithms remain separate.
+
+Transfer requires PID025D/interface2 and the correct matrix. It checks cancellation/deadline before I/O, freshly queries Driver Mode3, then sends the seven packets in order. The source frame path disables transfer-in checks, so this method sends USB OUT only and does not wait for invented row acknowledgements. Generic show_frame and all existing query/ACK rules remain unchanged.
+
+The outcome distinguishes attempted and accepted USB calls, mode-query failures, cancellation, deadline and a failed packet index. A failed write may have reached hardware. No later packet or automatic retry follows failure. The mutable Device borrow serializes this batch through that handle only; the caller coordinates other owners and recovery. Deadline/cancellation are cooperative and cannot interrupt an in-flight HID call.
+
+Accepted USB OUT does not prove firmware execution, visible RGB output, atomic frames, unchanged mode after writes or exclusive ownership. There is no mode setter, brightness operation, input/macro operation, profile1 write or automatic Spectrum fallback. No physical frame execution has been performed for this unit. A practical restoration test may restart unchanged stock configuration; that must not be described as preserving an exact prior animation phase.
+
+Nine spy-transport tests independently check every packet byte/order/checksum, partial failures including commit failure, cancellation/deadlines before and between writes, fresh mode queries, scope refusal and private sender rejection of noncanonical commands. Source basis: shipped Ornata chunk2890 SHA2561e49e375d27a457dadcf525f2032d66c4d3e7d9330eb34afca279d5633a1b3cd and lighting main SHA256c82c7074e5da8abcffbff95f23a6b962c1e14b04586715b9d4b7a6f11fe9e6d2. Proprietary source and private runtime evidence are not distributed.
+
+A later GET-only observation of the installed keyboard found profile0/region0 CustomFrame8 (flags/rate/count0, declared6), brightness255, Driver Mode3 and absent parameter. Replies passed correlation/checksum checks on their first read. Stock user processes were restored afterward. See [the scoped result](validation/lighting-profile0-readback.json). This captures the control register, not RGB buffers, animation history or exclusive ownership; no frame SET was sent by that probe.
