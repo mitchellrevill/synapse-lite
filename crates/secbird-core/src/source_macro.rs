@@ -673,8 +673,33 @@ mod tests {
     }
 
     #[test]
+    fn explicit_recorded_prefix_flags_preserve_identity_and_direction() {
+        // Source recorder G.createKeyEvent uses output flags2(E0)/4(E1)
+        // and adds1 for keyup. No prefix is inferred from scan code alone.
+        for (scancode, flag, transition) in [
+            (29, 2, Transition::Down),
+            (29, 3, Transition::Up),
+            (29, 4, Transition::Down),
+            (29, 5, Transition::Up),
+            (29, 0, Transition::Down),
+            (29, 1, Transition::Up),
+        ] {
+            let text = json!([{"type":"keyboard","scancode":scancode,"flag":flag}]).to_string();
+            let p = plan(&text).unwrap();
+            assert_eq!(
+                p.events(),
+                &[Event::Keyboard {
+                    scancode,
+                    flag,
+                    transition
+                }]
+            );
+        }
+    }
+
+    #[test]
     fn all_unsupported_keyboard_flags_and_invalid_numbers_are_rejected() {
-        for flag in [2, 3, 4, 5, 6, 7, 65535] {
+        for flag in [6, 7, 8, 0x8000, 65535] {
             assert_eq!(
                 plan(&json!([{"type":"keyboard","scancode":30,"flag":flag}]).to_string()),
                 Err(PlanError::UnsupportedKeyboardFlag { event: 0, flag })
@@ -929,8 +954,8 @@ fn decode_event(index: usize, value: &Value) -> Result<Event, PlanError> {
             let scancode = integer(at, object, "scancode", u16::MAX as u64)? as u16;
             let flag = integer(at, object, "flag", u16::MAX as u64)? as u16;
             let transition = match flag {
-                0 => Transition::Down,
-                1 => Transition::Up,
+                0 | 2 | 4 => Transition::Down,
+                1 | 3 | 5 => Transition::Up,
                 _ => return Err(PlanError::UnsupportedKeyboardFlag { event: index, flag }),
             };
             Ok(Event::Keyboard {

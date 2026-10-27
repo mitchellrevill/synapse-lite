@@ -11,7 +11,7 @@ The planner accepts only these native source events:
 | Event | Accepted fields | Interpretation |
 |---|---|---|
 |delay|type, ms|Integer u32 milliseconds; zero remains an actual event.|
-|keyboard|type, scancode, flag|Native u16 scan code retained; flag0 down,1 up. Extended/other flags and optional modifier/unit/timer fields are explicitly unsupported. No HID/VK conversion.|
+|keyboard|type, scancode, flag|Native u16 scan code retained; Explicit flags0/1 ordinary down/up,2/3 E0 down/up,4/5 E1 down/up. Mixed-prefix6/7 and other flags, plus optional modifier/unit/timer fields, are unsupported. No prefix inference or HID/VK conversion.|
 |mouse button|type, id|Single transition: left1/2, right4/8, middle16/32, button4 64/128, button5 256/512.|
 |mouse wheel|type, id, data|Vertical1024 or horizontal2048; raw120→+120, raw65416→−120. Both raw bits and signed delta remain available.|
 
@@ -31,4 +31,6 @@ Native mapping_engine.dll SHA256 `6eabdfdedf797e042738b630d827c06f7a45dbe560ebae
 
 Zero-delay adjacency was checked against the actual dispatcher branch, rather than inferred from elapsed time. Dispatch12BE6E evidence ev_bed07cbcc6184aaf6145e517884bf89970b7a48a8c5e1bb89b73117e82d41034 shows the delay branch calls12AB1E at12C1C7 and then unconditionally calls6566A at12C201 with the current delay object and executor+0x80. Helper6566A writes the incoming pointer into that slot at65689; it does not filter for output types. The delay executor tests ms at12AB36..12AB3C and skips only its wait when zero, returning to that assignment. The keyboard branch reads+0x80 at12C2AB, invokes previous/current type methods and compares at12C2DA. Only equal types take the 0x2710 (10,000 microsecond) wait setup/call at12C2E7/12C2EE. Consequently a dispatched delay-kind12, including delay0, replaces the prior event before the next keyboard-kind21 check. This proves immediate-event adjacency for these successful linear dispatch paths; cancellation, parse failure and repeat-boundary behavior remain unresolved.
 
-Eleven focused tests cover source vectors, every supported transition/wheel encoding, strict flags/numbers, exact raw retention, duplicates, atomic unsupported-action failure, finite/unresolved playback, compact repetition, budgets and duration overflow. Full core validation passed238tests with5ignored after setting TEMP/TMP to a writable workspace directory. The first full run's15 disk-test failures were sandbox temporary-directory AccessDenied errors; no implementation change was needed to resolve them. No hardware or macro runtime was exercised.
+Twelve focused parser tests cover source vectors, every supported transition/wheel encoding, strict flags/numbers, exact raw retention, duplicates, atomic unsupported-action failure, finite/unresolved playback, compact repetition, budgets and duration overflow. Full core validation passed238tests with5ignored after setting TEMP/TMP to a writable workspace directory. The first full run's15 disk-test failures were sandbox temporary-directory AccessDenied errors; no implementation change was needed to resolve them. No hardware or macro runtime was exercised.
+
+The separate [keyboard symbolic bridge](KEYBOARD-SYMBOLIC-BRIDGE.md) can plan raw packets from explicitly supplied native keyboard fields and routing context. It does not make this macro plan executable or resolve held-output recovery.
