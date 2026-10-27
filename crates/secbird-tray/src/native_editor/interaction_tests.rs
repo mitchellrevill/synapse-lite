@@ -289,6 +289,19 @@ unsafe fn edit_text(hwnd: HWND, id: u16) -> Option<String> {
     let len = GetWindowTextW(edit, text.as_mut_ptr(), text.len() as i32);
     Some(String::from_utf16_lossy(&text[..len.max(0) as usize]))
 }
+/// Acknowledge only the failure dialog owned by this test's editor HWND.
+unsafe fn acknowledge_owned_failure(hwnd: HWND) -> bool {
+    let dialog = FindWindowW(wide("#32770").as_ptr(), wide(FAILURE_TITLE).as_ptr());
+    if dialog.is_null() || GetWindow(dialog, GW_OWNER) != hwnd {
+        return false;
+    }
+    let button = FindWindowExW(dialog, null_mut(), wide("Button").as_ptr(), null());
+    if button.is_null() {
+        return false;
+    }
+    PostMessageW(button, BM_CLICK, 0, 0);
+    true
+}
 fn brightness_write_count(sim: &Sim) -> usize {
     sim.state()
         .log
@@ -513,6 +526,18 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                 || edit_text(hwnd, lighting_view::HEX).as_deref() == Some("445566"),
                 "Second slot must not inherit first draft",
             )?;
+            // Exercise acknowledged failure feedback through a real source control.
+            // The native eyedropper is explicitly unavailable; no capture is started.
+            lighting_click(
+                hwnd,
+                palette.eyedropper.x + 12.0,
+                palette.eyedropper.y + 12.0,
+                scale,
+            );
+            wait_for(
+                || acknowledge_owned_failure(hwnd),
+                "Acknowledged native failure dialog",
+            )?;
             let edit = GetDlgItem(hwnd, i32::from(lighting_view::HEX));
             SetWindowTextW(edit, wide("a1b2c3").as_ptr());
             lighting_click(hwnd, palette.save.x + 40.0, palette.save.y + 13.0, scale);
@@ -540,9 +565,16 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
             if brightness_write_count(&controller_sim) != after_release {
                 return Err("Color editor unexpectedly changed brightness".into());
             }
-            SendMessageW(hwnd, WM_CLOSE, 0, 0);
+            PostMessageW(hwnd, WM_CLOSE, 0, 0);
+            wait_for(
+                || {
+                    acknowledge_owned_failure(hwnd);
+                    IsWindow(hwnd) == 0
+                },
+                "Editor closed after failure acknowledgement",
+            )?;
             Ok(
-                json!({"transport":"simulated only","physical_discovery_disabled":true,"source_region0_readback_not_modeled":true,
+                json!({"native_failure_dialog_acknowledged":true,"transport":"simulated only","physical_discovery_disabled":true,"source_region0_readback_not_modeled":true,
                 "brightness_capture_verified":true,"source_layout_client_css_width":width,"scale":scale,"brightness_no_write_before_release":true,"brightness_release_raw":114,"brightness_cancel_no_write":true,
                 "native_edit_draft_switch_isolated":true,"cancelled_color_retained":true,"opaque_slot_preserved":true,
                 "edited_slot_saved":"#a1b2c3","color_actions_did_not_write_brightness":true,

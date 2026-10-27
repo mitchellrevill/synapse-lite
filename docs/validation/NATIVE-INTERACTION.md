@@ -37,3 +37,7 @@ cargo test -p secbird-tray native_lighting_messages --locked -- --ignored --test
 ```
 
 See [the scoped Lighting result](native-lighting-interaction.json). Native color raster parity and complete input/modal/DPI behavior remain unverified.
+
+## Corrected source viewport
+
+Audited device pages no longer reserve or paint the extra35px status footer. Card scroll limits include the recovered30px trailing gap. Failures use an acknowledged native dialog queue rather than disappearing with the footer; this is an explicit adaptation, not a pixel-identical stock error flow. Both native interaction tests pass after the change, including the Lighting failure acknowledgement. See [the viewport contract](../VIEWPORT.md).

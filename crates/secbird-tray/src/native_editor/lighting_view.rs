@@ -760,10 +760,10 @@ pub(super) fn scroll(state: &mut State, delta: i16) -> Update {
     ) else {
         return Update::handled();
     };
-    let bottom = (g.sleep_panel.y + g.sleep_panel.height)
-        .max(g.effects_panel.y + g.effects_panel.height)
-        + 20.0;
-    let max = (bottom - (f64::from(state.height) / f64::from(state.scale) - 35.0)).max(0.0);
+    let bottom =
+        (g.sleep_panel.y + g.sleep_panel.height).max(g.effects_panel.y + g.effects_panel.height);
+    let max =
+        super::viewport::card_scroll_max(bottom, f64::from(state.height) / f64::from(state.scale));
     state.lighting.scroll =
         (state.lighting.scroll + if delta < 0 { 40.0 } else { -40.0 }).clamp(0.0, max);
     Update::rebuild()
@@ -960,7 +960,7 @@ unsafe fn field(state: &mut State, id: u16, value: &str, r: color::Rect, max: us
             ((r.height - 2.0) * f64::from(state.scale)).round() as i32,
             1,
         );
-        if r.y < 128.0 || r.y + r.height > f64::from(state.height) / f64::from(state.scale) - 35.0 {
+        if r.y < 128.0 || r.y + r.height > f64::from(state.height) / f64::from(state.scale) {
             ShowWindow(*hwnd, SW_HIDE);
         }
     }

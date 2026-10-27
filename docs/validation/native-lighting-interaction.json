@@ -8,11 +8,14 @@
   "edited_slot_saved": "#a1b2c3",
   "evidence": "actual HWND mouse/EDIT notifications and worker persistence; no OS pointer injection or hardware proof",
   "native_edit_draft_switch_isolated": true,
+  "native_failure_dialog_acknowledged": true,
   "opaque_slot_preserved": true,
   "physical_discovery_disabled": true,
   "scale": 1.25,
   "source_layout_client_css_width": 1307.2,
   "source_region0_readback_not_modeled": true,
   "transport": "simulated only",
-  "test_source_sha256": "0336549d1f2de20358d27232988e5c73698af50d602848651dc2918dbc4f294c"
+  "source_viewport": true,
+  "reserved_footer_css": 0,
+  "test_source_sha256": "7ef6cf8d0eddc4fe68346891c936288e5d436d7ff3b972e7df4c469b7debb7e3"
 }

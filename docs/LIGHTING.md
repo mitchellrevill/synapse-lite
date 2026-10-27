@@ -8,7 +8,7 @@ Firmware effect support is deliberately bounded; see the backend coverage below.
 
 Local fonts, recovered icon artwork and inert CSS-canvas color tables are provisioned into ignored `target/native-assets`; proprietary bundles/assets are not embedded or committed. `native_editor/provision_lighting_assets.cjs` records provenance and creates the lighting assets from explicit local source inputs without executing vendor JavaScript.
 
-This remains a partial native port. GDI rasterization, hover/transition details, all clipping/modal states and the extra35px native status footer have not been proved pixel-identical to Synapse. Source-derived layout tests and native-message checks do not replace that final gate. Physical brightness checks, host-runtime simulator checks and read-only mode evidence are documented separately in [LIGHTING-BRIGHTNESS.md](LIGHTING-BRIGHTNESS.md), [LIGHTING-RUNTIME.md](LIGHTING-RUNTIME.md) and [LIGHTING-MODE.md](LIGHTING-MODE.md).
+This remains a partial native port. The extra status footer has been removed from audited device pages using the recovered [viewport contract](VIEWPORT.md). GDI rasterization, hover/transition details and all clipping/modal states remain unproved. Acknowledged native failure dialogs are an explicit adaptation. Source-derived layout tests and native-message checks do not replace the pixel-parity gate. Physical brightness checks, host-runtime simulator checks and read-only mode evidence are documented separately in [LIGHTING-BRIGHTNESS.md](LIGHTING-BRIGHTNESS.md), [LIGHTING-RUNTIME.md](LIGHTING-RUNTIME.md) and [LIGHTING-MODE.md](LIGHTING-MODE.md).
 
 ## Retained profile contract
 

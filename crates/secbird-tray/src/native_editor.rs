@@ -29,6 +29,7 @@ use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
 mod color_editor_layout;
 mod color_editor_view;
+mod feedback;
 #[cfg(test)]
 mod interaction_tests;
 mod lighting_layout;
@@ -39,14 +40,18 @@ mod power_layout;
 mod power_view;
 mod profile_files;
 mod source_layout;
+mod viewport;
 
 const CLASS: &str = "SynapseLiteNativeEditor";
 const RESPONSE_TIMER: usize = 71;
 const SMOKE_TIMER: usize = 72;
 const PROFILE_DIALOG: u32 = WM_APP + 91;
 const PROFILE_RENAME: u32 = WM_APP + 92;
+const FAILURE_DIALOG: u32 = WM_APP + 93;
+const FAILURE_TITLE: &str = "Synapse Lite - Action failed";
 const PERFORMANCE_REPEAT: usize = 73;
 const LIGHTING_REPEAT: usize = 74;
+const FAILURE_RETRY: usize = 75;
 const BG: u32 = 0x222222;
 const PANEL: u32 = 0x111111;
 const TEXT: u32 = 0xcccccc;
@@ -712,6 +717,7 @@ struct State {
     pending: usize,
     pending_jobs: VecDeque<Job>,
     closing: bool,
+    failures: feedback::Failures,
     performance: Option<Performance>,
     performance_owner: Option<(String, String)>,
     performance_scroll: f64,
@@ -747,6 +753,24 @@ impl Drop for State {
 }
 
 impl State {
+    fn source_viewport(&self) -> bool {
+        self.device()
+            .and_then(|d| d["pid"].as_str())
+            .is_some_and(|pid| viewport::covered(pid, self.tab.title()))
+    }
+    fn content_bottom_css(&self) -> f64 {
+        viewport::bottom(
+            f64::from(self.height) / f64::from(self.scale),
+            self.source_viewport(),
+        )
+    }
+    fn content_bottom_px(&self) -> i32 {
+        if self.source_viewport() {
+            self.height
+        } else {
+            self.height - self.px(35)
+        }
+    }
     fn lighting_point(&self, point: POINT) -> lighting_view::Point {
         lighting_view::Point {
             x: f64::from(point.x) / f64::from(self.scale),
@@ -969,7 +993,7 @@ impl State {
                 })
                 .map(|(_, row)| *row);
         }
-        if logical_y < 128.0 || logical_y >= f64::from(self.height) / f64::from(self.scale) - 35.0 {
+        if logical_y < 128.0 || logical_y >= self.content_bottom_css() {
             self.performance_hover = None;
         }
         match self.performance_gesture {
@@ -1052,7 +1076,7 @@ impl State {
             SendMessageW(control, EM_SETLIMITTEXT, 6, 0);
             SendMessageW(control, EM_SETMARGINS, 3, 0);
             let top = (self.px(128) - px(rect.y + 1.0)).clamp(0, px(24.0));
-            let bottom = (self.height - self.px(35) - px(rect.y + 1.0)).clamp(0, px(24.0));
+            let bottom = (self.content_bottom_px() - px(rect.y + 1.0)).clamp(0, px(24.0));
             let region = CreateRectRgn(0, top.min(bottom), px(41.0), bottom);
             if !region.is_null() && SetWindowRgn(control, region, 1) == 0 {
                 DeleteObject(region);
@@ -1196,6 +1220,8 @@ impl State {
             "performance_scroll_css": self.performance_scroll,
             "presentation_only_override": matches!(requested.as_str(),"mouse-performance-independent"|"mouse-performance-hidden"),
             "failed": self.failed,
+            "source_viewport":self.source_viewport(),
+            "reserved_footer_css":if self.source_viewport(){0}else{35},
             "fidelity": "partial source-derived native port; pixel identity unproven"
         });
         match serde_json::to_vec_pretty(&report)
@@ -1226,6 +1252,9 @@ impl State {
     }
 
     unsafe fn queue(&mut self, job: Job) {
+        self.submit(job, true);
+    }
+    unsafe fn submit(&mut self, job: Job, user_operation: bool) {
         if self.pending > 0 {
             if let Err(error) = enqueue_setting(&mut self.pending_jobs, job) {
                 self.error(error);
@@ -1233,11 +1262,17 @@ impl State {
             InvalidateRect(self.hwnd, null(), 0);
             return;
         }
+        if user_operation && !matches!(&job, Job::Refresh | Job::Rescan) {
+            self.failures.new_operation();
+        }
         if self.jobs.send(job).is_ok() {
             self.pending += 1;
             self.status = "Working…".into();
             self.failed = false;
             SetTimer(self.hwnd, RESPONSE_TIMER, 40, None);
+            InvalidateRect(self.hwnd, null(), 0);
+        } else {
+            self.error("The native device worker is unavailable; this operation was not accepted");
             InvalidateRect(self.hwnd, null(), 0);
         }
     }
@@ -1276,8 +1311,12 @@ impl State {
             if let Some(buttons) = reply.buttons {
                 self.buttons = buttons["buttons"].as_array().cloned().unwrap_or_default();
             }
-            self.status = reply.status;
-            self.failed = reply.failed;
+            if reply.failed {
+                self.error(&reply.status);
+            } else {
+                self.status = reply.status;
+                self.failed = false;
+            }
             if !reply.notices.is_empty() {
                 self.status = format!(
                     "{} — {} compatibility notices (see Help)",
@@ -1319,10 +1358,10 @@ impl State {
                 }
                 if self.smoke_requested.as_deref() == Some("mouse-performance-polling") {
                     if let Some((g, _)) = performance_view::layout(self) {
-                        self.performance_scroll =
-                            (g.polling_widget.y + g.polling_widget.height + 20.0
-                                - (f64::from(self.height) / f64::from(self.scale) - 35.0))
-                                .max(0.0);
+                        self.performance_scroll = viewport::card_scroll_max(
+                            g.polling_widget.y + g.polling_widget.height,
+                            self.content_bottom_css(),
+                        );
                     }
                 }
             }
@@ -1331,10 +1370,10 @@ impl State {
         }
         if self.pending == 0 {
             if let Some(job) = self.pending_jobs.pop_front() {
-                self.queue(job);
+                self.submit(job, false);
             } else {
                 KillTimer(self.hwnd, RESPONSE_TIMER);
-                if self.closing {
+                if self.closing && !self.failures.outstanding() {
                     PostMessageW(self.hwnd, WM_CLOSE, 0, 0);
                 }
             }
@@ -1801,6 +1840,11 @@ impl State {
     fn error(&mut self, message: &str) {
         self.status = message.into();
         self.failed = true;
+        if self.failures.record(message) {
+            unsafe {
+                PostMessageW(self.hwnd, FAILURE_DIALOG, 0, 0);
+            }
+        }
     }
 }
 
@@ -2272,15 +2316,12 @@ unsafe fn paint(state: &mut State, dc: HDC) {
             }
             Tab::Performance => {
                 let saved = SaveDC(p.dc);
-                IntersectClipRect(p.dc, 0, p.px(128), state.width, state.height - p.px(35));
+                IntersectClipRect(p.dc, 0, p.px(128), state.width, state.content_bottom_px());
                 let previous_hits = p.hits.len();
                 let source_view = performance_view::paint(state, &mut p, &device);
                 for hit in p.hits.iter_mut().skip(previous_hits) {
                     hit.rect.top = hit.rect.top.max((128.0 * state.scale).round() as i32);
-                    hit.rect.bottom = hit
-                        .rect
-                        .bottom
-                        .min(state.height - (35.0 * state.scale).round() as i32);
+                    hit.rect.bottom = hit.rect.bottom.min(state.content_bottom_px());
                 }
                 let mut index = 0usize;
                 p.hits.retain(|hit| {
@@ -2388,7 +2429,7 @@ unsafe fn paint(state: &mut State, dc: HDC) {
             }
             Tab::Lighting => {
                 let saved = SaveDC(p.dc);
-                IntersectClipRect(p.dc, 0, p.px(128), state.width, state.height - p.px(35));
+                IntersectClipRect(p.dc, 0, p.px(128), state.width, state.content_bottom_px());
                 let source = lighting_view::paint(state, &mut p, &device);
                 RestoreDC(p.dc, saved);
                 if !source {
@@ -2670,17 +2711,19 @@ unsafe fn paint(state: &mut State, dc: HDC) {
             }
         }
     }
-    p.line(0, height - 35, width, 0);
-    p.text(
-        &state.status,
-        20,
-        height - 33,
-        width - 40,
-        30,
-        p.fonts.small,
-        if state.failed { 0xfd4949 } else { MUTED },
-        DT_LEFT,
-    );
+    if !state.source_viewport() {
+        p.line(0, height - 35, width, 0);
+        p.text(
+            &state.status,
+            20,
+            height - 33,
+            width - 40,
+            30,
+            p.fonts.small,
+            if state.failed { 0xfd4949 } else { MUTED },
+            DT_LEFT,
+        );
+    }
     if state.focus > 0 {
         if let Some(hit) = p.hits.get(state.focus - 1) {
             DrawFocusRect(dc, &hit.rect);
@@ -2725,6 +2768,11 @@ unsafe extern "system" fn window_proc(
                     }) {
                         state.commit_performance_input(id);
                     }
+                    if state.failures.outstanding() {
+                        state.closing = true;
+                        PostMessageW(hwnd, FAILURE_DIALOG, 0, 0);
+                        return 0;
+                    }
                     if state.pending > 0 || !state.pending_jobs.is_empty() {
                         state.closing = true;
                         ShowWindow(hwnd, SW_HIDE);
@@ -2752,6 +2800,39 @@ unsafe extern "system" fn window_proc(
     let pointer = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut RefCell<State>;
     if pointer.is_null() {
         return DefWindowProcW(hwnd, message, wparam, lparam);
+    }
+    if message == FAILURE_DIALOG {
+        let message = match (*pointer).try_borrow_mut() {
+            Ok(mut state) => state.failures.begin(),
+            Err(_) => {
+                // A different native modal loop may still hold State. Retry at a
+                // bounded cadence; never flood that loop with immediate reposts.
+                SetTimer(hwnd, FAILURE_RETRY, 50, None);
+                return 0;
+            }
+        };
+        if let Some(message) = message {
+            // Native acknowledged error UI is a port adaptation, not a recovered stock toast.
+            MessageBoxW(
+                hwnd,
+                wide(&message).as_ptr(),
+                wide(FAILURE_TITLE).as_ptr(),
+                MB_OK | MB_ICONERROR,
+            );
+            // The modal loop can close the owner. Re-read userdata rather than reuse its pointer.
+            let current = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut RefCell<State>;
+            if !current.is_null() {
+                if let Ok(mut state) = (*current).try_borrow_mut() {
+                    state.failures.acknowledge();
+                    if state.failures.outstanding() {
+                        PostMessageW(hwnd, FAILURE_DIALOG, 0, 0);
+                    } else if state.closing && state.pending == 0 && state.pending_jobs.is_empty() {
+                        PostMessageW(hwnd, WM_CLOSE, 0, 0);
+                    }
+                }
+            }
+        }
+        return 0;
     }
     if message == PROFILE_DIALOG {
         // Common dialogs pump this window's messages. Release the state borrow
@@ -3059,12 +3140,11 @@ unsafe extern "system" fn window_proc(
             if let Some((g, _)) = performance_view::layout(&state) {
                 let bottom = (g.sensitivity_widget.y + g.sensitivity_widget.height)
                     .max(g.polling_widget.y + g.polling_widget.height)
-                    + state.performance_scroll
-                    + 20.0;
-                let viewport = f64::from(state.height) / f64::from(state.scale) - 35.0;
+                    + state.performance_scroll;
+                let viewport = state.content_bottom_css();
                 let delta = f64::from((wparam >> 16) as u16 as i16) / 120.0 * 60.0;
-                state.performance_scroll =
-                    (state.performance_scroll - delta).clamp(0.0, (bottom - viewport).max(0.0));
+                state.performance_scroll = (state.performance_scroll - delta)
+                    .clamp(0.0, viewport::card_scroll_max(bottom, viewport));
                 state.performance_hover = None;
                 state.rebuild_fields();
                 InvalidateRect(hwnd, null(), 0);
@@ -3241,6 +3321,11 @@ unsafe extern "system" fn window_proc(
             SetBkColor(wparam as HDC, rgb(PANEL));
             state.edit_brush as isize
         }
+        WM_TIMER if wparam == FAILURE_RETRY => {
+            KillTimer(hwnd, FAILURE_RETRY);
+            PostMessageW(hwnd, FAILURE_DIALOG, 0, 0);
+            0
+        }
         WM_TIMER if wparam == RESPONSE_TIMER => {
             state.collect();
             0
@@ -3371,6 +3456,7 @@ fn run_window(
             pending: 0,
             pending_jobs: VecDeque::new(),
             closing: false,
+            failures: feedback::Failures::default(),
             performance: None,
             performance_owner: None,
             performance_scroll: 0.0,
