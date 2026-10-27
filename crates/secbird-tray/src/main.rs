@@ -8,6 +8,8 @@ mod apps;
 #[cfg(windows)]
 mod engine;
 #[cfg(windows)]
+mod lighting_runtime;
+#[cfg(windows)]
 mod osd;
 #[cfg(windows)]
 mod native_editor;

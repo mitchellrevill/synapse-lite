@@ -534,7 +534,7 @@ impl Profile {
             if let Some(settings) = &self.lighting_settings {
                 push("source brightness".into(), settings.apply_brightness(dev).map(|_| ()));
                 if settings.needs_runtime() {
-                    push("source idle/display lighting policy".into(), Err(Error::Unsupported("idle/display lighting policies are retained but their host runtime is not implemented".into())));
+                    push("source idle/display lighting policy".into(), Err(Error::Unsupported("idle/display lighting policies require a running host runtime".into())));
                 }
             }
         }

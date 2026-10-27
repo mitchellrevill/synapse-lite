@@ -2,6 +2,8 @@
 
 use secbird_core::{config_dir, discover, hidapi::HidApi, Db, Device, Dimming, Result, Store};
 use std::collections::{HashMap, HashSet};
+use std::cell::RefCell;
+use crate::lighting_runtime::{Config as LightingConfig, DeviceIo, Runtime as LightingRuntime};
 use std::time::{Duration, Instant, SystemTime};
 
 pub struct Engine {
@@ -26,6 +28,9 @@ pub struct Engine {
     away: Option<u8>,
     /// Devices that didn't answer [`Engine::lights_back`], and until when to keep trying.
     relight: HashMap<String, Instant>,
+    lighting_runtime: RefCell<LightingRuntime>,
+    #[cfg(test)]
+    runtime_store_path: Option<std::path::PathBuf>,
 }
 
 const FINDER_PAUSE: Duration = Duration::from_secs(10 * 60);
@@ -88,6 +93,9 @@ impl Engine {
             frames_paused_until: None,
             away: None,
             relight: HashMap::new(),
+            lighting_runtime: RefCell::new(LightingRuntime::default()),
+            #[cfg(test)]
+            runtime_store_path: None,
         }
     }
 
@@ -102,6 +110,29 @@ impl Engine {
         assert!(device.path.as_bytes().starts_with(b"sim:"));
         engine.devices.push(device);
         engine.simulated_only = true;
+        Ok(engine)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn with_simulated_keyboard(
+        sim: &secbird_core::sim::Sim,
+        path: std::path::PathBuf,
+    ) -> Result<Self> {
+        HidApi::disable_device_discovery();
+        let mut engine = Self::from_api(HidApi::new()?);
+        let mut dev = sim
+            .open(
+                605,
+                secbird_core::sim::Sim::spec_for(secbird_core::sim::KEYBOARD_PID),
+            )
+            .ok_or_else(|| {
+                secbird_core::Error::InvalidArg("simulated keyboard did not answer".into())
+            })?;
+        assert!(dev.path.as_bytes().starts_with(b"sim:"));
+        dev.interface = 2;
+        engine.devices.push(dev);
+        engine.simulated_only = true;
+        engine.runtime_store_path = Some(path);
         Ok(engine)
     }
 
@@ -142,7 +173,7 @@ impl Engine {
         self.live_seq += 1;
         self.live_dpi.insert(key.to_string(), (x, y));
         let Some(dev) = self.devices.iter().find(|d| d.key() == key) else { return };
-        if let Ok(mut store) = Self::store() {
+        if let Ok(mut store) = self.load_store() {
             let p = store.for_device(dev);
             let name = p.effective(self.foreground.as_deref()).to_string();
             if let Some(profile) = p.profiles.get_mut(&name) {
@@ -168,7 +199,7 @@ impl Engine {
             return Vec::new();
         }
         let before = std::mem::replace(&mut self.foreground, exe);
-        let Ok(mut store) = Self::store() else { return Vec::new() };
+        let Ok(mut store) = self.load_store() else { return Vec::new() };
         let changed: Vec<String> = self
             .devices
             .iter()
@@ -186,7 +217,7 @@ impl Engine {
     fn refresh_apps(&mut self) {
         let stamp = std::fs::metadata(config_dir().join("profiles.json")).and_then(|m| m.modified()).ok();
         if stamp != self.apps_read || stamp.is_none() {
-            self.apps = Self::store().map(|s| s.apps()).unwrap_or_default();
+            self.apps = self.load_store().map(|s| s.apps()).unwrap_or_default();
             self.apps_read = stamp;
         }
     }
@@ -218,7 +249,7 @@ impl Engine {
     /// Failures are left out: a mouse off its dock or asleep doesn't answer, and the
     /// colour stays until the next check.
     pub fn refresh_battery_lights(&self) {
-        let Ok(mut store) = Self::store() else { return };
+        let Ok(mut store) = self.load_store() else { return };
         for dev in self.devices.iter().filter(|d| d.spec.as_ref().is_some_and(|s| s.wireless)) {
             let p = store.for_device(dev);
             let name = p.effective(self.foreground()).to_string();
@@ -235,7 +266,7 @@ impl Engine {
         if self.away.is_some() || self.frames_paused_until.is_some_and(|t| Instant::now() < t) {
             return;
         }
-        let Ok(mut store) = Self::store() else { return };
+        let Ok(mut store) = self.load_store() else { return };
         let wired_boards = self.devices.iter().filter(|d| {
             d.matrix().is_some()
                 && d.spec.as_ref().is_some_and(|s| {
@@ -243,6 +274,7 @@ impl Engine {
                 })
         });
         for dev in wired_boards {
+            if dev.pid==605 && (!self.lighting_runtime.borrow().owner_clear() || self.lighting_runtime.borrow().blocks_frames(&dev.key())) {continue;}
             let p = store.for_device(dev);
             let name = p.effective(self.foreground()).to_string();
             p.refresh_frame(&name, dev);
@@ -255,7 +287,7 @@ impl Engine {
         if self.away.is_some() {
             return;
         }
-        let Ok(mut store) = Self::store() else { return };
+        let Ok(mut store) = self.load_store() else { return };
         let laptops = self.devices.iter().filter(|d| d.spec.as_ref().is_some_and(|s| s.kind == secbird_core::Kind::Laptop));
         for dev in laptops {
             let p = store.for_device(dev);
@@ -274,6 +306,7 @@ impl Engine {
     pub fn lights_away(&mut self, percent: u8) {
         self.away = Some(percent);
         self.relight.clear();
+        self.refresh_lighting_runtime();
         self.each_zone(|dev, led| {
             let saved = dev.brightness(led)?;
             dev.set_brightness_live(led, (saved as u32 * percent as u32 / 100) as u8)
@@ -287,10 +320,15 @@ impl Engine {
         if self.away.take().is_none() {
             return Vec::new();
         }
+        self.refresh_lighting_runtime();
         let missed = self.each_zone(|dev, led| dev.set_brightness_live(led, dev.brightness(led)?));
         let until = Instant::now() + RELIGHT_FOR;
         self.relight = missed.into_iter().map(|key| (key, until)).collect();
-        self.apply(&self.all_keys())
+        let mut store=self.load_store().ok();
+        let legacy_keys=self.devices.iter().filter(|dev| {
+            !store.as_mut().is_some_and(|store|dev.pid==605 && self.lighting_runtime.borrow().manages(&dev.key(),&self.lighting_config(dev,store)))
+        }).map(Device::key).collect::<Vec<_>>();
+        self.apply(&legacy_keys)
     }
 
     /// [`Engine::lights_back`] again for the devices that missed it, until they answer or
@@ -323,9 +361,14 @@ impl Engine {
     /// Run `f` on each lighting zone of each device whose lighting this app controls.
     /// Returns the keys of the devices where `f` failed: an asleep wireless device doesn't answer.
     fn each_zone(&self, f: impl Fn(&Device, u8) -> Result<()>) -> Vec<String> {
-        let Ok(mut store) = Self::store() else { return Vec::new() };
+        let Ok(mut store) = self.load_store() else { return Vec::new() };
         let mut failed = Vec::new();
         for dev in &self.devices {
+            if dev.pid==605 {
+                let config=self.lighting_config(dev,&mut store);
+                let runtime=self.lighting_runtime.borrow();
+                if runtime.stopping || runtime.manages(&dev.key(),&config) || (runtime.running && !runtime.owner_clear()) {continue;}
+            }
             if store.for_device(dev).lighting_off {
                 continue;
             }
@@ -369,6 +412,8 @@ impl Engine {
             })
             .collect();
         self.synapse = secbird_core::debloat::synapse_running();
+        self.lighting_runtime.borrow_mut().invalidate_all();
+        self.refresh_lighting_runtime();
         self.devices.iter().map(|d| d.key()).filter(|k| !before.contains(k)).collect()
     }
 
@@ -380,6 +425,109 @@ impl Engine {
     /// Read profiles fresh from disk, so changes made with the CLI are picked up.
     fn store() -> Result<Store> {
         Store::load(&config_dir().join("profiles.json"))
+    }
+
+    fn load_store(&self) -> Result<Store> {
+        #[cfg(test)]
+        if let Some(path) = &self.runtime_store_path {
+            return Store::load(path);
+        }
+        Self::store()
+    }
+    fn lighting_config(&self, dev: &Device, store: &mut Store) -> LightingConfig {
+        let profiles = store.for_device(dev);
+        let name = profiles.effective(self.foreground()).to_string();
+        let mut config = LightingConfig::from_profile(
+            &name,
+            &profiles.profiles[&name],
+            !profiles.lighting_off,
+            self.away,
+        );
+        if dev.pid == 605 && dev.interface != 2 {
+            config.error = Some("host lighting bridge requires verified Ornata interface2".into());
+        }
+        config
+    }
+    /// Standalone editors do not claim a continuously running host policy service.
+    pub fn start_lighting_runtime(&self) {
+        self.lighting_runtime.borrow_mut().start();
+        self.refresh_lighting_runtime();
+    }
+    pub fn set_lighting_display_off(&self, off: bool) {
+        self.lighting_runtime.borrow_mut().environment.display_off = Some(off);
+        self.refresh_lighting_runtime();
+    }
+    pub fn refresh_lighting_runtime(&self) {
+        self.lighting_runtime.borrow_mut().sample_host();
+        let mut store = match self.load_store() {
+            Ok(store) => store,
+            Err(error) => {
+                self.lighting_runtime
+                    .borrow_mut()
+                    .store_error(&error.to_string());
+                return;
+            }
+        };
+        let keys = self
+            .devices
+            .iter()
+            .filter(|d| d.pid == 605)
+            .map(Device::key)
+            .collect();
+        self.lighting_runtime.borrow_mut().retain(&keys);
+        for dev in self.devices.iter().filter(|d| d.pid == 605) {
+            let config = self.lighting_config(dev, &mut store);
+            self.lighting_runtime
+                .borrow_mut()
+                .reconcile(&dev.key(), &config, &mut DeviceIo(dev));
+        }
+    }
+    /// Re-sample input immediately after an action; do not leave a new saved value
+    /// visible until the next timer when display/idle suppression is still active.
+    pub fn request_lighting_refresh(&self) {
+        self.lighting_runtime.borrow_mut().invalidate_all();
+        self.refresh_lighting_runtime();
+    }
+    pub fn lighting_runtime_status(&self) -> serde_json::Value {
+        let mut status = self.lighting_runtime.borrow().status();
+        for dev in self.devices.iter().filter(|d| d.pid == 605) {
+            let key = dev.key();
+            if status.get(&key).is_none() {
+                status[&key] = serde_json::json!({"available":false,"can_execute_policies":false,"suppressed":false,"blocked_reason":"host-runtime-not-yet-sampled","error":null});
+            }
+        }
+        status
+    }
+    /// Release only our live overrides, with bounded attempts and ownership gates.
+    pub fn shutdown_lighting_runtime(&self) -> Vec<String> {
+        if !self.lighting_runtime.borrow().running {
+            return Vec::new();
+        }
+        self.lighting_runtime.borrow_mut().stopping = true;
+        for _ in 0..3 {
+            self.refresh_lighting_runtime();
+            if !self.lighting_runtime.borrow().has_pending_restore() {
+                break;
+            }
+        }
+        let status = self.lighting_runtime.borrow().status();
+        let failures = status
+            .as_object()
+            .into_iter()
+            .flat_map(|items| items.iter())
+            .filter(|(_, value)| value["restoration_pending"] == true)
+            .map(|(key, value)| {
+                format!(
+                    "{key}: {}",
+                    value["error"]
+                        .as_str()
+                        .or_else(|| value["blocked_reason"].as_str())
+                        .unwrap_or("live brightness restoration did not complete")
+                )
+            })
+            .collect();
+        self.lighting_runtime.borrow_mut().finish_stop();
+        failures
     }
 
     /// Profile names for a device and which one is active.
@@ -395,44 +543,91 @@ impl Engine {
 
     /// The profile a device shows right now (see [`Engine::set_foreground`]).
     pub fn effective_profile(&self, dev: &Device) -> String {
-        Self::store().map(|mut s| s.for_device(dev).effective(self.foreground()).to_string()).unwrap_or_default()
+        self.load_store().map(|mut s| s.for_device(dev).effective(self.foreground()).to_string()).unwrap_or_default()
     }
 
     /// Apply the current profile of each listed device (by [`Device::key`]): the one tied
     /// to the program in front, else the active one.
     pub fn apply(&self, keys: &[String]) -> Vec<ApplyReport> {
-        let mut store = Self::store();
-        self.devices
+        self.lighting_runtime.borrow_mut().sample_host();
+        let mut store = self.load_store();
+        let mut reports: Vec<ApplyReport> = self
+            .devices
             .iter()
-            .filter(|d| keys.contains(&d.key()))
+            .filter(|dev| keys.contains(&dev.key()))
             .map(|dev| match &mut store {
                 Ok(store) => {
-                    let p = store.for_device(dev);
-                    // Lights stay down while away (a lock screen in front switches profiles);
-                    // this copy of the store is never saved.
-                    p.lighting_off |= self.away.is_some();
-                    let name = p.effective(self.foreground()).to_string();
-                    let failures = p
+                    let config = self.lighting_config(dev, store);
+                    let runtime = self.lighting_runtime.borrow();
+                    let handled = dev.pid == 605 && runtime.can_execute(&config);
+                    let blocked = dev.pid == 605
+                        && (runtime.stopping
+                            || (runtime.running && runtime.should_suppress(&config)));
+                    drop(runtime);
+                    let profiles = store.for_device(dev);
+                    profiles.lighting_off |= self.away.is_some() || blocked;
+                    let name = profiles.effective(self.foreground()).to_string();
+                    let failures = profiles
                         .apply(&name, dev)
                         .into_iter()
-                        .filter_map(|a| a.result.err().map(|e| format!("{}: {e}", a.setting)))
+                        .filter_map(|outcome| {
+                            if handled && outcome.setting == "source idle/display lighting policy" {
+                                return None;
+                            }
+                            outcome
+                                .result
+                                .err()
+                                .map(|error| format!("{}: {error}", outcome.setting))
+                        })
                         .collect();
-                    ApplyReport { device: dev.name(), profile: name, failures }
+                    ApplyReport {
+                        device: dev.name(),
+                        profile: name,
+                        failures,
+                    }
                 }
-                Err(e) => ApplyReport {
+                Err(error) => ApplyReport {
                     device: dev.name(),
                     profile: String::new(),
-                    failures: vec![format!("profiles.json: {e}")],
+                    failures: vec![format!("profiles.json: {error}")],
                 },
             })
-            .collect()
+            .collect();
+        self.lighting_runtime.borrow_mut().invalidate(keys);
+        self.refresh_lighting_runtime();
+        let status = self.lighting_runtime.borrow().status();
+        for (dev, report) in self
+            .devices
+            .iter()
+            .filter(|dev| keys.contains(&dev.key()))
+            .zip(&mut reports)
+        {
+            if dev.pid != 605 {
+                continue;
+            }
+            let state = &status[dev.key()];
+            if let Some(error) = state["error"].as_str() {
+                report
+                    .failures
+                    .push(format!("source lighting runtime: {error}"));
+            } else if self.lighting_runtime.borrow().running {
+                if let Some(reason) = state["blocked_reason"].as_str().filter(|r| {
+                    *r != "no-retained-source-brightness" && *r != "lighting-ownership-disabled"
+                }) {
+                    report
+                        .failures
+                        .push(format!("source lighting runtime blocked: {reason}"));
+                }
+            }
+        }
+        reports
     }
 
     /// Wireless mice that dropped their button remaps while asleep (#45) get them back.
     /// `skip` holds keys re-sent moments ago, left alone so a mouse that keeps losing
     /// them isn't written over and over. Returns the keys re-sent, with their reports.
     pub fn restore_lost_buttons(&self, skip: &HashSet<String>) -> Vec<(String, ApplyReport)> {
-        let Ok(mut store) = Self::store() else { return Vec::new() };
+        let Ok(mut store) = self.load_store() else { return Vec::new() };
         self.devices
             .iter()
             .filter(|d| d.spec.as_ref().is_some_and(|s| s.wireless && s.kind == secbird_core::Kind::Mouse))
@@ -460,7 +655,7 @@ impl Engine {
     /// Make `name` the active profile for a device and apply it.
     /// Every mouse's remapped buttons back to what the mouse stores. Returns (device, count).
     pub fn restore_buttons(&self) -> Vec<(String, Result<usize>)> {
-        let mut store = match Self::store() {
+        let mut store = match self.load_store() {
             Ok(s) => s,
             Err(e) => return vec![("profiles".into(), Err(e))],
         };
@@ -477,7 +672,7 @@ impl Engine {
             .iter()
             .find(|d| d.key() == key)
             .ok_or_else(|| secbird_core::Error::NotFound(format!("device {key}")))?;
-        let mut store = Self::store()?;
+        let mut store = self.load_store()?;
         store.for_device(dev).switch(name)?;
         store.save()?;
         Ok(self.apply(&[key.to_string()]))
@@ -490,5 +685,230 @@ impl Engine {
             n if twins > 1 && n > 0 => format!("{} ({})", dev.name(), &dev.serial[n.saturating_sub(4)..]),
             _ => dev.name(),
         }
+    }
+}
+
+#[cfg(test)]
+mod lighting_runtime_tests {
+    use super::*;
+    use crate::lighting_runtime::{Environment, Owner};
+    use secbird_core::{
+        lighting::{Brightness, LightingSettings, SwitchOffLighting},
+        sim::Sim,
+    };
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    static SEQUENCE: AtomicUsize = AtomicUsize::new(0);
+    struct Fixture {
+        engine: Engine,
+        sim: Sim,
+        folder: std::path::PathBuf,
+        key: String,
+    }
+    impl Fixture {
+        fn new() -> Self {
+            let folder = std::env::temp_dir().join(format!(
+                "synapse-host-lighting-{}-{}",
+                std::process::id(),
+                SEQUENCE.fetch_add(1, Ordering::Relaxed)
+            ));
+            let path = folder.join("profiles.json");
+            let sim = Sim::keyboard();
+            let engine = Engine::with_simulated_keyboard(&sim, path.clone()).unwrap();
+            let dev = &engine.devices[0];
+            let key = dev.key();
+            dev.set_brightness(5, 73).unwrap();
+            let mut store = Store::load(&path).unwrap();
+            let settings = LightingSettings {
+                brightness: Some(Brightness {
+                    value: 73,
+                    ..Default::default()
+                }),
+                switch_off: Some(SwitchOffLighting {
+                    idle_enabled: true,
+                    display_off: true,
+                    ..Default::default()
+                }),
+                ..Default::default()
+            };
+            settings
+                .store_in_profile(store.for_device(dev).active_mut())
+                .unwrap();
+            store.for_device(dev).active_mut().keys = vec![secbird_core::Rgb(1, 2, 3); 6 * 22];
+            store.save().unwrap();
+            engine.lighting_runtime.borrow_mut().test_environment = Some(Environment {
+                now_ms: 60_000,
+                idle_ms: Ok(60_000),
+                display_off: Some(false),
+                owner: Owner::Clear,
+            });
+            sim.state().log.clear();
+            Self {
+                engine,
+                sim,
+                folder,
+                key,
+            }
+        }
+        fn environment(&self, idle: u64, display: bool, owner: Owner) {
+            self.engine.lighting_runtime.borrow_mut().test_environment = Some(Environment {
+                now_ms: 60_000 + idle,
+                idle_ms: Ok(idle),
+                display_off: Some(display),
+                owner,
+            });
+        }
+        fn edit(&self, change: impl FnOnce(&mut Store, &Device)) {
+            let mut store = self.engine.load_store().unwrap();
+            change(&mut store, &self.engine.devices[0]);
+            store.save().unwrap();
+        }
+    }
+    impl Drop for Fixture {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_file(self.folder.join("profiles.json"));
+            let _ = std::fs::remove_dir(&self.folder);
+        }
+    }
+    #[test]
+    fn engine_composes_global_dim_blocks_frames_and_releases_on_shutdown_without_effect_writes() {
+        let mut f = Fixture::new();
+        f.engine.start_lighting_runtime();
+        assert_eq!(f.sim.state().live_brightness[&5], 0);
+        let before = f.sim.state().log.len();
+        f.engine.refresh_lighting_runtime();
+        f.engine.refresh_frames();
+        assert_eq!(f.sim.state().log.len(), before);
+        f.engine.lights_away(50);
+        assert_eq!(f.sim.state().live_brightness[&5], 0);
+        f.environment(0, false, Owner::Clear);
+        f.engine.request_lighting_refresh();
+        assert_eq!(
+            f.sim.state().live_brightness[&5],
+            91,
+            "73% * 50% = 36%, encoded to91"
+        );
+        f.engine.lights_back();
+        assert_eq!(f.sim.state().live_brightness[&5], 186);
+        f.environment(60_000, true, Owner::Clear);
+        f.engine.request_lighting_refresh();
+        assert_eq!(f.sim.state().live_brightness[&5], 0);
+        assert!(f.engine.shutdown_lighting_runtime().is_empty());
+        assert_eq!(f.sim.state().live_brightness[&5], 186);
+        assert_eq!(f.engine.devices[0].brightness(5).unwrap(), 73);
+        assert!(f
+            .sim
+            .state()
+            .log
+            .iter()
+            .all(|c| *c == secbird_core::commands::MATRIX_BRIGHTNESS
+                || *c == secbird_core::commands::MATRIX_BRIGHTNESS.get()
+                || *c == secbird_core::commands::ACTIVE_SLOT.get()));
+        assert_eq!(
+            f.engine.lighting_runtime_status()[&f.key]["can_execute_policies"],
+            false
+        );
+        let before = f.sim.state().log.len();
+        f.engine.refresh_frames();
+        f.engine.lights_away(0);
+        f.engine.request_lighting_refresh();
+        assert_eq!(
+            f.sim.state().log.len(),
+            before,
+            "late display/global-away events must not undo shutdown restoration"
+        );
+    }
+    #[test]
+    fn engine_uses_latest_profile_value_and_respects_owner_revocation_and_competing_processes() {
+        let f = Fixture::new();
+        f.engine.start_lighting_runtime();
+        f.edit(|store, dev| {
+            let profiles = store.for_device(dev);
+            profiles.create("Other").unwrap();
+            profiles.active = "Other".into();
+            let mut settings = profiles.active().lighting_settings.clone().unwrap();
+            settings.brightness.as_mut().unwrap().set_value(41).unwrap();
+            settings.store_in_profile(profiles.active_mut()).unwrap();
+        });
+        f.engine.request_lighting_refresh();
+        assert_eq!(f.sim.state().live_brightness[&5], 0);
+        f.environment(
+            0,
+            false,
+            Owner::Competing(vec!["RazerAppEngine.exe".into()]),
+        );
+        let before = f.sim.state().log.len();
+        f.engine.request_lighting_refresh();
+        f.engine.refresh_frames();
+        assert_eq!(f.sim.state().log.len(), before);
+        assert!(f.engine.lighting_runtime_status()[&f.key]["blocked_reason"]
+            .as_str()
+            .unwrap()
+            .contains("competing"));
+        f.environment(0, false, Owner::Clear);
+        f.edit(|store, dev| store.for_device(dev).lighting_off = true);
+        f.engine.request_lighting_refresh();
+        assert_eq!(f.sim.state().log.len(), before);
+        f.edit(|store, dev| store.for_device(dev).lighting_off = false);
+        f.engine.request_lighting_refresh();
+        assert_eq!(
+            f.sim.state().live_brightness[&5],
+            104,
+            "restore current41 rather than old73"
+        );
+        assert_eq!(
+            f.engine.devices[0].brightness(5).unwrap(),
+            73,
+            "runtime never changes saved hardware brightness"
+        );
+    }
+    #[test]
+    fn shutdown_reports_unrestored_lease_without_fighting_a_competing_owner() {
+        let f = Fixture::new();
+        f.engine.start_lighting_runtime();
+        f.environment(
+            0,
+            false,
+            Owner::Competing(vec!["RazerAppEngine.exe".into()]),
+        );
+        let before = f.sim.state().log.len();
+        let failures = f.engine.shutdown_lighting_runtime();
+        assert_eq!(failures.len(), 1);
+        assert!(failures[0].contains("competing-synapse-owner"));
+        assert_eq!(f.sim.state().log.len(), before);
+        assert_eq!(
+            f.engine.lighting_runtime_status()[&f.key]["restoration_pending"],
+            true
+        );
+    }
+
+    #[test]
+    fn engine_handles_core_policy_outcome_only_when_its_actual_gate_is_ready() {
+        let f = Fixture::new();
+        f.environment(0, false, Owner::Clear);
+        f.edit(|store, dev| store.for_device(dev).active_mut().keys.clear());
+        let mut store = f.engine.load_store().unwrap();
+        let core = store
+            .for_device(&f.engine.devices[0])
+            .active()
+            .apply(&f.engine.devices[0]);
+        assert!(core
+            .iter()
+            .any(|r| r.setting == "source idle/display lighting policy" && r.result.is_err()));
+        f.engine.start_lighting_runtime();
+        let reports = f.engine.apply(std::slice::from_ref(&f.key));
+        assert!(reports[0].failures.is_empty());
+        f.environment(0, false, Owner::Unknown("unavailable".into()));
+        let reports = f.engine.apply(std::slice::from_ref(&f.key));
+        assert!(reports[0]
+            .failures
+            .iter()
+            .any(|e| e.contains("owner-check-unavailable")));
+        f.environment(60_000, false, Owner::Clear);
+        f.sim.state().leds.clear();
+        let reports = f.engine.apply(std::slice::from_ref(&f.key));
+        assert!(reports[0]
+            .failures
+            .iter()
+            .any(|e| e.contains("source lighting runtime")));
     }
 }

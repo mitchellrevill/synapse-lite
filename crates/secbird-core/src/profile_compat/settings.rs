@@ -55,7 +55,7 @@ pub(super) fn import_keyboard_lighting(
     if settings.brightness.is_some() || settings.switch_off.is_some() {
         settings.validate()?;
         if settings.needs_runtime() {
-            warnings.push(format!("{name}: idle/display switch-off settings are retained; their host runtime is not implemented"));
+            warnings.push(format!("{name}: idle/display switch-off settings are retained and require a running host runtime"));
         }
         settings.store_in_profile(profile)?;
     }

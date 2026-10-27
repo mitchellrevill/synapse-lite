@@ -265,8 +265,6 @@ pub fn run() {
         register_hid_notifications(hwnd);
         // Locking and the screen turning off, for the lights while away (#48). Windows
         // sends the display state once right away.
-        WTSRegisterSessionNotification(hwnd, NOTIFY_FOR_THIS_SESSION);
-        RegisterPowerSettingNotification(hwnd, &GUID_CONSOLE_DISPLAY_STATE, DEVICE_NOTIFY_WINDOW_HANDLE);
         // Event-driven, no polling: Windows calls back on this thread when the window
         // in front changes, and nothing runs in between.
         TRAY_HWND.store(hwnd, Ordering::Relaxed);
@@ -314,6 +312,11 @@ pub fn run() {
                 screen_off: false,
             })
         });
+        with_app(|app| app.engine().start_lighting_runtime());
+        // Register only after App exists, so the initial display-state message is
+        // retained instead of being discarded during window construction.
+        WTSRegisterSessionNotification(hwnd, NOTIFY_FOR_THIS_SESSION);
+        RegisterPowerSettingNotification(hwnd, &GUID_CONSOLE_DISPLAY_STATE, DEVICE_NOTIFY_WINDOW_HANDLE);
         log::append("tray started");
         with_app(|app| app.rescan());
         start_retries(hwnd);
@@ -411,7 +414,10 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
                 if same_guid(&setting.PowerSetting, &GUID_CONSOLE_DISPLAY_STATE) {
                     // 0 off, 1 on, 2 dimmed (still on).
                     let off = setting.Data[0] == 0;
-                    with_app(|app| app.set_away(app.locked, off));
+                    with_app(|app| {
+                        app.set_away(app.locked, off);
+                        app.engine().set_lighting_display_off(off);
+                    });
                 }
             }
             TRUE as LRESULT
@@ -462,6 +468,7 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
         WM_TIMER if wparam == TIMER_LIGHTS => {
             with_app(|app| {
                 let mut engine = app.engine();
+                engine.refresh_lighting_runtime();
                 engine.retry_lights_back();
                 engine.refresh_frames();
                 engine.keep_laptops_lit();
@@ -475,8 +482,16 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
             }
             0
         }
+        WM_QUERYENDSESSION => TRUE as LRESULT,
+        WM_ENDSESSION => {
+            if wparam != 0 { with_app(|app| app.shutdown_lighting()); }
+            0
+        }
         WM_DESTROY => {
-            with_app(|app| remove_icon(app.hwnd));
+            with_app(|app| {
+                app.shutdown_lighting();
+                remove_icon(app.hwnd);
+            });
             PostQuitMessage(0);
             0
         }
@@ -536,6 +551,12 @@ impl App {
         // A device that arrives (or wakes) while the PC is locked comes up lit.
         if let Some(percent) = TraySettings::load().away_percent().filter(|_| self.engine().is_away()) {
             self.engine().lights_away(percent);
+        }
+    }
+
+    fn shutdown_lighting(&self) {
+        for failure in self.engine().shutdown_lighting_runtime() {
+            log::append(&format!("lighting restoration on shutdown: {failure}"));
         }
     }
 
