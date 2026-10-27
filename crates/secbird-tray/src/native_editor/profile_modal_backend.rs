@@ -3,6 +3,14 @@ use super::*;
 use profile_modal_model::{Message, Owner, Request};
 use secbird_core::profile_compat::{self, gui};
 
+fn export_preview(backup: &[u8], want: &Owner) -> Result<gui::Preview, String> {
+    // Preview already resolves exact/legacy/connection aliases without rewriting
+    // them. Migrating an alias here could inflate an accepted boundary backup.
+    gui::preview_export(backup, &want.device, &want.profile)
+        .and_then(|preview| preview.preserve_native_backup(backup))
+        .map_err(|e| e.to_string())
+}
+
 fn owner(engine: &Engine, store: &secbird_core::Store, want: &Owner) -> Result<(), String> {
     if !engine.devices().iter().any(|d| d.key() == want.device) {
         return Err("The selected device disconnected; reopen the profile dialog".into());
@@ -34,22 +42,16 @@ fn execute(request: Request, engine: &Arc<Mutex<Engine>>) -> Result<Reply, Strin
         Request::PreviewExport { token, owner: want } => {
             let e = engine.lock().map_err(|_| "Device worker is unavailable")?;
             let backup = server::export_profile_document(None).map_err(|e| e.to_string())?;
-            let mut store = profile_compat::import_document(&backup.bytes)
+            let store = profile_compat::import_document(&backup.bytes)
                 .map_err(|e| e.to_string())?
                 .store;
             owner(&e, &store, &want)?;
-            let actual = e
+            e
                 .devices()
                 .iter()
                 .find(|d| d.key() == want.device)
                 .ok_or("Selected device disconnected")?;
-            store.for_device(actual);
-            let candidate = serde_json::to_vec(&store).map_err(|e| e.to_string())?;
-            let data = Arc::new(
-                gui::preview_export(&candidate, &want.device, &want.profile)
-                    .and_then(|preview| preview.preserve_native_backup(&backup.bytes))
-                    .map_err(|e| e.to_string())?,
-            );
+            let data = Arc::new(export_preview(&backup.bytes, &want)?);
             Ok(Reply {
                 state: None,
                 buttons: None,
@@ -153,5 +155,29 @@ pub(super) fn run(request: Request, engine: &Arc<Mutex<Engine>>) -> Reply {
                 profile_modal: None,
             },
         },
+    }
+}
+
+#[cfg(test)]
+mod boundary_tests {
+    use super::*;
+
+    #[test]
+    fn exact_limit_legacy_backup_previews_without_alias_growth_or_data_loss() {
+        let mut value = json!({"devices":{"025D":{"active":"Synthetic0000","profiles":{}}},"padding":""});
+        for i in 0..1000 {
+            value["devices"]["025D"]["profiles"][format!("Synthetic{i:04}")] =
+                json!({"future":{"keep":true}});
+        }
+        let overhead = serde_json::to_vec(&value).unwrap().len();
+        value["padding"] = json!("x".repeat(2 * 1024 * 1024 - overhead));
+        let bytes = serde_json::to_vec(&value).unwrap();
+        assert_eq!(bytes.len(), 2 * 1024 * 1024);
+        let want = Owner { device: "025D:explicit-unit".into(), profile: "Synthetic0000".into() };
+        let preview = export_preview(&bytes, &want).unwrap();
+        assert_eq!(preview.rows.len(), 1000);
+        assert!(preview.rows.iter().all(|row| row.device_key == "025D"));
+        assert_eq!(preview.full_native_backup(), bytes);
+        assert_eq!(preview.initial_choices(Some(&want.profile)).iter().filter(|c|c.selected).count(), 1);
     }
 }
