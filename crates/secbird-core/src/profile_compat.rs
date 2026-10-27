@@ -161,7 +161,7 @@ pub fn set_source_custom_colors(
     effects.insert("customColors".into(), Value::Array(filled));
     Ok(())
 }
-const MAX_DOCUMENT_BYTES: usize = 2 * 1024 * 1024;
+pub(crate) const MAX_DOCUMENT_BYTES: usize = 2 * 1024 * 1024;
 const MAX_DECODED_BYTES: usize = 1024 * 1024;
 const MAX_JSON_TOKENS: usize = 32_768;
 
@@ -295,11 +295,9 @@ fn import_synapse4(envelope: Value) -> Result<ImportReport> {
 
 /// Check the complete post-merge store before committing an import or profile edit.
 pub fn validate_store_budget(store: &Store) -> Result<()> {
-    let backup = serde_json::to_vec_pretty(store).map_err(|e| invalid(e.to_string()))?;
-    if backup.len() > MAX_DOCUMENT_BYTES {
-        return Err(invalid("Lossless native profile backup would exceed 2 MiB; import refused without discarding fields"));
-    }
-    check_json_complexity(&backup)
+    store.validate_save().map_err(|error| invalid(format!(
+        "Lossless native profile backup refused without discarding fields: {error}"
+    )))
 }
 
 /// A copied native profile is a new Synapse identity even when it retains the
@@ -855,7 +853,7 @@ fn invalid(message: impl Into<String>) -> Error {
 
 // Bound allocation before serde_json creates a Value for a document full of tiny
 // objects. Full syntax validation is still performed by serde_json afterwards.
-fn check_json_complexity(bytes: &[u8]) -> Result<()> {
+pub(crate) fn check_json_complexity(bytes: &[u8]) -> Result<()> {
     let mut in_string = false;
     let mut escaped = false;
     let mut tokens = 0;

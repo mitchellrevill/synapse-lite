@@ -10,6 +10,8 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
+mod storage;
+
 pub const DEFAULT_PROFILE: &str = "Default";
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -306,7 +308,7 @@ impl DeviceProfiles {
 }
 
 /// All profiles on disk, keyed by device (`"0099:SERIAL"`, or `"0099"` without a serial).
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Store {
     #[serde(flatten)]
     pub extra: BTreeMap<String, serde_json::Value>,
@@ -317,17 +319,20 @@ pub struct Store {
 }
 
 impl Store {
+    /// Bounded native JSON for saving or lossless backup. Near the byte limit,
+    /// compact formatting preserves data that pretty whitespace would displace.
+    pub fn native_bytes(&self) -> Result<Vec<u8>> {
+        storage::encode(self)
+    }
+
+    /// Validate the exact persistence budget before a caller sends hardware SETs.
+    /// This performs no file operation or device access.
+    pub fn validate_save(&self) -> Result<()> {
+        self.native_bytes().map(drop)
+    }
+
     pub fn load(path: &Path) -> Result<Self> {
-        let mut store: Store = match std::fs::read_to_string(path) {
-            // Notepad and PowerShell 5 may save with a UTF-8 BOM.
-            Ok(text) => serde_json::from_str(text.trim_start_matches('\u{feff}'))
-                .map_err(|e| Error::Db(format!("{}: {e}", path.display())))?,
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Store::default(),
-            Err(e) => return Err(Error::Db(format!("{}: {e}", path.display()))),
-        };
-        store.path = path.to_path_buf();
-        store.rename_old_buttons();
-        Ok(store)
+        storage::load(path)
     }
 
     /// Button 128 was saved as `top-extra` before 0.5; it is the extra side button (#54).
@@ -350,14 +355,7 @@ impl Store {
 
     /// Write atomically: a crash mid-save never leaves a half-written file.
     pub fn save(&self) -> Result<()> {
-        let io = |e: std::io::Error| Error::Db(format!("{}: {e}", self.path.display()));
-        if let Some(dir) = self.path.parent() {
-            std::fs::create_dir_all(dir).map_err(io)?;
-        }
-        let tmp = self.path.with_extension("json.tmp");
-        let text = serde_json::to_string_pretty(self).map_err(|e| Error::Db(e.to_string()))?;
-        std::fs::write(&tmp, text).map_err(io)?;
-        std::fs::rename(&tmp, &self.path).map_err(io)
+        storage::save(self)
     }
 
     /// Add every profile from `other` (an export). A name that already exists for that

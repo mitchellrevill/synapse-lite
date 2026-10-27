@@ -217,10 +217,9 @@ impl Device {
         Ok(DpiStages { active: a[1], stages, ..Default::default() })
     }
 
-    /// Replace the DPI stages and store them in the device's memory. Values are rounded
-    /// to the device's step; returns what was sent. The device also switches to the active
-    /// stage's DPI.
-    pub fn set_dpi_stages(&self, stages: &DpiStages) -> Result<DpiStages> {
+    /// Pure validation and rounding of DPI stages to this device's range and step.
+    /// Unknown profile metadata is retained; this sends no hardware request.
+    pub fn fitted_dpi_stages(&self, stages: &DpiStages) -> Result<DpiStages> {
         let n = stages.stages.len();
         if !(1..=cmd::MAX_DPI_STAGES).contains(&n) {
             return Err(Error::InvalidArg(format!("{n} DPI stages; 1 to {} are allowed", cmd::MAX_DPI_STAGES)));
@@ -228,17 +227,20 @@ impl Device {
         if !(1..=n as u8).contains(&stages.active) {
             return Err(Error::InvalidArg(format!("active stage {} of {n}", stages.active)));
         }
-        let range = self.spec.as_ref().and_then(|s| s.dpi.as_ref());
-        let fit = |v: u16| match range {
-            Some(r) => Ok(snap(v, r.min, r.max, r.step)),
-            None if (100..=30000).contains(&v) => Ok(v),
-            None => Err(Error::InvalidArg(format!("DPI {v} out of range"))),
-        };
-        let mut sent = DpiStages { active: stages.active, stages: Vec::with_capacity(n), extra: stages.extra.clone() };
-        let mut args = vec![cmd::VARSTORE, stages.active, n as u8];
-        for (i, &(x, y)) in stages.stages.iter().enumerate() {
-            let (x, y) = (fit(x)?, fit(y)?);
-            sent.stages.push((x, y));
+        let fitted = stages.stages.iter().map(|&(x, y)| self.fitted_dpi(x, y))
+            .collect::<Result<Vec<_>>>()?;
+        Ok(DpiStages {
+            active: stages.active,
+            stages: fitted,
+            extra: stages.extra.clone(),
+        })
+    }
+    /// Replace stages using exactly the same pure projection exposed to callers
+    /// staging a complete profile before any hardware mutation.
+    pub fn set_dpi_stages(&self, stages: &DpiStages) -> Result<DpiStages> {
+        let sent = self.fitted_dpi_stages(stages)?;
+        let mut args = vec![cmd::VARSTORE, sent.active, sent.stages.len() as u8];
+        for (i, &(x, y)) in sent.stages.iter().enumerate() {
             let ([xh, xl], [yh, yl]) = (x.to_be_bytes(), y.to_be_bytes());
             args.extend([i as u8, xh, xl, yh, yl, 0, 0]);
         }

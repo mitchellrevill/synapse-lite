@@ -902,7 +902,7 @@ pub(crate) fn export_profile_document(synapse_device: Option<&str>) -> Result<se
     }
     secbird_core::profile_compat::validate_store_budget(&store)?;
     Ok(secbird_core::profile_compat::ExportReport {
-        bytes: serde_json::to_vec_pretty(&store).map_err(|e| Error::Db(e.to_string()))?,
+        bytes: store.native_bytes()?,
         warnings: Vec::new(),
     })
 }

@@ -435,15 +435,15 @@ mod host_static_tests {
             .as_mut()
             .unwrap()
             .owner = Owner::Clear;
-        f.edit(|store, _| {
-            store.extra.insert(
-                "large".into(),
-                serde_json::json!("x".repeat(2 * 1024 * 1024)),
-            );
-        });
+        let valid_bytes = std::fs::read(&f.path).unwrap();
+        let mut oversized = Store::load(&f.path).unwrap();
+        oversized.extra.insert("large".into(),serde_json::json!("x".repeat(2 * 1024 * 1024)));
+        // Model an externally supplied oversized file, bypassing validating Save.
+        std::fs::write(&f.path,serde_json::to_vec(&oversized).unwrap()).unwrap();
         let reports = f.engine.apply(std::slice::from_ref(&f.key));
         assert!(!reports[0].failures.is_empty());
         assert!(f.spy.state.lock().unwrap().commands.is_empty());
+        std::fs::write(&f.path, valid_bytes).unwrap();
         f.edit(|store, dev| {
             store.extra.remove("large");
             store

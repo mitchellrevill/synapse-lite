@@ -1181,10 +1181,12 @@ mod host_dispatch_tests {
         Plan::parse(1, &json!({"color1":"#123456"}))
             .unwrap()
             .project(p);
-        let length = serde_json::to_vec_pretty(&projected).unwrap().len();
+        // Native save may compact whitespace at the boundary. Place the compact
+        // pre-bootstrap candidate exactly at2MiB so provenance growth must fail.
+        let length = serde_json::to_vec(&projected).unwrap().len();
         f.store.extra.insert(
             "padding".into(),
-            json!("x".repeat(2 * 1024 * 1024 - length - 16)),
+            json!("x".repeat(2 * 1024 * 1024 - length)),
         );
         let before = serde_json::to_value(&f.store).unwrap();
         let b = f.body();

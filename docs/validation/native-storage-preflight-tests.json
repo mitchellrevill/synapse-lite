@@ -1,0 +1,36 @@
+{
+  "scope": "Bounded native storage and persisted-action preflight; exact indexed source tree, excluding concurrent assignment UI work",
+  "base_commit": "75cadb4",
+  "command": "cargo test --workspace --locked --offline --quiet -j 2",
+  "workspace": {
+    "cli_passed": 1,
+    "core_passed": 270,
+    "core_ignored": 5,
+    "tray_passed": 158,
+    "tray_ignored": 6,
+    "doc_passed": 1,
+    "failed": 0
+  },
+  "coverage": [
+    "Bounded growing-stream reads, BOM and opaque-field preservation",
+    "Original and temporary file preservation on deterministic refusal",
+    "Exact-limit compact native load/save/export compatibility",
+    "Byte and structural-token refusals before protocol SET",
+    "Device aliases and normalized DPI/stage persistence",
+    "Recovery backup failure and partial hardware failure",
+    "Separate conservative byte/token bounds for partial multi-device sync"
+  ],
+  "limits": {
+    "bytes": 2097152,
+    "structural_tokens": 32768,
+    "nesting_levels": 64
+  },
+  "hardware_exercised": false,
+  "new_ram_acceptance": false,
+  "new_pixel_identity_acceptance": false,
+  "limitations": [
+    "A filesystem failure after a successful device write remains possible; no hardware rollback is claimed",
+    "Conservative partial-sync bounds may refuse a near-limit result that would fit",
+    "No interprocess locking or general power-loss guarantee"
+  ]
+}

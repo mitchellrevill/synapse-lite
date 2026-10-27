@@ -187,8 +187,8 @@ Download: {}", r.version, secbird_core::update::CURRENT, r.url),
             for warning in report.warnings { eprintln!("Preserved without translation: {warning}"); }
             println!("Exported Synapse 4 profile document to {file}");
         } else if command == "export" {
-            let text = serde_json::to_string_pretty(&store).map_err(|e| Error::Db(e.to_string()))?;
-            std::fs::write(path, text).map_err(|e| Error::Db(format!("{file}: {e}")))?;
+            let bytes = store.native_bytes()?;
+            std::fs::write(path, bytes).map_err(|e| Error::Db(format!("{file}: {e}")))?;
             let count: usize = store.devices.values().map(|d| d.profiles.len()).sum();
             println!("Exported {count} profile(s) for {} device(s) to {file}", store.devices.len());
         } else {
