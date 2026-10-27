@@ -1,6 +1,6 @@
 # Guarded Ornata host Wave
 
-Source Quick Wave4 now has a tray action and worker path for an already compatible Ornata V2 Driver Mode3/CustomFrame8 state. It uses a current scoped layout GET, the exact authenticated local source manifest, source-derived Wave math and the existing guarded physical-frame writer. It does not acquire a mode or install a driver. A separate [two-frame physical diagnostic](PHYSICAL-WAVE.md) accepted 14/14 frame packets with unchanged readable controls. Visible hardware output, continuous Wave worker operation, stock cadence, full lifecycle recovery and final RAM acceptance remain unverified.
+Source Quick Wave4 now has a tray action and worker path for an already compatible Ornata V2 Driver Mode3/CustomFrame8 state. It uses a current scoped layout GET, the exact authenticated local source manifest, source-derived Wave math and the existing guarded physical-frame writer. It does not acquire a mode or install a driver. A separate [two-frame physical diagnostic](PHYSICAL-WAVE.md) accepted 14/14 frame packets with unchanged readable controls. A subsequent [six-run native Wave checkpoint](ACTIVE-WAVE-RUNTIME.md) verified continuous physical worker output and clean shutdown in both directions below 100 MB. Visible hardware output, stock cadence, full lifecycle recovery and final RAM acceptance remain unverified.
 
 ## Choice, projection and opt-in
 

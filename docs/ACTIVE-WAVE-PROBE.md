@@ -94,3 +94,5 @@ of an earlier lighting-only seed, not stock exports, and are not repository
 fixtures. This checkpoint performs no physical execution or new RAM measurement.
 Cadence, optical output and memory claims require a separately reviewed,
 hash-pinned measurement run.
+
+Subsequent [physical native Wave measurements](ACTIVE-WAVE-RUNTIME.md) passed six bounded runs of the exact release. Those results retain their separately declared workload and resource scope.
