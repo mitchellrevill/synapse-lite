@@ -114,6 +114,7 @@
     "held-track scrollbar repeat or snap-back"
   ],
   "private_paths_names_serials_included": false,
-  "source_checkpoint_before_checkbox_fix": "e31a7e4",
-  "intentional_behavior_correction": "Available macro action selections now follow the source visible checks after parent Select all transitions; no silent omission of checked macros"
+  "intentional_behavior_correction": "Available macro action selections now follow the source visible checks after parent Select all transitions; no silent omission of checked macros",
+  "profile_modal_baseline_checkpoint": "e31a7e4",
+  "macro_selection_model_sha256": "8ea4822456e7d8d1bcc72e935dc9d4131c820e53b8449bf0329bc130c72d2f09"
 }
