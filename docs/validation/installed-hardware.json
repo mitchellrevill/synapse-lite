@@ -1,0 +1,80 @@
+{
+  "timestamp_utc": "2026-10-27T02:57:19.031177+00:00",
+  "harness_sha256": "67fe0579832334d9f7d27e35840b3404fffb0471a5ac3b0733e2ba310f4492f0",
+  "scope": "Physical installed hardware; typed setting writes/readbacks, raw snapshot restoration. Stock AppEngine/watchdog temporarily closed; services/drivers unchanged; AppEngine restored with 12 processes observed. No profile files, input maps, macros, effects, driver mode, hooks or services changed.",
+  "devices": [
+    {
+      "product_id": "00C4",
+      "checks": [
+        {
+          "setting": "dpi",
+          "write_readback_passed": true,
+          "stage_register_unchanged_after_dpi": true
+        },
+        {
+          "setting": "polling",
+          "write_readback_passed": true
+        },
+        {
+          "setting": "sleep-minutes",
+          "write_readback_passed": true
+        },
+        {
+          "setting": "dpi-stages",
+          "write_readback_passed": true
+        }
+      ],
+      "captured_registers": [
+        {
+          "name": "dpi-saved",
+          "bytes": 7
+        },
+        {
+          "name": "dpi-live",
+          "bytes": 7
+        },
+        {
+          "name": "polling",
+          "bytes": 1
+        },
+        {
+          "name": "idle-seconds",
+          "bytes": 2
+        },
+        {
+          "name": "dpi-stages",
+          "bytes": 38
+        }
+      ],
+      "restore_verified_byte_for_byte": true
+    },
+    {
+      "product_id": "025D",
+      "checks": [
+        {
+          "setting": "brightness-percent",
+          "write_readback_passed": true
+        }
+      ],
+      "captured_registers": [
+        {
+          "name": "brightness-saved",
+          "bytes": 3
+        },
+        {
+          "name": "brightness-live",
+          "bytes": 3
+        }
+      ],
+      "restore_verified_byte_for_byte": true
+    }
+  ],
+  "controlled_failure": {
+    "point": "after verified DPI write, before polling/sleep/stage writes",
+    "expected_process_exit": 1,
+    "observed_process_exit": 1,
+    "restore_verified_byte_for_byte": true,
+    "stage_register_unchanged_after_dpi": true,
+    "limits": "Controlled error return; abrupt process termination, driver failure, power loss and unplug are not established."
+  }
+}
