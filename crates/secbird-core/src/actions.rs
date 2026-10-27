@@ -27,6 +27,17 @@ fn check_lighting(dev: &Device, store: &mut Store) -> Result<()> {
 
 /// Returns the DPI actually set, after rounding to the device's step.
 pub fn set_dpi(dev: &Device, store: &mut Store, x: u16, y: u16) -> Result<(u16, u16)> {
+    if let Some(mut intent) = store.for_device(dev).active().performance.clone() {
+        intent.validate()?;
+        let (x, y) = dev.fitted_dpi(x, y)?;
+        let row = &mut intent.stages[usize::from(intent.active - 1)];
+        row.x = x;
+        row.y = y;
+        if x != y { row.independent = true; }
+        let sent = set_performance(dev, store, &intent)?;
+        let packed = sent.pack()?;
+        return Ok(packed.stages[usize::from(packed.active - 1)]);
+    }
     let applied = dev.set_dpi(x, y)?;
     store.for_device(dev).active_mut().dpi = Some(applied);
     store.save()?;
@@ -40,6 +51,31 @@ pub fn set_dpi_stages(dev: &Device, store: &mut Store, stages: &DpiStages) -> Re
     let profile = store.for_device(dev).active_mut();
     profile.dpi = Some(sent.stages[sent.active as usize - 1]);
     profile.dpi_stages = Some(sent.clone());
+    // This legacy operation explicitly replaces the physical stage list.
+    // It carries no hidden-row or independent-axis intent.
+    profile.performance = None;
+    store.save()?;
+    Ok(sent)
+}
+
+/// Apply the source stage intent while retaining rows not sent to the device.
+/// Validate the snapped complete candidate before any hardware write.
+pub fn set_performance(dev: &Device, store: &mut Store, want: &crate::performance::Performance) -> Result<crate::performance::Performance> {
+    want.validate()?;
+    let mut normalized = want.clone();
+    let selected = usize::from(want.active - 1);
+    for (index, row) in normalized.stages.iter_mut().enumerate() {
+        if (want.enabled && row.visible) || (!want.enabled && index == selected) {
+            (row.x, row.y) = dev.fitted_dpi(row.x, row.y)?;
+        }
+    }
+    let before = store.for_device(dev).active().clone();
+    normalized.store_in_profile(store.for_device(dev).active_mut())?;
+    let validation = crate::profile_compat::validate_store_budget(store);
+    *store.for_device(dev).active_mut() = before;
+    validation?;
+    let sent = normalized.apply(dev)?;
+    sent.store_in_profile(store.for_device(dev).active_mut())?;
     store.save()?;
     Ok(sent)
 }
@@ -329,4 +365,56 @@ pub fn sync_effect(devices: &[Device], store: &mut Store, effect: &crate::effect
         out.iter_mut().filter(|r| r.result.is_ok()).for_each(|r| r.result = Err(crate::error::Error::System(format!("set, but not saved: {e}"))));
     }
     out
+}
+
+#[cfg(test)]
+mod performance_tests {
+    use super::*;
+    use crate::performance::{DpiStage, Performance};
+    use std::collections::BTreeMap;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    static SEQUENCE: AtomicUsize = AtomicUsize::new(0);
+
+    fn store() -> (Store, std::path::PathBuf) {
+        let folder = std::env::temp_dir().join(format!("synapse-performance-actions-{}-{}",std::process::id(),SEQUENCE.fetch_add(1,Ordering::Relaxed)));
+        (Store::load(&folder.join("profiles.json")).unwrap(),folder)
+    }
+    fn intent() -> Performance {
+        Performance { enabled:true, active:3, stages:[(400,true),(800,false),(1600,true)].into_iter().map(|(value,visible)|DpiStage {
+            x:value,y:value,independent:false,visible,extra:BTreeMap::from([("future".into(),serde_json::json!(value))])
+        }).collect(), extra:BTreeMap::new() }
+    }
+
+    #[test]
+    fn explicit_dpi_edits_keep_hidden_rows_and_persist_the_verified_projection() {
+        let sim=crate::sim::Sim::mouse();
+        let dev=sim.open(196,crate::sim::Sim::spec_for(crate::sim::MOUSE_PID)).unwrap();
+        let (mut store,folder)=store();
+        let want=intent();
+        set_performance(&dev,&mut store,&want).unwrap();
+        assert_eq!(dev.dpi_stages().unwrap().stages,vec![(400,400),(1600,1600)]);
+        assert_eq!(set_dpi(&dev,&mut store,1801,1901).unwrap(),(1800,1900));
+        let mut disk=Store::load(&folder.join("profiles.json")).unwrap();
+        let saved=disk.for_device(&dev).active().performance.as_ref().unwrap();
+        assert_eq!(saved.stages[1],want.stages[1]);
+        assert!(saved.stages[2].independent);
+        assert_eq!(dev.dpi().unwrap(),(1800,1900));
+        assert_eq!(dev.dpi_stages().unwrap().stages,vec![(400,400),(1800,1900)]);
+        std::fs::remove_file(folder.join("profiles.json")).unwrap();
+        std::fs::remove_dir(folder).unwrap();
+    }
+
+    #[test]
+    fn oversized_intent_is_refused_before_hardware_or_profile_changes() {
+        let sim=crate::sim::Sim::mouse();
+        let dev=sim.open(196,crate::sim::Sim::spec_for(crate::sim::MOUSE_PID)).unwrap();
+        let before=dev.dpi_stages().unwrap();
+        let (mut store,folder)=store();
+        let mut want=intent();
+        want.extra.insert("future-large".into(),serde_json::json!("x".repeat(2*1024*1024)));
+        assert!(set_performance(&dev,&mut store,&want).is_err());
+        assert_eq!(dev.dpi_stages().unwrap(),before);
+        assert!(store.for_device(&dev).active().performance.is_none());
+        assert!(!folder.exists());
+    }
 }

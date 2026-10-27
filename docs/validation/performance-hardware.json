@@ -1,0 +1,65 @@
+{
+  "timestamp_utc": "2026-10-27T04:24:02.118459+00:00",
+  "harness_sha256": "c8168841d5af2d255be5380c7cd1ada727ca5febc3f89429a24a756f0c6dab6f",
+  "product_id": "00C4",
+  "scope": "Physical wired mouse; typed setting writes, disabled cycling/hidden-row projections, current DPI and in-memory profile activation helper. This does not establish native pointer routing or real Synapse application import. Stock app temporarily closed and restored with 12 processes observed; services/drivers unchanged.",
+  "checks": [
+    {
+      "setting": "dpi",
+      "passed": true
+    },
+    {
+      "setting": "polling",
+      "passed": true
+    },
+    {
+      "setting": "sleep-minutes",
+      "passed": true
+    },
+    {
+      "setting": "dpi-stages",
+      "passed": true
+    },
+    {
+      "setting": "performance-disabled",
+      "passed": true,
+      "active_hardware_stage": 1,
+      "hardware_stage_count": 1,
+      "retained_row_count": 5
+    },
+    {
+      "setting": "performance-hidden-rows",
+      "passed": true,
+      "active_hardware_stage": 3,
+      "hardware_stage_count": 4,
+      "retained_row_count": 5
+    },
+    {
+      "setting": "performance-profile-activation",
+      "passed": true
+    }
+  ],
+  "captured_registers": [
+    {
+      "name": "dpi-saved",
+      "bytes": 7
+    },
+    {
+      "name": "dpi-live",
+      "bytes": 7
+    },
+    {
+      "name": "polling",
+      "bytes": 1
+    },
+    {
+      "name": "idle-seconds",
+      "bytes": 2
+    },
+    {
+      "name": "dpi-stages",
+      "bytes": 38
+    }
+  ],
+  "restore_verified_byte_for_byte": true
+}

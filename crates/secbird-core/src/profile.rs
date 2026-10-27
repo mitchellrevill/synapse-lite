@@ -39,6 +39,9 @@ pub struct Profile {
     /// What the DPI button cycles through.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dpi_stages: Option<DpiStages>,
+    /// Synapse stage intent, including hidden rows and the stage-cycling switch.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub performance: Option<crate::performance::Performance>,
     /// Minutes idle before a wireless device sleeps.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sleep_minutes: Option<u16>,
@@ -466,12 +469,16 @@ impl Profile {
         if let Some(hz) = self.polling {
             push(format!("polling {hz} Hz"), dev.set_polling_rate(hz));
         }
-        // Stages first: setting them also moves the mouse to the active stage's DPI.
-        if let Some(stages) = &self.dpi_stages {
-            push(format!("dpi stages ({})", stages.stages.len()), dev.set_dpi_stages(stages).map(|_| ()));
-        }
-        if let Some((x, y)) = self.dpi {
-            push(format!("dpi {x}x{y}"), dev.set_dpi(x, y).map(|_| ()));
+        if let Some(performance) = &self.performance {
+            push("DPI stage intent".into(), performance.apply(dev).map(|_| ()));
+        } else {
+            // Legacy stages first: their active stage changes the current DPI.
+            if let Some(stages) = &self.dpi_stages {
+                push(format!("dpi stages ({})", stages.stages.len()), dev.set_dpi_stages(stages).map(|_| ()));
+            }
+            if let Some((x, y)) = self.dpi {
+                push(format!("dpi {x}x{y}"), dev.set_dpi(x, y).map(|_| ()));
+            }
         }
         if let Some(on) = self.auto_sleep {
             push(format!("auto sleep {}", if on { "on" } else { "off" }), dev.set_auto_sleep(on));

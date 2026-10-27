@@ -337,6 +337,42 @@ fn run() -> Result<(), String> {
             if actual != sent {
                 return Err("DPI stage readback differs".into());
             }
+            let mut intent = secbird_core::performance::Performance::from_hardware(&actual)
+                .map_err(|e| e.to_string())?;
+            intent.set_visible(1, false).map_err(|e| e.to_string())?;
+            intent.active = 4;
+            intent.enabled = false;
+            for (name, enabled) in [
+                ("performance-disabled", false),
+                ("performance-hidden-rows", true),
+            ] {
+                intent.enabled = enabled;
+                let sent = intent.apply(device).map_err(|e| e.to_string())?;
+                let packed = sent.pack().map_err(|e| e.to_string())?;
+                let stages = device.dpi_stages().map_err(|e| e.to_string())?;
+                let dpi = device.dpi().map_err(|e| e.to_string())?;
+                let current = packed.stages[usize::from(packed.active - 1)];
+                let passed =
+                    stages == packed && dpi == current && sent.stages[1] == intent.stages[1];
+                steps.push(json!({"setting":name,"passed":passed,"active_hardware_stage":stages.active,"hardware_stage_count":stages.stages.len(),"retained_row_count":sent.stages.len()}));
+                if !passed {
+                    return Err(format!("{name} projection/current-DPI readback differs"));
+                }
+            }
+            let profile = secbird_core::Profile {
+                performance: Some(intent.clone()),
+                dpi: Some((800, 800)),
+                ..Default::default()
+            };
+            let results = profile.apply(device);
+            let expected = intent.pack().map_err(|e| e.to_string())?;
+            let passed = results.iter().all(|r| r.result.is_ok())
+                && device.dpi().map_err(|e| e.to_string())?
+                    == expected.stages[usize::from(expected.active - 1)];
+            steps.push(json!({"setting":"performance-profile-activation","passed":passed}));
+            if !passed {
+                return Err("Profile activation did not prioritize stage intent".into());
+            }
         } else {
             let before = device
                 .brightness(cmd::BACKLIGHT_LED)

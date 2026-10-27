@@ -8,61 +8,27 @@ use serde_json::{json, Map, Value};
 pub(super) fn import_mouse(
     source: &Value,
     profile: &mut Profile,
-    name: &str,
-    warnings: &mut Vec<String>,
+    _name: &str,
+    _warnings: &mut Vec<String>,
 ) -> Result<()> {
     if let Some(value) = source.get("powerSavingValue") {
         profile.sleep_minutes = Some(integer(Some(value), 1, 15, "powerSavingValue")? as u16);
     }
     if let Some(stages) = source.get("dpiStages") {
-        let raw = stages
-            .get("stages")
-            .and_then(Value::as_array)
-            .ok_or_else(|| invalid("dpiStages.stages must be an array"))?;
-        if raw.is_empty() || raw.len() > 5 {
-            return Err(invalid(
-                "DeathAdder DPI stages require between 1 and 5 entries",
-            ));
-        }
-        let active = integer(
-            stages.get("active"),
-            1,
-            raw.len() as u64,
-            "dpiStages.active",
-        )? as u8;
-        let enabled = stages
-            .get("enable")
-            .and_then(Value::as_bool)
-            .ok_or_else(|| invalid("dpiStages.enable must be boolean"))?;
-        let count = integer(stages.get("count"), 1, raw.len() as u64, "dpiStages.count")? as usize;
-        let mut values = Vec::new();
-        let mut visible_count = 0;
-        for stage in raw {
-            let x = integer(stage.get("x"), 100, 26_000, "DPI stage x")? as u16;
-            let y = integer(stage.get("y"), 100, 26_000, "DPI stage y")? as u16;
-            let independent = stage
-                .get("independent")
-                .and_then(Value::as_bool)
-                .ok_or_else(|| invalid("DPI stage independent must be boolean"))?;
-            let visible = stage
-                .get("visible")
-                .and_then(Value::as_bool)
-                .ok_or_else(|| invalid("DPI stage visible must be boolean"))?;
-            visible_count += usize::from(visible);
-            values.push((x, if independent { y } else { x }));
-        }
-        if count != visible_count {
+        let mut object = stages
+            .as_object()
+            .cloned()
+            .ok_or_else(|| invalid("dpiStages must be an object"))?;
+        let count = integer(object.get("count"), 1, 5, "dpiStages.count")? as usize;
+        object.remove("count");
+        let intent: crate::performance::Performance = serde_json::from_value(Value::Object(object))
+            .map_err(|e| invalid(format!("invalid dpiStages: {e}")))?;
+        intent.validate()?;
+        if count != intent.visible_count() {
             return Err(invalid("dpiStages.count does not match visible stages"));
         }
-        if !enabled || visible_count != raw.len() {
-            warnings.push(format!("{name}: disabled or hidden DPI stages are preserved; native stage cycling cannot express their enable/visibility state"));
-        } else {
-            profile.dpi_stages = Some(DpiStages {
-                active,
-                stages: values,
-                ..Default::default()
-            });
-        }
+        profile.dpi_stages = Some(intent.pack()?);
+        profile.performance = Some(intent);
     }
     Ok(())
 }
@@ -123,24 +89,24 @@ pub(super) fn export_mouse(
     } else if !preserve_defaults {
         decoded.remove("powerSavingValue");
     }
-    let Some(stages) = &profile.dpi_stages else {
-        if preserve_defaults {
-            return Ok(());
-        }
-        // An unsupported original visibility/enable configuration was not translated.
-        // Preserve it; absent native stages must not silently erase that configuration.
-        if let Some(original) = decoded.get("dpiStages") {
-            let mut scratch = Profile::default();
-            let mut warnings = Vec::new();
-            import_mouse(
-                &json!({"dpiStages": original}),
-                &mut scratch,
-                "profile",
-                &mut warnings,
-            )?;
-            if scratch.dpi_stages.is_some() {
-                decoded.remove("dpiStages");
+    if let Some(intent) = &profile.performance {
+        let mut intent = intent.clone();
+        // Legacy editors can still edit the packed projection. Merge those edits
+        // back into retained rows instead of silently discarding hidden values.
+        if let Some(legacy) = &profile.dpi_stages {
+            if intent.pack()? != *legacy {
+                merge_legacy_stages(&mut intent, legacy)?;
             }
+        }
+        intent.validate()?;
+        let mut value = serde_json::to_value(&intent).map_err(|e| invalid(e.to_string()))?;
+        value["count"] = json!(intent.visible_count());
+        decoded.insert("dpiStages".into(), value);
+        return Ok(());
+    }
+    let Some(stages) = &profile.dpi_stages else {
+        if !preserve_defaults {
+            decoded.remove("dpiStages");
         }
         return Ok(());
     };
@@ -185,6 +151,61 @@ pub(super) fn export_mouse(
         original,
         json!({"active": stages.active, "enable": true, "count": stages.stages.len(), "stages": entries}),
     )
+}
+
+/// Reconcile a legacy physical-stage edit while retaining rows invisible to it.
+fn merge_legacy_stages(
+    intent: &mut crate::performance::Performance,
+    legacy: &DpiStages,
+) -> Result<()> {
+    use crate::performance::DpiStage;
+    if legacy.stages.is_empty()
+        || legacy.stages.len() > 5
+        || legacy.active == 0
+        || usize::from(legacy.active) > legacy.stages.len()
+    {
+        return Err(invalid("invalid legacy DPI stages"));
+    }
+    let old = intent.pack()?;
+    let indices: Vec<usize> = if legacy.stages.len() == old.stages.len() {
+        if intent.enabled {
+            intent
+                .stages
+                .iter()
+                .enumerate()
+                .filter(|(_, r)| r.visible)
+                .map(|(i, _)| i)
+                .collect()
+        } else {
+            vec![usize::from(intent.active - 1)]
+        }
+    } else {
+        // Legacy count changes have no visibility flags. Match the source UI's
+        // prefix visibility selector and keep hidden trailing rows available.
+        while intent.stages.len() < legacy.stages.len() {
+            let &(x, y) = &legacy.stages[intent.stages.len()];
+            intent.stages.push(DpiStage {
+                x,
+                y,
+                independent: x != y,
+                visible: true,
+                extra: Default::default(),
+            });
+        }
+        intent.enabled = true;
+        intent.set_visible_count(legacy.stages.len() as u8)?;
+        (0..legacy.stages.len()).collect()
+    };
+    intent.active = indices[usize::from(legacy.active - 1)] as u8 + 1;
+    for (i, &(x, y)) in indices.into_iter().zip(&legacy.stages) {
+        let row = &mut intent.stages[i];
+        if (row.x, row.y) != (x, y) {
+            row.x = x;
+            row.y = y;
+            row.independent = x != y;
+        }
+    }
+    intent.validate()
 }
 
 pub(super) fn export_game_mode(profile: &Profile, decoded: &mut Map<String, Value>) -> Result<()> {

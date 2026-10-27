@@ -427,6 +427,7 @@ pub fn export_synapse4(store: &Store, device_key: &str) -> Result<ExportReport> 
             if profile.dpi.is_some()
                 || profile.polling.is_some()
                 || profile.dpi_stages.is_some()
+                || profile.performance.is_some()
                 || profile.sleep_minutes.is_some()
             {
                 return Err(Error::Unsupported(format!(

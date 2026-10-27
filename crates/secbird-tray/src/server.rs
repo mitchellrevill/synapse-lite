@@ -303,6 +303,10 @@ struct Body {
     active: u8,
     #[serde(default)]
     stages: Vec<(u16, u16)>,
+    #[serde(default)]
+    performance: Option<secbird_core::performance::Performance>,
+    #[serde(default)]
+    expected_profile: Option<String>,
     /// Sleep timer in minutes (0 = leave it), and the auto-sleep switch.
     #[serde(default)]
     minutes: u16,
@@ -405,6 +409,14 @@ fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
                 let sent = actions::set_dpi_stages(dev, &mut store, &want)?;
                 let (x, y) = sent.stages[sent.active as usize - 1];
                 Ok(json!({ "stages": { "active": sent.active, "list": sent.stages }, "dpi": [x, y] }))
+            }
+            "/api/performance" => {
+                if b.expected_profile.as_deref() != Some(store.for_device(dev).active.as_str()) {
+                    return Err(Error::InvalidArg("The active profile changed; refresh before changing performance".into()));
+                }
+                let want = b.performance.as_ref().ok_or_else(|| Error::InvalidArg("performance state is required".into()))?;
+                let sent = actions::set_performance(dev, &mut store, want)?;
+                Ok(json!({ "performance": sent }))
             }
             "/api/dimming" => {
                 actions::set_dimming(dev, &mut store, b.dimming.parse()?)?;

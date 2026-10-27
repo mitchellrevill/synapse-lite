@@ -39,7 +39,7 @@ fn dpi_stages_and_sleep_translate_and_preserve_inactive_axis_and_unknown_fields(
     assert_eq!(profile.dpi_stages.as_ref().unwrap().active, 2);
     assert_eq!(
         profile.dpi_stages.as_ref().unwrap().stages,
-        [(400, 400), (800, 1600)]
+        [(400, 1200), (800, 1600)]
     );
     let unchanged = payload(&report.store, "00C4", "Fixture");
     assert_eq!(unchanged["dpiStages"], source["dpiStages"]);
@@ -63,7 +63,7 @@ fn dpi_stages_and_sleep_translate_and_preserve_inactive_axis_and_unknown_fields(
 }
 
 #[test]
-fn hidden_disabled_stages_and_conditional_gaming_remain_explicitly_unsupported() {
+fn hidden_disabled_stages_translate_and_conditional_gaming_stays_unsupported() {
     let stages = json!({"guid":"hidden", "name":"Fixture", "dpiStages":{
         "active":1,"enable":false,"count":1,"stages":[
             {"x":400,"y":400,"independent":false,"visible":true},
@@ -71,13 +71,11 @@ fn hidden_disabled_stages_and_conditional_gaming_remain_explicitly_unsupported()
         ]
     }});
     let report = import_document(&document(stages.clone(), 196)).unwrap();
-    assert!(report.store.devices["00C4"].profiles["Fixture"]
-        .dpi_stages
-        .is_none());
-    assert!(report
-        .warnings
-        .iter()
-        .any(|warning| warning.contains("hidden DPI stages")));
+    let profile = &report.store.devices["00C4"].profiles["Fixture"];
+    assert!(report.warnings.is_empty());
+    assert_eq!(profile.dpi_stages.as_ref().unwrap().stages, [(400, 400)]);
+    assert!(!profile.performance.as_ref().unwrap().enabled);
+    assert_eq!(profile.performance.as_ref().unwrap().stages.len(), 2);
     assert_eq!(
         payload(&report.store, "00C4", "Fixture")["dpiStages"],
         stages["dpiStages"]
@@ -422,4 +420,72 @@ fn foreign_export_refuses_unknown_native_extensions_without_losing_native_data()
         export_synapse4(&store, "00C4"),
         Err(Error::Unsupported(_))
     ));
+}
+
+#[test]
+fn hidden_rows_and_independent_edit_round_trip_without_losing_foreign_fields() {
+    let source = json!({"guid":"hidden-rows","name":"Fixture","dpiStages":{
+    "enable":true,"active":3,"count":2,"futureStages":{"keep":true},"stages":[
+        {"x":400,"y":900,"independent":false,"visible":true},
+        {"x":800,"y":1700,"independent":false,"visible":false,"futureRow":"keep"},
+        {"x":1600,"y":3200,"independent":true,"visible":true}
+    ]}});
+    let mut report = import_document(&document(source.clone(), 196)).unwrap();
+    assert!(report.warnings.is_empty());
+    let p = &report.store.devices["00C4"].profiles["Fixture"];
+    assert_eq!(p.dpi_stages.as_ref().unwrap().active, 2);
+    assert_eq!(
+        p.dpi_stages.as_ref().unwrap().stages,
+        vec![(400, 900), (1600, 3200)]
+    );
+    assert_eq!(
+        payload(&report.store, "00C4", "Fixture")["dpiStages"],
+        source["dpiStages"]
+    );
+    let p = report
+        .store
+        .devices
+        .get_mut("00C4")
+        .unwrap()
+        .profiles
+        .get_mut("Fixture")
+        .unwrap();
+    let mut intent = crate::performance::Performance::from_profile(p)
+        .unwrap()
+        .unwrap();
+    intent.enabled = false;
+    intent.store_in_profile(p).unwrap();
+    let out = payload(&report.store, "00C4", "Fixture");
+    assert_eq!(out["dpiStages"]["stages"], source["dpiStages"]["stages"]);
+    assert_eq!(out["dpiStages"]["active"], 3);
+    assert_eq!(out["dpiStages"]["enable"], false);
+    let p = report
+        .store
+        .devices
+        .get_mut("00C4")
+        .unwrap()
+        .profiles
+        .get_mut("Fixture")
+        .unwrap();
+    intent.enabled = true;
+    intent.set_visible_count(3).unwrap();
+    intent.select_visible(2).unwrap();
+    intent.set_independent(1, true).unwrap();
+    // Revealing the row and enabling XY must recover its original stored Y.
+    assert_eq!(intent.stages[1].y, 1700);
+    intent.store_in_profile(p).unwrap();
+    let out = payload(&report.store, "00C4", "Fixture");
+    assert_eq!(out["dpiStages"]["stages"][1]["y"], 1700);
+    assert_eq!(out["dpiStages"]["stages"][1]["futureRow"], "keep");
+    assert_eq!(
+        out["dpiStages"]["futureStages"],
+        source["dpiStages"]["futureStages"]
+    );
+    let imported = import_document(&export_synapse4(&report.store, "00C4").unwrap().bytes).unwrap();
+    assert_eq!(
+        imported.store.devices["00C4"].profiles["Fixture"]
+            .performance
+            .as_ref(),
+        Some(&intent)
+    );
 }

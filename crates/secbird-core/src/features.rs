@@ -185,13 +185,18 @@ impl Device {
         Ok((u16::from_be_bytes([a[1], a[2]]), u16::from_be_bytes([a[3], a[4]])))
     }
 
+    /// Preview the device's range/step normalization without issuing a request.
+    pub fn fitted_dpi(&self, x: u16, y: u16) -> Result<(u16, u16)> {
+        match self.spec.as_ref().and_then(|s| s.dpi.as_ref()) {
+            Some(r) => Ok((snap(x, r.min, r.max, r.step), snap(y, r.min, r.max, r.step))),
+            None if (100..=30000).contains(&x) && (100..=30000).contains(&y) => Ok((x, y)),
+            None => Err(Error::InvalidArg(format!("DPI {x}x{y} out of range"))),
+        }
+    }
+
     /// Set DPI and store it in the device's memory, rounded to the device's step.
     pub fn set_dpi(&self, x: u16, y: u16) -> Result<(u16, u16)> {
-        let (x, y) = match self.spec.as_ref().and_then(|s| s.dpi.as_ref()) {
-            Some(r) => (snap(x, r.min, r.max, r.step), snap(y, r.min, r.max, r.step)),
-            None if (100..=30000).contains(&x) && (100..=30000).contains(&y) => (x, y),
-            None => return Err(Error::InvalidArg(format!("DPI {x}x{y} out of range"))),
-        };
+        let (x, y) = self.fitted_dpi(x, y)?;
         let [xh, xl] = x.to_be_bytes();
         let [yh, yl] = y.to_be_bytes();
         self.transact(cmd::DPI, cmd::DPI_SIZE, &[cmd::VARSTORE, xh, xl, yh, yl, 0, 0])?;
