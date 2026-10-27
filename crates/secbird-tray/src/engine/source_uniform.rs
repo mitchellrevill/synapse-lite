@@ -156,6 +156,20 @@ impl Engine {
         wake: Option<std::thread::Thread>,
         alive: Option<std::sync::Arc<crate::uniform_worker::Signal>>,
     ) {
+        let actor_changed = match (&self.uniform.alive, &alive) {
+            (Some(previous), Some(next)) => !std::sync::Arc::ptr_eq(previous, next),
+            (None, Some(_)) => true,
+            _ => false,
+        };
+        if enabled && actor_changed {
+            // A new local worker starts a new playback generation. In particular,
+            // a ticket planned just before quiesce must not stay InFlight forever.
+            // Device-bound failures survive this reset and still prohibit retry.
+            self.uniform.sessions.clear();
+        }
+        if let Some(signal) = &alive {
+            self.lighting_publisher.attach_signal(signal.clone());
+        }
         self.uniform.enabled = enabled;
         self.uniform.alive = if enabled { alive } else { None };
         self.uniform.wake = wake;
@@ -381,6 +395,7 @@ impl Engine {
             let gate_started = Instant::now();
             let availability = self.uniform_availability(&candidate.config);
             let gate_us = gate_started.elapsed().as_micros() as u64;
+            let worker_signal = state.alive.clone();
             let session = state.session(&candidate.key, &candidate.name, candidate.program);
             let now = epoch.elapsed();
             match availability {
@@ -443,12 +458,19 @@ impl Engine {
                     else {
                         continue;
                     };
+                    let Some(signal) = worker_signal.as_ref() else { break; };
+                    let Some(mut admission) = signal.begin_batch() else {
+                        session.status = json!({"state":"quiescing","streaming":false});
+                        break;
+                    };
                     let submitted = session.controls.submit(
                         device,
                         ticket,
                         Instant::now() + Duration::from_millis(500),
                         || stopped.load(Ordering::Acquire),
                     );
+                    admission.record(&submitted.completion);
+                    drop(admission);
                     let success = submitted.completion.error.is_none()
                         && submitted.completion.accepted_packets == 7;
                     let fault = if !success {
@@ -487,7 +509,7 @@ impl Engine {
             }
         }
         self.uniform = state;
-        if refresh_live {
+        if refresh_live && self.uniform_is_enabled() {
             self.refresh_lighting_runtime();
         }
         wait
@@ -575,6 +597,22 @@ impl Engine {
             session.pending_live = false;
         }
     }
+    pub(super) fn uniform_publication_faulted(&self) -> bool {
+        self.uniform.error.is_some()
+            || !self.uniform.faults.is_empty()
+            || self.lighting_probe_error().is_some()
+    }
+    pub(crate) fn log_uniform_shutdown_diagnostics(&self) {
+        // Local private diagnostics retain actual errors/counts before cleanup
+        // clears sessions. Public RAM metadata remains sanitized separately.
+        let detail = json!({
+            "uniform":self.uniform_status(),
+            "brightness_policy":self.lighting_runtime.borrow().status(),
+            "probe_error":self.lighting_probe_error(),
+            "worker_signal":self.uniform.alive.as_ref().map(|signal|signal.metrics())
+        });
+        secbird_core::log::append(&format!("uniform shutdown cached diagnostics: {detail}"));
+    }
     pub(super) fn uniform_status(&self) -> Value {
         let mut result = serde_json::Map::new();
         for (key, session) in &self.uniform.sessions {
@@ -585,7 +623,8 @@ impl Engine {
             value["worker_timing"] = self.uniform.alive.as_ref().map(|signal| signal.metrics()).unwrap_or(Value::Null);
             if !self.uniform_is_enabled() {
                 value["streaming"] = json!(false);
-                value["worker_stopped"] = json!(true);
+                value["worker_stopped"] = json!(self.uniform.alive.as_ref().is_none_or(|signal|!signal.thread_alive()));
+                value["quiesce_requested"] = json!(self.uniform.alive.as_ref().is_some_and(|signal|signal.quiescing()));
             }
             value["configuration_reloads"] = json!(self.uniform.cache.reloads);
             value["control_observation"] = session.controls.status();
@@ -870,6 +909,217 @@ mod tests {
         f.engine.reset_uniform_handles();
         f.tick();
         assert_eq!(f.spy.state.lock().unwrap().effects_read, 10);
+    }
+    #[derive(Default)]
+    struct RowGateState {
+        next_row: usize,
+        entered: bool,
+        released: bool,
+    }
+    type RowGate = std::sync::Arc<(std::sync::Mutex<RowGateState>,std::sync::Condvar)>;
+    type SharedEngine = std::sync::Arc<std::sync::Mutex<Engine>>;
+    struct BlockedRow {
+        spy: Spy,
+        gate: RowGate,
+    }
+    impl secbird_core::transport::Transport for BlockedRow {
+        fn send_feature_report(&self, data: &[u8]) -> secbird_core::Result<()> {
+            if data[7] == 15 && data[8] == 3 {
+                let (mutex, wake) = &*self.gate;
+                let mut state = mutex.lock().unwrap();
+                let row = state.next_row;
+                state.next_row += 1;
+                if row == 2 {
+                    state.entered = true;
+                    wake.notify_all();
+                    while !state.released {
+                        state = wake.wait(state).unwrap();
+                    }
+                }
+            }
+            secbird_core::transport::Transport::send_feature_report(&self.spy, data)
+        }
+        fn get_feature_report(&self, data: &mut [u8]) -> secbird_core::Result<usize> {
+            secbird_core::transport::Transport::get_feature_report(&self.spy, data)
+        }
+        fn read_delay(&self) -> Duration {
+            Duration::ZERO
+        }
+    }
+    fn blocked_worker(f: &mut Fixture) -> (crate::uniform_worker::Worker, SharedEngine, RowGate) {
+        let gate = std::sync::Arc::new((
+            std::sync::Mutex::new(RowGateState::default()),
+            std::sync::Condvar::new(),
+        ));
+        let old = f.engine.devices.remove(0);
+        let device = Device::open(
+            Box::new(BlockedRow {
+                spy: f.spy.clone(),
+                gate: gate.clone(),
+            }),
+            605,
+            2,
+            std::ffi::CString::new("sim:blocked-row").unwrap(),
+            &[0x1f],
+            old.spec,
+        )
+        .unwrap();
+        f.engine.devices.push(device);
+        let engine = std::mem::replace(&mut f.engine, Engine::from_api(HidApi::new().unwrap()));
+        let shared = std::sync::Arc::new(std::sync::Mutex::new(engine));
+        let worker = crate::uniform_worker::Worker::start(shared.clone()).unwrap();
+        let (mutex, wake) = &*gate;
+        let state = mutex.lock().unwrap();
+        let (state, wait) = wake
+            .wait_timeout_while(state, Duration::from_secs(2), |state| !state.entered)
+            .unwrap();
+        assert!(state.entered && !wait.timed_out());
+        drop(state);
+        (worker, shared, gate)
+    }
+    fn release_row(gate: &RowGate) {
+        let (mutex, wake) = &**gate;
+        mutex.lock().unwrap().released = true;
+        wake.notify_all();
+    }
+    #[test]
+    fn graceful_stop_during_actual_row_finishes_one_batch_and_keeps_genuine_failure() {
+        for fail in [false, true] {
+            let mut f = Fixture::new(true);
+            if fail {
+                f.spy.state.lock().unwrap().fail_at = Some(2);
+            }
+            let (mut worker, shared, gate) = blocked_worker(&mut f);
+            let signal = worker.signal_for_test();
+            let observed = signal.clone();
+            let release = std::thread::spawn(move || {
+                let limit = Instant::now() + Duration::from_secs(2);
+                while !observed.quiescing() && Instant::now() < limit {
+                    std::thread::sleep(Duration::from_millis(1));
+                }
+                assert!(observed.quiescing());
+                release_row(&gate);
+            });
+            assert!(worker.stop(Duration::from_secs(2)));
+            release.join().unwrap();
+            let engine = shared.lock().unwrap();
+            let value = engine.uniform_status();
+            if fail {
+                assert_eq!(value[&f.key]["accepted_packets"], 2);
+                assert_eq!(value[&f.key]["attempted_packets"], 3);
+                assert!(value[&f.key]["error"].is_string());
+            } else {
+                assert_eq!(value[&f.key]["accepted_frames"], 1);
+                assert!(!value[&f.key]["error"].is_string());
+                assert_eq!(f.spy.state.lock().unwrap().attempts, 7);
+                assert!(!engine.lighting_runtime_status()[&f.key]["error"].is_string());
+            }
+            let metrics = signal.metrics();
+            assert_eq!(metrics["batches_admitted"], 1);
+            assert_eq!(metrics["batches_completed"], 1);
+            assert_eq!(
+                metrics["last_batch_accepted_packets"],
+                if fail { 2 } else { 7 }
+            );
+            assert_eq!(
+                metrics["last_batch_attempted_packets"],
+                if fail { 3 } else { 7 }
+            );
+            assert_eq!(metrics["last_batch_failed"], fail);
+            assert_eq!(metrics["stop_timeouts"], 0);
+        }
+    }
+    #[test]
+    fn immediate_cancel_mid_row_reproduces_partial_fault_instead_of_hiding_it() {
+        let mut f = Fixture::new(true);
+        let (mut worker, shared, gate) = blocked_worker(&mut f);
+        let signal = worker.signal_for_test();
+        signal.stop_for_test();
+        let observed = signal.clone();
+        let release = std::thread::spawn(move || {
+            let limit = Instant::now() + Duration::from_secs(2);
+            while !observed.quiescing() && Instant::now() < limit {
+                std::thread::sleep(Duration::from_millis(1));
+            }
+            assert!(observed.quiescing());
+            release_row(&gate);
+        });
+        assert!(worker.stop(Duration::from_secs(2)));
+        release.join().unwrap();
+        let engine = shared.lock().unwrap();
+        let value = engine.uniform_status();
+        assert_eq!(value[&f.key]["accepted_packets"], 3);
+        assert_eq!(value[&f.key]["attempted_packets"], 3);
+        assert!(value[&f.key]["error"]
+            .as_str()
+            .unwrap()
+            .contains("Cancelled"));
+        assert_eq!(signal.metrics()["last_batch_failed"], true);
+        assert_eq!(f.spy.state.lock().unwrap().attempts, 3);
+    }
+    #[test]
+    fn blocked_hid_stop_timeout_is_bounded_and_does_not_acquire_engine_for_cleanup() {
+        let mut f = Fixture::new(true);
+        let (mut worker, shared, gate) = blocked_worker(&mut f);
+        let signal = worker.signal_for_test();
+        let started = Instant::now();
+        assert!(!worker.stop(Duration::from_secs(2)));
+        assert!(started.elapsed() < Duration::from_secs(3));
+        assert!(
+            shared.try_lock().is_err(),
+            "HID call remains blocked underEngine; caller must not acquire it"
+        );
+        assert_eq!(signal.metrics()["stop_timeouts"], 1);
+        release_row(&gate);
+        assert!(worker.stop(Duration::from_secs(1)));
+        let engine = shared.lock().unwrap();
+        let value = engine.uniform_status();
+        assert_eq!(value[&f.key]["accepted_packets"], 3);
+        assert_eq!(value[&f.key]["attempted_packets"], 3);
+        assert!(value[&f.key]["error"].is_string());
+        assert_eq!(f.spy.state.lock().unwrap().attempts, 3);
+    }
+    #[test]
+    fn replacement_worker_discards_unsubmitted_ticket_but_preserves_device_faults() {
+        let mut f = Fixture::new(true);
+        let epoch = f.engine.uniform.epoch;
+        let session = f
+            .engine
+            .uniform
+            .session(&f.key, "Default", Program::Spectrum);
+        let now = epoch.elapsed();
+        assert!(matches!(
+            session.playback.poll(now, Availability::Ready),
+            Poll::Frame(_)
+        ));
+        assert!(matches!(
+            session.playback.poll(now, Availability::Ready),
+            Poll::InFlight
+        ));
+        f.engine.set_uniform_worker(
+            true,
+            None,
+            Some(crate::uniform_worker::Signal::running_for_test()),
+        );
+        assert!(f.engine.uniform.sessions.is_empty());
+        f.tick();
+        assert_eq!(f.spy.state.lock().unwrap().attempts, 7);
+        assert_eq!(f.engine.uniform_status()[&f.key]["accepted_frames"], 1);
+        let mut f = Fixture::new(true);
+        f.spy.state.lock().unwrap().fail_at = Some(2);
+        f.tick();
+        assert!(f.engine.uniform.faults.contains_key(&f.key));
+        f.engine.set_uniform_worker(
+            true,
+            None,
+            Some(crate::uniform_worker::Signal::running_for_test()),
+        );
+        assert!(f.engine.uniform.sessions.is_empty());
+        assert!(f.engine.uniform.faults.contains_key(&f.key));
+        f.tick();
+        assert_eq!(f.spy.state.lock().unwrap().attempts, 3);
+        assert_eq!(f.engine.uniform_status()[&f.key]["accepted_packets"], 2);
+        assert_eq!(f.engine.uniform_status()[&f.key]["attempted_packets"], 3);
     }
     #[test]
     fn initial_frame_precedes_live_brightness_and_cache_is_reused() {

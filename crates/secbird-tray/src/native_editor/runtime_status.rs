@@ -1,10 +1,9 @@
 //! Cached-only Lighting observations. This module never dispatches commands,
 //! refreshes hardware, reads the Store, or edits profile/gesture intent.
-use super::Engine;
+use crate::lighting_status::Reader;
 use serde_json::{json, Value};
 use std::collections::VecDeque;
 use std::hash::{Hash, Hasher};
-use std::sync::{Arc, Mutex, TryLockError};
 use std::time::{Duration, Instant};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -18,7 +17,7 @@ pub(super) struct Request {
     pub binding: Binding,
 }
 pub(super) enum Payload {
-    Snapshot(Value),
+    Snapshot(Value, Instant),
     Busy,
     Unavailable,
 }
@@ -30,23 +29,15 @@ pub(super) struct Response {
 pub(super) struct Change {
     pub runtime: Option<Value>,
     pub faults: Vec<String>,
+    pub observed_at: Option<Instant>,
 }
 
-/// The persistent UI worker calls only the engine's cached accessor. A busy tray
-/// lock is skipped instead of delaying a user action or accumulating poll work.
-pub(super) fn read(engine: &Arc<Mutex<Engine>>, request: Request) -> Response {
-    let payload = match engine.try_lock() {
-        Ok(engine) => {
-            let status = engine.lighting_runtime_status();
-            Payload::Snapshot(
-                status
-                    .get(&request.binding.device)
-                    .cloned()
-                    .unwrap_or(Value::Null),
-            )
-        }
-        Err(TryLockError::WouldBlock) => Payload::Busy,
-        Err(TryLockError::Poisoned(_)) => Payload::Unavailable,
+/// Reads the separately published cache. A busy HID/Engine mutex never prevents
+/// observation, and reading does not change the producer's observation time.
+pub(super) fn read(reader: &Reader, request: Request) -> Response {
+    let payload = match reader.read_device(&request.binding.device) {
+        Some(snapshot) => Payload::Snapshot((*snapshot.value).clone(), snapshot.observed_at),
+        None => Payload::Busy,
     };
     Response { request, payload }
 }
@@ -79,7 +70,7 @@ impl Observer {
                 sequence: self.sequence,
                 binding,
             },
-            payload: Payload::Snapshot(value),
+            payload: Payload::Snapshot(value, Instant::now()),
         }
     }
     pub fn pending(&self) -> bool {
@@ -106,17 +97,23 @@ impl Observer {
         if current != Some(&binding) {
             return Change::default();
         }
+        let observed_at = match &response.payload {
+            Payload::Snapshot(_, time) => Some(*time),
+            _ => None,
+        };
         let mut change = match response.payload {
             Payload::Busy => return Change::default(),
             Payload::Unavailable => Change {
                 runtime: Some(unavailable("cached-worker-unavailable")),
                 faults: vec!["Lighting runtime status worker is unavailable; refresh before applying settings.".into()],
+                observed_at: None,
             },
-            Payload::Snapshot(mut runtime) => {
+            Payload::Snapshot(mut runtime, _) => {
                 if runtime.is_null() {
                     return Change {
                         runtime: Some(unavailable("cached-status-not-yet-available")),
                         faults: Vec::new(),
+                        observed_at,
                     };
                 }
                 let wrong_profile = [
@@ -130,6 +127,7 @@ impl Observer {
                     Change {
                         runtime: Some(unavailable("cached-profile-changed-refresh-required")),
                         faults: vec!["The cached Lighting runtime belongs to another profile. Refresh the device view before applying settings; local edits were retained.".into()],
+                        observed_at,
                     }
                 } else {
                     // Static results can outlive the effect that produced them.
@@ -167,7 +165,7 @@ impl Observer {
                     {
                         faults.push("Lighting host worker stopped while enabled; explicit retry is required.".into());
                     }
-                    Change { runtime: Some(runtime), faults }
+                    Change { runtime: Some(runtime), faults, observed_at }
                 }
             }
         };
@@ -195,6 +193,8 @@ fn unavailable(reason: &str) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::engine::Engine;
+    use std::sync::{Arc, Mutex};
     fn owner(profile: &str) -> Binding {
         Binding {
             device: "025D:sim".into(),
@@ -204,7 +204,7 @@ mod tests {
     fn response(request: Request, value: Value) -> Response {
         Response {
             request,
-            payload: Payload::Snapshot(value),
+            payload: Payload::Snapshot(value, Instant::now()),
         }
     }
 
@@ -301,30 +301,48 @@ mod tests {
         std::fs::write(&file, b"intentionally invalid JSON").unwrap();
         let commands = sim.state().log.len();
         let engine = Arc::new(Mutex::new(engine));
+        let (publisher, reader) = crate::lighting_status::channel();
+        publisher.publish(json!({binding.device.clone():{"profile":"Default","uniform_host":{"profile":"Default","accepted_frames":3}}}));
+        let first = reader.read_device(&binding.device).unwrap().observed_at;
+        let lock = engine.lock().unwrap();
         for sequence in 1..=20 {
-            let value = read(
-                &engine,
+            let reply = read(
+                &reader,
                 Request {
                     sequence,
                     binding: binding.clone(),
                 },
             );
-            assert!(matches!(value.payload, Payload::Snapshot(_)));
+            match reply.payload {
+                Payload::Snapshot(value, observed_at) => {
+                    assert_eq!(
+                        observed_at, first,
+                        "consumption cannot refresh producer time"
+                    );
+                    assert_eq!(value["uniform_host"]["accepted_frames"], 3);
+                }
+                _ => panic!("held Engine must not starve separately cached observation"),
+            }
+        }
+        // Publishing a completed actor observation while Engine remains held
+        // must become visible immediately, without any hardware/Store work.
+        publisher.publish(json!({binding.device.clone():{"profile":"Default","uniform_host":{"profile":"Default","accepted_frames":7}}}));
+        let reply = read(
+            &reader,
+            Request {
+                sequence: 21,
+                binding,
+            },
+        );
+        match reply.payload {
+            Payload::Snapshot(value, observed_at) => {
+                assert!(observed_at >= first);
+                assert_eq!(value["uniform_host"]["accepted_frames"], 7);
+            }
+            _ => panic!("new publication was starved by Engine"),
         }
         assert_eq!(sim.state().log.len(), commands);
         assert_eq!(std::fs::read(file).unwrap(), b"intentionally invalid JSON");
-        let lock = engine.lock().unwrap();
-        assert!(matches!(
-            read(
-                &engine,
-                Request {
-                    sequence: 21,
-                    binding
-                }
-            )
-            .payload,
-            Payload::Busy
-        ));
         drop(lock);
     }
 }

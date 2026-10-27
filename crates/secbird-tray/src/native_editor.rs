@@ -480,10 +480,22 @@ fn worker(
     jobs: mpsc::Receiver<Job>,
     replies: mpsc::Sender<WorkerReply>,
 ) {
+    // Clone once before processing the initial ordinary snapshot. Subsequent
+    // status jobs never contend with a uniform batch for the Engine mutex.
+    let status_reader = engine
+        .lock()
+        .ok()
+        .map(|engine| engine.lighting_status_reader());
     for job in jobs {
         let job = match job {
             Job::CachedLighting(request) => {
-                let response = runtime_status::read(&engine, request);
+                let response = match &status_reader {
+                    Some(reader) => runtime_status::read(reader, request),
+                    None => runtime_status::Response {
+                        request,
+                        payload: runtime_status::Payload::Unavailable,
+                    },
+                };
                 if replies.send(WorkerReply::CachedLighting(response)).is_err() {
                     break;
                 }
@@ -1546,7 +1558,7 @@ impl State {
         let change = self.runtime_observer.finish(response, binding.as_ref());
         let mut changed = false;
         if let Some(runtime) = change.runtime {
-            self.lighting_runtime_observed = Some(std::time::Instant::now());
+            self.lighting_runtime_observed = change.observed_at;
             changed = lighting_view::update_runtime_only(&mut self.lighting, runtime.clone());
             if let Some(binding) = &binding {
                 if let Some(devices) = self.state["devices"].as_array_mut() {

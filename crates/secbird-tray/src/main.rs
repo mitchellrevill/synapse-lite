@@ -16,6 +16,8 @@ mod host_uniform;
 #[cfg(windows)]
 mod uniform_worker;
 #[cfg(windows)]
+mod lighting_status;
+#[cfg(windows)]
 mod osd;
 #[cfg(windows)]
 mod native_editor;

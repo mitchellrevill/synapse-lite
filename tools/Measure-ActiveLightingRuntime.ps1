@@ -25,10 +25,16 @@ $previous = @{}
 foreach ($name in $names) { $previous[$name] = [Environment]::GetEnvironmentVariable($name, 'Process') }
 $results = @()
 $failure = $null
+$run = 0
+$frame = $null
+$worker = $null
+$samples = @()
 try {
     $env:SYNAPSE_LITE_ASSETS = $assetsPath
     $env:SYNAPSE_LITE_SMOKE_VIEW = $Scenario
     for ($run = 1; $run -le $Runs; $run++) {
+        $frame = $null
+        $worker = $null
         $directory = Join-Path $scratch "run-$run"
         New-Item -ItemType Directory -Path $directory | Out-Null
         Copy-Item -LiteralPath $config -Destination (Join-Path $directory 'profiles.json')
@@ -119,6 +125,7 @@ try {
     MetricNote = 'Sum of observed process working-set high-waters and sampled private committed bytes. Shared pages can be counted more than once. Descendants discovered once per second; short-lived processes and UDP/DNS traffic are not covered. Peak paged memory is an additional conservative metric.'
     ConfigurationUnchanged = $(if ($failure) { $null } else { $true })
     Failure = $failure
+    RejectedRun = $(if ($failure) { [pscustomobject]@{ Run=$run; PresentedFrame=$frame; ActiveWorker=$worker; Samples=$samples; Accepted=$false } } else { $null })
     Runs = $results
 } | ConvertTo-Json -Depth 16 | Set-Content -LiteralPath $outputPath -Encoding utf8
 $results | Select-Object Run,Scenario,PeakWorkingSetBytes,SampledPeakPrivateBytes,MaxObservedProcesses,Under100MB | Format-Table

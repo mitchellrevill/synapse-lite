@@ -1,0 +1,34 @@
+{
+  "scope": "cached runtime observation independent of Engine/HID mutex",
+  "targeted_tests": {
+    "runtime_status_passed": 4,
+    "runtime_probe_passed": 4,
+    "simulated_native_lighting_passed": 1
+  },
+  "proofs": [
+    "a held simulated Engine mutex does not block reading a newly published status",
+    "invalid profile JSON is not parsed by status consumption",
+    "status consumption adds no simulated HID command",
+    "repeated reads preserve producer observation time",
+    "stale observations still fail the unchanged2500ms readiness bound",
+    "producer control age and conservative extrapolated age are separate; no current control verification is claimed",
+    "actual HWND capture/draft/failure acknowledgement regression remains passing"
+  ],
+  "physical_retest_performed": false,
+  "ram_acceptance_claimed": false,
+  "limitation": "The dependency that allowed starvation has been removed; physical probe readiness must still be revalidated.",
+  "root_workspace_verification": {
+    "cli_passed": 1,
+    "core_passed": 247,
+    "core_ignored": 5,
+    "tray_passed": 155,
+    "tray_ignored": 6,
+    "doc_passed": 1,
+    "failed": 0,
+    "native_hwnd_passed": 4,
+    "native_hwnd_seconds": 3.99,
+    "desktop_font_context": true,
+    "simulated_transports_only": true,
+    "physical_retest_pending": true
+  }
+}

@@ -34,6 +34,8 @@ pub struct Engine {
     lighting_runtime: RefCell<LightingRuntime>,
     uniform: source_uniform::UniformState,
     lighting_probe: RefCell<Option<lighting_probe::Boundary>>,
+    lighting_publisher: crate::lighting_status::Publisher,
+    lighting_reader: crate::lighting_status::Reader,
     host_static_results: RefCell<HashMap<String, (String, secbird_core::Rgb, serde_json::Value)>>,
     #[cfg(test)]
     runtime_store_path: Option<std::path::PathBuf>,
@@ -84,6 +86,7 @@ impl Engine {
     }
 
     fn from_api(api: HidApi) -> Self {
+        let (lighting_publisher, lighting_reader) = crate::lighting_status::channel();
         Self {
             #[cfg(test)]
             simulated_only: false,
@@ -102,6 +105,8 @@ impl Engine {
             lighting_runtime: RefCell::new(LightingRuntime::default()),
             uniform: source_uniform::UniformState::default(),
             lighting_probe: RefCell::new(None),
+            lighting_publisher,
+            lighting_reader,
             host_static_results: RefCell::new(HashMap::new()),
             #[cfg(test)]
             runtime_store_path: None,
@@ -627,6 +632,17 @@ impl Engine {
         self.invalidate_uniform();
         self.lighting_runtime.borrow_mut().invalidate_all();
         self.refresh_lighting_runtime();
+    }
+    pub(crate) fn lighting_status_reader(&self) -> crate::lighting_status::Reader {
+        self.lighting_reader.clone()
+    }
+    pub(crate) fn publish_lighting_status(&self, force: bool) {
+        let faulted = self.uniform_publication_faulted();
+        let observed_at = Instant::now();
+        if force || self.lighting_publisher.due(observed_at, faulted) {
+            let value = self.lighting_runtime_status();
+            self.lighting_publisher.publish_at(value, observed_at, faulted);
+        }
     }
     pub fn lighting_runtime_status(&self) -> serde_json::Value {
         let mut status = self.lighting_runtime.borrow().status();

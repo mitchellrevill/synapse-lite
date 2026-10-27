@@ -1,7 +1,7 @@
 //! One cooperative, joinable off-UI uniform worker. There is no per-frame spawn.
 use crate::engine::Engine;
 use std::sync::{
-    atomic::{AtomicBool, AtomicU64, Ordering},
+    atomic::{AtomicBool, AtomicU64, AtomicU8, Ordering},
     Arc, Mutex, TryLockError,
 };
 use std::thread::{self, JoinHandle};
@@ -21,6 +21,14 @@ struct Metrics {
     last_park_requested_us: AtomicU64,
     last_park_actual_us: AtomicU64,
     max_park_actual_us: AtomicU64,
+    batches_admitted: AtomicU64,
+    batches_completed: AtomicU64,
+    batches_abandoned: AtomicU64,
+    last_batch_accepted: AtomicU64,
+    last_batch_attempted: AtomicU64,
+    last_batch_counts_known: AtomicBool,
+    last_batch_failed: AtomicBool,
+    stop_timeouts: AtomicU64,
 }
 impl Metrics {
     fn tick_completed(&self, elapsed: Duration) {
@@ -58,23 +66,119 @@ impl Metrics {
             "last_park_actual_us":self.last_park_actual_us.load(Ordering::Relaxed),
             "max_park_actual_us":self.max_park_actual_us.load(Ordering::Relaxed),
             "diagnostic_snapshot_atomic_fields_not_simultaneous":true,
-            "wait_policy":"unchanged-park_timeout-minimum8ms-no-timer-resolution-change"
+            "wait_policy":"unchanged-park_timeout-minimum8ms-no-timer-resolution-change",
+            "batches_admitted":self.batches_admitted.load(Ordering::Relaxed),
+            "batches_completed":self.batches_completed.load(Ordering::Relaxed),
+            "batches_abandoned":self.batches_abandoned.load(Ordering::Relaxed),
+            "last_batch_accepted_packets":self.last_batch_counts_known.load(Ordering::Acquire).then(||self.last_batch_accepted.load(Ordering::Relaxed)),
+            "last_batch_attempted_packets":self.last_batch_counts_known.load(Ordering::Acquire).then(||self.last_batch_attempted.load(Ordering::Relaxed)),
+            "last_batch_failed":self.last_batch_failed.load(Ordering::Relaxed),
+            "stop_timeouts":self.stop_timeouts.load(Ordering::Relaxed)
         })
     }
 }
 
+const QUIESCE: u8 = 1;
+const IN_BATCH: u8 = 2;
 pub(crate) struct Signal {
     alive: AtomicBool,
     stop: AtomicBool,
+    admission: AtomicU8,
+    unexpected_exit: AtomicBool,
     metrics: Metrics,
+}
+/// A local worker scheduling admission, not a device ownership/restore token.
+pub(crate) struct BatchAdmission {
+    signal: Arc<Signal>,
+    recorded: bool,
+}
+impl BatchAdmission {
+    pub(crate) fn record(&mut self, completion: &crate::host_uniform::Completion) {
+        let metrics = &self.signal.metrics;
+        metrics
+            .last_batch_accepted
+            .store(completion.accepted_packets as u64, Ordering::Relaxed);
+        metrics
+            .last_batch_attempted
+            .store(completion.attempted_packets as u64, Ordering::Relaxed);
+        metrics
+            .last_batch_failed
+            .store(completion.error.is_some(), Ordering::Relaxed);
+        metrics
+            .last_batch_counts_known
+            .store(true, Ordering::Release);
+        metrics.batches_completed.fetch_add(1, Ordering::Relaxed);
+        self.recorded = true;
+    }
+}
+impl Drop for BatchAdmission {
+    fn drop(&mut self) {
+        if !self.recorded {
+            self.signal
+                .metrics
+                .batches_abandoned
+                .fetch_add(1, Ordering::Relaxed);
+            self.signal
+                .metrics
+                .last_batch_counts_known
+                .store(false, Ordering::Release);
+            self.signal
+                .metrics
+                .last_batch_failed
+                .store(true, Ordering::Relaxed);
+        }
+        self.signal
+            .admission
+            .fetch_and(!IN_BATCH, Ordering::Release);
+    }
 }
 impl Signal {
     pub(crate) fn metrics(&self) -> serde_json::Value {
-        self.metrics.status()
+        let mut value = self.metrics.status();
+        value["quiesce_requested"] = serde_json::json!(self.quiescing());
+        value["cancel_requested"] = serde_json::json!(self.stop.load(Ordering::Acquire));
+        value["batch_active"] =
+            serde_json::json!(self.admission.load(Ordering::Acquire) & IN_BATCH != 0);
+        value["thread_alive"] = serde_json::json!(self.thread_alive());
+        value["unexpected_exit"] = serde_json::json!(self.unexpected_exit());
+        value
+    }
+    pub(crate) fn thread_alive(&self) -> bool {
+        self.alive.load(Ordering::Acquire)
     }
     pub(crate) fn running(&self) -> bool {
-        self.alive.load(Ordering::Acquire) && !self.stop.load(Ordering::Acquire)
+        self.alive.load(Ordering::Acquire)
+            && !self.stop.load(Ordering::Acquire)
+            && !self.quiescing()
     }
+    pub(crate) fn quiescing(&self) -> bool {
+        self.admission.load(Ordering::Acquire) & QUIESCE != 0
+    }
+    pub(crate) fn unexpected_exit(&self) -> bool {
+        self.unexpected_exit.load(Ordering::Acquire)
+    }
+    pub(crate) fn begin_batch(self: &Arc<Self>) -> Option<BatchAdmission> {
+        if self.stop.load(Ordering::Acquire) {
+            return None;
+        }
+        self.admission
+            .compare_exchange(0, IN_BATCH, Ordering::AcqRel, Ordering::Acquire)
+            .ok()?;
+        self.metrics
+            .last_batch_counts_known
+            .store(false, Ordering::Release);
+        self.metrics
+            .batches_admitted
+            .fetch_add(1, Ordering::Relaxed);
+        Some(BatchAdmission {
+            signal: self.clone(),
+            recorded: false,
+        })
+    }
+    fn request_quiesce(&self) {
+        self.admission.fetch_or(QUIESCE, Ordering::AcqRel);
+    }
+
     #[cfg(test)]
     pub(crate) fn stop_for_test(&self) {
         self.stop.store(true, Ordering::Release);
@@ -84,6 +188,8 @@ impl Signal {
         Arc::new(Self {
             alive: AtomicBool::new(true),
             stop: AtomicBool::new(false),
+            admission: AtomicU8::new(0),
+            unexpected_exit: AtomicBool::new(false),
             metrics: Metrics::default(),
         })
     }
@@ -91,6 +197,9 @@ impl Signal {
 struct AliveGuard(Arc<Signal>);
 impl Drop for AliveGuard {
     fn drop(&mut self) {
+        if !self.0.quiescing() || std::thread::panicking() {
+            self.0.unexpected_exit.store(true, Ordering::Release);
+        }
         self.0.alive.store(false, Ordering::Release);
     }
 }
@@ -119,7 +228,11 @@ impl Worker {
     pub(crate) fn start(engine: Arc<Mutex<Engine>>) -> Result<Self, String> {
         let shared = engine.clone();
         let mut worker = Self::spawn(move |signal| {
-            try_tick(&shared, signal, |engine| engine.tick_uniform(&signal.stop))
+            try_tick(&shared, signal, |engine| {
+                let wait = engine.tick_uniform(&signal.stop);
+                engine.publish_lighting_status(signal.quiescing());
+                wait
+            })
         })?;
         let wake = worker.handle.as_ref().unwrap().thread().clone();
         match engine.lock() {
@@ -138,6 +251,8 @@ impl Worker {
         let signal = Arc::new(Signal {
             alive: AtomicBool::new(false),
             stop: AtomicBool::new(false),
+            admission: AtomicU8::new(0),
+            unexpected_exit: AtomicBool::new(false),
             metrics: Metrics::default(),
         });
         let cancelled = signal.clone();
@@ -146,7 +261,7 @@ impl Worker {
             .spawn(move || {
                 let _alive = AliveGuard(cancelled.clone());
                 cancelled.alive.store(true, Ordering::Release);
-                while !cancelled.stop.load(Ordering::Acquire) {
+                while !cancelled.stop.load(Ordering::Acquire) && !cancelled.quiescing() {
                     cancelled
                         .metrics
                         .ticks_started
@@ -155,7 +270,7 @@ impl Worker {
                     let delay = tick(&cancelled)
                         .clamp(Duration::from_millis(8), Duration::from_millis(250));
                     cancelled.metrics.tick_completed(tick_started.elapsed());
-                    if cancelled.stop.load(Ordering::Acquire) {
+                    if cancelled.stop.load(Ordering::Acquire) || cancelled.quiescing() {
                         break;
                     }
                     // At least 8ms between batches gives pending UI/server lock users
@@ -171,29 +286,54 @@ impl Worker {
             handle: Some(handle),
         })
     }
-    /// Call outside the Engine lock. In-flight HID syscalls cannot be interrupted;
-    /// on timeout the caller must not block acquiring that same engine for cleanup.
+    pub(crate) fn log_shutdown_diagnostics(&self) {
+        secbird_core::log::append(&format!(
+            "uniform worker stop diagnostics: {}",
+            self.signal.metrics()
+        ));
+    }
+    #[cfg(test)]
+    pub(crate) fn signal_for_test(&self) -> Arc<Signal> {
+        self.signal.clone()
+    }
+    /// Close local admission and let the current batch finish. Call outside the
+    /// Engine lock. Only timeout requests immediate cooperative cancellation;
+    /// HID syscalls cannot be interrupted. On timeout do not acquire Engine for
+    /// cleanup. A joined thread does not erase any recorded frame failure.
     pub(crate) fn stop(&mut self, timeout: Duration) -> bool {
-        self.signal.stop.store(true, Ordering::Release);
+        self.signal.request_quiesce();
         let Some(handle) = &self.handle else {
-            return true;
+            return !self.signal.unexpected_exit();
         };
         handle.thread().unpark();
         let deadline = Instant::now() + timeout;
         while !handle.is_finished() {
             if Instant::now() >= deadline {
+                self.signal
+                    .metrics
+                    .stop_timeouts
+                    .fetch_add(1, Ordering::Relaxed);
+                self.signal.stop.store(true, Ordering::Release);
+                handle.thread().unpark();
                 return false;
             }
             thread::sleep(
                 Duration::from_millis(5).min(deadline.saturating_duration_since(Instant::now())),
             );
         }
-        self.handle.take().unwrap().join().is_ok()
+        self.handle.take().unwrap().join().is_ok() && !self.signal.unexpected_exit()
     }
 }
 impl Drop for Worker {
     fn drop(&mut self) {
-        let _ = self.stop(Duration::ZERO);
+        self.signal.request_quiesce();
+        self.signal.stop.store(true, Ordering::Release);
+        if let Some(handle) = self.handle.take() {
+            handle.thread().unpark();
+            if handle.is_finished() {
+                let _ = handle.join();
+            }
+        }
     }
 }
 
@@ -215,6 +355,66 @@ mod tests {
         assert_eq!(value["last_park_actual_us"], 1000);
         assert_eq!(value["max_park_actual_us"], 12000);
         assert_eq!(value["tick_us_total"], 75);
+    }
+    #[test]
+    fn quiesce_closes_local_admission_without_cancelling_an_admitted_batch() {
+        let signal = Signal::running_for_test();
+        let mut batch = signal.begin_batch().unwrap();
+        signal.request_quiesce();
+        assert!(!signal.running());
+        assert!(!signal.stop.load(Ordering::Acquire));
+        assert!(signal.begin_batch().is_none());
+        batch.record(&crate::host_uniform::Completion {
+            accepted_packets: 7,
+            attempted_packets: 7,
+            error: None,
+        });
+        drop(batch);
+        assert!(signal.begin_batch().is_none());
+        assert_eq!(signal.metrics()["batch_active"], false);
+        assert_eq!(signal.metrics()["last_batch_accepted_packets"], 7);
+        for _ in 0..32 {
+            let signal = Signal::running_for_test();
+            let rendezvous = Arc::new(std::sync::Barrier::new(2));
+            let other = signal.clone();
+            let wait = rendezvous.clone();
+            let admitted = thread::spawn(move || {
+                wait.wait();
+                other.begin_batch()
+            });
+            rendezvous.wait();
+            signal.request_quiesce();
+            drop(admitted.join().unwrap());
+            assert!(signal.begin_batch().is_none());
+            assert!(signal.metrics()["batches_admitted"].as_u64().unwrap() <= 1);
+        }
+    }
+    #[test]
+    fn last_healthy_publication_cannot_hide_an_actual_worker_panic() {
+        let (publisher, reader) = crate::lighting_status::channel();
+        let (release, wait) = mpsc::channel();
+        let mut worker = Worker::spawn(move |_| {
+            wait.recv().unwrap();
+            panic!("injected after healthy publication")
+        })
+        .unwrap();
+        publisher.attach_signal(worker.signal.clone());
+        publisher.publish(serde_json::json!({"one":{"uniform_host":{"worker_enabled":true,"streaming":true,"error":null}}}));
+        let observed = reader.read_device("one").unwrap().observed_at;
+        release.send(()).unwrap();
+        let deadline = Instant::now() + Duration::from_secs(1);
+        while !worker.handle.as_ref().unwrap().is_finished() && Instant::now() < deadline {
+            thread::sleep(Duration::from_millis(1));
+        }
+        assert!(!worker.stop(Duration::from_secs(1)));
+        let snapshot = reader.read_device("one").unwrap();
+        assert_eq!(snapshot.observed_at, observed);
+        assert_eq!(snapshot.value["uniform_host"]["worker_enabled"], false);
+        assert_eq!(snapshot.value["uniform_host"]["worker_stopped"], true);
+        assert!(snapshot.value["uniform_host"]["error"]
+            .as_str()
+            .unwrap()
+            .contains("unexpectedly"));
     }
     #[test]
     fn one_worker_runs_multiple_ticks_and_joins_once() {
@@ -304,7 +504,10 @@ mod tests {
             thread::yield_now();
         }
         assert!(!poison.signal.running());
-        assert!(poison.stop(Duration::from_secs(1)));
+        assert!(
+            !poison.stop(Duration::from_secs(1)),
+            "poisoned Engine exit is not a clean stop"
+        );
     }
     #[test]
     fn stop_timeout_does_not_join_an_uninterruptible_call_or_take_engine_lock() {

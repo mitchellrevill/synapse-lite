@@ -103,6 +103,7 @@ struct App {
     uniform_shutdown_blocked: Cell<bool>,
     lighting_probe: bool,
     probe_binding: Option<(String, String)>,
+    lighting_status: crate::lighting_status::Reader,
     probe_observation: RefCell<Option<(std::time::Instant, serde_json::Value)>>,
     probe_report_done: Cell<bool>,
     /// Menu id offset -> (device key, profile name).
@@ -287,6 +288,7 @@ pub fn run() {
             }
         } else { None };
 
+        let lighting_status = engine.lighting_status_reader();
         let hinstance = GetModuleHandleW(null());
         let class = wide(CLASS_NAME);
         let wc = WNDCLASSW {
@@ -343,6 +345,7 @@ pub fn run() {
                 uniform_shutdown_blocked: Cell::new(false),
                 lighting_probe,
                 probe_binding,
+                lighting_status,
                 probe_observation: RefCell::new(None),
                 probe_report_done: Cell::new(false),
                 profile_items: Vec::new(),
@@ -646,11 +649,11 @@ impl App {
         if self.probe_report_done.get() {
             return;
         }
-        // Observation never queues work or waits behind an in-flight USB batch.
-        if let Ok(engine) = self.engine.try_lock() {
-            let runtime = engine.lighting_runtime_status();
-            let metadata = crate::runtime_probe::readiness(&runtime[key], profile);
-            *self.probe_observation.borrow_mut() = Some((std::time::Instant::now(), metadata));
+        // This cache has its own tiny lock. A long HID batch cannot starve
+        // observation, and consuming a sample never gives it a new timestamp.
+        if let Some(snapshot) = self.lighting_status.read_device(key) {
+            let metadata = crate::runtime_probe::readiness(&snapshot.value, profile);
+            *self.probe_observation.borrow_mut() = Some((snapshot.observed_at, metadata));
         }
     }
 
@@ -696,6 +699,7 @@ impl App {
             }
         }
         let mut engine = self.engine();
+        engine.log_uniform_shutdown_diagnostics();
         // Join has completed and Signal.running is now false. Observe session
         // errors before disabling the worker clears its ordinary session cache.
         let mut post_stop = self.probe_binding.as_ref().map(|(key,profile)| {

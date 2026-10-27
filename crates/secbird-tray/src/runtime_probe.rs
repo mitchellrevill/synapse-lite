@@ -214,8 +214,12 @@ pub(crate) fn readiness(runtime: &Value, expected_profile: &str) -> Value {
         && streaming
         && supported;
     json!({"ready":ready,"owner_matches":owner_matches,"worker_alive":worker_alive,"streaming":streaming,
+        "worker_liveness_sampled_separately":runtime["worker_liveness_sampled_separately"]==true,
+        "worker_liveness_scope":if runtime["worker_liveness_sampled_separately"]==true {"live-signal-at-cache-read"}else{"engine-status-snapshot"},
         "accepted_frames":accepted_frames,"controls_checkpoint_ready":controls,
-        "control_checkpoint_age_us":checkpoint_age,"control_parameter_known":uniform["parameter_before"].is_number(),
+        "control_checkpoint_age_us":checkpoint_age,"control_age_at_producer_us":checkpoint_age,
+        "current_controls_verified":false,"control_age_scope":"at-producer-observation",
+        "control_parameter_known":uniform["parameter_before"].is_number(),
         "per_frame_controls_verified":uniform["custom_frame_control_verified"]==true,"source_id":uniform.get("source_id"),
         "native_id":uniform.get("native_id"),"no_cached_error":no_error,"active_lighting_probe":true,
         "read_only_smoke":false,"final_ram_acceptance":false})
@@ -224,9 +228,23 @@ pub(crate) fn readiness(runtime: &Value, expected_profile: &str) -> Value {
 /// A previously valid cached frame is insufficient after observation stalls.
 pub(crate) fn fresh_readiness(runtime: &Value, profile: &str, age_ms: Option<u64>) -> Value {
     let mut status = readiness(runtime, profile);
-    status["status_snapshot_age_ms"] = json!(age_ms);
+    annotate_age(&mut status, age_ms);
     status["ready"] = json!(status["ready"] == true && age_ms.is_some_and(|age| age <= 2500));
     status
+}
+
+fn annotate_age(status: &mut Value, age_ms: Option<u64>) {
+    status["status_snapshot_age_ms"] = json!(age_ms);
+    status["snapshot_age_ms"] = json!(age_ms);
+    // Round upward because the public elapsed age is quantized to milliseconds.
+    status["conservative_control_age_now_us"] = json!(status["control_age_at_producer_us"]
+        .as_u64()
+        .zip(age_ms)
+        .map(|(control, elapsed)| control
+            .saturating_add(elapsed.saturating_add(1).saturating_mul(1000))
+            .saturating_add(1)));
+    // This is a bounded cached observation, never a new control GET at draw time.
+    status["current_controls_verified"] = json!(false);
 }
 
 /// Keep pre-stop activity evidence distinct from errors observed after joining
@@ -244,7 +262,7 @@ pub(crate) fn stop_report(
     report["ready_before_stop"] =
         json!(report["ready"] == true && age.is_some_and(|age| age <= 2500));
     report["worker_was_running"] = report["worker_alive"].clone();
-    report["status_snapshot_age_ms"] = json!(age);
+    annotate_age(&mut report, age);
     report["worker_stopped"] = json!(stopped);
     report["restoration_failure_count"] = json!(restoration_failures);
     report["clean_stop"] = json!(stopped && restoration_failures == 0);
@@ -414,6 +432,14 @@ mod tests {
             false
         );
         assert_eq!(fresh_readiness(&status, "Fixture", None)["ready"], false);
+        let cached = fresh_readiness(&status, "Fixture", Some(1200));
+        assert_eq!(
+            cached["ready"], true,
+            "producer checkpoint plus bounded snapshot age is admission evidence"
+        );
+        assert_eq!(cached["control_age_at_producer_us"], 100000);
+        assert_eq!(cached["conservative_control_age_now_us"], 1301001);
+        assert_eq!(cached["current_controls_verified"], false);
         assert_eq!(
             presentation("keyboard-color-editor").unwrap(),
             "keyboard-lighting-color-editor"

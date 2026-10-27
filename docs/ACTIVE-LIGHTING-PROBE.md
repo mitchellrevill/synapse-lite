@@ -17,3 +17,5 @@ The older `--runtime-smoke` continues to omit the uniform worker and keeps its e
 Validation for this unit uses simulated transport only: flag/conflict/admission/readiness tests, Engine GET-only admission/config-pin tests, and the four existing native HWND regressions. Physical active-runtime RAM measurement is a separate step.
 
 The frozen simulated checkpoint passed 145 regular tray tests (6 opt-in tests ignored) and all 4 native HWND regressions in 4.04 seconds. See [active-lighting-probe-tests.json](validation/active-lighting-probe-tests.json). No physical active probe was executed for this validation.
+
+Cached runtime updates now use a separately published status bus. The producer observation timestamp is preserved through UI and tray reads; repeated reads cannot refresh its age. This prevents an active uniform worker from starving status observation by holding the Engine mutex during USB batches.
