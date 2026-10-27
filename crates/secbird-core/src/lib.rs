@@ -36,6 +36,7 @@ pub mod proto;
 pub mod report;
 pub mod sim;
 pub mod transport;
+pub mod uniform_lighting;
 pub mod update;
 
 pub use db::{Db, DeviceSpec, Kind, Lighting, Matrix};

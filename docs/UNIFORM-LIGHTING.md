@@ -1,0 +1,11 @@
+# Recovered uniform animation math
+
+UniformCycle implements the source Quick Spectrum (UI3/native4) and fixed-colour Breathing (UI2/native5) palettes in Rust. It has no vendor runtime dependency, clock, device access or frame history. One RGB colour table is retained; source Spectrum needs2,829 bytes, and the general constructor caps table storage at49,152 bytes.
+
+Spectrum uses ten recovered colour stops over37,740ms at25fps. The native integer40ms interval produces943 entries and a37,720ms nominal cycle. It copies one table colour uniformly to the output and advances one index per render call. Source one/two-colour Breathing uses175/350 entries over7/14 seconds. No HSV/sine approximation substitutes for the recovered palette.
+
+The shared table builder repeats f32 additions, truncates channels and saturates to bytes. Segment endpoints are duplicated. A one-slot final segment has a native branch quirk: the final endpoint restoration is skipped, so stops[0,99,100] with three frames produce A,B,B. The Rust code preserves that observed instruction behaviour. Invalid native fallback, alpha/sentinel blending, random colours, finite/pause/input-trigger combinations and other effects are outside this bounded ordinary-RGB API.
+
+Eleven tests pass in debug and release. All943 Spectrum RGB triples match an independent static-derived fixture, whose SHA256 is6258f96d86f84a7e73b6dcee488e3d844d36523e2728b5edca1d1393cb162017. This cross-language byte comparison is reconstruction evidence, not vendor DLL execution or optical verification. Source algorithms do not by themselves establish outer scheduling, catch-up/drop behaviour or phase synchronization with an existing animation.
+
+Native source: RzLightingEngineApi_v4.0.55.0.dll SHA256cd9fc2a61ff920b9b73e1f5e27632020e2f8586f443e426a875ad3b042b714fa. REA/Ghidra evidence includes Spectrum initializer ev_1bf9883710f4b284ad854f70446f8ee7e1d5250075a3c0aa58bf0e8e761a65f5, frame recurrence ev_abf338dc8009c242a4d6d40b82daba9cb565b1ea7def0a8e83d2d9a72338d6e0, shared palette builder ev_18490e4590fbff48a9601b33c5bb711772be71b56c0af9ed363a6f116f2d0094 and Breathing initialization ev_30008e015878effeb86e23de09ca15ea646559ae9ebe08ecd03069c822d7b388. Assembly corroborates the f32 and endpoint semantics; decompiler type guesses were not used as an exported ABI. The DLL was not executed or bundled.
