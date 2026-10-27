@@ -911,6 +911,8 @@ fn state(engine: &Engine) -> Value {
     let runtime=engine.lighting_runtime_status();
     json!({
         "version": env!("CARGO_PKG_VERSION"),
+        "measurement_read_only": engine.is_measurement_read_only(),
+        "query_only_device_handles": engine.is_measurement_read_only() && engine.devices().iter().all(Device::is_query_only),
         "devices": engine.devices().iter().map(|dev|{
             let mut device=device_json(dev);
             device["lighting_runtime"]=runtime.get(&dev.key()).cloned().unwrap_or(Value::Null);

@@ -149,6 +149,9 @@ fn populated_store_callbacks_dispatch_and_direct_device_paths_issue_no_set() {
         .iter()
         .all(|command| command.id & 0x80 != 0));
     assert_eq!(std::fs::read(&path).unwrap(), before);
+    let state = crate::server::dispatch(&mut engine, "GET", "/api/state", b"").unwrap();
+    assert_eq!(state["measurement_read_only"], true);
+    assert_eq!(state["query_only_device_handles"], true);
     let shared = std::sync::Arc::new(std::sync::Mutex::new(engine));
     assert!(crate::uniform_worker::Worker::start(shared.clone()).is_err());
     assert!(!shared.lock().unwrap().uniform_is_enabled());
