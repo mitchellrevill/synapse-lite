@@ -45,7 +45,9 @@ See [the pinned baseline](docs/BASELINE.json), [acceptance criteria](docs/ACCEPT
 
 The source-derived mouse [Performance](docs/PERFORMANCE.md) and [Power](docs/POWER.md) controls are connected to shared device actions. Their reports distinguish source reconstruction, simulator checks, physical setting/readback/restoration checks and memory observations from the remaining visual and interaction gates.
 
-The keyboard [Lighting editor](docs/LIGHTING.md) includes recovered brightness/policy controls, palettes and the color editor. The tray runs idle/display brightness policies. A guarded [host Static path](docs/HOST-STATIC.md) and [Spectrum/fixed Breathing worker](docs/UNIFORM-RUNTIME.md) support the keyboard's existing Driver Mode. The first bounded animation test achieved about11fps; cadence improvement, other host effects and pixel parity remain unfinished.
+The keyboard [Lighting editor](docs/LIGHTING.md) includes recovered brightness/policy controls, palettes and the color editor. The tray runs idle/display brightness policies. A guarded [host Static path](docs/HOST-STATIC.md) and [Spectrum/fixed Breathing worker](docs/UNIFORM-RUNTIME.md) support the keyboard's existing Driver Mode. A later [control-sampling checkpoint](docs/UNIFORM-CONTROL-CHECKPOINTS.md) improved bounded measured throughput from about11fps to14.27/14.56fps with readable controls unchanged; cadence improvement, other host effects and pixel parity remain unfinished.
+
+An independent [Rust kernel forwarding candidate](docs/KERNEL-BUILD.md) compiled and linked against generated WDK bindings. Its source and pinned Microsoft build dependencies are included separately under experimental/. It has never been loaded or attached to hardware and is not a replacement for the installed drivers.
 
 The native [profile Import/Export modal](docs/PROFILE-MODAL.md) provides worker-backed previews, profile/macro selection, inactive imports, partial corrupt-record warnings and explicit full native backups. Source geometry and converted icon pixels are verified separately from whole-UI parity; the simulated HWND tests do not establish real Synapse re-import acceptance.
 
