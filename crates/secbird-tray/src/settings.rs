@@ -8,7 +8,7 @@ use windows_sys::Win32::System::Registry::*;
 use windows_sys::Win32::UI::Shell::ShellExecuteW;
 use windows_sys::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
 
-const APP_NAME: &str = "Secretarybird";
+const APP_NAME: &str = "Synapse Lite";
 const RUN_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
 
 fn wide(s: &str) -> Vec<u16> {
@@ -16,7 +16,7 @@ fn wide(s: &str) -> Vec<u16> {
 }
 
 /// Tray settings in `tray.json`.
-#[derive(Default, serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct TraySettings {
     /// Check Razer's product pages for newer firmware once a week. Off until turned on.
     #[serde(default)]
@@ -27,8 +27,8 @@ pub struct TraySettings {
     /// Device key -> firmware version already announced, so each is announced once.
     #[serde(default)]
     pub firmware_notified: std::collections::BTreeMap<String, String>,
-    /// Don't check GitHub for a newer Secretarybird. The check is on unless turned off.
-    #[serde(default)]
+    /// Preserved for upstream compatibility. The fork does not schedule network checks.
+    #[serde(default = "updates_disabled")]
     pub updates_off: bool,
     /// Unix time of the last daily new-version check.
     #[serde(default)]
@@ -55,6 +55,27 @@ pub struct TraySettings {
     /// or left as they are when unset.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub away_lights: Option<String>,
+}
+
+fn updates_disabled() -> bool { true }
+
+impl Default for TraySettings {
+    fn default() -> Self {
+        Self {
+            firmware_weekly: false,
+            firmware_checked: 0,
+            firmware_notified: Default::default(),
+            updates_off: true,
+            update_checked: 0,
+            update_notified: String::new(),
+            last_version: String::new(),
+            popups_off: false,
+            battery_warning_off: false,
+            battery_warning_at: None,
+            auto_switch_off: false,
+            away_lights: None,
+        }
+    }
 }
 
 /// Choices for [`TraySettings::away_lights`], with the percent of the saved brightness.
@@ -116,7 +137,7 @@ pub fn set_autostart(enable: bool) {
         }
         if enable {
             if let Ok(exe) = std::env::current_exe() {
-                let value = wide(&format!("\"{}\"", exe.display()));
+                let value = wide(&format!("\"{}\" --tray", exe.display()));
                 RegSetValueExW(
                     key,
                     wide(APP_NAME).as_ptr(),

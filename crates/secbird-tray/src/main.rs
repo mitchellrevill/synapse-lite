@@ -10,6 +10,8 @@ mod engine;
 #[cfg(windows)]
 mod osd;
 #[cfg(windows)]
+mod native_editor;
+#[cfg(windows)]
 mod server;
 #[cfg(windows)]
 mod settings;
@@ -18,6 +20,33 @@ mod win;
 
 #[cfg(windows)]
 fn main() {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    if let Some(index) = args.iter().position(|arg| arg == "--runtime-smoke") {
+        if !args.get(index + 1).and_then(|s| s.parse::<u32>().ok()).is_some_and(|s| (1..=600).contains(&s)) {
+            eprintln!("--runtime-smoke requires 1..600 seconds");
+            std::process::exit(2);
+        }
+    }
+    if let Some(index) = args.iter().position(|arg| arg == "--native-smoke") {
+        let seconds = args.get(index + 1).and_then(|s| s.parse::<u64>().ok()).filter(|s| (1..=600).contains(s));
+        let Some(seconds) = seconds else {
+            eprintln!("--native-smoke requires 1..600 seconds");
+            std::process::exit(2);
+        };
+        let mut engine = match engine::Engine::new() {
+            Ok(engine) => engine,
+            Err(error) => { eprintln!("{error}"); std::process::exit(1); }
+        };
+        engine.rescan();
+        if let Err(error) = native_editor::run_standalone(
+            std::sync::Arc::new(std::sync::Mutex::new(engine)),
+            Some(std::time::Duration::from_secs(seconds)),
+        ) {
+            eprintln!("{error}");
+            std::process::exit(1);
+        }
+        return;
+    }
     // Development: serve the editor only (no tray icon, no single-instance lock, nothing
     // applied), print its URL and keep running. Used to look at the editor beside a running
     // tray, e.g. with SECBIRD_SIM devices. Debug builds have a console for the URL.

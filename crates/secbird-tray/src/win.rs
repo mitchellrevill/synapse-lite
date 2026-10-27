@@ -2,7 +2,7 @@ use crate::engine::{ApplyReport, Battery, Engine};
 use secbird_core::log;
 use std::collections::{HashMap, HashSet};
 use crate::settings::{autostart_enabled, open_config_folder, set_autostart, TraySettings};
-use crate::{apps, osd, server};
+use crate::{apps, osd, native_editor};
 use std::ffi::CString;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use secbird_core::update::Release;
@@ -23,7 +23,7 @@ use windows_sys::Win32::UI::Accessibility::{SetWinEventHook, HWINEVENTHOOK};
 use windows_sys::Win32::UI::Shell::*;
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
-const APP_NAME: &str = "Secretarybird";
+const APP_NAME: &str = "Synapse Lite";
 const WM_TRAY: u32 = WM_APP + 1;
 /// Sent by a second launch: open the editor of the instance already running.
 const WM_OPEN_EDITOR: u32 = WM_APP + 2;
@@ -39,7 +39,7 @@ const WM_UPDATE: u32 = WM_APP + 6;
 const WM_UPDATE_INSTALL: u32 = WM_APP + 7;
 /// Sent by the editor's "Update now": the release is waiting in `REQUESTED_UPDATE`.
 const WM_START_UPDATE: u32 = WM_APP + 8;
-const CLASS_NAME: &str = "SecretarybirdTray";
+const CLASS_NAME: &str = "SynapseLiteTray";
 const TIMER_RESCAN: usize = 1;
 /// Extra rescans after start and wake: devices often answer late at boot.
 const TIMER_RETRY: usize = 2;
@@ -57,11 +57,7 @@ const SETTLE_MS: u32 = 1500;
 /// one profile instead of one per window passed.
 const TIMER_FOREGROUND: usize = 4;
 const FOREGROUND_MS: u32 = 300;
-/// Weekly firmware check (opt-in) and daily new-version check (on unless turned off):
-/// looked at every few hours, each runs when its time has passed.
-const TIMER_FIRMWARE: usize = 5;
-const FIRMWARE_TIMER_MS: u32 = 6 * 60 * 60 * 1000;
-const FIRMWARE_FIRST_MS: u32 = 2 * 60 * 1000;
+// No automatic firmware/version network timer in this fork.
 const FIRMWARE_EVERY_SECS: u64 = 7 * 24 * 60 * 60;
 const UPDATE_EVERY_SECS: u64 = 24 * 60 * 60;
 /// Wireless mice forget their button remaps when they sleep (#45): one button is read
@@ -74,6 +70,8 @@ const BUTTONS_AGAIN_SECS: u64 = 60;
 /// set to stay lit get a read on the same beat (#34).
 const TIMER_LIGHTS: usize = 7;
 const LIGHTS_MS: u32 = 3_000;
+/// Bounded measurement run of the real tray + native editor path.
+const TIMER_SMOKE_EXIT: usize = 8;
 
 const ID_REAPPLY: u32 = 1;
 const ID_FOLDER: u32 = 2;
@@ -100,8 +98,6 @@ struct App {
     icon: HICON,
     /// Shared with the editor's server thread.
     engine: Arc<Mutex<Engine>>,
-    /// Started on first use; holds the tokenized URL.
-    editor_url: Option<String>,
     /// Menu id offset -> (device key, profile name).
     profile_items: Vec<(String, String)>,
     /// Apply to every device on the next rescan, not just newly arrived ones.
@@ -213,7 +209,7 @@ fn copy_wide(dst: &mut [u16], s: &str) {
 
 pub fn run() {
     unsafe {
-        let _mutex = CreateMutexW(null(), 0, wide("Local\\Secretarybird.Tray").as_ptr());
+        let _mutex = CreateMutexW(null(), 0, wide("Local\\SynapseLite.Tray").as_ptr());
         if GetLastError() == ERROR_ALREADY_EXISTS {
             let running = FindWindowW(wide(CLASS_NAME).as_ptr(), null());
             if std::env::var_os("SECBIRD_SIM").is_some() {
@@ -295,7 +291,6 @@ pub fn run() {
                 hwnd,
                 icon,
                 engine: Arc::new(Mutex::new(engine)),
-                editor_url: None,
                 profile_items: Vec::new(),
                 apply_all_pending: true,
                 retry_step: 0,
@@ -320,15 +315,19 @@ pub fn run() {
             })
         });
         log::append("tray started");
-        with_app(|app| app.announce_updated());
         with_app(|app| app.rescan());
         start_retries(hwnd);
         SetTimer(hwnd, TIMER_BATTERY, BATTERY_MS, None);
         SetTimer(hwnd, TIMER_BUTTONS, BUTTONS_MS, None);
         SetTimer(hwnd, TIMER_LIGHTS, LIGHTS_MS, None);
-        SetTimer(hwnd, TIMER_FIRMWARE, FIRMWARE_FIRST_MS, None);
-        if std::env::args().any(|a| a == "--editor") {
+        if !std::env::args().any(|a| a == "--tray") {
             with_app(|app| app.open_editor());
+        }
+        let smoke_args: Vec<String> = std::env::args().collect();
+        if let Some(index) = smoke_args.iter().position(|arg| arg == "--runtime-smoke") {
+            if let Some(seconds) = smoke_args.get(index + 1).and_then(|s| s.parse::<u32>().ok()).filter(|s| (1..=600).contains(s)) {
+                SetTimer(hwnd, TIMER_SMOKE_EXIT, seconds * 1000, None);
+            }
         }
 
         let mut msg: MSG = zeroed();
@@ -447,12 +446,9 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
             }
             0
         }
-        WM_TIMER if wparam == TIMER_FIRMWARE => {
-            SetTimer(hwnd, TIMER_FIRMWARE, FIRMWARE_TIMER_MS, None);
-            with_app(|app| {
-                app.check_firmware(false);
-                app.check_update(false);
-            });
+        WM_TIMER if wparam == TIMER_SMOKE_EXIT => {
+            KillTimer(hwnd, TIMER_SMOKE_EXIT);
+            DestroyWindow(hwnd);
             0
         }
         WM_TIMER if wparam == TIMER_BATTERY => {
@@ -691,20 +687,10 @@ impl App {
         self.update_tooltip();
     }
 
-    /// Start the local editor server on first use, then open it in the default browser.
+    /// The editor shares the engine directly; no browser or HTTP server is started.
     fn open_editor(&mut self) {
-        if self.editor_url.is_none() {
-            match server::start(self.engine.clone()) {
-                Ok(editor) => self.editor_url = Some(editor.url),
-                Err(e) => return self.balloon("Could not start the editor", &e.to_string()),
-            }
-        }
-        if let Some(url) = &self.editor_url {
-            #[cfg(debug_assertions)]
-            eprintln!("editor: {url}");
-            unsafe {
-                ShellExecuteW(null_mut(), wide("open").as_ptr(), wide(url).as_ptr(), null(), null(), SW_SHOWNORMAL);
-            }
+        if let Err(error) = native_editor::open(self.engine.clone()) {
+            self.balloon("Could not open the editor", &error);
         }
     }
 
@@ -916,24 +902,6 @@ impl App {
         }
     }
 
-    /// Once after an update: open the new version's release notes (a notification alone is
-    /// easy to miss) and say which version is running now.
-    fn announce_updated(&mut self) {
-        let current = secbird_core::update::CURRENT;
-        let mut settings = TraySettings::load();
-        if settings.last_version == current {
-            return;
-        }
-        let updated = !settings.last_version.is_empty() && secbird_core::firmware::is_newer(current, &settings.last_version);
-        settings.last_version = current.to_string();
-        settings.save();
-        if updated {
-            let url = format!("{}/releases/tag/v{current}", env!("CARGO_PKG_REPOSITORY"));
-            open_url(&url);
-            self.notify(&format!("Updated to Secretarybird {current}"), "What's new is open in your browser.", NIIF_INFO, None);
-        }
-    }
-
     /// Build `secbird report` (a few seconds of read-only USB requests) on a background
     /// thread, put it on the clipboard and open the GitHub device report form.
     fn make_report(&mut self) {
@@ -1011,11 +979,6 @@ impl App {
         append(menu, MF_STRING, ID_REPORT as usize, "Make a device report…");
         let auto = if autostart_enabled() { MF_CHECKED } else { MF_UNCHECKED };
         append(menu, MF_STRING | auto, ID_AUTOSTART as usize, "Start with Windows");
-        let fw = if TraySettings::load().firmware_weekly { MF_CHECKED } else { MF_UNCHECKED };
-        append(menu, MF_STRING | fw, ID_FIRMWARE as usize, "Check for firmware updates weekly");
-        let notify = if TraySettings::load().updates_off { MF_UNCHECKED } else { MF_CHECKED };
-        append(menu, MF_STRING | notify, ID_UPDATE_NOTIFY as usize, "Tell me when a new version is out");
-        append(menu, MF_STRING, ID_CHECK_UPDATE as usize, "Check for updates now");
         AppendMenuW(menu, MF_SEPARATOR, 0, null());
         append(menu, MF_STRING, ID_EXIT as usize, "Exit");
         menu

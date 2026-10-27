@@ -1,0 +1,9 @@
+{
+  "Source": "Synthetic checked-in Synapse4 fixture",
+  "ForkSynapse4Import": true,
+  "ForkSynapse4Export": true,
+  "UpstreamBetaReadsNativeExport": true,
+  "KnownSettingsSurviveUpstreamRoundtrip": true,
+  "UpstreamPreservesUnknownMetadata": false,
+  "LiveSynapseImportVerified": false
+}

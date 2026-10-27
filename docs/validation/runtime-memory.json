@@ -1,0 +1,87 @@
+{
+  "BinarySha256": "C1B8D1F996DF7CED1F6080A0A2BC0B8989DD826A83424AA3E5CBFB7A3B132115",
+  "TimestampUtc": "2026-10-27T01:31:18.6640004+00:00",
+  "LimitBytes": 100000000,
+  "Scope": "Real tray, native editor, worker/listener threads and observed descendants. Stock Synapse/services and installed kernel drivers are excluded. These read-only views do not prove full workflow, visual or hardware parity.",
+  "StockState": "RazerAppEngine and razerwdl temporarily closed to avoid HID contention; Razer services/drivers remained installed and running; AppEngine restored afterward",
+  "Runs": [
+    {
+      "Scenario": "dashboard",
+      "PeakWorkingSetBytes": 22241280,
+      "SampledPeakPrivateBytes": 7458816.0,
+      "PeakPagedMemoryBytes": 8036352,
+      "MaxObservedProcesses": 1.0,
+      "Under100MB": true,
+      "ObservedTcpConnections": [],
+      "PresentedFrame": {
+        "detected_devices": 2,
+        "device_kind": null,
+        "failed": false,
+        "fidelity": "partial source-derived native port; pixel identity unproven",
+        "height": 706,
+        "keyboard_artwork": true,
+        "loaded_source_fonts": 3,
+        "matched": true,
+        "mouse_artwork": true,
+        "presented": true,
+        "requested": "dashboard",
+        "scale": 1.0,
+        "tab": "CUSTOMIZE",
+        "visible": true,
+        "width": 1266
+      }
+    },
+    {
+      "Scenario": "mouse-performance",
+      "PeakWorkingSetBytes": 21876736,
+      "SampledPeakPrivateBytes": 7614464.0,
+      "PeakPagedMemoryBytes": 8204288,
+      "MaxObservedProcesses": 1.0,
+      "Under100MB": true,
+      "ObservedTcpConnections": [],
+      "PresentedFrame": {
+        "detected_devices": 2,
+        "device_kind": "mouse",
+        "failed": false,
+        "fidelity": "partial source-derived native port; pixel identity unproven",
+        "height": 706,
+        "keyboard_artwork": true,
+        "loaded_source_fonts": 3,
+        "matched": true,
+        "mouse_artwork": true,
+        "presented": true,
+        "requested": "mouse-performance",
+        "scale": 1.0,
+        "tab": "PERFORMANCE",
+        "visible": true,
+        "width": 1266
+      }
+    },
+    {
+      "Scenario": "keyboard-lighting",
+      "PeakWorkingSetBytes": 21835776,
+      "SampledPeakPrivateBytes": 7483392.0,
+      "PeakPagedMemoryBytes": 8531968,
+      "MaxObservedProcesses": 1.0,
+      "Under100MB": true,
+      "ObservedTcpConnections": [],
+      "PresentedFrame": {
+        "detected_devices": 2,
+        "device_kind": "keyboard",
+        "failed": false,
+        "fidelity": "partial source-derived native port; pixel identity unproven",
+        "height": 706,
+        "keyboard_artwork": true,
+        "loaded_source_fonts": 3,
+        "matched": true,
+        "mouse_artwork": true,
+        "presented": true,
+        "requested": "keyboard-lighting",
+        "scale": 1.0,
+        "tab": "LIGHTING",
+        "visible": true,
+        "width": 1266
+      }
+    }
+  ]
+}
