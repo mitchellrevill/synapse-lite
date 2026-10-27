@@ -30,6 +30,8 @@ pub mod macros;
 pub mod net;
 pub mod ornata_frame;
 pub mod ornata_identity;
+#[cfg(windows)]
+pub mod ornata_manifest;
 pub mod ornata_spatial;
 pub mod performance;
 pub mod power;
