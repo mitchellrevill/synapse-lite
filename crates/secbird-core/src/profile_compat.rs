@@ -12,6 +12,12 @@ use base64::Engine;
 use serde_json::{json, Map, Value};
 use std::collections::BTreeMap;
 
+mod mappings;
+mod settings;
+
+#[cfg(test)]
+mod expanded_tests;
+
 const SOURCE: &str = "_synapseLiteSynapse4";
 const MAX_DOCUMENT_BYTES: usize = 2 * 1024 * 1024;
 const MAX_DECODED_BYTES: usize = 1024 * 1024;
@@ -48,7 +54,7 @@ pub fn import_document(bytes: &[u8]) -> Result<ImportReport> {
         let mut store: Store = serde_json::from_value(value)
             .map_err(|e| invalid(format!("Invalid Secretarybird profiles: {e}")))?;
         store.rename_old_buttons();
-        ensure_native_budget(&store)?;
+        validate_store_budget(&store)?;
         return Ok(ImportReport {
             store,
             warnings: Vec::new(),
@@ -141,16 +147,49 @@ fn import_synapse4(envelope: Value) -> Result<ImportReport> {
         .clone();
     let mut store = Store::default();
     store.devices.insert(format!("{pid:04X}"), device);
-    ensure_native_budget(&store)?;
+    validate_store_budget(&store)?;
     Ok(ImportReport { store, warnings })
 }
 
-fn ensure_native_budget(store: &Store) -> Result<()> {
+/// Check the complete post-merge store before committing an import or profile edit.
+pub fn validate_store_budget(store: &Store) -> Result<()> {
     let backup = serde_json::to_vec_pretty(store).map_err(|e| invalid(e.to_string()))?;
     if backup.len() > MAX_DOCUMENT_BYTES {
         return Err(invalid("Lossless native profile backup would exceed 2 MiB; import refused without discarding fields"));
     }
     check_json_complexity(&backup)
+}
+
+/// A copied native profile is a new Synapse identity even when it retains the
+/// original foreign mappings and metadata. Renaming alone should not call this.
+pub fn renew_profile_identity(profile: &mut Profile) -> Result<()> {
+    if let Some(source) = profile.extra.get_mut(SOURCE) {
+        let decoded = source
+            .get_mut("decoded")
+            .and_then(Value::as_object_mut)
+            .ok_or_else(|| invalid("Preserved Synapse profile has no decoded object"))?;
+        decoded.insert("guid".into(), json!(settings::new_guid()?));
+    }
+    Ok(())
+}
+
+/// Create an installed model's observed Synapse default profile. The caller owns
+/// selecting a unique visible name, inserting it, and making it active.
+pub fn new_native_profile(product_id: u16, name: &str) -> Result<Profile> {
+    if name.trim().is_empty() {
+        return Err(invalid("Profile name is empty"));
+    }
+    let decoded = settings::default_profile(product_id, name)?;
+    let mut warnings = Vec::new();
+    let mut profile = translate_profile(&decoded, product_id, name, &mut warnings)?;
+    let entry = json!({
+        "name":name, "hash":synapse_hash(&decoded)?,
+        "payload":STANDARD.encode(serde_json::to_vec(&decoded).map_err(|e|invalid(e.to_string()))?)
+    });
+    profile
+        .extra
+        .insert(SOURCE.into(), json!({"entry":entry,"decoded":decoded}));
+    Ok(profile)
 }
 
 fn translate_profile(
@@ -175,7 +214,12 @@ fn translate_profile(
         }
         profile.polling = Some(hz);
     }
+    if matches!(pid, 196 | 197) {
+        settings::import_mouse(source, &mut profile, name, warnings)?;
+    }
+    mappings::import(source, &mut profile, pid, name, warnings)?;
     if pid == 605 {
+        settings::import_game_mode(source, &mut profile, name, warnings)?;
         let zone = profile.lighting.entry("backlight".into()).or_default();
         if let Some(brightness) = source.get("brightness") {
             zone.brightness =
@@ -224,8 +268,19 @@ fn translate_profile(
         }
     }
     for (key, value) in object {
-        if ["guid", "name", "hash", "gamemode", "dpi", "pollingRate"].contains(&key.as_str())
-            || (pid == 605 && ["brightness", "quickEffects"].contains(&key.as_str()))
+        if [
+            "guid",
+            "name",
+            "hash",
+            "gamemode",
+            "dpi",
+            "pollingRate",
+            "mappings",
+        ]
+        .contains(&key.as_str())
+            || (matches!(pid, 196 | 197)
+                && ["dpiStages", "powerSavingValue"].contains(&key.as_str()))
+            || (pid == 605 && ["brightness", "quickEffects", "gamingMode"].contains(&key.as_str()))
         {
             continue;
         }
@@ -274,7 +329,8 @@ fn integer(value: Option<&Value>, min: u64, max: u64, label: &str) -> Result<u64
 }
 
 /// Re-export imported Synapse profiles, updating only verified settings and retaining
-/// mappings, macros, GUIDs and foreign fields. Native-only profiles fail explicitly.
+/// mappings, macros, GUIDs and foreign fields. New native profiles use the observed
+/// default schema for the model, and receive an operating-system-generated UUID.
 pub fn export_synapse4(store: &Store, device_key: &str) -> Result<ExportReport> {
     let device = store
         .devices
@@ -287,42 +343,113 @@ pub fn export_synapse4(store: &Store, device_key: &str) -> Result<ExportReport> 
     {
         return Err(Error::Unsupported("This device combines multiple Synapse source exports; merging foreign macro identities is not verified. Export a native JSON backup to retain every source document".into()));
     }
-    let mut envelope = device.extra.get(SOURCE).cloned().ok_or_else(|| Error::Unsupported("This device has no Synapse 4 source export; creating a foreign profile from defaults is not verified".into()))?;
+    if device.extra.keys().any(|key| key != SOURCE) {
+        return Err(Error::Unsupported("Unknown native device extension fields cannot be translated to Synapse; retain a native JSON backup".into()));
+    }
+    let mut envelope = match device.extra.get(SOURCE) {
+        Some(source) => source.clone(),
+        None => {
+            let pid =
+                u16::from_str_radix(device_key.split(':').next().unwrap_or(device_key), 16)
+                    .map_err(|_| invalid("Device key must start with a hexadecimal product ID"))?;
+            settings::default_envelope(pid)?
+        }
+    };
     let pid = integer(envelope.get("productId"), 0, u16::MAX as u64, "productId")? as u16;
+    settings::default_envelope(pid)?;
     let mut records = Vec::new();
     let mut warnings = Vec::new();
+    let mut exported_guids = std::collections::BTreeSet::new();
+    let mut guid_owners: BTreeMap<String, String> = BTreeMap::new();
     for (name, profile) in &device.profiles {
-        let source = profile.extra.get(SOURCE).ok_or_else(|| {
-            Error::Unsupported(format!(
-                "Profile '{name}' has no Synapse source; no settings were discarded"
-            ))
-        })?;
-        let mut decoded = source
-            .get("decoded")
-            .cloned()
-            .ok_or_else(|| invalid("Missing preserved Synapse payload"))?;
+        if let Some(decoded) = profile
+            .extra
+            .get(SOURCE)
+            .and_then(|source| source.get("decoded"))
+        {
+            if let Some(guid) = decoded.get("guid").and_then(Value::as_str) {
+                if !guid_owners.contains_key(guid)
+                    || decoded.get("name").and_then(Value::as_str) == Some(name.as_str())
+                {
+                    guid_owners.insert(guid.to_string(), name.clone());
+                }
+            }
+        }
+    }
+    for (name, profile) in &device.profiles {
+        if profile.extra.keys().any(|key| key != SOURCE)
+            || profile
+                .dpi_stages
+                .as_ref()
+                .is_some_and(|stages| !stages.extra.is_empty())
+            || profile.lighting.values().any(|zone| !zone.extra.is_empty())
+        {
+            return Err(Error::Unsupported(format!("{name}: unknown native extension fields cannot be translated to Synapse; export a native JSON backup to retain them")));
+        }
+        let source = profile.extra.get(SOURCE);
+        let mut decoded = match source {
+            Some(source) => source
+                .get("decoded")
+                .cloned()
+                .ok_or_else(|| invalid("Missing preserved Synapse payload"))?,
+            None => settings::default_profile(pid, name)?,
+        };
         let decoded_object = decoded
             .as_object_mut()
             .ok_or_else(|| invalid("Preserved Synapse payload is not an object"))?;
         decoded_object.insert("name".into(), json!(name));
-        sync_optional(
-            decoded_object,
-            "dpi",
-            profile.dpi.map(|(x, y)| json!({"x": x, "y": y})),
-        );
-        sync_optional(
-            decoded_object,
-            "pollingRate",
-            profile.polling.map(|hz| json!(hz)),
-        );
+        if source.is_some() || profile.dpi.is_some() {
+            sync_optional(
+                decoded_object,
+                "dpi",
+                profile.dpi.map(|(x, y)| json!({"x": x, "y": y})),
+            );
+        }
+        if source.is_some() || profile.polling.is_some() {
+            sync_optional(
+                decoded_object,
+                "pollingRate",
+                profile.polling.map(|hz| json!(hz)),
+            );
+        }
+        if matches!(pid, 196 | 197) {
+            settings::export_mouse(profile, decoded_object, source.is_none())?;
+            if !profile.lighting.is_empty()
+                || !profile.keys.is_empty()
+                || profile.game_mode.is_some()
+            {
+                return Err(Error::Unsupported(format!("{name}: mouse lighting, keyboard colors or gaming mode have no matching Synapse mouse fields")));
+            }
+        }
+        mappings::export(profile, decoded_object, pid)?;
         if pid == 605 {
+            settings::export_game_mode(profile, decoded_object)?;
+            if profile.dpi.is_some()
+                || profile.polling.is_some()
+                || profile.dpi_stages.is_some()
+                || profile.sleep_minutes.is_some()
+            {
+                return Err(Error::Unsupported(format!(
+                    "{name}: mouse performance settings cannot be exported for Ornata V2"
+                )));
+            }
             if let Some(zone) = profile.lighting.get("backlight") {
-                if let Some(percent) = zone.brightness {
+                if zone.brightness.is_some()
+                    || zone.off
+                    || decoded_object.get("brightness").is_some()
+                {
                     let brightness = decoded_object.entry("brightness").or_insert(json!({}));
                     let object = brightness
                         .as_object_mut()
                         .ok_or_else(|| invalid("brightness must be an object"))?;
-                    object.insert("value".into(), json!(percent));
+                    if let Some(percent) = zone.brightness {
+                        if percent > 100 {
+                            return Err(invalid("Brightness exceeds 100 percent"));
+                        }
+                        object.insert("value".into(), json!(percent));
+                    } else if !object.contains_key("value") {
+                        object.insert("value".into(), json!(100));
+                    }
                     object.insert("isEnabled".into(), json!(!zone.off));
                 }
                 let quick = decoded_object.entry("quickEffects").or_insert(json!({}));
@@ -338,7 +465,7 @@ pub fn export_synapse4(store: &Store, device_key: &str) -> Result<ExportReport> 
                         merge_object(original, settings)?;
                     }
                 }
-            } else {
+            } else if source.is_some() {
                 decoded_object.remove("brightness");
                 decoded_object.remove("quickEffects");
             }
@@ -349,14 +476,8 @@ pub fn export_synapse4(store: &Store, device_key: &str) -> Result<ExportReport> 
             }
         }
         for (label, present) in [
-            ("buttons", !profile.buttons.is_empty()),
             ("applications", !profile.apps.is_empty()),
-            ("DPI stages", profile.dpi_stages.is_some()),
-            (
-                "sleep settings",
-                profile.sleep_minutes.is_some() || profile.auto_sleep.is_some(),
-            ),
-            ("gaming mode", profile.game_mode.is_some()),
+            ("auto-sleep enable switch", profile.auto_sleep.is_some()),
             ("dimming", profile.dimming.is_some()),
         ] {
             if present {
@@ -365,10 +486,24 @@ pub fn export_synapse4(store: &Store, device_key: &str) -> Result<ExportReport> 
                 )));
             }
         }
-        let mut entry = source
-            .get("entry")
-            .cloned()
-            .ok_or_else(|| invalid("Missing preserved Synapse envelope entry"))?;
+        let guid = decoded_object
+            .get("guid")
+            .and_then(Value::as_str)
+            .ok_or_else(|| invalid("Synapse profile has no GUID"))?
+            .to_string();
+        let belongs_to_another_profile = guid_owners.get(&guid).is_some_and(|owner| owner != name);
+        if belongs_to_another_profile || !exported_guids.insert(guid) {
+            let replacement = settings::new_guid()?;
+            exported_guids.insert(replacement.clone());
+            decoded_object.insert("guid".into(), json!(replacement));
+        }
+        let mut entry = match source {
+            Some(source) => source
+                .get("entry")
+                .cloned()
+                .ok_or_else(|| invalid("Missing preserved Synapse envelope entry"))?,
+            None => json!({}),
+        };
         let object = entry
             .as_object_mut()
             .ok_or_else(|| invalid("Synapse entry is not an object"))?;
@@ -381,13 +516,7 @@ pub fn export_synapse4(store: &Store, device_key: &str) -> Result<ExportReport> 
             ),
         );
         records.push(entry);
-        for key in [
-            "mappings",
-            "macro",
-            "dpiStages",
-            "switchOffLighting",
-            "gamingMode",
-        ] {
+        for key in ["macro", "switchOffLighting"] {
             if decoded.get(key).is_some_and(|v| !is_empty(v)) {
                 warnings.push(format!(
                     "{name}: original Synapse '{key}' retained without translation"
@@ -916,7 +1045,7 @@ mod tests {
             .get_mut("Fixture Mouse")
             .unwrap()
             .buttons
-            .insert("side-forward".into(), "key:f13".into());
+            .insert("side-forward".into(), "macro:1".into());
         assert!(matches!(
             export_synapse4(&report.store, "00C4"),
             Err(Error::Unsupported(_))

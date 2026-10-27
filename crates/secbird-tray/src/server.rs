@@ -273,6 +273,8 @@ struct Body {
     #[serde(default)]
     name: String,
     #[serde(default)]
+    previous_name: String,
+    #[serde(default)]
     keys: Vec<String>,
     /// Finding a keyboard's layout: the `[row, col]` light to show; none puts the profile back.
     #[serde(default)]
@@ -511,13 +513,28 @@ fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
                 let profiles = store.for_device(dev);
                 match b.action.as_str() {
                     "new" => profiles.create(b.name.trim())?,
+                    "add" => {
+                        let name = b.name.trim();
+                        if profiles.profiles.contains_key(name) {
+                            return Err(Error::InvalidArg(format!("profile '{name}' already exists")));
+                        }
+                        let profile = secbird_core::profile_compat::new_native_profile(dev.pid, name)?;
+                        profiles.profiles.insert(name.into(), profile);
+                        profiles.switch(name)?;
+                    }
+                    "duplicate" => {
+                        profiles.create(b.name.trim())?;
+                        profiles.switch(b.name.trim())?;
+                    }
+                    "rename" => profiles.rename(&b.previous_name, b.name.trim())?,
                     "delete" => profiles.delete(&b.name)?,
                     "use" => profiles.switch(&b.name)?,
                     "apps" => profiles.set_apps(&b.name, &b.apps)?,
                     other => return Err(Error::InvalidArg(format!("unknown action '{other}'"))),
                 }
-                let switched = b.action == "use";
+                let switched = matches!(b.action.as_str(), "use" | "add" | "duplicate");
                 let profiles = profiles.clone();
+                secbird_core::profile_compat::validate_store_budget(&store)?;
                 store.save()?;
                 let failures: Vec<String> = if switched {
                     profiles
@@ -648,11 +665,7 @@ fn app_post(engine: &mut Engine, path: &str, b: &Body) -> Option<Result<Value, E
         })(),
         "/api/import" => (|| {
             let bytes = serde_json::to_vec(&b.data).map_err(|e| Error::InvalidArg(e.to_string()))?;
-            let incoming = secbird_core::profile_compat::import_document(&bytes)?;
-            let mut store = Store::load(&config_dir().join("profiles.json"))?;
-            let added = store.import_for(incoming.store, &engine.all_keys());
-            store.save()?;
-            Ok(json!({ "added": added, "warnings": incoming.warnings, "state": state(engine) }))
+            import_profile_document(engine, &bytes, (!b.id.is_empty()).then_some(b.id.as_str()))
         })(),
         "/api/export-synapse4" => (|| {
             let store = Store::load(&config_dir().join("profiles.json"))?;
@@ -670,6 +683,33 @@ fn app_post(engine: &mut Engine, path: &str, b: &Body) -> Option<Result<Value, E
             Err(e) => json!({ "device": name, "error": e.to_string() }),
         }).collect::<Vec<_>>() })),
         _ => return None,
+    })
+}
+
+/// Import a selected local file without a JSON transport round trip. The merged
+/// candidate remains local until its size/complexity has passed validation.
+pub(crate) fn import_profile_document(engine: &mut Engine, bytes: &[u8], target: Option<&str>) -> Result<Value, Error> {
+    let incoming = secbird_core::profile_compat::import_document(bytes)?;
+    let connected: Vec<_> = engine.all_keys().into_iter().filter(|key| target.is_none_or(|target| key == target)).collect();
+    incoming.store.validate_import_targets(&connected)?;
+    let mut store = Store::load(&config_dir().join("profiles.json"))?;
+    let added = store.import_for(incoming.store, &connected);
+    secbird_core::profile_compat::validate_store_budget(&store)?;
+    store.save()?;
+    Ok(json!({ "added": added, "warnings": incoming.warnings, "state": state(engine) }))
+}
+
+/// Snapshot an export while the caller holds the shared engine lock. File I/O
+/// can then finish outside that lock, without delaying tray/device events.
+pub(crate) fn export_profile_document(synapse_device: Option<&str>) -> Result<secbird_core::profile_compat::ExportReport, Error> {
+    let store = Store::load(&config_dir().join("profiles.json"))?;
+    if let Some(device) = synapse_device {
+        return secbird_core::profile_compat::export_synapse4(&store, device);
+    }
+    secbird_core::profile_compat::validate_store_budget(&store)?;
+    Ok(secbird_core::profile_compat::ExportReport {
+        bytes: serde_json::to_vec_pretty(&store).map_err(|e| Error::Db(e.to_string()))?,
+        warnings: Vec::new(),
     })
 }
 

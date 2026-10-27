@@ -1,0 +1,502 @@
+[
+  {
+    "id": "KEY_0",
+    "usage": 39
+  },
+  {
+    "id": "KEY_1",
+    "usage": 30
+  },
+  {
+    "id": "KEY_2",
+    "usage": 31
+  },
+  {
+    "id": "KEY_3",
+    "usage": 32
+  },
+  {
+    "id": "KEY_4",
+    "usage": 33
+  },
+  {
+    "id": "KEY_5",
+    "usage": 34
+  },
+  {
+    "id": "KEY_6",
+    "usage": 35
+  },
+  {
+    "id": "KEY_7",
+    "usage": 36
+  },
+  {
+    "id": "KEY_8",
+    "usage": 37
+  },
+  {
+    "id": "KEY_9",
+    "usage": 38
+  },
+  {
+    "id": "KEY_A",
+    "usage": 4
+  },
+  {
+    "id": "KEY_APPLICATION",
+    "usage": 101
+  },
+  {
+    "id": "KEY_B",
+    "usage": 5
+  },
+  {
+    "id": "KEY_BACKSLASH",
+    "usage": 49
+  },
+  {
+    "id": "KEY_BACKSPACE",
+    "usage": 42
+  },
+  {
+    "id": "KEY_C",
+    "usage": 6
+  },
+  {
+    "id": "KEY_CAPS_LOCK",
+    "usage": 57
+  },
+  {
+    "id": "KEY_CLOSE_SQUARE_BRACKET",
+    "usage": 48
+  },
+  {
+    "id": "KEY_COMMA",
+    "usage": 54
+  },
+  {
+    "id": "KEY_D",
+    "usage": 7
+  },
+  {
+    "id": "KEY_DELETE",
+    "usage": 76
+  },
+  {
+    "id": "KEY_DOWN_ARROW",
+    "usage": 81
+  },
+  {
+    "id": "KEY_DOWN_DPAD",
+    "usage": 81
+  },
+  {
+    "id": "KEY_E",
+    "usage": 8
+  },
+  {
+    "id": "KEY_END",
+    "usage": 77
+  },
+  {
+    "id": "KEY_ENTER",
+    "usage": 40
+  },
+  {
+    "id": "KEY_EQUAL",
+    "usage": 46
+  },
+  {
+    "id": "KEY_ESC",
+    "usage": 41
+  },
+  {
+    "id": "KEY_F",
+    "usage": 9
+  },
+  {
+    "id": "KEY_F1",
+    "usage": 58
+  },
+  {
+    "id": "KEY_F10",
+    "usage": 67
+  },
+  {
+    "id": "KEY_F11",
+    "usage": 68
+  },
+  {
+    "id": "KEY_F12",
+    "usage": 69
+  },
+  {
+    "id": "KEY_F13",
+    "usage": 104
+  },
+  {
+    "id": "KEY_F14",
+    "usage": 105
+  },
+  {
+    "id": "KEY_F15",
+    "usage": 106
+  },
+  {
+    "id": "KEY_F16",
+    "usage": 107
+  },
+  {
+    "id": "KEY_F17",
+    "usage": 108
+  },
+  {
+    "id": "KEY_F18",
+    "usage": 109
+  },
+  {
+    "id": "KEY_F19",
+    "usage": 110
+  },
+  {
+    "id": "KEY_F2",
+    "usage": 59
+  },
+  {
+    "id": "KEY_F20",
+    "usage": 111
+  },
+  {
+    "id": "KEY_F21",
+    "usage": 112
+  },
+  {
+    "id": "KEY_F22",
+    "usage": 113
+  },
+  {
+    "id": "KEY_F23",
+    "usage": 114
+  },
+  {
+    "id": "KEY_F24",
+    "usage": 115
+  },
+  {
+    "id": "KEY_F3",
+    "usage": 60
+  },
+  {
+    "id": "KEY_F4",
+    "usage": 61
+  },
+  {
+    "id": "KEY_F5",
+    "usage": 62
+  },
+  {
+    "id": "KEY_F6",
+    "usage": 63
+  },
+  {
+    "id": "KEY_F7",
+    "usage": 64
+  },
+  {
+    "id": "KEY_F8",
+    "usage": 65
+  },
+  {
+    "id": "KEY_F9",
+    "usage": 66
+  },
+  {
+    "id": "KEY_G",
+    "usage": 10
+  },
+  {
+    "id": "KEY_H",
+    "usage": 11
+  },
+  {
+    "id": "KEY_HENKAN",
+    "usage": 138
+  },
+  {
+    "id": "KEY_HOME",
+    "usage": 74
+  },
+  {
+    "id": "KEY_HYPEN",
+    "usage": 45
+  },
+  {
+    "id": "KEY_I",
+    "usage": 12
+  },
+  {
+    "id": "KEY_INSERT",
+    "usage": 73
+  },
+  {
+    "id": "KEY_J",
+    "usage": 13
+  },
+  {
+    "id": "KEY_K",
+    "usage": 14
+  },
+  {
+    "id": "KEY_KATAKANA_HIRAGANA",
+    "usage": 136
+  },
+  {
+    "id": "KEY_L",
+    "usage": 15
+  },
+  {
+    "id": "KEY_LEFT_ALT",
+    "usage": 226
+  },
+  {
+    "id": "KEY_LEFT_ARROW",
+    "usage": 80
+  },
+  {
+    "id": "KEY_LEFT_CTRL",
+    "usage": 224
+  },
+  {
+    "id": "KEY_LEFT_DPAD",
+    "usage": 80
+  },
+  {
+    "id": "KEY_LEFT_GUI",
+    "usage": 227
+  },
+  {
+    "id": "KEY_LEFT_SHIFT",
+    "usage": 225
+  },
+  {
+    "id": "KEY_M",
+    "usage": 16
+  },
+  {
+    "id": "KEY_MUHENKAN",
+    "usage": 139
+  },
+  {
+    "id": "KEY_N",
+    "usage": 17
+  },
+  {
+    "id": "KEY_NON_US_BACKSLASH",
+    "usage": 100
+  },
+  {
+    "id": "KEY_NON_US_POUND",
+    "usage": 50
+  },
+  {
+    "id": "KEY_NUMPAD_0",
+    "usage": 98
+  },
+  {
+    "id": "KEY_NUMPAD_1",
+    "usage": 89
+  },
+  {
+    "id": "KEY_NUMPAD_2",
+    "usage": 90
+  },
+  {
+    "id": "KEY_NUMPAD_3",
+    "usage": 91
+  },
+  {
+    "id": "KEY_NUMPAD_4",
+    "usage": 92
+  },
+  {
+    "id": "KEY_NUMPAD_5",
+    "usage": 93
+  },
+  {
+    "id": "KEY_NUMPAD_6",
+    "usage": 94
+  },
+  {
+    "id": "KEY_NUMPAD_7",
+    "usage": 95
+  },
+  {
+    "id": "KEY_NUMPAD_8",
+    "usage": 96
+  },
+  {
+    "id": "KEY_NUMPAD_9",
+    "usage": 97
+  },
+  {
+    "id": "KEY_NUMPAD_ASTERISK",
+    "usage": 85
+  },
+  {
+    "id": "KEY_NUMPAD_DASH",
+    "usage": 86
+  },
+  {
+    "id": "KEY_NUMPAD_ENTER",
+    "usage": 88
+  },
+  {
+    "id": "KEY_NUMPAD_NUM_LOCK",
+    "usage": 83
+  },
+  {
+    "id": "KEY_NUMPAD_PERIOD",
+    "usage": 99
+  },
+  {
+    "id": "KEY_NUMPAD_PLUS",
+    "usage": 87
+  },
+  {
+    "id": "KEY_NUMPAD_SLASH",
+    "usage": 84
+  },
+  {
+    "id": "KEY_O",
+    "usage": 18
+  },
+  {
+    "id": "KEY_OPEN_SQUARE_BRACKET",
+    "usage": 47
+  },
+  {
+    "id": "KEY_P",
+    "usage": 19
+  },
+  {
+    "id": "KEY_PAGE_DOWN",
+    "usage": 78
+  },
+  {
+    "id": "KEY_PAGE_UP",
+    "usage": 75
+  },
+  {
+    "id": "KEY_PAUSE",
+    "usage": 72
+  },
+  {
+    "id": "KEY_PRINT_SCREEN",
+    "usage": 70
+  },
+  {
+    "id": "KEY_Q",
+    "usage": 20
+  },
+  {
+    "id": "KEY_R",
+    "usage": 21
+  },
+  {
+    "id": "KEY_RIGHT_ALT",
+    "usage": 230
+  },
+  {
+    "id": "KEY_RIGHT_ARROW",
+    "usage": 79
+  },
+  {
+    "id": "KEY_RIGHT_CTRL",
+    "usage": 228
+  },
+  {
+    "id": "KEY_RIGHT_DPAD",
+    "usage": 79
+  },
+  {
+    "id": "KEY_RIGHT_GUI",
+    "usage": 231
+  },
+  {
+    "id": "KEY_RIGHT_SHIFT",
+    "usage": 229
+  },
+  {
+    "id": "KEY_RO",
+    "usage": 135
+  },
+  {
+    "id": "KEY_S",
+    "usage": 22
+  },
+  {
+    "id": "KEY_SCROLL_LOCK",
+    "usage": 71
+  },
+  {
+    "id": "KEY_SEMICOLON",
+    "usage": 51
+  },
+  {
+    "id": "KEY_SLASH",
+    "usage": 56
+  },
+  {
+    "id": "KEY_SPACEBAR",
+    "usage": 44
+  },
+  {
+    "id": "KEY_T",
+    "usage": 23
+  },
+  {
+    "id": "KEY_TAB",
+    "usage": 43
+  },
+  {
+    "id": "KEY_TILDE",
+    "usage": 53
+  },
+  {
+    "id": "KEY_U",
+    "usage": 24
+  },
+  {
+    "id": "KEY_UP_ARROW",
+    "usage": 82
+  },
+  {
+    "id": "KEY_UP_DPAD",
+    "usage": 82
+  },
+  {
+    "id": "KEY_V",
+    "usage": 25
+  },
+  {
+    "id": "KEY_W",
+    "usage": 26
+  },
+  {
+    "id": "KEY_X",
+    "usage": 27
+  },
+  {
+    "id": "KEY_Y",
+    "usage": 28
+  },
+  {
+    "id": "KEY_YEN",
+    "usage": 137
+  },
+  {
+    "id": "KEY_Z",
+    "usage": 29
+  }
+]

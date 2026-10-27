@@ -81,6 +81,7 @@ MACROS (stored on the device, shared by all profiles):
 PROFILES:
   profile [list]            Profiles for this device (* = active)
   profile new <name>        New profile, copied from the active one
+  profile rename <old> <new> Rename a profile without changing its settings
   profile use <name>        Switch to a profile and apply it
   profile delete <name>     Delete a profile
   profile show [name]       Settings stored in a profile
@@ -184,10 +185,12 @@ Download: {}", r.version, secbird_core::update::CURRENT, r.url),
             }
             let incoming = read_profile_document(path)?;
             let connected: Vec<String> = match (HidApi::new(), Db::load(Some(&config_dir().join("devices.json")))) {
-                (Ok(api), Ok(db)) => discover(&api, &db).iter().map(Device::key).collect(),
+                (Ok(api), Ok(db)) => discover(&api, &db).iter().filter(|dev| selects(dev.pid, &dev.key(), &dev.serial)).map(Device::key).collect(),
                 _ => Vec::new(),
             };
+            incoming.store.validate_import_targets(&connected)?;
             let added = store.import_for(incoming.store, &connected);
+            secbird_core::profile_compat::validate_store_budget(&store)?;
             store.save()?;
             for warning in incoming.warnings { eprintln!("Preserved without translation: {warning}"); }
             println!("Imported {added} profile(s). Existing profiles were kept; clashing names got \"(imported)\".");
@@ -565,6 +568,15 @@ fn profile_cmd(dev: &Device, store: &mut Store, rest: &[String]) -> Result<(), E
             profiles.create(name)?;
             store.save()?;
             println!("Created profile '{name}' (copy of the active one). Switch with: secbird profile use {name}");
+            Ok(())
+        }
+        "rename" => {
+            let previous = name.ok_or_else(need_name)?;
+            let name = rest.get(2).ok_or_else(|| Error::InvalidArg("usage: profile rename <old> <new>".into()))?;
+            profiles.rename(previous, name.trim())?;
+            secbird_core::profile_compat::validate_store_budget(store)?;
+            store.save()?;
+            println!("Renamed profile '{previous}' to '{}'", name.trim());
             Ok(())
         }
         "use" => {

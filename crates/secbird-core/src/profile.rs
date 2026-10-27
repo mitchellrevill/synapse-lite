@@ -135,12 +135,33 @@ impl DeviceProfiles {
 
     /// Create `name` as a copy of the active profile.
     pub fn create(&mut self, name: &str) -> Result<()> {
+        if name.trim().is_empty() { return Err(Error::InvalidArg("profile name cannot be empty".into())); }
         if self.profiles.contains_key(name) {
             return Err(Error::InvalidArg(format!("profile '{name}' already exists")));
         }
         // A program belongs to one profile, so the copy starts without any.
-        let copy = Profile { apps: Vec::new(), ..self.active().clone() };
+        let mut copy = Profile { apps: Vec::new(), ..self.active().clone() };
+        crate::profile_compat::renew_profile_identity(&mut copy)?;
         self.profiles.insert(name.into(), copy);
+        Ok(())
+    }
+
+    /// Renaming changes identity labels, never device settings or recovery data.
+    pub fn rename(&mut self, previous: &str, name: &str) -> Result<()> {
+        if !self.profiles.contains_key(previous) {
+            return Err(Error::NotFound(format!("profile '{previous}'")));
+        }
+        if name.trim().is_empty() { return Err(Error::InvalidArg("profile name cannot be empty".into())); }
+        if previous == name { return Ok(()); }
+        if self.profiles.contains_key(name) {
+            return Err(Error::InvalidArg(format!("profile '{name}' already exists")));
+        }
+        let profile = self.profiles.remove(previous).expect("profile checked above");
+        self.profiles.insert(name.to_string(), profile);
+        if self.active == previous { self.active = name.to_string(); }
+        if let Some(onboard) = self.onboard.as_mut().filter(|saved| saved.profile == previous) {
+            onboard.profile = name.to_string();
+        }
         Ok(())
     }
 
@@ -356,15 +377,25 @@ impl Store {
     /// [`Store::import`] for a backup made on another PC. Devices are keyed by serial, so
     /// profiles saved for a unit that isn't connected here go to a connected device of the
     /// same model that the backup has nothing for (#40). `connected` are device keys.
+    pub fn validate_import_targets(&self, connected: &[String]) -> Result<()> {
+        for key in self.devices.keys().filter(|key| !connected.contains(key)) {
+            let targets = connected.iter().filter(|target| profile_family(target) == profile_family(key) && !self.devices.contains_key(*target)).count();
+            if targets > 1 {
+                return Err(Error::InvalidArg(format!("profile device '{key}' matches several connected devices; choose the target device explicitly")));
+            }
+        }
+        Ok(())
+    }
+
     pub fn import_for(&mut self, mut other: Store, connected: &[String]) -> usize {
-        let pid = |key: &str| key.split(':').next().unwrap_or(key).to_string();
         let keys: Vec<String> = other.devices.keys().cloned().collect();
         for key in keys.into_iter().filter(|k| !connected.contains(k)) {
-            let Some(target) = connected.iter().find(|c| pid(c) == pid(&key) && !other.devices.contains_key(*c)) else {
+            let targets: Vec<_> = connected.iter().filter(|c| profile_family(c) == profile_family(&key) && !other.devices.contains_key(*c)).collect();
+            let [target] = targets.as_slice() else {
                 continue;
             };
             if let Some(profiles) = other.devices.remove(&key) {
-                other.devices.insert(target.clone(), profiles);
+                other.devices.insert((*target).clone(), profiles);
             }
         }
         self.import(other)
@@ -375,6 +406,18 @@ impl Store {
     /// product id; the first device of that model to ask takes them over.
     pub fn profiles_for(&mut self, key: &str, pid: u16) -> &mut DeviceProfiles {
         let legacy = format!("{pid:04X}");
+        // A nonempty matching serial identifies the same physical DeathAdder
+        // across its two connection modes. Never merge unrelated units by PID.
+        if !self.devices.contains_key(key) {
+            if let Some((_, serial)) = key.split_once(':').filter(|(_, serial)| !serial.is_empty()) {
+                let peer = match pid { 0x00c4 => Some(0x00c5), 0x00c5 => Some(0x00c4), _ => None };
+                if let Some(peer) = peer {
+                    if let Some(profile) = self.devices.remove(&format!("{peer:04X}:{serial}")) {
+                        self.devices.insert(key.to_string(), profile);
+                    }
+                }
+            }
+        }
         if key != legacy && !self.devices.contains_key(key) {
             if let Some(old) = self.devices.remove(&legacy) {
                 self.devices.insert(key.to_string(), old);
@@ -395,6 +438,11 @@ impl Store {
     pub fn apps(&self) -> std::collections::HashSet<String> {
         self.devices.values().flat_map(|d| d.profiles.values()).flat_map(|p| p.apps.iter().cloned()).collect()
     }
+}
+
+fn profile_family(key: &str) -> String {
+    let pid = key.split(':').next().unwrap_or(key).to_ascii_uppercase();
+    if matches!(pid.as_str(), "00C4" | "00C5") { "00C4".into() } else { pid }
 }
 
 /// Outcome of applying one setting from a profile.
@@ -708,5 +756,47 @@ mod tests {
         assert!(!mine.devices.contains_key("0096:OTHERPC01"));
         // Nothing connected of that model: kept as it was, for when it's plugged in.
         assert!(mine.devices.contains_key("0084:UNPLUGGED"));
+    }
+
+    #[test]
+    fn rename_keeps_recovery_data_and_profile_identity() {
+        let mut profiles = DeviceProfiles::default();
+        profiles.active_mut().extra.insert("future-setting".into(), serde_json::json!({"opaque": 42}));
+        profiles.onboard = Some(OnboardSave { profile: "Default".into(), before: BTreeMap::from([("left".into(), "default".into())]), ..Default::default() });
+        let original = profiles.active().clone();
+        let recovery = profiles.onboard.as_ref().unwrap().before.clone();
+        profiles.rename("Default", "Work").unwrap();
+        assert_eq!(profiles.active, "Work");
+        assert_eq!(profiles.active(), &original);
+        assert_eq!(profiles.onboard.as_ref().unwrap().profile, "Work");
+        assert_eq!(profiles.onboard.as_ref().unwrap().before, recovery);
+        profiles.create("Taken").unwrap();
+        assert!(profiles.rename("Work", "Taken").is_err());
+        assert!(profiles.rename("Work", "  ").is_err());
+        assert!(profiles.rename("Missing", "New").is_err());
+        assert_eq!(profiles.active, "Work");
+    }
+
+    #[test]
+    fn connection_modes_share_profiles_only_for_the_same_serial() {
+        let mut store = Store::default();
+        store.profiles_for("00C4:UNIT1", 0x00c4).active_mut().dpi = Some((800, 800));
+        assert_eq!(store.profiles_for("00C5:UNIT2", 0x00c5).active().dpi, None);
+        assert_eq!(store.profiles_for("00C5:UNIT1", 0x00c5).active().dpi, Some((800, 800)));
+        assert!(!store.devices.contains_key("00C4:UNIT1"));
+        assert!(store.devices.contains_key("00C5:UNIT2"));
+    }
+
+    #[test]
+    fn foreign_mouse_import_accepts_receiver_alias_and_rejects_ambiguous_units() {
+        let mut incoming = Store::default();
+        incoming.profiles_for("00C4:FOREIGN", 0x00c4).active_mut().dpi = Some((1200, 1200));
+        assert!(incoming.validate_import_targets(&["00C5:ONE".into(), "00C5:TWO".into()]).is_err());
+        let target = ["00C5:ONE".into()];
+        incoming.validate_import_targets(&target).unwrap();
+        let mut local = Store::default();
+        local.import_for(incoming, &target);
+        assert_eq!(local.devices["00C5:ONE"].active().dpi, Some((1200, 1200)));
+        assert!(!local.devices.contains_key("00C4:FOREIGN"));
     }
 }
