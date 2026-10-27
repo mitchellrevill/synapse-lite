@@ -41,8 +41,21 @@ pub(super) fn load(path: &Path) -> Result<Store> {
         Err(e) => return Err(error(path, e)),
     };
     store.path = path.to_path_buf();
+    validate_active_profiles(&store)?;
     store.rename_old_buttons();
     Ok(store)
+}
+
+fn validate_active_profiles(store: &Store) -> Result<()> {
+    for (key, device) in &store.devices {
+        if !device.profiles.contains_key(&device.active) {
+            return Err(error(
+                &store.path,
+                format!("Device {key} refers to a missing active profile; original file retained"),
+            ));
+        }
+    }
+    Ok(())
 }
 
 #[derive(Default)]
@@ -67,6 +80,7 @@ impl Write for BoundedDocument {
 }
 
 pub(super) fn encode(store: &Store) -> Result<Vec<u8>> {
+    validate_active_profiles(store)?;
     let path = &store.path;
     let mut document = BoundedDocument::default();
     if let Err(failure) = serde_json::to_writer_pretty(&mut document, store) {
@@ -211,6 +225,23 @@ mod tests {
             std::fs::write(dir.file(), &before).unwrap();
             assert!(Store::load(&dir.file()).is_err());
             assert_eq!(std::fs::read(dir.file()).unwrap(), before);
+        }
+    }
+
+    #[test]
+    fn dangling_active_profile_is_refused_without_repairing_or_overwriting_data() {
+        let dir = Directory::new();
+        for profiles in [json!({}), json!({"Other":{"future":{"keep":true}}})] {
+            let value = json!({"devices":{"025D":{"active":"Missing","profiles":profiles}},"future":"retained"});
+            let before = serde_json::to_vec(&value).unwrap();
+            std::fs::write(dir.file(), &before).unwrap();
+            assert!(Store::load(&dir.file()).is_err());
+            assert_eq!(std::fs::read(dir.file()).unwrap(), before);
+            assert!(!dir.file().with_extension("json.tmp").exists());
+            let candidate: Store = serde_json::from_value(value).unwrap();
+            assert!(candidate.validate_save().is_err());
+            assert!(candidate.native_bytes().is_err());
+            assert!(crate::profile_compat::import_document(&before).is_err());
         }
     }
 }
