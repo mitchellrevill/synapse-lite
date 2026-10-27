@@ -32,6 +32,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--evidence", type=pathlib.Path, required=True)
     parser.add_argument("--output", type=pathlib.Path, required=True)
+    parser.add_argument("--icons-from", type=pathlib.Path,
+                        help="Optional directory of already rasterized, source-provenanced icon-*.bmp/SVG assets")
     args = parser.parse_args()
     evidence = args.evidence.resolve(strict=True)
     output = args.output.resolve()
@@ -60,6 +62,36 @@ def main():
         manifest["assets"].append({"file": name, "sha256": sha256(target),
                                    "source_sha256": sha256(source), "source_name": source.name,
                                    "width": image.width, "height": image.height, "kind": "artwork"})
+    observation = evidence / 'physical-layout-observation.json'
+    geometry = evidence / 'ornata-key-regions.json'
+    if observation.is_file() and geometry.is_file():
+        observed = json.loads(observation.read_text(encoding='utf-8'))
+        layout = json.loads(geometry.read_text(encoding='utf-8'))
+        if all(observed.get(key) == layout.get(key) for key in ('product_id', 'edition_id', 'layout_id')):
+            # This exact cached product/layout tuple was recovered; no locale inference.
+            if (layout['product_id'], layout['edition_id'], layout['layout_id']) == (605, 0, 6):
+                target = output / 'keyboard-layout.json'
+                shutil.copyfile(geometry, target)
+                manifest['assets'].append({'file': target.name, 'sha256': sha256(target),
+                                           'kind': 'source-key-geometry', 'source_sha256': layout['source_sha256']})
+                source = unique(products / '605/ui/static/media', '6-1x.2f1978eb.avif*')
+                image = Image.open(source).convert('RGBA')
+                background = Image.new('RGBA', image.size, (34, 34, 34, 255))
+                background.alpha_composite(image)
+                target = output / 'keyboard-customize.bmp'
+                background.convert('RGB').save(target, 'BMP')
+                manifest['assets'].append({'file': target.name, 'sha256': sha256(target),
+                                           'source_sha256': sha256(source), 'kind': 'layout-artwork',
+                                           'width': image.width, 'height': image.height})
+    if args.icons_from:
+        icon_dir = args.icons_from.resolve(strict=True)
+        for source in icon_dir.iterdir():
+            if source.is_file() and (source.name == 'icon-provenance.json'
+                                    or source.name.startswith('icon-') and source.suffix in ('.bmp', '.svg')):
+                target = output / source.name
+                if source.resolve() != target.resolve():
+                    shutil.copyfile(source, target)
+                manifest['assets'].append({'file': target.name, 'sha256': sha256(target), 'kind': 'source-icon'})
     (output / "provenance.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     print(f"Provisioned {len(manifest['assets'])} local assets into {output}")
 

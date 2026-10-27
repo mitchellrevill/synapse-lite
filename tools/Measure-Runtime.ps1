@@ -2,6 +2,7 @@ param(
     [string]$Executable = "$PSScriptRoot\..\target\release\secbird-tray.exe",
     [string]$Assets = "$PSScriptRoot\..\target\native-assets",
     [int]$Seconds = 12,
+    [string[]]$Scenarios = @('dashboard', 'mouse-performance', 'keyboard-lighting'),
     [string]$Output = "$PSScriptRoot\..\target\runtime-memory.json"
 )
 $ErrorActionPreference = 'Stop'
@@ -18,7 +19,7 @@ foreach ($key in @('SYNAPSE_LITE_CONFIG_DIR', 'SYNAPSE_LITE_SMOKE_VIEW', 'SYNAPS
 $results = @()
 try {
     $env:SYNAPSE_LITE_ASSETS = $assetsPath
-    foreach ($scenario in @('dashboard', 'mouse-performance', 'keyboard-lighting')) {
+    foreach ($scenario in $Scenarios) {
         $env:SYNAPSE_LITE_CONFIG_DIR = Join-Path $scratch $scenario
         $env:SYNAPSE_LITE_SMOKE_VIEW = $scenario
         $frameReport = Join-Path $scratch "$scenario-$([guid]::NewGuid().ToString('N')).json"
