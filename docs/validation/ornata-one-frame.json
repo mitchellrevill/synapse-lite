@@ -1,0 +1,42 @@
+{
+  "scope": "One physical low-intensity RGB frame; USB OUT and readable control register checks, not optical or full input recovery proof",
+  "started_utc": "2026-10-27T09:29:01.9345938Z",
+  "finished_utc": "2026-10-27T09:29:08.4358654Z",
+  "binary_sha256": "610F430B3951A3F715F37B4898ADF5425856899224F05A83553F6ACC784BFBC2",
+  "physical_pixels": 132,
+  "requested_uniform_rgb": [
+    16,
+    32,
+    48
+  ],
+  "baseline_persisted_before_frame_out": true,
+  "accepted_packets": 7,
+  "attempted_packets": 7,
+  "transfer_elapsed_ms": 38,
+  "write_retries": 0,
+  "comparison": {
+    "all_readable_control_fields_unchanged": true,
+    "brightness0_raw_unchanged": true,
+    "brightness1_raw_unchanged": true,
+    "effect0_meaningful_fields_unchanged": true,
+    "effect1_meaningful_fields_unchanged": true,
+    "mode_and_optional_param_unchanged": true,
+    "optical_effect_proven": false,
+    "rgb_frame_restoration_proven": false
+  },
+  "stock_before": 11,
+  "stock_after_5_seconds": 15,
+  "stock_owner_running_after_restart": true,
+  "restore_query_exit": 0,
+  "restore_control_state": {
+    "mode": 3,
+    "mode_parameter": null,
+    "profile0_effect": 8,
+    "profile0_brightness": 255,
+    "selectors_match": true
+  },
+  "services_changed": false,
+  "probe_error": null,
+  "wrapper_error": null,
+  "frame_transport_source_sha256": "90AA810262921986B5849824D739509673FC9575FF642CA1F7007E6EDAC53AD0"
+}
