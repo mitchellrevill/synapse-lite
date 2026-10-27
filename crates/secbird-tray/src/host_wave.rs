@@ -1,6 +1,7 @@
 //! Pure source Quick Wave selection and authenticated-layout frame preparation.
 //!
-//! No clock, scheduling, device access, file loading, or profile activation.
+//! Selection/rendering has no clock, scheduling, device access, file loading,
+//! or profile activation. The preparation child separately reads identity/assets.
 //! The caller establishes fresh identity and output ownership. See
 //! docs/HOST-WAVE.md for direction/projection and source-derived limits.
 
@@ -14,6 +15,8 @@ use secbird_core::{
 };
 use serde_json::{json, Value};
 use std::time::Duration;
+
+pub(crate) mod preparation;
 
 const SOURCE: &str = "_synapseLiteSynapse4";
 const OPT_IN: &str = "waveHostIntent";
@@ -144,6 +147,7 @@ impl Program {
 
 /// Prepared immutable frame-index function. The production constructor requires
 /// the manifest loader's opaque authenticated selection, never a declared SHA.
+#[derive(Debug, Clone)]
 pub(crate) struct PreparedWave {
     program: Program,
     cycle: WaveCycle,

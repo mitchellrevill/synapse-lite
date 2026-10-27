@@ -97,3 +97,38 @@ even for a profile with an explicit Wave marker. Engine/server/worker integratio
 has not been added. Four additional tests cover every index and wrap for both
 directions, typed zero-I/O refusal, phase/fault/generation behavior, and delegated
 opt-in without automatic Wave discovery.
+
+## Fresh identity and authenticated asset preparation seam
+
+The separate `host_wave::preparation::prepare(&Device, program, explicit_path)`
+seam performs one scoped Ornata edition GET on each call, selects the exact raw
+observed edition/layout in the authenticated manifest loader, then constructs
+PreparedWave from its opaque AuthenticatedLayout. There is no default/locale/
+historical fallback, implicit asset search, cached identity, Store load/save,
+mode GET/SET, brightness/effect/frame output, driver operation, or ownership
+acquisition. Ordinary protocol response-read retries remain bounded by the
+existing GET implementation. The caller enforces DriverMode3, device/profile
+binding, owner and lighting policies separately.
+
+ReadyWave retains the prepared numeric frame function, raw identity observation,
+authenticated digest/byte length, and monotonic query start/end Instants. It
+retains neither the supplied file path nor source JSON. `prepared()` exposes
+immutable index rendering. `observation_started_at()` is conservatively stamped
+before GET, not after asset loading. `metadata_at(caller_time)` reports raw
+layout/edition/optional firmware ID, declared identity size, digest/length, query
+span and observation age. It makes no new device request or ownership lease.
+A caller time preceding the observation produces unknown age instead of a
+fabricated fresh timestamp. PreparedWave and ReadyWave are Clone/Debug; cloning
+shares the same observation time and prepared data without another GET or file
+load. It does not renew hardware freshness.
+
+Two regular synthetic tests verify wrong PID/interface zero I/O, unsupported or
+truncated identity refusal before asset loading, missing/untrusted asset refusal,
+and a fresh GET for every preparation call. A separate ignored test requires
+`SECBIRD_ORNATA_MANIFEST_TEST_PATH` explicitly selecting the pinned private asset.
+It was run with a **mock** two-byte `[6,0]` reply and actual authenticated manifest
+bytes, proving exact layout6 selection, absent firmware ID despite padding9,
+the2,895,966-byte digest-bound asset, all18 black holes, conservative observation
+metadata, and canonical request-size3/zero selectors. Clone/render/metadata
+perform no additional GET. No physical device was opened or queried in any of
+these tests. The ignored test does not make this a public bundled-asset claim.
