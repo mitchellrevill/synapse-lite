@@ -28,6 +28,7 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
 mod assignment_geometry;
+mod assignment_fonts;
 mod assignment_layout;
 mod assignment_model;
 mod assignment_view;
@@ -3495,6 +3496,10 @@ unsafe extern "system" fn window_proc(
     #[cfg(test)]
     if message == ASSIGNMENT_TEST_QUERY {
         if let Ok(mut state) = (*pointer).try_borrow_mut() {
+            if wparam == 2 {
+                *(lparam as *mut Value) = assignment_view::font_diagnostics(&state);
+                return 0;
+            }
             if wparam == 1 {
                 state.assignment.cancel();
                 state.assignment_next = None;
@@ -4306,7 +4311,7 @@ unsafe extern "system" fn window_proc(
     }
 }
 
-fn assets_dir() -> PathBuf {
+pub(crate) fn assets_dir() -> PathBuf {
     std::env::var_os("SYNAPSE_LITE_ASSETS")
         .map(PathBuf::from)
         .unwrap_or_else(|| {

@@ -1,0 +1,2137 @@
+{
+  "schema": "synapse-lite-customize-ancestor-font-evidence-v1",
+  "authority": {
+    "component_chain": "shipped source AST/CSS",
+    "geometry": "controlled inert populated DOM with source CSS/fonts",
+    "native_fonts": "actual GDI vector glyph paths from simulated native HWND",
+    "vendor_javascript_executed": false,
+    "screenshots": false,
+    "network": false
+  },
+  "source": {
+    "root_605_js_sha256": "307e2b199037ed53a8fde90d76fc67a9a3766a9361fb152e7820d8bf05f19c65",
+    "root_196_js_sha256": "f99b1f88ca9496a77cab258d05814a312b876873cb5c586841c28a732db78c42",
+    "605_css_sha256": "d8038bcd55d84e4f57b6c09057fe78e5c4a2495def92e0e259b2b72f861746e4",
+    "host_tab_common_sha256": "7262ee43326e3960b0159547909282434421aba1cb000c01a6a96fda068f0532",
+    "host_version_common_sha256": "b7bfa2eec3da3d20e33add539e6606338c27aa6484bf0c7097a13959a3374dce",
+    "source_nodes": [
+      {
+        "pid": 605,
+        "name": "xa",
+        "offset_utf8": 7937051,
+        "size": 131,
+        "source_file": "main.fcf07de2.js",
+        "source_sha256": "307e2b199037ed53a8fde90d76fc67a9a3766a9361fb152e7820d8bf05f19c65"
+      },
+      {
+        "pid": 605,
+        "name": "H_",
+        "offset_utf8": 8180640,
+        "size": 167,
+        "source_file": "main.fcf07de2.js",
+        "source_sha256": "307e2b199037ed53a8fde90d76fc67a9a3766a9361fb152e7820d8bf05f19c65"
+      },
+      {
+        "pid": 605,
+        "name": "Hl",
+        "offset_utf8": 8377110,
+        "size": 26205,
+        "source_file": "main.fcf07de2.js",
+        "source_sha256": "307e2b199037ed53a8fde90d76fc67a9a3766a9361fb152e7820d8bf05f19c65"
+      },
+      {
+        "pid": 605,
+        "name": "mP",
+        "offset_utf8": 8549905,
+        "size": 3833,
+        "source_file": "main.fcf07de2.js",
+        "source_sha256": "307e2b199037ed53a8fde90d76fc67a9a3766a9361fb152e7820d8bf05f19c65"
+      },
+      {
+        "pid": 605,
+        "name": "HP",
+        "offset_utf8": 8554484,
+        "size": 7745,
+        "source_file": "main.fcf07de2.js",
+        "source_sha256": "307e2b199037ed53a8fde90d76fc67a9a3766a9361fb152e7820d8bf05f19c65"
+      },
+      {
+        "pid": 605,
+        "name": "Cl",
+        "offset_utf8": 8369327,
+        "size": 6693,
+        "source_file": "main.fcf07de2.js",
+        "source_sha256": "307e2b199037ed53a8fde90d76fc67a9a3766a9361fb152e7820d8bf05f19c65"
+      }
+    ],
+    "toolbar_rule_utf8": 132966,
+    "body_viewport_override_utf8": 377191,
+    "translation_fragment_module": 10264,
+    "translation_module_utf8": 299077
+  },
+  "rea": {
+    "parent": "ev_20a1225ede84b09491c9d0f84bdd3c54ef3fe9c1d4742b06114ff60361c4954c",
+    "summary": "ev_3cb3655bda78c3f2f2b9384c3c564b10f9d0e98588e400578cc2b50dceae8f19",
+    "projected_files": 10,
+    "projected_bytes": 74081,
+    "parse_failures": 0,
+    "semantic_unknowns": 5054,
+    "semantic_coverage": "partial/unknown"
+  },
+  "browser": {
+    "version": "156.0.4314.42",
+    "device_scale_factor": 1.25,
+    "toolbar_inline_height": false,
+    "populated_controls": true,
+    "source_fonts": [
+      {
+        "name": "Roboto-Regular",
+        "family": "Roboto",
+        "sha256": "9939ae1ec75415c4b6e8889c95704bfbcbfb9d4245203605c1044ba21845ca36"
+      },
+      {
+        "name": "RazerF5-Regular",
+        "family": "RazerF5",
+        "sha256": "3182980316d7527b7ecdac6d782fd12aa8fb4ff9ab9f71e7d01d1b87330d26de"
+      }
+    ]
+  },
+  "geometry": [
+    {
+      "product_id": 605,
+      "viewport_css": [
+        1280,
+        678
+      ],
+      "drawer": false,
+      "boxes": {
+        "toolbar": {
+          "x": 0,
+          "y": 0,
+          "width": 1280,
+          "height": 38
+        },
+        "nav": {
+          "x": 0,
+          "y": 38,
+          "width": 1280,
+          "height": 48
+        },
+        "outer": {
+          "x": 0,
+          "y": 86,
+          "width": 1280,
+          "height": 592
+        },
+        "outerWidgets": {
+          "x": 20,
+          "y": 96,
+          "width": 1240,
+          "height": 0
+        },
+        "customize": {
+          "x": 5,
+          "y": 96,
+          "width": 1270,
+          "height": 0
+        },
+        "inner": {
+          "x": 0,
+          "y": 96,
+          "width": 1280,
+          "height": 582
+        },
+        "innerWidgets": {
+          "x": 20,
+          "y": 106,
+          "width": 1240,
+          "height": 451
+        },
+        "config": {
+          "x": 30,
+          "y": 106,
+          "width": 1220,
+          "height": 385
+        },
+        "block": {
+          "x": 30,
+          "y": 112,
+          "width": 1220,
+          "height": 385
+        },
+        "image": {
+          "x": 275,
+          "y": 112,
+          "width": 730,
+          "height": 340
+        },
+        "svg": {
+          "x": 275,
+          "y": 112,
+          "width": 730,
+          "height": 387
+        },
+        "row": {
+          "x": 20,
+          "y": 511,
+          "width": 1240,
+          "height": 36
+        },
+        "drawer": {
+          "x": -230,
+          "y": 86,
+          "width": 230,
+          "height": 658
+        }
+      },
+      "inner_overflow": [
+        "hidden",
+        "scroll"
+      ],
+      "source_fonts_ready": false
+    },
+    {
+      "product_id": 605,
+      "viewport_css": [
+        1280,
+        678
+      ],
+      "drawer": true,
+      "boxes": {
+        "toolbar": {
+          "x": 0,
+          "y": 0,
+          "width": 1280,
+          "height": 38
+        },
+        "nav": {
+          "x": 0,
+          "y": 38,
+          "width": 1280,
+          "height": 48
+        },
+        "outer": {
+          "x": 0,
+          "y": 86,
+          "width": 1280,
+          "height": 592
+        },
+        "outerWidgets": {
+          "x": 20,
+          "y": 96,
+          "width": 1240,
+          "height": 0
+        },
+        "customize": {
+          "x": 5,
+          "y": 96,
+          "width": 1270,
+          "height": 0
+        },
+        "inner": {
+          "x": 230,
+          "y": 96,
+          "width": 1050,
+          "height": 582
+        },
+        "innerWidgets": {
+          "x": 255,
+          "y": 106,
+          "width": 1000,
+          "height": 451
+        },
+        "config": {
+          "x": 255,
+          "y": 106,
+          "width": 1000,
+          "height": 385
+        },
+        "block": {
+          "x": 255,
+          "y": 112,
+          "width": 1000,
+          "height": 385
+        },
+        "image": {
+          "x": 390,
+          "y": 112,
+          "width": 730,
+          "height": 340
+        },
+        "svg": {
+          "x": 390,
+          "y": 112,
+          "width": 730,
+          "height": 387
+        },
+        "row": {
+          "x": 255,
+          "y": 511,
+          "width": 1000,
+          "height": 36
+        },
+        "drawer": {
+          "x": 0,
+          "y": 86,
+          "width": 230,
+          "height": 658
+        }
+      },
+      "inner_overflow": [
+        "hidden",
+        "scroll"
+      ],
+      "source_fonts_ready": false
+    },
+    {
+      "product_id": 605,
+      "viewport_css": [
+        1266,
+        664
+      ],
+      "drawer": false,
+      "boxes": {
+        "toolbar": {
+          "x": 0,
+          "y": 0,
+          "width": 1266,
+          "height": 38
+        },
+        "nav": {
+          "x": 0,
+          "y": 38,
+          "width": 1266,
+          "height": 48
+        },
+        "outer": {
+          "x": 0,
+          "y": 86,
+          "width": 1266,
+          "height": 578
+        },
+        "outerWidgets": {
+          "x": 20,
+          "y": 96,
+          "width": 1226,
+          "height": 0
+        },
+        "customize": {
+          "x": -2,
+          "y": 96,
+          "width": 1270,
+          "height": 0
+        },
+        "inner": {
+          "x": 0,
+          "y": 96,
+          "width": 1266,
+          "height": 568
+        },
+        "innerWidgets": {
+          "x": 20,
+          "y": 106,
+          "width": 1226,
+          "height": 451
+        },
+        "config": {
+          "x": 23,
+          "y": 106,
+          "width": 1220,
+          "height": 385
+        },
+        "block": {
+          "x": 23,
+          "y": 112,
+          "width": 1220,
+          "height": 385
+        },
+        "image": {
+          "x": 268,
+          "y": 112,
+          "width": 730,
+          "height": 340
+        },
+        "svg": {
+          "x": 268,
+          "y": 112,
+          "width": 730,
+          "height": 387
+        },
+        "row": {
+          "x": 20,
+          "y": 511,
+          "width": 1226,
+          "height": 36
+        },
+        "drawer": {
+          "x": -230,
+          "y": 86,
+          "width": 230,
+          "height": 644
+        }
+      },
+      "inner_overflow": [
+        "auto",
+        "auto"
+      ],
+      "source_fonts_ready": false
+    },
+    {
+      "product_id": 605,
+      "viewport_css": [
+        1266,
+        664
+      ],
+      "drawer": true,
+      "boxes": {
+        "toolbar": {
+          "x": 0,
+          "y": 0,
+          "width": 1266,
+          "height": 38
+        },
+        "nav": {
+          "x": 0,
+          "y": 38,
+          "width": 1266,
+          "height": 48
+        },
+        "outer": {
+          "x": 0,
+          "y": 86,
+          "width": 1266,
+          "height": 578
+        },
+        "outerWidgets": {
+          "x": 20,
+          "y": 96,
+          "width": 1226,
+          "height": 0
+        },
+        "customize": {
+          "x": -2,
+          "y": 96,
+          "width": 1270,
+          "height": 0
+        },
+        "inner": {
+          "x": 230,
+          "y": 96,
+          "width": 1036,
+          "height": 568
+        },
+        "innerWidgets": {
+          "x": 250,
+          "y": 106,
+          "width": 1000,
+          "height": 451
+        },
+        "config": {
+          "x": 250,
+          "y": 106,
+          "width": 1000,
+          "height": 385
+        },
+        "block": {
+          "x": 250,
+          "y": 112,
+          "width": 1000,
+          "height": 385
+        },
+        "image": {
+          "x": 385,
+          "y": 112,
+          "width": 730,
+          "height": 340
+        },
+        "svg": {
+          "x": 385,
+          "y": 112,
+          "width": 730,
+          "height": 387
+        },
+        "row": {
+          "x": 250,
+          "y": 511,
+          "width": 1000,
+          "height": 36
+        },
+        "drawer": {
+          "x": 0,
+          "y": 86,
+          "width": 230,
+          "height": 644
+        }
+      },
+      "inner_overflow": [
+        "auto",
+        "auto"
+      ],
+      "source_fonts_ready": false
+    },
+    {
+      "product_id": 605,
+      "viewport_css": [
+        1000,
+        594
+      ],
+      "drawer": false,
+      "boxes": {
+        "toolbar": {
+          "x": 0,
+          "y": 0,
+          "width": 1000,
+          "height": 38
+        },
+        "nav": {
+          "x": 0,
+          "y": 38,
+          "width": 1000,
+          "height": 48
+        },
+        "outer": {
+          "x": 0,
+          "y": 86,
+          "width": 1000,
+          "height": 508
+        },
+        "outerWidgets": {
+          "x": 20,
+          "y": 96,
+          "width": 960,
+          "height": 0
+        },
+        "customize": {
+          "x": -135,
+          "y": 96,
+          "width": 1270,
+          "height": 0
+        },
+        "inner": {
+          "x": 0,
+          "y": 96,
+          "width": 1000,
+          "height": 498
+        },
+        "innerWidgets": {
+          "x": 20,
+          "y": 106,
+          "width": 960,
+          "height": 451
+        },
+        "config": {
+          "x": 20,
+          "y": 106,
+          "width": 960,
+          "height": 385
+        },
+        "block": {
+          "x": 20,
+          "y": 112,
+          "width": 960,
+          "height": 385
+        },
+        "image": {
+          "x": 135,
+          "y": 112,
+          "width": 730,
+          "height": 340
+        },
+        "svg": {
+          "x": 135,
+          "y": 112,
+          "width": 730,
+          "height": 387
+        },
+        "row": {
+          "x": 20,
+          "y": 511,
+          "width": 960,
+          "height": 36
+        },
+        "drawer": {
+          "x": -230,
+          "y": 86,
+          "width": 230,
+          "height": 574
+        }
+      },
+      "inner_overflow": [
+        "auto",
+        "auto"
+      ],
+      "source_fonts_ready": false
+    },
+    {
+      "product_id": 605,
+      "viewport_css": [
+        1000,
+        594
+      ],
+      "drawer": true,
+      "boxes": {
+        "toolbar": {
+          "x": 0,
+          "y": 0,
+          "width": 1000,
+          "height": 38
+        },
+        "nav": {
+          "x": 0,
+          "y": 38,
+          "width": 1000,
+          "height": 48
+        },
+        "outer": {
+          "x": 0,
+          "y": 86,
+          "width": 1000,
+          "height": 508
+        },
+        "outerWidgets": {
+          "x": 20,
+          "y": 96,
+          "width": 960,
+          "height": 0
+        },
+        "customize": {
+          "x": -135,
+          "y": 96,
+          "width": 1270,
+          "height": 0
+        },
+        "inner": {
+          "x": 230,
+          "y": 96,
+          "width": 770,
+          "height": 498
+        },
+        "innerWidgets": {
+          "x": 250,
+          "y": 106,
+          "width": 1000,
+          "height": 451
+        },
+        "config": {
+          "x": 250,
+          "y": 106,
+          "width": 1000,
+          "height": 385
+        },
+        "block": {
+          "x": 250,
+          "y": 112,
+          "width": 1000,
+          "height": 385
+        },
+        "image": {
+          "x": 385,
+          "y": 112,
+          "width": 730,
+          "height": 340
+        },
+        "svg": {
+          "x": 385,
+          "y": 112,
+          "width": 730,
+          "height": 387
+        },
+        "row": {
+          "x": 250,
+          "y": 511,
+          "width": 1000,
+          "height": 36
+        },
+        "drawer": {
+          "x": 0,
+          "y": 86,
+          "width": 230,
+          "height": 574
+        }
+      },
+      "inner_overflow": [
+        "auto",
+        "auto"
+      ],
+      "source_fonts_ready": false
+    },
+    {
+      "product_id": 196,
+      "viewport_css": [
+        1280,
+        678
+      ],
+      "drawer": false,
+      "boxes": {
+        "toolbar": {
+          "x": 0,
+          "y": 0,
+          "width": 1280,
+          "height": 38
+        },
+        "nav": {
+          "x": 0,
+          "y": 38,
+          "width": 1280,
+          "height": 48
+        },
+        "outer": {
+          "x": 0,
+          "y": 86,
+          "width": 1280,
+          "height": 592
+        },
+        "outerWidgets": {
+          "x": 20,
+          "y": 96,
+          "width": 1240,
+          "height": 0
+        },
+        "customize": {
+          "x": 20,
+          "y": 96,
+          "width": 620,
+          "height": 0
+        },
+        "inner": {
+          "x": 0,
+          "y": 96,
+          "width": 1280,
+          "height": 582
+        },
+        "innerWidgets": {
+          "x": 20,
+          "y": 106,
+          "width": 1240,
+          "height": 416
+        },
+        "config": {
+          "x": 30,
+          "y": 106,
+          "width": 1220,
+          "height": 340
+        },
+        "block": {
+          "x": 255,
+          "y": 106,
+          "width": 770,
+          "height": 340
+        },
+        "image": {
+          "x": 490,
+          "y": 106,
+          "width": 300,
+          "height": 340
+        },
+        "canvas": {
+          "x": 485,
+          "y": 106,
+          "width": 310,
+          "height": 340
+        },
+        "row": {
+          "x": 20,
+          "y": 466,
+          "width": 1240,
+          "height": 36
+        },
+        "drawer": {
+          "x": -230,
+          "y": 86,
+          "width": 230,
+          "height": 658
+        }
+      },
+      "inner_overflow": [
+        "hidden",
+        "auto"
+      ],
+      "source_fonts_ready": false
+    },
+    {
+      "product_id": 196,
+      "viewport_css": [
+        1280,
+        678
+      ],
+      "drawer": true,
+      "boxes": {
+        "toolbar": {
+          "x": 0,
+          "y": 0,
+          "width": 1280,
+          "height": 38
+        },
+        "nav": {
+          "x": 0,
+          "y": 38,
+          "width": 1280,
+          "height": 48
+        },
+        "outer": {
+          "x": 0,
+          "y": 86,
+          "width": 1280,
+          "height": 592
+        },
+        "outerWidgets": {
+          "x": 20,
+          "y": 96,
+          "width": 1240,
+          "height": 0
+        },
+        "customize": {
+          "x": 20,
+          "y": 96,
+          "width": 620,
+          "height": 0
+        },
+        "inner": {
+          "x": 230,
+          "y": 96,
+          "width": 1050,
+          "height": 582
+        },
+        "innerWidgets": {
+          "x": 255,
+          "y": 106,
+          "width": 1000,
+          "height": 416
+        },
+        "config": {
+          "x": 255,
+          "y": 106,
+          "width": 1000,
+          "height": 340
+        },
+        "block": {
+          "x": 370,
+          "y": 106,
+          "width": 770,
+          "height": 340
+        },
+        "image": {
+          "x": 605,
+          "y": 106,
+          "width": 300,
+          "height": 340
+        },
+        "canvas": {
+          "x": 600,
+          "y": 106,
+          "width": 310,
+          "height": 340
+        },
+        "row": {
+          "x": 255,
+          "y": 466,
+          "width": 1000,
+          "height": 36
+        },
+        "drawer": {
+          "x": 0,
+          "y": 86,
+          "width": 230,
+          "height": 658
+        }
+      },
+      "inner_overflow": [
+        "hidden",
+        "auto"
+      ],
+      "source_fonts_ready": false
+    },
+    {
+      "product_id": 196,
+      "viewport_css": [
+        1266,
+        664
+      ],
+      "drawer": false,
+      "boxes": {
+        "toolbar": {
+          "x": 0,
+          "y": 0,
+          "width": 1266,
+          "height": 38
+        },
+        "nav": {
+          "x": 0,
+          "y": 38,
+          "width": 1266,
+          "height": 48
+        },
+        "outer": {
+          "x": 0,
+          "y": 86,
+          "width": 1266,
+          "height": 578
+        },
+        "outerWidgets": {
+          "x": 20,
+          "y": 96,
+          "width": 1226,
+          "height": 0
+        },
+        "customize": {
+          "x": 20,
+          "y": 96,
+          "width": 613,
+          "height": 0
+        },
+        "inner": {
+          "x": 0,
+          "y": 96,
+          "width": 1266,
+          "height": 568
+        },
+        "innerWidgets": {
+          "x": 20,
+          "y": 106,
+          "width": 1226,
+          "height": 416
+        },
+        "config": {
+          "x": 23,
+          "y": 106,
+          "width": 1220,
+          "height": 340
+        },
+        "block": {
+          "x": 248,
+          "y": 106,
+          "width": 770,
+          "height": 340
+        },
+        "image": {
+          "x": 483,
+          "y": 106,
+          "width": 300,
+          "height": 340
+        },
+        "canvas": {
+          "x": 478,
+          "y": 106,
+          "width": 310,
+          "height": 340
+        },
+        "row": {
+          "x": 20,
+          "y": 466,
+          "width": 1226,
+          "height": 36
+        },
+        "drawer": {
+          "x": -230,
+          "y": 86,
+          "width": 230,
+          "height": 644
+        }
+      },
+      "inner_overflow": [
+        "auto",
+        "auto"
+      ],
+      "source_fonts_ready": false
+    },
+    {
+      "product_id": 196,
+      "viewport_css": [
+        1266,
+        664
+      ],
+      "drawer": true,
+      "boxes": {
+        "toolbar": {
+          "x": 0,
+          "y": 0,
+          "width": 1266,
+          "height": 38
+        },
+        "nav": {
+          "x": 0,
+          "y": 38,
+          "width": 1266,
+          "height": 48
+        },
+        "outer": {
+          "x": 0,
+          "y": 86,
+          "width": 1266,
+          "height": 578
+        },
+        "outerWidgets": {
+          "x": 20,
+          "y": 96,
+          "width": 1226,
+          "height": 0
+        },
+        "customize": {
+          "x": 20,
+          "y": 96,
+          "width": 613,
+          "height": 0
+        },
+        "inner": {
+          "x": 230,
+          "y": 96,
+          "width": 1036,
+          "height": 568
+        },
+        "innerWidgets": {
+          "x": 250,
+          "y": 106,
+          "width": 1000,
+          "height": 416
+        },
+        "config": {
+          "x": 250,
+          "y": 106,
+          "width": 1000,
+          "height": 340
+        },
+        "block": {
+          "x": 365,
+          "y": 106,
+          "width": 770,
+          "height": 340
+        },
+        "image": {
+          "x": 600,
+          "y": 106,
+          "width": 300,
+          "height": 340
+        },
+        "canvas": {
+          "x": 595,
+          "y": 106,
+          "width": 310,
+          "height": 340
+        },
+        "row": {
+          "x": 250,
+          "y": 466,
+          "width": 1000,
+          "height": 36
+        },
+        "drawer": {
+          "x": 0,
+          "y": 86,
+          "width": 230,
+          "height": 644
+        }
+      },
+      "inner_overflow": [
+        "auto",
+        "auto"
+      ],
+      "source_fonts_ready": false
+    },
+    {
+      "product_id": 196,
+      "viewport_css": [
+        1000,
+        594
+      ],
+      "drawer": false,
+      "boxes": {
+        "toolbar": {
+          "x": 0,
+          "y": 0,
+          "width": 1000,
+          "height": 38
+        },
+        "nav": {
+          "x": 0,
+          "y": 38,
+          "width": 1000,
+          "height": 48
+        },
+        "outer": {
+          "x": 0,
+          "y": 86,
+          "width": 1000,
+          "height": 508
+        },
+        "outerWidgets": {
+          "x": 20,
+          "y": 96,
+          "width": 960,
+          "height": 0
+        },
+        "customize": {
+          "x": 20,
+          "y": 96,
+          "width": 480,
+          "height": 0
+        },
+        "inner": {
+          "x": 0,
+          "y": 96,
+          "width": 1000,
+          "height": 498
+        },
+        "innerWidgets": {
+          "x": 20,
+          "y": 106,
+          "width": 960,
+          "height": 416
+        },
+        "config": {
+          "x": 20,
+          "y": 106,
+          "width": 960,
+          "height": 340
+        },
+        "block": {
+          "x": 115,
+          "y": 106,
+          "width": 770,
+          "height": 340
+        },
+        "image": {
+          "x": 350,
+          "y": 106,
+          "width": 300,
+          "height": 340
+        },
+        "canvas": {
+          "x": 345,
+          "y": 106,
+          "width": 310,
+          "height": 340
+        },
+        "row": {
+          "x": 20,
+          "y": 466,
+          "width": 960,
+          "height": 36
+        },
+        "drawer": {
+          "x": -230,
+          "y": 86,
+          "width": 230,
+          "height": 574
+        }
+      },
+      "inner_overflow": [
+        "auto",
+        "auto"
+      ],
+      "source_fonts_ready": false
+    },
+    {
+      "product_id": 196,
+      "viewport_css": [
+        1000,
+        594
+      ],
+      "drawer": true,
+      "boxes": {
+        "toolbar": {
+          "x": 0,
+          "y": 0,
+          "width": 1000,
+          "height": 38
+        },
+        "nav": {
+          "x": 0,
+          "y": 38,
+          "width": 1000,
+          "height": 48
+        },
+        "outer": {
+          "x": 0,
+          "y": 86,
+          "width": 1000,
+          "height": 508
+        },
+        "outerWidgets": {
+          "x": 20,
+          "y": 96,
+          "width": 960,
+          "height": 0
+        },
+        "customize": {
+          "x": 20,
+          "y": 96,
+          "width": 480,
+          "height": 0
+        },
+        "inner": {
+          "x": 230,
+          "y": 96,
+          "width": 770,
+          "height": 498
+        },
+        "innerWidgets": {
+          "x": 250,
+          "y": 106,
+          "width": 1000,
+          "height": 416
+        },
+        "config": {
+          "x": 250,
+          "y": 106,
+          "width": 1000,
+          "height": 340
+        },
+        "block": {
+          "x": 365,
+          "y": 106,
+          "width": 770,
+          "height": 340
+        },
+        "image": {
+          "x": 600,
+          "y": 106,
+          "width": 300,
+          "height": 340
+        },
+        "canvas": {
+          "x": 595,
+          "y": 106,
+          "width": 310,
+          "height": 340
+        },
+        "row": {
+          "x": 250,
+          "y": 466,
+          "width": 1000,
+          "height": 36
+        },
+        "drawer": {
+          "x": 0,
+          "y": 86,
+          "width": 230,
+          "height": 574
+        }
+      },
+      "inner_overflow": [
+        "auto",
+        "auto"
+      ],
+      "source_fonts_ready": false
+    }
+  ],
+  "source_font_measurements": [
+    {
+      "id": "header",
+      "text": "A",
+      "element": {
+        "x": 241.421875,
+        "y": 102,
+        "width": 9.140625,
+        "height": 17
+      },
+      "font": "14px / 17px Roboto, sans-serif",
+      "family": "Roboto, sans-serif",
+      "size": 14,
+      "lineHeight": "17px",
+      "padding": "0px",
+      "border": "0px none rgb(153, 153, 153)",
+      "display": "inline-block",
+      "textAlign": "center",
+      "baseline_y": 115,
+      "baseline_relative": 13,
+      "parent": {
+        "class": "keymap-head",
+        "y": 91,
+        "height": 36,
+        "baseline_relative": 24
+      },
+      "canvas": {
+        "width": 9.1328125,
+        "fontBoundingBoxAscent": 13,
+        "fontBoundingBoxDescent": 4,
+        "actualBoundingBoxAscent": 10,
+        "actualBoundingBoxDescent": 0
+      }
+    },
+    {
+      "id": "category",
+      "text": "MOUSE FUNCTION",
+      "element": {
+        "x": 151,
+        "y": 140,
+        "width": 101.265625,
+        "height": 14
+      },
+      "font": "12px / 40px Roboto, sans-serif",
+      "family": "Roboto, sans-serif",
+      "size": 12,
+      "lineHeight": "40px",
+      "padding": "0px",
+      "border": "0px none rgb(68, 214, 44)",
+      "display": "inline",
+      "textAlign": "left",
+      "baseline_y": 151,
+      "baseline_relative": 11,
+      "parent": {
+        "class": "head",
+        "y": 127,
+        "height": 40,
+        "baseline_relative": 24
+      },
+      "canvas": {
+        "width": 101.255859375,
+        "fontBoundingBoxAscent": 11,
+        "fontBoundingBoxDescent": 3,
+        "actualBoundingBoxAscent": 9,
+        "actualBoundingBoxDescent": 0
+      }
+    },
+    {
+      "id": "heading",
+      "text": "MOUSE FUNCTION",
+      "element": {
+        "x": 161,
+        "y": 147,
+        "width": 210,
+        "height": 19
+      },
+      "font": "16px / 19px RazerF5",
+      "family": "RazerF5",
+      "size": 16,
+      "lineHeight": "19px",
+      "padding": "0px",
+      "border": "0px none rgb(68, 214, 44)",
+      "display": "flex",
+      "textAlign": "left",
+      "baseline_y": 162,
+      "baseline_relative": 15,
+      "parent": {
+        "class": "body",
+        "y": 127,
+        "height": 452,
+        "baseline_relative": 35
+      },
+      "canvas": {
+        "width": 127.31190490722656,
+        "fontBoundingBoxAscent": 17,
+        "fontBoundingBoxDescent": 5,
+        "actualBoundingBoxAscent": 12,
+        "actualBoundingBoxDescent": 1
+      }
+    },
+    {
+      "id": "default",
+      "text": "A",
+      "element": {
+        "x": 161,
+        "y": 186,
+        "width": 210,
+        "height": 29
+      },
+      "font": "14px / 17px Roboto, sans-serif",
+      "family": "Roboto, sans-serif",
+      "size": 14,
+      "lineHeight": "17px",
+      "padding": "5px",
+      "border": "1px solid rgb(93, 93, 93)",
+      "display": "block",
+      "textAlign": "center",
+      "baseline_y": 205,
+      "baseline_relative": 19,
+      "parent": {
+        "class": "body",
+        "y": 127,
+        "height": 452,
+        "baseline_relative": 78
+      },
+      "canvas": {
+        "width": 9.1328125,
+        "fontBoundingBoxAscent": 13,
+        "fontBoundingBoxDescent": 4,
+        "actualBoundingBoxAscent": 10,
+        "actualBoundingBoxDescent": 0
+      }
+    },
+    {
+      "id": "option",
+      "text": "Double Click",
+      "element": {
+        "x": 167,
+        "y": 230,
+        "width": 77.359375,
+        "height": 17
+      },
+      "font": "14px / 17px Roboto, sans-serif",
+      "family": "Roboto, sans-serif",
+      "size": 14,
+      "lineHeight": "17px",
+      "padding": "0px",
+      "border": "0px none rgb(204, 204, 204)",
+      "display": "block",
+      "textAlign": "left",
+      "baseline_y": 243,
+      "baseline_relative": 13,
+      "parent": {
+        "class": "s3-dropdown",
+        "y": 225,
+        "height": 27,
+        "baseline_relative": 18
+      },
+      "canvas": {
+        "width": 77.3486328125,
+        "fontBoundingBoxAscent": 13,
+        "fontBoundingBoxDescent": 4,
+        "actualBoundingBoxAscent": 11,
+        "actualBoundingBoxDescent": 0
+      }
+    },
+    {
+      "id": "options",
+      "text": "Double Click",
+      "element": {
+        "x": 166,
+        "y": 267,
+        "width": 200,
+        "height": 17
+      },
+      "font": "14px Roboto, sans-serif",
+      "family": "Roboto, sans-serif",
+      "size": 14,
+      "lineHeight": "normal",
+      "padding": "0px",
+      "border": "0px none rgb(204, 204, 204)",
+      "display": "block",
+      "textAlign": "start",
+      "baseline_y": 280,
+      "baseline_relative": 13,
+      "parent": {
+        "class": "raw-text option",
+        "y": 263,
+        "height": 25,
+        "baseline_relative": 17
+      },
+      "canvas": {
+        "width": 77.3486328125,
+        "fontBoundingBoxAscent": 13,
+        "fontBoundingBoxDescent": 4,
+        "actualBoundingBoxAscent": 11,
+        "actualBoundingBoxDescent": 0
+      }
+    },
+    {
+      "id": "turbo",
+      "text": "Speed (press/sec)",
+      "element": {
+        "x": 161,
+        "y": 289,
+        "width": 210,
+        "height": 17
+      },
+      "font": "14px / 17px Roboto, sans-serif",
+      "family": "Roboto, sans-serif",
+      "size": 14,
+      "lineHeight": "17px",
+      "padding": "0px",
+      "border": "0px none rgb(204, 204, 204)",
+      "display": "block",
+      "textAlign": "start",
+      "baseline_y": 302,
+      "baseline_relative": 13,
+      "parent": {
+        "class": "body",
+        "y": 127,
+        "height": 452,
+        "baseline_relative": 175
+      },
+      "canvas": {
+        "width": 114.0576171875,
+        "fontBoundingBoxAscent": 13,
+        "fontBoundingBoxDescent": 4,
+        "actualBoundingBoxAscent": 11,
+        "actualBoundingBoxDescent": 3
+      }
+    },
+    {
+      "id": "button",
+      "text": "CANCEL",
+      "element": {
+        "x": 161,
+        "y": 306,
+        "width": 100,
+        "height": 27
+      },
+      "font": "12px / 14px Roboto, sans-serif",
+      "family": "Roboto, sans-serif",
+      "size": 12,
+      "lineHeight": "14px",
+      "padding": "6px 0px 7px",
+      "border": "1px solid rgb(0, 0, 0)",
+      "display": "block",
+      "textAlign": "center",
+      "baseline_y": 324,
+      "baseline_relative": 18,
+      "parent": {
+        "class": "flex keymap-action",
+        "y": 306,
+        "height": 27,
+        "baseline_relative": 18
+      },
+      "canvas": {
+        "width": 45.28125,
+        "fontBoundingBoxAscent": 11,
+        "fontBoundingBoxDescent": 3,
+        "actualBoundingBoxAscent": 9,
+        "actualBoundingBoxDescent": 0
+      }
+    },
+    {
+      "id": "layer",
+      "text": "Standard",
+      "element": {
+        "x": 6,
+        "y": 6,
+        "width": 76.234375,
+        "height": 24
+      },
+      "font": "14px / 14px Roboto, sans-serif",
+      "family": "Roboto, sans-serif",
+      "size": 14,
+      "lineHeight": "14px",
+      "padding": "6px 10px 5px",
+      "border": "0px none rgb(33, 33, 33)",
+      "display": "inline-block",
+      "textAlign": "start",
+      "baseline_y": 23,
+      "baseline_relative": 17,
+      "parent": {
+        "class": "hyper-wrapper",
+        "y": 0,
+        "height": 36,
+        "baseline_relative": 23
+      },
+      "canvas": {
+        "width": 56.232421875,
+        "fontBoundingBoxAscent": 13,
+        "fontBoundingBoxDescent": 4,
+        "actualBoundingBoxAscent": 11,
+        "actualBoundingBoxDescent": 0
+      }
+    },
+    {
+      "id": "mouse",
+      "text": "Right Click",
+      "element": {
+        "x": 0,
+        "y": 0,
+        "width": 85.953125,
+        "height": 30
+      },
+      "font": "14px / 17px Roboto, sans-serif",
+      "family": "Roboto, sans-serif",
+      "size": 14,
+      "lineHeight": "17px",
+      "padding": "6px 10px 7px",
+      "border": "0px none rgb(204, 204, 204)",
+      "display": "flex",
+      "textAlign": "start",
+      "baseline_y": 19,
+      "baseline_relative": 19,
+      "parent": {
+        "class": "config-btns",
+        "y": 0,
+        "height": 50,
+        "baseline_relative": 19
+      },
+      "canvas": {
+        "width": 65.953125,
+        "fontBoundingBoxAscent": 13,
+        "fontBoundingBoxDescent": 4,
+        "actualBoundingBoxAscent": 11,
+        "actualBoundingBoxDescent": 3
+      }
+    }
+  ],
+  "gdi_before": {
+    "rows": [
+      {
+        "id": "header",
+        "measurement": {
+          "family": "Roboto",
+          "selected_face": "Roboto",
+          "font_pixels": 18,
+          "rect_height_pixels": 45,
+          "center": true,
+          "text": "A",
+          "metrics": [
+            22,
+            17,
+            5,
+            4,
+            0
+          ],
+          "extent_pixels": [
+            12,
+            22
+          ],
+          "ink_at_baseline_zero": [
+            0,
+            -17,
+            12,
+            5
+          ],
+          "draw_text_ink": [
+            0,
+            11,
+            12,
+            33
+          ],
+          "draw_text_baseline_pixels": 28,
+          "draw_text_return": 33
+        }
+      },
+      {
+        "id": "category-before",
+        "measurement": {
+          "family": "Roboto",
+          "selected_face": "Roboto",
+          "font_pixels": 18,
+          "rect_height_pixels": 50,
+          "center": true,
+          "text": "MOUSE FUNCTION",
+          "metrics": [
+            22,
+            17,
+            5,
+            4,
+            0
+          ],
+          "extent_pixels": [
+            153,
+            22
+          ],
+          "ink_at_baseline_zero": [
+            0,
+            -17,
+            153,
+            5
+          ],
+          "draw_text_ink": [
+            0,
+            14,
+            153,
+            36
+          ],
+          "draw_text_baseline_pixels": 31,
+          "draw_text_return": 36
+        }
+      },
+      {
+        "id": "category-source",
+        "measurement": {
+          "family": "Roboto",
+          "selected_face": "Roboto",
+          "font_pixels": 15,
+          "rect_height_pixels": 50,
+          "center": true,
+          "text": "MOUSE FUNCTION",
+          "metrics": [
+            18,
+            14,
+            4,
+            3,
+            0
+          ],
+          "extent_pixels": [
+            128,
+            18
+          ],
+          "ink_at_baseline_zero": [
+            0,
+            -14,
+            128,
+            4
+          ],
+          "draw_text_ink": [
+            0,
+            16,
+            128,
+            34
+          ],
+          "draw_text_baseline_pixels": 30,
+          "draw_text_return": 34
+        }
+      },
+      {
+        "id": "heading",
+        "measurement": {
+          "family": "RazerF5",
+          "selected_face": "RazerF5",
+          "font_pixels": 20,
+          "rect_height_pixels": 24,
+          "center": false,
+          "text": "MOUSE FUNCTION",
+          "metrics": [
+            28,
+            22,
+            6,
+            8,
+            0
+          ],
+          "extent_pixels": [
+            161,
+            28
+          ],
+          "ink_at_baseline_zero": [
+            0,
+            -22,
+            161,
+            6
+          ],
+          "draw_text_ink": [
+            0,
+            0,
+            161,
+            28
+          ],
+          "draw_text_baseline_pixels": 22,
+          "draw_text_return": 28
+        }
+      },
+      {
+        "id": "default",
+        "measurement": {
+          "family": "Roboto",
+          "selected_face": "Roboto",
+          "font_pixels": 18,
+          "rect_height_pixels": 36,
+          "center": true,
+          "text": "A",
+          "metrics": [
+            22,
+            17,
+            5,
+            4,
+            0
+          ],
+          "extent_pixels": [
+            12,
+            22
+          ],
+          "ink_at_baseline_zero": [
+            0,
+            -17,
+            12,
+            5
+          ],
+          "draw_text_ink": [
+            0,
+            7,
+            12,
+            29
+          ],
+          "draw_text_baseline_pixels": 24,
+          "draw_text_return": 29
+        }
+      },
+      {
+        "id": "option",
+        "measurement": {
+          "family": "Roboto",
+          "selected_face": "Roboto",
+          "font_pixels": 18,
+          "rect_height_pixels": 34,
+          "center": true,
+          "text": "Double Click",
+          "metrics": [
+            22,
+            17,
+            5,
+            4,
+            0
+          ],
+          "extent_pixels": [
+            98,
+            22
+          ],
+          "ink_at_baseline_zero": [
+            0,
+            -17,
+            98,
+            5
+          ],
+          "draw_text_ink": [
+            0,
+            6,
+            98,
+            28
+          ],
+          "draw_text_baseline_pixels": 23,
+          "draw_text_return": 28
+        }
+      },
+      {
+        "id": "turbo",
+        "measurement": {
+          "family": "Roboto",
+          "selected_face": "Roboto",
+          "font_pixels": 18,
+          "rect_height_pixels": 21,
+          "center": false,
+          "text": "Speed (press/sec)",
+          "metrics": [
+            22,
+            17,
+            5,
+            4,
+            0
+          ],
+          "extent_pixels": [
+            146,
+            22
+          ],
+          "ink_at_baseline_zero": [
+            0,
+            -17,
+            146,
+            5
+          ],
+          "draw_text_ink": [
+            0,
+            0,
+            146,
+            22
+          ],
+          "draw_text_baseline_pixels": 17,
+          "draw_text_return": 22
+        }
+      },
+      {
+        "id": "button",
+        "measurement": {
+          "family": "Roboto",
+          "selected_face": "Roboto",
+          "font_pixels": 15,
+          "rect_height_pixels": 34,
+          "center": true,
+          "text": "CANCEL",
+          "metrics": [
+            18,
+            14,
+            4,
+            3,
+            0
+          ],
+          "extent_pixels": [
+            58,
+            18
+          ],
+          "ink_at_baseline_zero": [
+            0,
+            -14,
+            58,
+            4
+          ],
+          "draw_text_ink": [
+            0,
+            8,
+            58,
+            26
+          ],
+          "draw_text_baseline_pixels": 22,
+          "draw_text_return": 26
+        }
+      },
+      {
+        "id": "layer",
+        "measurement": {
+          "family": "Roboto",
+          "selected_face": "Roboto",
+          "font_pixels": 18,
+          "rect_height_pixels": 30,
+          "center": true,
+          "text": "Standard",
+          "metrics": [
+            22,
+            17,
+            5,
+            4,
+            0
+          ],
+          "extent_pixels": [
+            73,
+            22
+          ],
+          "ink_at_baseline_zero": [
+            0,
+            -17,
+            73,
+            5
+          ],
+          "draw_text_ink": [
+            0,
+            4,
+            73,
+            26
+          ],
+          "draw_text_baseline_pixels": 21,
+          "draw_text_return": 26
+        }
+      },
+      {
+        "id": "mouse",
+        "measurement": {
+          "family": "Roboto",
+          "selected_face": "Roboto",
+          "font_pixels": 18,
+          "rect_height_pixels": 38,
+          "center": true,
+          "text": "Right Click",
+          "metrics": [
+            22,
+            17,
+            5,
+            4,
+            0
+          ],
+          "extent_pixels": [
+            83,
+            22
+          ],
+          "ink_at_baseline_zero": [
+            0,
+            -17,
+            83,
+            5
+          ],
+          "draw_text_ink": [
+            0,
+            8,
+            83,
+            30
+          ],
+          "draw_text_baseline_pixels": 25,
+          "draw_text_return": 30
+        }
+      }
+    ],
+    "private_fonts_loaded": [
+      1,
+      1
+    ],
+    "source": "Private source fonts measured through GDI vector paths, not raster screenshots",
+    "scale": 1.25
+  },
+  "gdi_after": {
+    "private_font_files": 3,
+    "rows": [
+      {
+        "actual_baseline_px": 30,
+        "drawn_path": [
+          13,
+          13
+        ],
+        "emitted": true,
+        "expected_baseline_px": 30,
+        "face": "Roboto",
+        "matches": true,
+        "reference_path": [
+          13,
+          13
+        ],
+        "role": "Header",
+        "source_baseline_css": 24.0
+      },
+      {
+        "actual_baseline_px": 30,
+        "drawn_path": [
+          13,
+          13
+        ],
+        "emitted": true,
+        "expected_baseline_px": 30,
+        "face": "Roboto",
+        "matches": true,
+        "reference_path": [
+          13,
+          13
+        ],
+        "role": "Category",
+        "source_baseline_css": 24.0
+      },
+      {
+        "actual_baseline_px": 19,
+        "drawn_path": [
+          14,
+          14
+        ],
+        "emitted": true,
+        "expected_baseline_px": 19,
+        "face": "RazerF5",
+        "matches": true,
+        "reference_path": [
+          14,
+          14
+        ],
+        "role": "Heading",
+        "source_baseline_css": 15.0
+      },
+      {
+        "actual_baseline_px": 24,
+        "drawn_path": [
+          13,
+          13
+        ],
+        "emitted": true,
+        "expected_baseline_px": 24,
+        "face": "Roboto",
+        "matches": true,
+        "reference_path": [
+          13,
+          13
+        ],
+        "role": "DefaultValue",
+        "source_baseline_css": 19.0
+      },
+      {
+        "actual_baseline_px": 23,
+        "drawn_path": [
+          13,
+          13
+        ],
+        "emitted": true,
+        "expected_baseline_px": 23,
+        "face": "Roboto",
+        "matches": true,
+        "reference_path": [
+          13,
+          13
+        ],
+        "role": "Dropdown",
+        "source_baseline_css": 18.0
+      },
+      {
+        "actual_baseline_px": 21,
+        "drawn_path": [
+          13,
+          13
+        ],
+        "emitted": true,
+        "expected_baseline_px": 21,
+        "face": "Roboto",
+        "matches": true,
+        "reference_path": [
+          13,
+          13
+        ],
+        "role": "Options",
+        "source_baseline_css": 17.0
+      },
+      {
+        "actual_baseline_px": 16,
+        "drawn_path": [
+          13,
+          13
+        ],
+        "emitted": true,
+        "expected_baseline_px": 16,
+        "face": "Roboto",
+        "matches": true,
+        "reference_path": [
+          13,
+          13
+        ],
+        "role": "TurboLabel",
+        "source_baseline_css": 13.0
+      },
+      {
+        "actual_baseline_px": 23,
+        "drawn_path": [
+          13,
+          13
+        ],
+        "emitted": true,
+        "expected_baseline_px": 23,
+        "face": "Roboto",
+        "matches": true,
+        "reference_path": [
+          13,
+          13
+        ],
+        "role": "Button",
+        "source_baseline_css": 18.0
+      },
+      {
+        "actual_baseline_px": 21,
+        "drawn_path": [
+          13,
+          13
+        ],
+        "emitted": true,
+        "expected_baseline_px": 21,
+        "face": "Roboto",
+        "matches": true,
+        "reference_path": [
+          13,
+          13
+        ],
+        "role": "Layer",
+        "source_baseline_css": 17.0
+      },
+      {
+        "actual_baseline_px": 24,
+        "drawn_path": [
+          13,
+          13
+        ],
+        "emitted": true,
+        "expected_baseline_px": 24,
+        "face": "Roboto",
+        "matches": true,
+        "reference_path": [
+          13,
+          13
+        ],
+        "role": "MouseLabel",
+        "source_baseline_css": 19.0
+      }
+    ],
+    "scale": 1.25,
+    "window_geometry": {
+      "client_height_px": 884,
+      "client_inset_x_px": 8,
+      "client_inset_y_px": 8,
+      "client_width_px": 1584,
+      "outer_height_px": 900,
+      "outer_width_px": 1600
+    }
+  },
+  "code_corrections": {
+    "keyboard_center_normal": "width/2",
+    "keyboard_center_drawer": "max((width+230)/2,750)",
+    "keyboard_control_row_native_y": 553,
+    "category_font_css_px": 12,
+    "baseline_roles": 10
+  },
+  "known_limits": [
+    "Full lower Gaming Mode/card content was omitted from this origin replay; total vertical content scroll range is not established.",
+    "GDI glyph advances, hinting and raster antialiasing still differ from Chromium; baseline equality is not pixel equality.",
+    "Native EDIT, multi-line prose and remaining text roles were not corrected in this unit.",
+    "Current native WS_THICKFRAME client inset remains8physical pixels per side at125%; global frame correction is a separate unit."
+  ],
+  "new_ram_measurement": false,
+  "global_nccalc_change": false,
+  "native_hwnd_regressions": {
+    "passed": 6,
+    "failed": 0,
+    "seconds": 5.39,
+    "physical_discovery": false
+  },
+  "native_source_sha256": {
+    "crates/secbird-tray/src/native_editor.rs": "a46884d3be820ee9b9aa9dd8a94df0f19a4f940a704a23fce7d9e5c53600f30a",
+    "crates/secbird-tray/src/native_editor/assignment_fonts.rs": "4f7c5d74268a23e7a62426f580f7ce1deda53658e7da919593679b3762755337",
+    "crates/secbird-tray/src/native_editor/assignment_geometry.rs": "46c5a654758343beaeb8263d233e43ac977fe643254515849139c7b1e983d785",
+    "crates/secbird-tray/src/native_editor/assignment_view.rs": "c91192c8e305fa77b3b45aa2a4aebd52c9bf33fd9f84fdc18a9d03dd360007b0",
+    "crates/secbird-tray/src/native_editor/interaction_tests.rs": "6fc27d61fa11b791b978f7f9fcf7d485901113a23fd94bcfa7b3484456dbf136"
+  },
+  "regular_tray_tests": {
+    "passed": 184,
+    "failed": 0,
+    "ignored": 9,
+    "scope": "combined working tree including concurrent independent host-effect work"
+  }
+}

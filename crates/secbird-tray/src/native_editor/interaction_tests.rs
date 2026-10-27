@@ -1449,6 +1449,27 @@ fn native_assignment_source_draft_has_no_device_or_store_writes() {
                     (key.top + key.bottom) / 2.0,
                     scale,
                 );
+                let mut fonts = Value::Null;
+                SendMessageW(
+                    hwnd,
+                    ASSIGNMENT_TEST_QUERY,
+                    2,
+                    &mut fonts as *mut Value as isize,
+                );
+                if fonts["private_font_files"] != 3
+                    || !fonts["rows"].as_array().is_some_and(|rows| {
+                        rows.len() == 10 && rows.iter().all(|row| row["matches"] == true)
+                    })
+                {
+                    return Err(format!(
+                        "Native source baseline vector check failed: {fonts}"
+                    ));
+                }
+                std::fs::write(
+                    controller_directory.join("font-window-geometry.json"),
+                    serde_json::to_vec_pretty(&fonts).unwrap(),
+                )
+                .unwrap();
                 let initial = query();
                 if initial["open"] != true
                     || initial["input"] != "KEY_A"

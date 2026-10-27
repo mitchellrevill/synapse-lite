@@ -220,14 +220,25 @@ pub(super) fn alert(width: f64, client_height: f64) -> Alert {
 }
 pub(super) fn keyboard_center(width: f64, drawer: bool) -> f64 {
     if drawer {
-        ((width + 230.0) / 2.0).max(755.0)
+        ((width + 230.0) / 2.0).max(750.0)
     } else {
-        width / 2.0 - 10.0
+        width / 2.0
     }
 }
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn populated_source_controls_resolve_keyboard_center_without_empty_flex_artifact() {
+        for (width, closed, open) in [
+            (1280.0, 640.0, 755.0),
+            (1266.0, 633.0, 750.0),
+            (1000.0, 500.0, 750.0),
+        ] {
+            assert_eq!(keyboard_center(width, false), closed);
+            assert_eq!(keyboard_center(width, true), open);
+        }
+    }
     #[test]
     fn forms_match_source_replay_not_a_common_footer() {
         let g = shell::shell(678.0, 42.0, 100.0, 36.0, false).unwrap();

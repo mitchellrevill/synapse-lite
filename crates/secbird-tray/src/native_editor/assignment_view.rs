@@ -1,5 +1,6 @@
 //! Installed Customize popup projection. This module never submits a device job.
 //! Positions come from assignment_layout + inert shipped CSS/font replay.
+use super::assignment_fonts::Role;
 use super::assignment_geometry as geo;
 use super::assignment_layout::{self as shell, Rect};
 use super::assignment_model::{self as model, Anchor, Category, Draft, Input, Transition};
@@ -132,6 +133,65 @@ unsafe fn text(p: &Painter, t: &str, r: Rect, font: HFONT, c: u32, flags: u32) {
     DrawTextW(p.dc, wide(t).as_ptr(), -1, &mut b, flags | DT_NOPREFIX);
     SelectObject(p.dc, old);
 }
+/// Position the glyph baseline from the source line box, rather than centering
+/// GDI's larger font metrics inside that box. Glyph advances remain native GDI.
+unsafe fn baseline_text(
+    p: &Painter,
+    t: &str,
+    r: Rect,
+    font: HFONT,
+    color: u32,
+    flags: u32,
+    role: Role,
+) -> bool {
+    let Some(y) = role.pixel(r.y, p.scale as f64) else {
+        return false;
+    };
+    // Keep the application clip separate from an open glyph path. The native
+    // vector regression exercises the same drawing primitive as the live view.
+    let previous_clip = CreateRectRgn(0, 0, 0, 0);
+    if previous_clip.is_null() {
+        return false;
+    }
+    let had_clip = GetClipRgn(p.dc, previous_clip);
+    if had_clip < 0 {
+        DeleteObject(previous_clip);
+        return false;
+    }
+    let previous_font = SelectObject(p.dc, font);
+    let previous_align = SetTextAlign(p.dc, TA_BASELINE | TA_LEFT);
+    let previous_mode = SetBkMode(p.dc, TRANSPARENT as i32);
+    let previous_color = SetTextColor(p.dc, rgb(color));
+    let value = wide(t);
+    let count = value.len().saturating_sub(1) as u32;
+    let bounds = box_px(p, r);
+    IntersectClipRect(p.dc, bounds.left, bounds.top, bounds.right, bounds.bottom);
+    let mut size: SIZE = std::mem::zeroed();
+    GetTextExtentPoint32W(p.dc, value.as_ptr(), count as i32, &mut size);
+    let x = if flags & DT_CENTER != 0 {
+        bounds.left + (bounds.right - bounds.left - size.cx) / 2
+    } else if flags & DT_RIGHT != 0 {
+        bounds.right - size.cx
+    } else {
+        bounds.left
+    };
+    let emitted = ExtTextOutW(p.dc, x, y, 0, null(), value.as_ptr(), count, null());
+    SelectClipRgn(
+        p.dc,
+        if had_clip == 1 {
+            previous_clip
+        } else {
+            null_mut()
+        },
+    );
+    DeleteObject(previous_clip);
+    SetTextAlign(p.dc, previous_align);
+    SetBkMode(p.dc, previous_mode);
+    SetTextColor(p.dc, previous_color);
+    SelectObject(p.dc, previous_font);
+    emitted != 0
+}
+
 fn hit(p: &mut Painter, r: Rect, c: Control) {
     let mut clip: RECT = unsafe { std::mem::zeroed() };
     unsafe {
@@ -171,13 +231,14 @@ unsafe fn button(p: &mut Painter, t: &str, r: Rect, control: Option<Control>) {
     let bg = performance_view::faded(if save { GREEN } else { 0x707070 }, 0x111111, opacity);
     let fg = performance_view::faded(if save { 0 } else { 0xffffff }, 0x111111, opacity);
     rounded(p, r, bg, performance_view::faded(0, 0x111111, opacity), 3.0);
-    text(
+    baseline_text(
         p,
         t,
         r,
         p.fonts.small,
         fg,
         DT_CENTER | DT_VCENTER | DT_SINGLELINE,
+        Role::Button,
     );
     hit(p, r, control.unwrap_or(Control::Block));
 }
@@ -364,13 +425,14 @@ pub(super) unsafe fn paint_customize(s: &State, p: &mut Painter) -> bool {
             if active || hover(s, b) {
                 fill(p, b, if active { 0x111111 } else { 0x383838 });
             }
-            text(
+            baseline_text(
                 p,
                 &item.default_label,
                 r(b.x + 10.0, b.y, b.width - 20.0, b.height),
                 p.fonts.normal,
                 if !item.enabled { 0x555555 } else { 0xcccccc },
                 DT_VCENTER | DT_SINGLELINE,
+                Role::MouseLabel,
             );
             if item.enabled {
                 hit(p, b, Control::Open(item, Anchor::Mouse(i)));
@@ -474,7 +536,7 @@ pub(super) unsafe fn paint_customize(s: &State, p: &mut Painter) -> bool {
         .x + 150.0
     };
     let y = if s.device().is_some_and(|d| d["pid"] == "025D") {
-        554.0
+        553.0
     } else {
         508.0
     } - s.assignment.scroll_y;
@@ -537,13 +599,14 @@ pub(super) unsafe fn paint_customize(s: &State, p: &mut Painter) -> bool {
                 12.0,
             );
         }
-        text(
+        baseline_text(
             p,
             label,
             bounds,
             p.fonts.normal,
             if selected { 0x212121 } else { 0xcccccc },
             DT_SINGLELINE | DT_CENTER | DT_VCENTER,
+            Role::Layer,
         );
         hit(p, bounds, Control::Layer(on));
     }
@@ -559,7 +622,7 @@ pub(super) unsafe fn paint_customize(s: &State, p: &mut Painter) -> bool {
         fill(p, r(0.0, 194.0, 230.0, 1.0), 0x5d5d5d);
         let dropdown = r(7.0, 148.0, 180.0, 27.0);
         border(p, dropdown, 0x515151);
-        text(
+        baseline_text(
             p,
             if s.assignment.customized_only {
                 "Customized"
@@ -570,6 +633,7 @@ pub(super) unsafe fn paint_customize(s: &State, p: &mut Painter) -> bool {
             p.fonts.normal,
             0xcccccc,
             DT_SINGLELINE | DT_VCENTER,
+            Role::Dropdown,
         );
         image(s, p, "expand", r(167.0, 156.0, 10.0, 10.0));
         hit(p, dropdown, Control::Filter);
@@ -653,7 +717,7 @@ pub(super) unsafe fn paint_customize(s: &State, p: &mut Painter) -> bool {
             if hover(s, row) {
                 fill(p, row, 0x393939);
             }
-            text(
+            baseline_text(
                 p,
                 label,
                 r(18.0, y, 158.0, 25.0),
@@ -664,6 +728,7 @@ pub(super) unsafe fn paint_customize(s: &State, p: &mut Painter) -> bool {
                     0xcccccc
                 },
                 DT_SINGLELINE | DT_VCENTER,
+                Role::Options,
             );
             hit(p, row, Control::FilterChoice(value));
         }
@@ -686,13 +751,14 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
     fill(p, g.popup, 0x111111);
     border(p, g.popup, 0x5d5d5d);
     fill(p, g.header, 0x222222);
-    text(
+    baseline_text(
         p,
         &d.input.label,
         r(g.header.x + 10.0, g.header.y, 235.0, 36.0),
         p.fonts.normal,
         0xcccccc,
         DT_SINGLELINE | DT_VCENTER,
+        Role::Header,
     );
     hit(p, g.close, Control::Close);
     image(
@@ -712,7 +778,7 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
     let saved = SaveDC(p.dc);
     let b = box_px(p, g.body);
     IntersectClipRect(p.dc, b.left, b.top, b.right, b.bottom);
-    text(
+    baseline_text(
         p,
         d.category
             .map(Category::title)
@@ -721,29 +787,32 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
         p.fonts.widget_heading,
         GREEN,
         DT_SINGLELINE,
+        Role::Heading,
     );
     match d.category {
         Some(Category::Default) => {
             border(p, f.display, 0x5d5d5d);
-            text(
+            baseline_text(
                 p,
                 &d.input.default_label,
                 f.display,
                 p.fonts.normal,
                 0xcccccc,
                 DT_SINGLELINE | DT_VCENTER | DT_CENTER,
+                Role::DefaultValue,
             );
         }
         Some(Category::Disable) => {}
         Some(Category::Mouse) => {
             border(p, f.dropdown, 0x515151);
-            text(
+            baseline_text(
                 p,
                 model::MOUSE_ACTIONS[d.mouse_option].1,
                 r(f.dropdown.x + 10.0, f.dropdown.y, 180.0, 27.0),
                 p.fonts.normal,
                 0xcccccc,
                 DT_VCENTER | DT_SINGLELINE,
+                Role::Dropdown,
             );
             image(
                 s,
@@ -769,13 +838,14 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
                 );
                 hit(p, f.checkbox, Control::Turbo);
                 if d.turbo {
-                    text(
+                    baseline_text(
                         p,
                         "Speed (press/sec)",
                         f.label,
                         p.fonts.normal,
                         0xcccccc,
                         DT_SINGLELINE,
+                        Role::TurboLabel,
                     );
                     border(p, f.stepper, 0x515151);
                     image(
@@ -876,13 +946,14 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
         );
         image(s, p, &key, r(row.x + 10.0, row.y + 10.0, 20.0, 20.0));
         if d.rail_expanded {
-            text(
+            baseline_text(
                 p,
                 c.title(),
                 r(row.x + 50.0, row.y, row.width - 60.0, 40.0),
-                p.fonts.normal,
+                p.fonts.small,
                 if selected { GREEN } else { 0xcccccc },
                 DT_SINGLELINE | DT_VCENTER,
+                Role::Category,
             );
         }
         hit(p, *row, Control::Category(*c));
@@ -916,13 +987,14 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
             if hover(s, row) {
                 fill(p, row, 0x393939);
             }
-            text(
+            baseline_text(
                 p,
                 model::MOUSE_ACTIONS[i].1,
                 r(row.x + 10.0, row.y, row.width - 20.0, row.height),
                 p.fonts.normal,
                 if i == d.mouse_option { GREEN } else { 0xcccccc },
                 DT_SINGLELINE | DT_VCENTER,
+                Role::Options,
             );
             hit(p, row, Control::Option(i));
         }
@@ -979,13 +1051,14 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
         }
         hit(p, r(0.0, 42.0, w, h - 42.0), Control::Block);
         rounded(p, g.panel, 0x111111, GREEN, 5.0);
-        text(
+        baseline_text(
             p,
             "SAVE REMAPPED BUTTON",
             g.title,
             p.fonts.widget_heading,
             GREEN,
             DT_SINGLELINE | DT_CENTER,
+            Role::Heading,
         );
         text(
             p,
@@ -1427,4 +1500,91 @@ pub(super) unsafe fn repeat(s: &mut State) {
 #[cfg(test)]
 pub(super) fn diagnostics(s: &State) -> Value {
     json!({"drawer":s.assignment.drawer,"drawer_scroll":s.assignment.drawer_scroll,"drawer_count":visible_inputs(s).len(),"customized_only":s.assignment.customized_only,"filter_open":s.assignment.filter_open,"rail_expanded":s.assignment.draft.as_ref().is_some_and(|d|d.rail_expanded),"rail_scroll":s.assignment.draft.as_ref().map(|d|d.rail_scroll),"source_icons":s.icons.keys().filter(|key|key.starts_with("assignment-")).count()})
+}
+#[cfg(test)]
+pub(super) unsafe fn font_diagnostics(s: &State) -> Value {
+    let dc = CreateCompatibleDC(null_mut());
+    let bitmap = CreateCompatibleBitmap(dc, 800, 120);
+    let old_bitmap = SelectObject(dc, bitmap);
+    let mut rows = Vec::new();
+    let painter = Painter {
+        dc,
+        scale: s.scale,
+        fonts: &s.fonts,
+        hits: Vec::new(),
+    };
+    let cases = [
+        (Role::Header, s.fonts.normal, 36.0, 24.0),
+        (Role::Category, s.fonts.small, 40.0, 24.0),
+        (Role::Heading, s.fonts.widget_heading, 19.0, 15.0),
+        (Role::DefaultValue, s.fonts.normal, 29.0, 19.0),
+        (Role::Dropdown, s.fonts.normal, 27.0, 18.0),
+        (Role::Options, s.fonts.normal, 25.0, 17.0),
+        (Role::TurboLabel, s.fonts.normal, 17.0, 13.0),
+        (Role::Button, s.fonts.small, 27.0, 18.0),
+        (Role::Layer, s.fonts.normal, 24.0, 17.0),
+        (Role::MouseLabel, s.fonts.normal, 30.0, 19.0),
+    ];
+    let min_y = |dc| -> (Option<i32>, i32, i32) {
+        let count = GetPath(dc, null_mut(), null_mut(), 0);
+        if count <= 0 {
+            return (None, count, 0);
+        }
+        let mut points = vec![POINT { x: 0, y: 0 }; count as usize];
+        let mut types = vec![0u8; count as usize];
+        let read = GetPath(dc, points.as_mut_ptr(), types.as_mut_ptr(), count);
+        if read != count {
+            return (None, count, read);
+        }
+        (points.iter().map(|p| p.y).min(), count, read)
+    };
+    for (role, font, height, source_baseline) in cases {
+        let old_font = SelectObject(dc, font);
+        let mut face = [0u16; 80];
+        let face_len = GetTextFaceW(dc, face.len() as i32, face.as_mut_ptr());
+        let face = String::from_utf16_lossy(&face[..face_len.max(0) as usize])
+            .trim_end_matches('\0')
+            .to_owned();
+        let expected_face = if matches!(role, Role::Heading) {
+            "RazerF5"
+        } else {
+            "Roboto"
+        };
+        let old_align = SetTextAlign(dc, TA_BASELINE | TA_LEFT);
+        SetBkMode(dc, TRANSPARENT as i32);
+        BeginPath(dc);
+        TextOutW(dc, 0, 0, wide("A").as_ptr(), 1);
+        EndPath(dc);
+        let reference = min_y(dc);
+        SelectObject(dc, old_font);
+        SetTextAlign(dc, old_align);
+        BeginPath(dc);
+        let emitted = baseline_text(
+            &painter,
+            "A",
+            r(0.0, 0.0, 200.0, height),
+            font,
+            0xcccccc,
+            DT_SINGLELINE,
+            role,
+        );
+        EndPath(dc);
+        let drawn = min_y(dc);
+        let actual = drawn
+            .0
+            .zip(reference.0)
+            .map(|(actual, reference)| actual - reference);
+        let expected = (source_baseline * s.scale as f64).round() as i32;
+        rows.push(json!({"role":format!("{role:?}"),"actual_baseline_px":actual,"source_baseline_css":source_baseline,"expected_baseline_px":expected,"matches":actual==Some(expected)&&face==expected_face,"face":face,"reference_path":[reference.1,reference.2],"drawn_path":[drawn.1,drawn.2],"emitted":emitted}));
+    }
+    SelectObject(dc, old_bitmap);
+    DeleteObject(bitmap);
+    DeleteDC(dc);
+    let mut outer: RECT = std::mem::zeroed();
+    let mut client: RECT = std::mem::zeroed();
+    let mut origin = POINT { x: 0, y: 0 };
+    GetWindowRect(s.hwnd, &mut outer);
+    GetClientRect(s.hwnd, &mut client);
+    ClientToScreen(s.hwnd, &mut origin);
+    json!({"scale":s.scale,"private_font_files":s.fonts.loaded.len(),"rows":rows,"window_geometry":{"outer_width_px":outer.right-outer.left,"outer_height_px":outer.bottom-outer.top,"client_width_px":client.right,"client_height_px":client.bottom,"client_inset_x_px":origin.x-outer.left,"client_inset_y_px":origin.y-outer.top}})
 }
