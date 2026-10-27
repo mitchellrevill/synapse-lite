@@ -1,0 +1,43 @@
+{
+  "scope": "cached Lighting status and simulated HWND interaction",
+  "regular_tray_tests": {
+    "passed": 125,
+    "ignored": 5
+  },
+  "native_interaction_tests": {
+    "passed": 4,
+    "failed": 0,
+    "elapsed_seconds": 3.98
+  },
+  "observations": {
+    "transport": "simulated only",
+    "physical_discovery_disabled": true,
+    "cached_status_no_hid_or_store_write": true,
+    "background_fault_preserves_capture_and_draft": true,
+    "background_fault_once_across_user_operation": true,
+    "focused_background_failure_close_acknowledged": true,
+    "brightness_no_write_before_release": true,
+    "brightness_cancel_no_write": true,
+    "native_edit_draft_switch_isolated": true,
+    "opaque_slot_preserved": true,
+    "scale": 1.25,
+    "source_layout_client_css_width": 1307.2
+  },
+  "limits": [
+    "Simulated transport only; no physical hardware access.",
+    "No source-to-native pixel-equivalence proof.",
+    "Cached status does not supply a fresh intent/device snapshot."
+  ],
+  "latest_combined_tray_tests": {
+    "passed": 128,
+    "ignored": 6,
+    "failed": 0
+  },
+  "latest_native_interaction_tests": {
+    "passed": 4,
+    "failed": 0,
+    "elapsed_seconds": 4.07,
+    "desktop_context": true,
+    "physical_discovery_disabled": true
+  }
+}

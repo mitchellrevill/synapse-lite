@@ -126,11 +126,9 @@ impl Engine {
     ) -> Result<Self> {
         HidApi::disable_device_discovery();
         let mut engine = Self::from_api(HidApi::new()?);
+        let db = Db::builtin()?;
         let mut dev = sim
-            .open(
-                605,
-                secbird_core::sim::Sim::spec_for(secbird_core::sim::KEYBOARD_PID),
-            )
+            .open(605, db.get(605).cloned())
             .ok_or_else(|| {
                 secbird_core::Error::InvalidArg("simulated keyboard did not answer".into())
             })?;
@@ -139,6 +137,16 @@ impl Engine {
         engine.devices.push(dev);
         engine.simulated_only = true;
         engine.runtime_store_path = Some(path);
+        // This constructor never discovers or writes a real device. Its owner,
+        // display and idle facts must likewise come from the test environment.
+        engine.lighting_runtime.borrow_mut().test_environment = Some(
+            crate::lighting_runtime::Environment {
+                now_ms: 1000,
+                idle_ms: Ok(0),
+                display_off: Some(false),
+                owner: crate::lighting_runtime::Owner::Clear,
+            },
+        );
         Ok(engine)
     }
 

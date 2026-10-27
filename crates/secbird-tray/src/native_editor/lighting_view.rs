@@ -299,6 +299,19 @@ pub(super) fn sync(view: &mut View, device: &Value, preserve_local: bool) {
     }
 }
 
+/// A cached observation is not a profile/intent snapshot. Never call sync or
+/// rebuild native EDITs here: a pending gesture, draft and modal stay untouched.
+pub(super) fn update_runtime_only(view: &mut View, runtime: Value) -> bool {
+    if view.runtime == runtime {
+        return false;
+    }
+    view.runtime = runtime;
+    true
+}
+pub(super) fn runtime_feedback_busy(view: &View) -> bool {
+    view.gesture.is_some() || view.repeat.is_some() || view.focused.is_some()
+}
+
 fn active(state: &State) -> bool {
     state.tab == Tab::Lighting && state.device().is_some_and(|d| d["pid"] == "025D")
 }
@@ -1651,6 +1664,8 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, _device: &Value) 
         + 8.0;
     let runtime_issue = v.runtime["error"]
         .as_str()
+        .or_else(|| v.runtime["uniform_host"]["error"].as_str())
+        .or_else(|| v.runtime["uniform_host"]["configuration_error"].as_str())
         .or_else(|| v.runtime["blocked_reason"].as_str());
     let status = runtime_issue.filter(|s| !s.is_empty()).unwrap_or_else(|| {
         if !v.notice.is_empty() {
@@ -1850,6 +1865,36 @@ mod tests {
           "lighting_settings":{"brightness":{"isEnabled":true,"value":percent}},
           "lighting_runtime":{"error":null,"configured_percent":percent},
           "source_quick_effects":{"selectedEffectId":effect,"selectedEffectSetting":{"color1":"#00ff00"},"customColors":[]}})
+    }
+    #[test]
+    fn cached_status_preserves_dirty_intent_editor_and_opaque_slots() {
+        let mut view = View::default();
+        sync(&mut view, &device("a", 50, 1), false);
+        view.intent.brightness.as_mut().unwrap().value = 71;
+        view.intent_dirty = true;
+        view.slots = vec![json!({"color":"rgb(7, 8, 9)","opaque":[1,2]})];
+        view.slots_dirty = true;
+        view.editor = Some(color_editor_view::Editor::new(
+            0,
+            Some("112233"),
+            Path::new("missing-test-assets"),
+        ));
+        view.editor.as_mut().unwrap().drafts[0] = "abcdef".into();
+        view.focused = Some(HEX);
+        assert!(runtime_feedback_busy(&view));
+        assert!(update_runtime_only(
+            &mut view,
+            json!({"error":"worker fault"})
+        ));
+        assert_eq!(view.intent.brightness.as_ref().unwrap().value, 71);
+        assert!(view.intent_dirty && view.slots_dirty);
+        assert_eq!(view.slots[0]["opaque"], json!([1, 2]));
+        assert_eq!(view.editor.as_ref().unwrap().drafts[0], "abcdef");
+        assert_eq!(view.focused, Some(HEX));
+        assert!(!update_runtime_only(
+            &mut view,
+            json!({"error":"worker fault"})
+        ));
     }
     #[test]
     fn boost_controlled_drafts_and_quarter_rounding_match_source() {

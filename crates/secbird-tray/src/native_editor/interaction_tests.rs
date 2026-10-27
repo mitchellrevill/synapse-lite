@@ -299,7 +299,12 @@ unsafe fn acknowledge_owned_failure(hwnd: HWND) -> bool {
     if button.is_null() {
         return false;
     }
-    PostMessageW(button, BM_CLICK, 0, 0);
+    PostMessageW(
+        dialog,
+        WM_COMMAND,
+        GetDlgCtrlID(button) as usize,
+        button as isize,
+    );
     true
 }
 fn brightness_write_count(sim: &Sim) -> usize {
@@ -378,75 +383,137 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
     let controller_key = key.clone();
     let controller_opaque = opaque.clone();
     let controller = std::thread::spawn(move || -> Result<Value, String> {
-        wait_for(
-            || {
-                std::fs::read(&frame)
-                    .ok()
-                    .and_then(|b| serde_json::from_slice::<Value>(&b).ok())
-                    .is_some_and(|f| {
-                        // The generic keyboard simulator has LED5, not the physical
-                        // Ornata region0 alias. This fixture supplies profile intent;
-                        // physical smoke matched/readback checks remain stricter.
-                        f["presented"] == true
-                            && f["source_lighting_view"] == true
-                            && f["device_kind"] == "keyboard"
-                            && f["tab"] == "LIGHTING"
-                            && f["lighting_intent_origin"]["source"] == "profile-intent"
-                            && f["lighting_intent_origin"]["retained_value_known"] == true
-                    })
-            },
-            "Lighting frame",
-        )?;
-        let hwnd = WINDOW.load(Ordering::Acquire) as HWND;
-        if hwnd.is_null() {
-            return Err("No Lighting HWND".into());
-        }
-        unsafe {
-            // Real WM_SIZE/layout/paint; wide enough for the source two-column mode.
-            let requested_scale = f64::from(GetDpiForWindow(hwnd).max(96)) / 96.0;
-            SetWindowPos(
-                hwnd,
-                null_mut(),
-                0,
-                0,
-                (1320.0 * requested_scale).round() as i32,
-                (900.0 * requested_scale).round() as i32,
-                SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE,
-            );
-            redraw(hwnd);
-            let mut client: RECT = std::mem::zeroed();
-            GetClientRect(hwnd, &mut client);
-            let scale = f64::from(GetDpiForWindow(hwnd).max(96)) / 96.0;
-            let width = f64::from(client.right) / scale;
-            if width < 1280.0 {
-                return Err("Interactive desktop constrained source two-column fixture".into());
-            }
-            let geometry =
-                lighting_layout::geometry(width, 128.0, 0.0, 1).ok_or("No Lighting geometry")?;
-            let shape = geometry.brightness_slider;
-            let point = |percent: f64| {
-                position(
-                    shape.x + 8.0 + percent / 100.0 * (shape.width - 16.0),
-                    shape.y + 36.0,
-                    scale,
-                )
-            };
-            let before = brightness_write_count(&controller_sim);
-            SendMessageW(hwnd, WM_LBUTTONDOWN, 1, point(60.0));
-            let thread = GetWindowThreadProcessId(hwnd, null_mut());
-            let mut gui: GUITHREADINFO = std::mem::zeroed();
-            gui.cbSize = std::mem::size_of::<GUITHREADINFO>() as u32;
-            GetGUIThreadInfo(thread, &mut gui);
-            if gui.hwndCapture != hwnd {
-                return Err(format!("Brightness press did not capture HWND; client={}x{}, scale={}, source track={:?}, capture={:?}",client.right,client.bottom,scale,lighting_layout::track(shape),gui.hwndCapture));
-            }
-            SendMessageW(hwnd, WM_MOUSEMOVE, 1, point(45.0));
-            std::thread::sleep(Duration::from_millis(80));
-            if brightness_write_count(&controller_sim) != before {
-                return Err("Brightness wrote before release".into());
-            }
-            SendMessageW(hwnd, WM_LBUTTONUP, 0, point(45.0));
+        let result = (|| -> Result<Value, String> {
             wait_for(
+                || {
+                    std::fs::read(&frame)
+                        .ok()
+                        .and_then(|b| serde_json::from_slice::<Value>(&b).ok())
+                        .is_some_and(|f| {
+                            // The generic keyboard simulator has LED5, not the physical
+                            // Ornata region0 alias. This fixture supplies profile intent;
+                            // physical smoke matched/readback checks remain stricter.
+                            f["presented"] == true
+                                && f["source_lighting_view"] == true
+                                && f["device_kind"] == "keyboard"
+                                && f["tab"] == "LIGHTING"
+                                && f["lighting_intent_origin"]["source"] == "profile-intent"
+                                && f["lighting_intent_origin"]["retained_value_known"] == true
+                        })
+                },
+                "Lighting frame",
+            )?;
+            let hwnd = WINDOW.load(Ordering::Acquire) as HWND;
+            if hwnd.is_null() {
+                return Err("No Lighting HWND".into());
+            }
+            unsafe {
+                // Real WM_SIZE/layout/paint; wide enough for the source two-column mode.
+                let requested_scale = f64::from(GetDpiForWindow(hwnd).max(96)) / 96.0;
+                SetWindowPos(
+                    hwnd,
+                    null_mut(),
+                    0,
+                    0,
+                    (1320.0 * requested_scale).round() as i32,
+                    (900.0 * requested_scale).round() as i32,
+                    SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE,
+                );
+                redraw(hwnd);
+                let mut client: RECT = std::mem::zeroed();
+                GetClientRect(hwnd, &mut client);
+                let scale = f64::from(GetDpiForWindow(hwnd).max(96)) / 96.0;
+                let width = f64::from(client.right) / scale;
+                if width < 1280.0 {
+                    return Err("Interactive desktop constrained source two-column fixture".into());
+                }
+                let geometry = lighting_layout::geometry(width, 128.0, 0.0, 1)
+                    .ok_or("No Lighting geometry")?;
+                let shape = geometry.brightness_slider;
+                let point = |percent: f64| {
+                    position(
+                        shape.x + 8.0 + percent / 100.0 * (shape.width - 16.0),
+                        shape.y + 36.0,
+                        scale,
+                    )
+                };
+                let before = brightness_write_count(&controller_sim);
+                SendMessageW(hwnd, WM_LBUTTONDOWN, 1, point(60.0));
+                let thread = GetWindowThreadProcessId(hwnd, null_mut());
+                let mut gui: GUITHREADINFO = std::mem::zeroed();
+                gui.cbSize = std::mem::size_of::<GUITHREADINFO>() as u32;
+                GetGUIThreadInfo(thread, &mut gui);
+                if gui.hwndCapture != hwnd {
+                    return Err(format!("Brightness press did not capture HWND; client={}x{}, scale={}, source track={:?}, capture={:?}",client.right,client.bottom,scale,lighting_layout::track(shape),gui.hwndCapture));
+                }
+                SendMessageW(hwnd, WM_MOUSEMOVE, 1, point(45.0));
+                // Inject through the same cached collector, then force the queued
+                // dialog message to run while a real HWND capture is still held.
+                let runtime = json!({"profile":"Fixture","uniform_host":{"profile":"Fixture","state":"faulted","error":"simulated background fault"}});
+                let cached_log = controller_sim.state().log.len();
+                let cached_store =
+                    std::fs::read(controller_directory.join("profiles.json")).unwrap();
+                let mut before_feedback = Value::Null;
+                SendMessageW(
+                    hwnd,
+                    RUNTIME_TEST_QUERY,
+                    0,
+                    &mut before_feedback as *mut Value as isize,
+                );
+                SendMessageW(
+                    hwnd,
+                    RUNTIME_TEST_INJECT,
+                    0,
+                    &runtime as *const Value as isize,
+                );
+                PostMessageW(hwnd, FAILURE_DIALOG, 1, 0);
+                std::thread::sleep(Duration::from_millis(80));
+                if brightness_write_count(&controller_sim) != before {
+                    return Err("Brightness wrote before release".into());
+                }
+                let mut observed = Value::Null;
+                SendMessageW(
+                    hwnd,
+                    RUNTIME_TEST_QUERY,
+                    0,
+                    &mut observed as *mut Value as isize,
+                );
+                GetGUIThreadInfo(thread, &mut gui);
+                if observed["status"] != before_feedback["status"]
+                    || observed["failed"] != before_feedback["failed"]
+                    || observed["pending"] != before_feedback["pending"]
+                {
+                    return Err(format!(
+                        "Cached reply changed foreground feedback: {before_feedback} -> {observed}"
+                    ));
+                }
+                if gui.hwndCapture != hwnd
+                    || observed["brightness"] != 45
+                    || observed["deferred"] != true
+                {
+                    return Err(format!(
+                        "Background failure interrupted draft/capture: {observed}"
+                    ));
+                }
+                if controller_sim.state().log.len() != cached_log
+                    || std::fs::read(controller_directory.join("profiles.json")).unwrap()
+                        != cached_store
+                {
+                    return Err("Cached status performed device IO or profile persistence".into());
+                }
+                SendMessageW(hwnd, WM_LBUTTONUP, 0, point(45.0));
+                SendMessageW(
+                    hwnd,
+                    RUNTIME_TEST_QUERY,
+                    0,
+                    &mut observed as *mut Value as isize,
+                );
+                PostMessageW(hwnd, WM_TIMER, CACHED_LIGHTING_TIMER, 0);
+                wait_for(
+                    || acknowledge_owned_failure(hwnd),
+                    "Deferred runtime failure acknowledged after release",
+                )?;
+                wait_for(
                 || {
                     Store::load(&controller_directory.join("profiles.json"))
                         .ok()
@@ -466,121 +533,194 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                 let _=std::fs::write(controller_directory.join("failure.json"),serde_json::to_vec_pretty(&diagnostic).unwrap());
                 format!("{error}; diagnostics: {}",controller_directory.join("failure.json").display())
             })?;
-            if brightness_write_count(&controller_sim) <= before {
-                return Err("Release did not reach simulated transport".into());
-            }
-            if controller_sim.state().brightness.get(&5) != Some(&114) {
-                return Err("Unexpected simulated brightness raw value".into());
-            }
-            let after_release = brightness_write_count(&controller_sim);
-            SendMessageW(hwnd, WM_LBUTTONDOWN, 1, point(80.0));
-            SendMessageW(hwnd, WM_CANCELMODE, 0, 0);
-            SendMessageW(hwnd, WM_LBUTTONUP, 0, point(80.0));
-            std::thread::sleep(Duration::from_millis(80));
-            if brightness_write_count(&controller_sim) != after_release {
-                return Err("Cancelled brightness gesture wrote".into());
-            }
-            redraw(hwnd);
-            let anchor = geometry.colors[0].dropdown;
-            let palette = color_editor_layout::geometry(
-                color_editor_layout::Rect {
-                    x: anchor.x,
-                    y: anchor.y,
-                    width: anchor.width,
-                    height: anchor.height,
-                },
-                f64::from(client.bottom) / scale,
-            )
-            .ok_or("No palette geometry")?;
-            lighting_click(hwnd, anchor.x + 15.0, anchor.y + 12.0, scale);
-            let open_edit = |slot: usize| {
-                let swatch = palette.custom_slots[slot];
+                if brightness_write_count(&controller_sim) <= before {
+                    return Err("Release did not reach simulated transport".into());
+                }
+                if controller_sim.state().brightness.get(&5) != Some(&114) {
+                    return Err("Unexpected simulated brightness raw value".into());
+                }
+                // User operations reset foreground dedup; an identical background
+                // fault still must stay acknowledged independently of that reset.
                 SendMessageW(
                     hwnd,
-                    WM_RBUTTONUP,
-                    0,
-                    position(swatch.x + 10.0, swatch.y + 10.0, scale),
+                    RUNTIME_TEST_INJECT,
+                    1,
+                    &runtime as *const Value as isize,
                 );
+                SendMessageW(
+                    hwnd,
+                    RUNTIME_TEST_QUERY,
+                    0,
+                    &mut observed as *mut Value as isize,
+                );
+                if observed["failures"] != false || observed["deferred"] != false {
+                    return Err(format!(
+                        "Acknowledged background fault repeated: {observed}"
+                    ));
+                }
+                let after_release = brightness_write_count(&controller_sim);
+                SendMessageW(hwnd, WM_LBUTTONDOWN, 1, point(80.0));
+                SendMessageW(hwnd, WM_CANCELMODE, 0, 0);
+                SendMessageW(hwnd, WM_LBUTTONUP, 0, point(80.0));
+                std::thread::sleep(Duration::from_millis(80));
+                if brightness_write_count(&controller_sim) != after_release {
+                    return Err("Cancelled brightness gesture wrote".into());
+                }
                 redraw(hwnd);
-                let menu = color_editor_layout::context_menu(swatch);
-                lighting_click(hwnd, menu.x + 20.0, menu.y + 13.0, scale);
-            };
-            open_edit(1);
-            wait_for(
-                || edit_text(hwnd, lighting_view::HEX).as_deref() == Some("112233"),
-                "First slot native EDIT",
-            )?;
-            let edit = GetDlgItem(hwnd, i32::from(lighting_view::HEX));
-            SetWindowTextW(edit, wide("abcdef").as_ptr());
-            if edit_text(hwnd, lighting_view::HEX).as_deref() != Some("abcdef") {
-                return Err("HEX message draft not accepted".into());
-            }
-            lighting_click(
-                hwnd,
-                palette.cancel.x + 40.0,
-                palette.cancel.y + 13.0,
-                scale,
-            );
-            open_edit(2);
-            wait_for(
-                || edit_text(hwnd, lighting_view::HEX).as_deref() == Some("445566"),
-                "Second slot must not inherit first draft",
-            )?;
-            // Exercise acknowledged failure feedback through a real source control.
-            // The native eyedropper is explicitly unavailable; no capture is started.
-            lighting_click(
-                hwnd,
-                palette.eyedropper.x + 12.0,
-                palette.eyedropper.y + 12.0,
-                scale,
-            );
-            wait_for(
-                || acknowledge_owned_failure(hwnd),
-                "Acknowledged native failure dialog",
-            )?;
-            let edit = GetDlgItem(hwnd, i32::from(lighting_view::HEX));
-            SetWindowTextW(edit, wide("a1b2c3").as_ptr());
-            lighting_click(hwnd, palette.save.x + 40.0, palette.save.y + 13.0, scale);
-            wait_for(
-                || {
-                    Store::load(&controller_directory.join("profiles.json"))
-                        .ok()
-                        .is_some_and(|s| {
-                            s.devices
-                                .get(&controller_key)
-                                .and_then(|d| {
-                                    secbird_core::profile_compat::source_quick_effects(d.active())
-                                })
-                                .and_then(|q| q["customColors"].as_array())
-                                .is_some_and(|slots| {
-                                    slots.len() == 3
-                                        && slots[0] == controller_opaque
-                                        && slots[1]["color"] == "#112233"
-                                        && slots[2]["color"] == "#a1b2c3"
-                                })
-                        })
-                },
-                "Saved slot and unchanged opaque slot persisted",
-            )?;
-            if brightness_write_count(&controller_sim) != after_release {
-                return Err("Color editor unexpectedly changed brightness".into());
-            }
-            PostMessageW(hwnd, WM_CLOSE, 0, 0);
-            wait_for(
-                || {
-                    acknowledge_owned_failure(hwnd);
-                    IsWindow(hwnd) == 0
-                },
-                "Editor closed after failure acknowledgement",
-            )?;
-            Ok(
-                json!({"native_failure_dialog_acknowledged":true,"transport":"simulated only","physical_discovery_disabled":true,"source_region0_readback_not_modeled":true,
-                "brightness_capture_verified":true,"source_layout_client_css_width":width,"scale":scale,"brightness_no_write_before_release":true,"brightness_release_raw":114,"brightness_cancel_no_write":true,
+                let anchor = geometry.colors[0].dropdown;
+                let palette = color_editor_layout::geometry(
+                    color_editor_layout::Rect {
+                        x: anchor.x,
+                        y: anchor.y,
+                        width: anchor.width,
+                        height: anchor.height,
+                    },
+                    f64::from(client.bottom) / scale,
+                )
+                .ok_or("No palette geometry")?;
+                lighting_click(hwnd, anchor.x + 15.0, anchor.y + 12.0, scale);
+                let open_edit = |slot: usize| {
+                    let swatch = palette.custom_slots[slot];
+                    SendMessageW(
+                        hwnd,
+                        WM_RBUTTONUP,
+                        0,
+                        position(swatch.x + 10.0, swatch.y + 10.0, scale),
+                    );
+                    redraw(hwnd);
+                    let menu = color_editor_layout::context_menu(swatch);
+                    lighting_click(hwnd, menu.x + 20.0, menu.y + 13.0, scale);
+                };
+                open_edit(1);
+                wait_for(
+                    || edit_text(hwnd, lighting_view::HEX).as_deref() == Some("112233"),
+                    "First slot native EDIT",
+                )?;
+                let edit = GetDlgItem(hwnd, i32::from(lighting_view::HEX));
+                SetWindowTextW(edit, wide("abcdef").as_ptr());
+                if edit_text(hwnd, lighting_view::HEX).as_deref() != Some("abcdef") {
+                    return Err("HEX message draft not accepted".into());
+                }
+                lighting_click(
+                    hwnd,
+                    palette.cancel.x + 40.0,
+                    palette.cancel.y + 13.0,
+                    scale,
+                );
+                open_edit(2);
+                wait_for(
+                    || edit_text(hwnd, lighting_view::HEX).as_deref() == Some("445566"),
+                    "Second slot must not inherit first draft",
+                )?;
+                // Exercise acknowledged failure feedback through a real source control.
+                // The native eyedropper is explicitly unavailable; no capture is started.
+                lighting_click(
+                    hwnd,
+                    palette.eyedropper.x + 12.0,
+                    palette.eyedropper.y + 12.0,
+                    scale,
+                );
+                wait_for(
+                    || acknowledge_owned_failure(hwnd),
+                    "Acknowledged native failure dialog",
+                )?;
+                let edit = GetDlgItem(hwnd, i32::from(lighting_view::HEX));
+                SetWindowTextW(edit, wide("a1b2c3").as_ptr());
+                lighting_click(hwnd, palette.save.x + 40.0, palette.save.y + 13.0, scale);
+                wait_for(
+                    || {
+                        Store::load(&controller_directory.join("profiles.json"))
+                            .ok()
+                            .is_some_and(|s| {
+                                s.devices
+                                    .get(&controller_key)
+                                    .and_then(|d| {
+                                        secbird_core::profile_compat::source_quick_effects(
+                                            d.active(),
+                                        )
+                                    })
+                                    .and_then(|q| q["customColors"].as_array())
+                                    .is_some_and(|slots| {
+                                        slots.len() == 3
+                                            && slots[0] == controller_opaque
+                                            && slots[1]["color"] == "#112233"
+                                            && slots[2]["color"] == "#a1b2c3"
+                                    })
+                            })
+                    },
+                    "Saved slot and unchanged opaque slot persisted",
+                )?;
+                if brightness_write_count(&controller_sim) != after_release {
+                    return Err("Color editor unexpectedly changed brightness".into());
+                }
+                // An acknowledged background failure must not prevent closing
+                // while a real color EDIT still owns focus and an unsaved draft.
+                lighting_click(hwnd, anchor.x + 15.0, anchor.y + 12.0, scale);
+                open_edit(2);
+                wait_for(
+                    || edit_text(hwnd, lighting_view::HEX).as_deref() == Some("a1b2c3"),
+                    "Color editor reopened before focused close",
+                )?;
+                let focused_fault = json!({"profile":"Fixture","uniform_host":{"profile":"Fixture","error":"simulated focused close fault"}});
+                let before_close_log = controller_sim.state().log.len();
+                let before_close_store =
+                    std::fs::read(controller_directory.join("profiles.json")).unwrap();
+                SendMessageW(
+                    hwnd,
+                    RUNTIME_TEST_INJECT,
+                    2,
+                    &focused_fault as *const Value as isize,
+                );
+                SendMessageW(
+                    hwnd,
+                    RUNTIME_TEST_QUERY,
+                    0,
+                    &mut observed as *mut Value as isize,
+                );
+                if observed["busy"] != true || observed["deferred"] != true {
+                    return Err(format!(
+                        "Focused editor did not defer runtime failure: {observed}"
+                    ));
+                }
+                PostMessageW(hwnd, WM_CLOSE, 0, 0);
+                wait_for(
+                    || {
+                        acknowledge_owned_failure(hwnd);
+                        IsWindow(hwnd) == 0
+                    },
+                    "Editor closed after failure acknowledgement",
+                )?;
+                if controller_sim.state().log.len() != before_close_log
+                    || std::fs::read(controller_directory.join("profiles.json")).unwrap()
+                        != before_close_store
+                {
+                    return Err("Focused close persisted draft or dispatched hardware".into());
+                }
+                Ok(
+                    json!({"native_failure_dialog_acknowledged":true,"transport":"simulated only","physical_discovery_disabled":true,"source_region0_readback_not_modeled":true,
+                "focused_background_failure_close_acknowledged":true,"cached_status_no_hid_or_store_write":true,"background_fault_preserves_capture_and_draft":true,"background_fault_once_across_user_operation":true,"brightness_capture_verified":true,"source_layout_client_css_width":width,"scale":scale,"brightness_no_write_before_release":true,"brightness_release_raw":114,"brightness_cancel_no_write":true,
                 "native_edit_draft_switch_isolated":true,"cancelled_color_retained":true,"opaque_slot_preserved":true,
                 "edited_slot_saved":"#a1b2c3","color_actions_did_not_write_brightness":true,
                 "evidence":"actual HWND mouse/EDIT notifications and worker persistence; no OS pointer injection or hardware proof"}),
-            )
+                )
+            }
+        })();
+        if let Err(error) = &result {
+            eprintln!("Lighting controller failed: {error}");
+            // A failed assertion must not strand its owned acknowledged dialog.
+            // Cleanup is limited to this simulated test's HWND.
+            unsafe {
+                let hwnd = WINDOW.load(Ordering::Acquire) as HWND;
+                PostMessageW(hwnd, WM_CANCELMODE, 0, 0);
+                PostMessageW(hwnd, WM_CLOSE, 0, 0);
+                let until = Instant::now() + Duration::from_secs(2);
+                while !hwnd.is_null() && IsWindow(hwnd) != 0 && Instant::now() < until {
+                    acknowledge_owned_failure(hwnd);
+                    std::thread::sleep(Duration::from_millis(20));
+                }
+            }
         }
+        result
     });
     let window_result = run_window(engine, Some(Duration::from_secs(20)), None);
     let result = controller

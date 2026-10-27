@@ -46,6 +46,7 @@ mod profile_modal_files;
 mod profile_modal_layout;
 mod profile_modal_model;
 mod profile_modal_view;
+mod runtime_status;
 mod source_layout;
 mod viewport;
 
@@ -64,11 +65,17 @@ const PROFILE_MODAL_TEST_SAVE: u32 = WM_APP + 97;
 const PROFILE_MODAL_TEST_OPEN: u32 = WM_APP + 98;
 #[cfg(test)]
 const PROFILE_MODAL_TEST_QUERY: u32 = WM_APP + 99;
+#[cfg(test)]
+const RUNTIME_TEST_INJECT: u32 = WM_APP + 104;
+#[cfg(test)]
+const RUNTIME_TEST_QUERY: u32 = WM_APP + 105;
 const FAILURE_DIALOG: u32 = WM_APP + 93;
 const FAILURE_TITLE: &str = "Synapse Lite - Action failed";
 const PERFORMANCE_REPEAT: usize = 73;
 const LIGHTING_REPEAT: usize = 74;
 const FAILURE_RETRY: usize = 75;
+const CACHED_LIGHTING_TIMER: usize = 76;
+const CACHED_FEEDBACK_RETRY: usize = 77;
 const BG: u32 = 0x222222;
 const PANEL: u32 = 0x111111;
 const TEXT: u32 = 0xcccccc;
@@ -402,6 +409,7 @@ struct Hit {
 }
 
 enum Job {
+    CachedLighting(runtime_status::Request),
     Profiles(profile_modal_model::Request),
     Refresh,
     Rescan,
@@ -460,14 +468,30 @@ struct Reply {
     notices: Vec<String>,
 }
 
+enum WorkerReply {
+    User(Reply),
+    CachedLighting(runtime_status::Response),
+}
+
 /// Device access runs on one worker, under the same engine lock as the tray.
 /// The UI thread never holds that lock and no browser or HTTP listener is started.
-fn worker(engine: Arc<Mutex<Engine>>, jobs: mpsc::Receiver<Job>, replies: mpsc::Sender<Reply>) {
+fn worker(
+    engine: Arc<Mutex<Engine>>,
+    jobs: mpsc::Receiver<Job>,
+    replies: mpsc::Sender<WorkerReply>,
+) {
     for job in jobs {
         let job = match job {
+            Job::CachedLighting(request) => {
+                let response = runtime_status::read(&engine, request);
+                if replies.send(WorkerReply::CachedLighting(response)).is_err() {
+                    break;
+                }
+                continue;
+            }
             Job::Profiles(request) => {
                 let reply = profile_modal_backend::run(request, &engine);
-                let _ = replies.send(reply);
+                let _ = replies.send(WorkerReply::User(reply));
                 continue;
             }
             other => other,
@@ -574,9 +598,10 @@ fn worker(engine: Arc<Mutex<Engine>>, jobs: mpsc::Receiver<Job>, replies: mpsc::
                     }
                     server::dispatch(&mut engine, "GET", "/api/state", &[])
                 }
-                Job::Profiles(_) | Job::ImportFile { .. } | Job::ExportFile { .. } => {
-                    return Err("File operation was not routed".into())
-                }
+                Job::CachedLighting(_)
+                | Job::Profiles(_)
+                | Job::ImportFile { .. }
+                | Job::ExportFile { .. } => return Err("File operation was not routed".into()),
             }
             .map_err(|e| e.to_string())?;
             Ok(Reply {
@@ -596,7 +621,7 @@ fn worker(engine: Arc<Mutex<Engine>>, jobs: mpsc::Receiver<Job>, replies: mpsc::
             failed: true,
             notices: Vec::new(),
         });
-        if replies.send(reply).is_err() {
+        if replies.send(WorkerReply::User(reply)).is_err() {
             break;
         }
     }
@@ -747,7 +772,9 @@ struct State {
     retained_fields: HashMap<u16, String>,
     performance_input_text: HashMap<u16, String>,
     jobs: mpsc::Sender<Job>,
-    replies: mpsc::Receiver<Reply>,
+    replies: mpsc::Receiver<WorkerReply>,
+    runtime_observer: runtime_status::Observer,
+    runtime_feedback_waiting: bool,
     pending: usize,
     pending_jobs: VecDeque<Job>,
     closing: bool,
@@ -1424,8 +1451,108 @@ impl State {
         }
     }
 
+    fn runtime_binding(&self) -> Option<runtime_status::Binding> {
+        if self.tab != Tab::Lighting {
+            return None;
+        }
+        let device = self.device()?;
+        if device["pid"] != "025D" {
+            return None;
+        }
+        let owner = self.lighting.owner.as_ref()?;
+        if device["id"].as_str() != Some(owner.device.as_str())
+            || device["active"].as_str() != Some(owner.profile.as_str())
+        {
+            return None;
+        }
+        Some(runtime_status::Binding {
+            device: owner.device.clone(),
+            profile: owner.profile.clone(),
+        })
+    }
+    fn runtime_feedback_busy(&self) -> bool {
+        self.lighting_capture
+            || lighting_view::runtime_feedback_busy(&self.lighting)
+            || self.profile_modal.is_some()
+    }
+    unsafe fn flush_runtime_feedback(&mut self) {
+        if self.runtime_feedback_waiting
+            && !self.runtime_feedback_busy()
+            && IsWindowVisible(self.hwnd) != 0
+        {
+            self.runtime_feedback_waiting = false;
+            if self.failures.outstanding() {
+                PostMessageW(self.hwnd, FAILURE_DIALOG, 1, 0);
+            }
+        }
+    }
+    unsafe fn request_cached_lighting(&mut self) {
+        self.flush_runtime_feedback();
+        if self.closing
+            || self.pending != 0
+            || !self.pending_jobs.is_empty()
+            || IsWindowVisible(self.hwnd) == 0
+            || IsIconic(self.hwnd) != 0
+        {
+            return;
+        }
+        let Some(binding) = self.runtime_binding() else {
+            return;
+        };
+        let Some(request) = self
+            .runtime_observer
+            .begin(binding, std::time::Instant::now())
+        else {
+            return;
+        };
+        if self.jobs.send(Job::CachedLighting(request.clone())).is_ok() {
+            SetTimer(self.hwnd, RESPONSE_TIMER, 40, None);
+        } else {
+            self.collect_cached_lighting(runtime_status::Response {
+                request,
+                payload: runtime_status::Payload::Unavailable,
+            });
+        }
+    }
+    unsafe fn collect_cached_lighting(&mut self, response: runtime_status::Response) {
+        let binding = self.runtime_binding();
+        let change = self.runtime_observer.finish(response, binding.as_ref());
+        let mut changed = false;
+        if let Some(runtime) = change.runtime {
+            changed = lighting_view::update_runtime_only(&mut self.lighting, runtime.clone());
+            if let Some(binding) = &binding {
+                if let Some(devices) = self.state["devices"].as_array_mut() {
+                    if let Some(device) = devices
+                        .iter_mut()
+                        .find(|d| d["id"].as_str() == Some(binding.device.as_str()))
+                    {
+                        device["lighting_runtime"] = runtime;
+                    }
+                }
+            }
+        }
+        // A read-only reply never touches pending user counts, status/failed,
+        // notices, intent or controls. Background failures have separate dedup.
+        for fault in change.faults {
+            if self.failures.record(&fault) {
+                self.runtime_feedback_waiting = true;
+            }
+        }
+        self.flush_runtime_feedback();
+        if changed {
+            InvalidateRect(self.hwnd, null(), 0);
+        }
+    }
+
     unsafe fn collect(&mut self) {
-        while let Ok(reply) = self.replies.try_recv() {
+        while let Ok(message) = self.replies.try_recv() {
+            let reply = match message {
+                WorkerReply::User(reply) => reply,
+                WorkerReply::CachedLighting(response) => {
+                    self.collect_cached_lighting(response);
+                    continue;
+                }
+            };
             self.pending = self.pending.saturating_sub(1);
             if let Some(message) = reply.profile_modal {
                 if let Some(view) = &mut self.profile_modal {
@@ -1549,7 +1676,9 @@ impl State {
             if let Some(job) = self.pending_jobs.pop_front() {
                 self.submit(job, false);
             } else {
-                KillTimer(self.hwnd, RESPONSE_TIMER);
+                if !self.runtime_observer.pending() {
+                    KillTimer(self.hwnd, RESPONSE_TIMER);
+                }
                 if self.closing && !self.failures.outstanding() {
                     PostMessageW(self.hwnd, WM_CLOSE, 0, 0);
                 }
@@ -3089,6 +3218,8 @@ unsafe extern "system" fn window_proc(
             WINDOW.store(0, Ordering::Release);
             KillTimer(hwnd, RESPONSE_TIMER);
             KillTimer(hwnd, SMOKE_TIMER);
+            KillTimer(hwnd, CACHED_LIGHTING_TIMER);
+            KillTimer(hwnd, CACHED_FEEDBACK_RETRY);
             PostQuitMessage(0);
             return 0;
         }
@@ -3104,11 +3235,26 @@ unsafe extern "system" fn window_proc(
     }
     if message == FAILURE_DIALOG {
         let message = match (*pointer).try_borrow_mut() {
-            Ok(mut state) => state.failures.begin(),
+            Ok(mut state) => {
+                if wparam == 1 && !state.closing && state.runtime_feedback_busy() {
+                    state.runtime_feedback_waiting = true;
+                    return 0;
+                }
+                state.failures.begin()
+            }
             Err(_) => {
                 // A different native modal loop may still hold State. Retry at a
                 // bounded cadence; never flood that loop with immediate reposts.
-                SetTimer(hwnd, FAILURE_RETRY, 50, None);
+                SetTimer(
+                    hwnd,
+                    if wparam == 1 {
+                        CACHED_FEEDBACK_RETRY
+                    } else {
+                        FAILURE_RETRY
+                    },
+                    50,
+                    None,
+                );
                 return 0;
             }
         };
@@ -3227,6 +3373,38 @@ unsafe extern "system" fn window_proc(
                 json!({"open":false,"export_plan":state.profile_export.is_some()})
             };
             *(lparam as *mut Value) = value;
+        }
+        return 0;
+    }
+    #[cfg(test)]
+    if message == RUNTIME_TEST_INJECT {
+        if wparam == 2 {
+            SetFocus(GetDlgItem(hwnd, i32::from(lighting_view::HEX)));
+        }
+        if let Ok(mut state) = (*pointer).try_borrow_mut() {
+            if let Some(binding) = state.runtime_binding() {
+                if wparam == 1 {
+                    state.failures.new_operation();
+                }
+                let value = (*(lparam as *const Value)).clone();
+                let response = state.runtime_observer.test_response(binding, value);
+                state.collect_cached_lighting(response);
+            }
+        }
+        return 0;
+    }
+    #[cfg(test)]
+    if message == RUNTIME_TEST_QUERY {
+        if let Ok(state) = (*pointer).try_borrow() {
+            *(lparam as *mut Value) = json!({
+                "capture":state.lighting_capture,
+                "busy":state.runtime_feedback_busy(),
+                "deferred":state.runtime_feedback_waiting,
+                "failures":state.failures.outstanding(),
+                "pending":state.pending,
+                "brightness":state.lighting.intent.brightness.as_ref().map(|b|b.value),
+                "status":state.status,"failed":state.failed
+            });
         }
         return 0;
     }
@@ -3821,6 +3999,15 @@ unsafe extern "system" fn window_proc(
             PostMessageW(hwnd, FAILURE_DIALOG, 0, 0);
             0
         }
+        WM_TIMER if wparam == CACHED_FEEDBACK_RETRY => {
+            KillTimer(hwnd, CACHED_FEEDBACK_RETRY);
+            PostMessageW(hwnd, FAILURE_DIALOG, 1, 0);
+            0
+        }
+        WM_TIMER if wparam == CACHED_LIGHTING_TIMER => {
+            state.request_cached_lighting();
+            0
+        }
         WM_TIMER if wparam == RESPONSE_TIMER => {
             state.collect();
             0
@@ -3950,6 +4137,8 @@ fn run_window(
             performance_input_text: HashMap::new(),
             jobs: jobs_tx,
             replies: replies_rx,
+            runtime_observer: runtime_status::Observer::default(),
+            runtime_feedback_waiting: false,
             pending: 0,
             pending_jobs: VecDeque::new(),
             closing: false,
@@ -4099,6 +4288,7 @@ fn run_window(
         }
         UpdateWindow(hwnd);
         state.borrow_mut().queue(Job::Refresh);
+        SetTimer(hwnd, CACHED_LIGHTING_TIMER, 1000, None);
         if let Some(duration) = close_after {
             SetTimer(
                 hwnd,
