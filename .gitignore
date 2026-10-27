@@ -7,3 +7,10 @@ skills-lock.json
 
 # design tool working files (screenshots may show real serial numbers)
 .impeccable/
+
+# Generated local visual assets and private reverse-engineering/runtime evidence.
+generated-assets/
+private-evidence/
+*.synapse3
+*.synapse4
+!crates/secbird-core/tests/fixtures/synthetic.synapse4

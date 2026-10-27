@@ -1,0 +1,10 @@
+{
+  "upstream": "https://github.com/infinityInfinite/secbird",
+  "tag": "v0.5.0-beta1",
+  "commit": "e649877a77f9a4e8573dda55b525a0a258ae9b0e",
+  "published_at": "2026-10-26T19:45:12Z",
+  "fork": "https://github.com/mitchellrevill/synapse-lite",
+  "reference_application": "RazerAppEngine 4.0.827; locally cached Synapse dashboard and product UI artifacts",
+  "implementation_reference": "REA source, CSS, component and profile-format recovery",
+  "status": "in development; acceptance not yet established"
+}
