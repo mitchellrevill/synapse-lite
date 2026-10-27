@@ -41,6 +41,7 @@ pub mod source_macro;
 pub mod transport;
 pub mod uniform_lighting;
 pub mod update;
+pub mod wave_lighting;
 
 pub use db::{Db, DeviceSpec, Kind, Lighting, Matrix};
 pub use device::{discover, Device};
