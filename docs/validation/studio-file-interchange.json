@@ -1,0 +1,16 @@
+{
+  "fixture": "source-shaped synthetic grouped Static; not a captured stock export",
+  "release_cli_sha256": "322cba6a0763e22093a571bdd4c42e55eb06745049a63830c030ddcee23fcd63",
+  "selected_profile_raw_bytes_preserved": true,
+  "numeric_literals_preserved": true,
+  "existing_output_refused": true,
+  "input_file_unchanged": true,
+  "normal_profile_store_unchanged": true,
+  "independent_json_check": {
+    "json_parser": "Node JSON.parse",
+    "selected_profile_equal": true,
+    "full_document_equal": true,
+    "group_and_led_structure_retained": true
+  },
+  "no_device_compatibility_or_stock_import_acceptance_claimed": true
+}

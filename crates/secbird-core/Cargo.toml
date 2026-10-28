@@ -8,7 +8,7 @@ repository.workspace = true
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
-serde_json = { version = "1", features = ["float_roundtrip"] }
+serde_json = { version = "1", features = ["float_roundtrip", "raw_value"] }
 base64 = "0.22"
 md5 = "0.7"
 ryu-js = "1"
