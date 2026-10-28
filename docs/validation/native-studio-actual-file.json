@@ -5,6 +5,7 @@
   "fire_native_hot_cold_independent_saved": true,
   "fire_none_undo_redo": true,
   "fire_read_only_guard": true,
+  "layer_switch_clears_selection": true,
   "layers": 2,
   "no_device_sets": true,
   "profiles": 1,
@@ -13,5 +14,10 @@
   "simulated_transport_only": true,
   "source_esc_hit": true,
   "source_file_unchanged": true,
+  "spectrum_add_delete_undo": true,
+  "spectrum_duration_preserves_gradient": true,
+  "spectrum_invalid_percentage_refused": true,
+  "spectrum_preset_stop_none_save": true,
+  "spectrum_read_only_guard": true,
   "whole_file_byte_identity_observed": true
 }

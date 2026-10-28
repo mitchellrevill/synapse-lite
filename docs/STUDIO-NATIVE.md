@@ -24,8 +24,10 @@ or behavioral parity with stock Studio. Text actions currently stand in for some
 source icons. A partial [source-path canvas and LED selection](STUDIO-CANVAS.md)
 is implemented for explicit Ornata placements, with
 [Static and independent Fire Hot/Cold region colour/erase](STUDIO-REGIONS.md).
-Fire None clears one colour without erasing membership. Other effect properties and algorithms,
-gradients, add/delete/reorder/group operations, preview, device output and full
+Fire None clears one colour without erasing membership.
+[Spectrum duration, presets and regional stop editing](STUDIO-SPECTRUM.md) are
+also implemented with interim native controls. Other effect properties and algorithms,
+layer add/delete/reorder/group operations, preview, device output and full
 composition-management controls remain to implement. Stock's import preview
 recognizes the round-tripped file, and the
 [user's saved composition roundtrip](STUDIO-ACTUAL.md) now preserves exact data.

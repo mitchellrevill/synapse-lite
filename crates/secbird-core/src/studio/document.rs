@@ -19,7 +19,10 @@ use std::{
 
 #[path = "regions.rs"]
 mod regions;
-pub use regions::{ColorProperty, LedSelection, SelectedColor};
+pub use regions::{
+    ColorProperty, GradientStop, LedSelection, SelectedColor, SelectedDuration, SelectedGradient,
+    StopEdit, SPECTRUM_DURATIONS,
+};
 
 pub const MAX_HISTORY: usize = 20;
 pub const MAX_HISTORY_BYTES: usize = 8 * 1024 * 1024;

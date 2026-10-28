@@ -368,6 +368,10 @@ impl Canvas {
             self.selected = g.before;
         }
     }
+    pub fn clear_selection(&mut self) {
+        self.gesture = None;
+        self.selected.clear();
+    }
     pub fn count(&self) -> usize {
         self.selected.len()
     }

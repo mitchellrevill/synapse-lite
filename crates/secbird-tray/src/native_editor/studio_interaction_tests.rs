@@ -189,6 +189,118 @@ fn native_studio_actual_stock_export_loads_geometry_and_preserves_profiles() {
                 if query()["dirty"] != false {
                     return Err("Fire None undo lost saved checkpoint".into());
                 }
+                let spectrum_id = device["layers"][1]["id"].as_str().unwrap();
+                let original_gradient = baseline
+                    .spectrum_selection_gradient(spectrum_id, &selection)
+                    .map_err(|e| e.to_string())?;
+                lighting_click(hwnd, 60.0, 228.0, scale);
+                if query()["selected_leds"] != 0 {
+                    return Err("Spectrum switch retained Fire selection".into());
+                }
+                lighting_click(
+                    hwnd,
+                    width / 2.0 + (67.0 - 480.0) * fit,
+                    (168.0 + height) / 2.0 + (76.0 - 180.0) * fit,
+                    scale,
+                );
+                SendMessageW(hwnd, READ_ONLY_TEST_SET, 1, 0);
+                lighting_click(hwnd, right + 195.0, 291.0, scale);
+                if query()["dirty"] != false {
+                    return Err("Read-only Spectrum duration mutated profile".into());
+                }
+                SendMessageW(hwnd, READ_ONLY_TEST_SET, 0, 0);
+                lighting_click(hwnd, right + 195.0, 291.0, scale);
+                let save_spectrum = || -> Result<Draft, String> {
+                    SendMessageW(hwnd, STUDIO_TEST, 3, &save_path as *const Value as isize);
+                    wait_for(|| query()["busy"] == false, "Spectrum save")?;
+                    if query()["failed"] != false {
+                        return Err("Spectrum save failed".into());
+                    }
+                    let bytes = std::fs::read(&edited_path).map_err(|e| e.to_string())?;
+                    let archive =
+                        secbird_core::studio::Archive::parse(&bytes).map_err(|e| e.to_string())?;
+                    Draft::open(archive.profile_json(0).unwrap()).map_err(|e| e.to_string())
+                };
+                use secbird_core::studio::document::{
+                    GradientStop, SelectedDuration, SelectedGradient,
+                };
+                let saved_spectrum = save_spectrum()?;
+                if saved_spectrum
+                    .spectrum_selection_duration(spectrum_id, &selection)
+                    .map_err(|e| e.to_string())?
+                    != SelectedDuration::Uniform(18870)
+                    || saved_spectrum
+                        .spectrum_selection_gradient(spectrum_id, &selection)
+                        .map_err(|e| e.to_string())?
+                        != original_gradient
+                {
+                    return Err(
+                        "Duration-only Spectrum edit changed gradient or stored wrong milliseconds"
+                            .into(),
+                    );
+                }
+                // Fifth source preset has three stops. Edit a real native field,
+                // clear its colour, then exercise add/delete and exact history.
+                lighting_click(hwnd, right + 210.0, 360.0, scale);
+                let position = GetDlgItem(hwnd, i32::from(studio_view::POSITION));
+                let color = GetDlgItem(hwnd, i32::from(studio_view::STOP_COLOR));
+                if position.is_null() || color.is_null() {
+                    return Err("Spectrum stop fields missing".into());
+                }
+                SendMessageW(position, WM_SETTEXT, 0, wide("101").as_ptr() as isize);
+                lighting_click(hwnd, right + 180.0, 493.0, scale);
+                if query()["failed"] != true {
+                    return Err("Invalid gradient percentage accepted".into());
+                }
+                let position = GetDlgItem(hwnd, i32::from(studio_view::POSITION));
+                SendMessageW(position, WM_SETTEXT, 0, wide("25").as_ptr() as isize);
+                lighting_click(hwnd, right + 180.0, 493.0, scale);
+                lighting_click(hwnd, right + 60.0, 529.0, scale);
+                lighting_click(hwnd, right + 180.0, 529.0, scale);
+                lighting_click(hwnd, 440.0, 100.0, scale);
+                lighting_click(hwnd, 440.0, 100.0, scale);
+                let saved_spectrum = save_spectrum()?;
+                let expected = SelectedGradient::Uniform(Some(vec![
+                    GradientStop {
+                        position: 25,
+                        color: None,
+                    },
+                    GradientStop {
+                        position: 50,
+                        color: Some(0xefff00),
+                    },
+                    GradientStop {
+                        position: 100,
+                        color: Some(0xff0000),
+                    },
+                ]));
+                if saved_spectrum
+                    .spectrum_selection_gradient(spectrum_id, &selection)
+                    .map_err(|e| e.to_string())?
+                    != expected
+                    || saved_spectrum
+                        .spectrum_selection_duration(spectrum_id, &selection)
+                        .map_err(|e| e.to_string())?
+                        != SelectedDuration::Uniform(18870)
+                {
+                    return Err("Spectrum preset/None/add/delete/history did not preserve expected gradient and duration".into());
+                }
+                let saved_json: Value = serde_json::from_str(saved_spectrum.json()).unwrap();
+                let assigned = saved_json["layers"][1]["regions"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .find(|region| {
+                        region["devices"][0]["leds"].as_array().is_some_and(|leds| {
+                            leds.iter().any(|led| led["row"] == 0 && led["col"] == 1)
+                        })
+                    })
+                    .ok_or("Edited Spectrum region absent")?;
+                if assigned["params"]["colorStopsCustom"] != true
+                    || assigned["params"]["colorStops"][0].get("Color").is_some()
+                {
+                    return Err("Spectrum custom flag or omitted None encoding incorrect".into());
+                }
                 if std::fs::read(&input).unwrap() != original
                     || std::fs::read(folder.join("profiles.json")).unwrap() != store_before
                 {
@@ -207,7 +319,7 @@ fn native_studio_actual_stock_export_loads_geometry_and_preserves_profiles() {
                     return Err("Actual export paint capture failed".into());
                 }
                 Ok(
-                    json!({"actual_export":true,"simulated_transport_only":true,"profiles":1,"layers":2,"canvas_devices":1,"selectable_leds":109,"source_esc_hit":true,"raw_profile_roundtrip_exact":true,"whole_file_byte_identity_observed":bytes==original,"fire_native_hot_cold_independent_saved":true,"fire_none_undo_redo":true,"fire_read_only_guard":true,"source_file_unchanged":true,"device_profiles_unchanged":true,"no_device_sets":true}),
+                    json!({"actual_export":true,"simulated_transport_only":true,"profiles":1,"layers":2,"canvas_devices":1,"selectable_leds":109,"source_esc_hit":true,"raw_profile_roundtrip_exact":true,"whole_file_byte_identity_observed":bytes==original,"fire_native_hot_cold_independent_saved":true,"fire_none_undo_redo":true,"fire_read_only_guard":true,"spectrum_duration_preserves_gradient":true,"spectrum_preset_stop_none_save":true,"spectrum_add_delete_undo":true,"spectrum_invalid_percentage_refused":true,"spectrum_read_only_guard":true,"layer_switch_clears_selection":true,"source_file_unchanged":true,"device_profiles_unchanged":true,"no_device_sets":true}),
                 )
             }
         })();
@@ -379,6 +491,13 @@ fn native_studio_edits_save_failure_and_exit_recovery() {
                 click(440.0, 100.0);
                 click(60.0, 228.0);
                 check(query()["selected"] == "a", "child selection failed")?;
+                check(
+                    query()["selected_leds"] == 0,
+                    "layer switch kept prior LED selection",
+                )?;
+                SendMessageW(hwnd, WM_LBUTTONDOWN, 1, from);
+                SendMessageW(hwnd, WM_MOUSEMOVE, 1, to);
+                SendMessageW(hwnd, WM_LBUTTONUP, 0, to);
                 let color_edit = || GetDlgItem(hwnd, i32::from(studio_view::COLOR));
                 if color_edit().is_null() {
                     return Err("Static RGB field missing".into());

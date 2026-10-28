@@ -90,7 +90,10 @@ characters. Source/API namespace Fire8 is not a firmware effect number.
 Full picker geometry/interaction, Pen/Bucket and live-version equality remain
 unverified. Static inspection establishes authoring semantics, not execution.
 
+Spectrum now supports [duration, presets and stop authoring](STUDIO-SPECTRUM.md),
+with separate source projection/mixed-field preservation and raw import limits.
+
 Remaining scope includes the stock colour picker, layer creation/management,
-other effect parameters and gradients, retained algorithms/compositing, complete
+other effect parameters, retained algorithms/compositing, complete
 tools, preview/output/ownership/recovery, actual file reconciliation, pixel and
 optical acceptance, and complete-build memory runs. The full goal remains active.

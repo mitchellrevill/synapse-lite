@@ -7,11 +7,16 @@ use secbird_core::studio::{
 use std::{collections::BTreeMap, fs::File, os::windows::ffi::OsStringExt};
 use windows_sys::Win32::UI::Controls::Dialogs::*;
 
+#[path = "studio_spectrum.rs"]
+mod spectrum;
+
 pub(super) const DIALOG: u32 = WM_APP + 112;
 pub(super) const EXIT_REQUEST: u32 = WM_APP + 114;
 pub(super) const NAME: u16 = 2100;
 pub(super) const COLOR: u16 = 2101;
 pub(super) const COLD: u16 = 2102;
+pub(super) const POSITION: u16 = 2103;
+pub(super) const STOP_COLOR: u16 = 2104;
 
 #[derive(Clone)]
 pub(super) enum Control {
@@ -32,6 +37,7 @@ pub(super) enum Control {
     ApplyColor,
     ApplyCold,
     ClearColor(bool),
+    Spectrum(spectrum::Control),
     Erase,
 }
 #[derive(Clone, Copy)]
@@ -58,6 +64,7 @@ pub(super) struct View {
     selected_color: Option<SelectedColor>,
     cold: String,
     selected_cold: Option<SelectedColor>,
+    spectrum: spectrum::Properties,
     dropdown: bool,
     profile_scroll: usize,
     scroll: usize,
@@ -232,6 +239,7 @@ impl View {
 
 pub(super) fn selection_changed(state: &mut State) {
     let view = &mut state.studio;
+    spectrum::refresh(view);
     view.selected_color = None;
     view.selected_cold = None;
     let Some(property) = view.color_property(false) else {
@@ -440,6 +448,10 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
         Control::Profiles => state.studio.dropdown = !state.studio.dropdown,
         Control::Profile(index) => transition(state, Next::Profile(index)),
         Control::Select(id) => {
+            if state.studio.selected.as_ref() != Some(&id) {
+                state.studio.canvas.clear_selection();
+                ReleaseCapture();
+            }
             state.studio.selected = Some(id);
             state.studio.renaming = false;
         }
@@ -475,6 +487,7 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
             finish_name(state);
         }
         Control::CancelRename => state.studio.renaming = false,
+        Control::Spectrum(control) => spectrum::action(state, control),
         Control::ApplyColor | Control::ApplyCold | Control::ClearColor(_) | Control::Erase => {
             let erase = matches!(control, Control::Erase);
             let cold = matches!(control, Control::ApplyCold | Control::ClearColor(true));
@@ -783,6 +796,7 @@ pub(super) unsafe fn rebuild_fields(state: &mut State) {
     if !state.studio.open {
         return;
     }
+    spectrum::fields(state);
     if state.studio.color_property(false).is_some() {
         let text = state.studio.color.clone();
         let right = (state.width as f32 / state.scale) as i32 - 250;
@@ -828,6 +842,9 @@ pub(super) unsafe fn rebuild_fields(state: &mut State) {
     }
 }
 pub(super) fn command(state: &mut State, id: u16, notification: u16) -> bool {
+    if spectrum::command(state, id, notification) {
+        return true;
+    }
     if matches!(id, NAME | COLOR | COLD) && notification == EN_CHANGE as u16 {
         let text = state.raw_text(id);
         if id == NAME {
@@ -848,6 +865,9 @@ pub(super) fn key(state: &State, key: usize, control: bool, edit: bool) -> Optio
     }
     match (key, control) {
         (13, _) if state.studio.renaming => Some(Control::CommitRename),
+        (13, _) if edit && spectrum::has_focus(state) => {
+            Some(Control::Spectrum(spectrum::Control::ApplyStop(false)))
+        }
         (13, _) if edit => Some(
             if unsafe { GetFocus() } == state.fields.get(&COLD).copied().unwrap_or(null_mut()) {
                 Control::ApplyCold
@@ -1229,6 +1249,8 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
             Control::Erase,
             view.editable() && view.canvas.count() > 0,
         );
+    } else if view.effect() == Some("spectrum") {
+        spectrum::paint(p, view, right);
     } else {
         paragraph(
             p,
@@ -1258,7 +1280,13 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         p,
         message,
         right + 10,
-        if view.is_fire() { 506 } else { 400 },
+        if view.effect() == Some("spectrum") {
+            590
+        } else if view.is_fire() {
+            506
+        } else {
+            400
+        },
         230,
         130,
         if view.failed { 0xfd4949 } else { MUTED },

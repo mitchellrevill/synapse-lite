@@ -2,6 +2,12 @@
 use super::*;
 use std::collections::BTreeMap;
 
+#[path = "spectrum.rs"]
+mod spectrum;
+pub use spectrum::{
+    GradientStop, SelectedDuration, SelectedGradient, StopEdit, SPECTRUM_DURATIONS,
+};
+
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct LedSelection {
     pub device: String,
@@ -38,19 +44,28 @@ impl ColorProperty {
 }
 
 #[derive(Clone, Copy)]
-enum RegionEdit {
+enum RegionEdit<'a> {
     Erase,
     Color(ColorProperty, Option<u32>),
+    Spectrum(spectrum::Edit<'a>, &'a Object),
 }
-impl RegionEdit {
+impl RegionEdit<'_> {
     fn assigns(self) -> bool {
-        matches!(self, Self::Color(..))
+        !matches!(self, Self::Erase)
     }
-    fn apply(self, params: &mut Object) -> Result<()> {
+    fn apply(self, params: &mut Object, new: bool) -> Result<()> {
         if let Self::Color(property, color) = self {
             // None is an explicit source picker clear, never JSON null.
             let encoded = color.map(|color| encode(&color)).transpose()?;
             params.set(property.field(), encoded.as_deref());
+        }
+        if let Self::Spectrum(edit, projection) = self {
+            if new {
+                for field in ["colorStops", "colorStopsCustom", "duration"] {
+                    params.set(field, projection.get(field));
+                }
+            }
+            edit.apply(params, new)?;
         }
         Ok(())
     }
@@ -262,7 +277,7 @@ impl Draft {
         &mut self,
         id: &str,
         selection: &[LedSelection],
-        edit: RegionEdit,
+        edit: RegionEdit<'_>,
     ) -> Result<bool> {
         let selection = selected(selection)?;
         if selection.is_empty() {
@@ -270,9 +285,12 @@ impl Draft {
         }
         let property = match edit {
             RegionEdit::Color(property, _) => Some(property),
-            RegionEdit::Erase => None,
+            RegionEdit::Erase | RegionEdit::Spectrum(..) => None,
         };
         let item = layer(self, id, property)?;
+        if matches!(edit, RegionEdit::Spectrum(..)) {
+            spectrum::validate_layer(&item)?;
+        }
         let available = inventory(self, &selection)?;
         let mut seen = BTreeSet::new();
         let mut kept = Vec::new();
@@ -324,7 +342,7 @@ impl Draft {
                         .get("params")
                         .ok_or_else(|| invalid("region has no params"))?,
                 )?;
-                edit.apply(&mut params)?;
+                edit.apply(&mut params, false)?;
                 new_region.set("params", Some(&encode(&params)?));
                 new_region.set("devices", Some(&encode(&selected_devices)?));
                 added.push(encode(&new_region)?);
@@ -361,7 +379,7 @@ impl Draft {
             if !devices.is_empty() {
                 let mut region = Object(vec![]);
                 let mut params = Object(vec![]);
-                edit.apply(&mut params)?;
+                edit.apply(&mut params, true)?;
                 region.set("params", Some(&encode(&params)?));
                 region.set("devices", Some(&encode(&devices)?));
                 added.push(encode(&region)?);
