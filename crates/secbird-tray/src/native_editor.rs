@@ -64,6 +64,7 @@ mod source_text;
 mod viewport;
 mod window_frame;
 mod studio_view;
+mod studio_canvas;
 
 const CLASS: &str = "SynapseLiteNativeEditor";
 const RESPONSE_TIMER: usize = 71;
@@ -2191,6 +2192,7 @@ impl State {
                 );
             }
             Action::Home => {
+                self.studio.canvas.cancel();ReleaseCapture();
                 self.studio.open=false;
                 host_tabs::remember(self);
                 self.renaming = None;
@@ -2202,6 +2204,7 @@ impl State {
                 self.rebuild_fields();
             }
             Action::Device(id) => {
+                self.studio.canvas.cancel();ReleaseCapture();
                 self.studio.open=false;
                 if !host_tabs::open(self, &id) { return; }
                 host_tabs::remember(self);
@@ -3933,6 +3936,7 @@ unsafe extern "system" fn window_proc(
     if message==WM_COMMAND && studio_view::command(&mut state,(wparam&0xffff)as u16,((wparam>>16)&0xffff)as u16) {return 0;}
     if message==WM_MOUSEWHEEL && studio_view::wheel(&mut state,((wparam>>16)as u16 as i16)as i32,
         POINT{x:(lparam as u32&0xffff)as i16 as i32,y:((lparam as u32>>16)&0xffff)as i16 as i32}) {return 0;}
+    if studio_canvas::Canvas::pointer(&mut state,message,lparam) {return 0;}
     if state.restricted_actions
         && matches!(
             message,

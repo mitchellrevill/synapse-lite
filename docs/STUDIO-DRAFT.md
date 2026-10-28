@@ -89,7 +89,7 @@ shaped synthetic data, not actual stock compositions. A separate asynchronous
 save-acknowledgement regression verifies that newer edits remain dirty, foreign
 checkpoints are inert and discard returns to the snapshot actually acknowledged.
 
-382 core tests (six intentionally ignored), three CLI tests, one doc test and230
+382 core tests (six intentionally ignored), three CLI tests, one doc test and233
 serial tray tests pass. An additional opt-in native Studio interaction test uses
 an actual window/message loop and simulated device transport. See
 [native Studio](STUDIO-NATIVE.md) for its scope and remaining gaps.

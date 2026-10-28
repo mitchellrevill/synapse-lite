@@ -25,7 +25,7 @@ fn native_studio_edits_save_failure_and_exit_recovery() {
     store.for_device(&engine.devices()[0]);
     store.save().unwrap();
     let original_store = std::fs::read(directory.join("profiles.json")).unwrap();
-    let profile = r#"{"id":"p0","title":"Desk","devices":[],"unknown":9007199254740993123456789,"layers":[{"id":"g","type":"group","title":"Group","visible":true,"opened":true,"layers":[{"id":"a","groupId":"g","type":"layer","title":"STATIC","name":"static","visible":false,"regions":[],"future":1.2300e-7}]}]}"#;
+    let profile = r#"{"id":"p0","title":"Desk","devices":[{"id":"keyboard","productId":605,"editionId":0,"layout":6,"x":4950,"y":4980,"width":960,"height":360,"orientation":0,"ledRef":[{"row":0,"col":1},{"row":0,"col":4}]}],"unknown":9007199254740993123456789,"layers":[{"id":"g","type":"group","title":"Group","visible":true,"opened":true,"layers":[{"id":"a","groupId":"g","type":"layer","title":"STATIC","name":"static","visible":false,"regions":[],"future":1.2300e-7}]}]}"#;
     let other = r#"{"id":"p1","title":"Other","devices":[],"layers":[{"id":"b","type":"layer","title":"SECOND","name":"static","visible":true,"regions":[]}]}"#;
     let source = directory.join("input.ChromaEffects");
     let output = directory.join("saved.ChromaEffects");
@@ -78,6 +78,54 @@ fn native_studio_edits_save_failure_and_exit_recovery() {
                         Err(format!("{message}: {}", query()))
                     }
                 };
+                check(
+                    query()["canvas_notes"].as_array().unwrap().is_empty(),
+                    "source geometry unavailable",
+                )?;
+                let width = f64::from(client.right) / scale;
+                let height = f64::from(client.bottom) / scale;
+                let fit = ((width - 540.0) / 960.0)
+                    .min((height - 250.0) / 360.0)
+                    .clamp(0.05, 4.0);
+                // Independent coordinates from the pinned UK SVG: Esc center67,76;
+                // F1 center145,76. The imported ledRef admits exactly those two.
+                let screen = |x: f64, y: f64| {
+                    position(
+                        width / 2.0 + (x - 480.0) * fit,
+                        (168.0 + height) / 2.0 + (y - 180.0) * fit,
+                        scale,
+                    )
+                };
+                let esc = screen(67.0, 76.0);
+                SendMessageW(hwnd, WM_LBUTTONDOWN, 1, esc);
+                SendMessageW(hwnd, WM_LBUTTONUP, 0, esc);
+                check(
+                    query()["selected_leds"] == 1 && query()["dirty"] == false,
+                    "LED hit selection changed document or missed",
+                )?;
+                let from = screen(45.0, 54.0);
+                let to = screen(165.0, 98.0);
+                SendMessageW(hwnd, WM_LBUTTONDOWN, 1, from);
+                SendMessageW(hwnd, WM_MOUSEMOVE, 1, to);
+                SendMessageW(hwnd, WM_CANCELMODE, 0, 0);
+                check(
+                    query()["selected_leds"] == 1,
+                    "canceled marquee lost prior selection",
+                )?;
+                SendMessageW(hwnd, WM_LBUTTONDOWN, 1, from);
+                SendMessageW(hwnd, WM_MOUSEMOVE, 1, to);
+                SendMessageW(hwnd, WM_LBUTTONUP, 0, to);
+                check(
+                    query()["selected_leds"] == 2 && query()["dirty"] == false,
+                    "marquee did not select admitted LED paths",
+                )?;
+                click(right - 40.0, 148.0);
+                check(
+                    query()["selected_leds"] == 2 && query()["dirty"] == false,
+                    "zoom changed selection or draft",
+                )?;
+                click(right - 100.0, 148.0);
+                redraw(hwnd);
                 click(215.0, 188.0);
                 check(
                     query()["rows"][0]["visible"] == false
@@ -242,6 +290,7 @@ fn native_studio_edits_save_failure_and_exit_recovery() {
                 "native_rename":true,"two_composition_saves_preserved":true,"unknown_literals_preserved":true,
                 "save_failure_keeps_draft_and_file":true,"navigation_keeps_draft":true,
                 "invalid_hidden_rename_recovery":true,
+                "source_led_hit_marquee_cancel_zoom":true,
                 "tray_exit_cancel_and_discard":true,"device_profiles_unchanged":true,"no_device_sets":true}),
                 )
             }

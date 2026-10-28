@@ -8,6 +8,7 @@
   "no_device_sets": true,
   "save_failure_keeps_draft_and_file": true,
   "simulated_only": true,
+  "source_led_hit_marquee_cancel_zoom": true,
   "tray_exit_cancel_and_discard": true,
   "two_composition_saves_preserved": true,
   "unknown_literals_preserved": true

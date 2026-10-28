@@ -26,6 +26,7 @@ pub(super) enum Control {
     CancelRename,
     Undo,
     Redo,
+    Zoom(i32),
 }
 #[derive(Clone, Copy)]
 enum Next {
@@ -36,6 +37,7 @@ enum Next {
 
 #[derive(Default)]
 pub(super) struct View {
+    pub(super) canvas: studio_canvas::Canvas,
     pub open: bool,
     archive: Option<Arc<Archive>>,
     titles: Vec<String>,
@@ -150,6 +152,7 @@ impl View {
         self.scroll = 0;
         self.dropdown = false;
         self.renaming = false;
+        self.canvas = studio_canvas::Canvas::load(raw, &assets_dir());
         match Draft::open(raw) {
             Ok(draft) => {
                 self.selected = draft.layers().first().map(|row| row.id.clone());
@@ -381,6 +384,14 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
             finish_name(state);
         }
         Control::CancelRename => state.studio.renaming = false,
+        Control::Zoom(steps) => {
+            state.studio.canvas.zoom(
+                steps,
+                f64::from(state.width) / f64::from(state.scale),
+                f64::from(state.height) / f64::from(state.scale),
+            );
+            ReleaseCapture();
+        }
         control => {
             let result = if let Some(draft) = &mut state.studio.draft {
                 match control {
@@ -431,6 +442,7 @@ pub(super) unsafe fn receive(state: &mut State, response: Response) {
             state.studio.archive = Some(archive);
             state.studio.path = Some(path);
             if state.studio.archive.as_ref().unwrap().profile_count() == 0 {
+                state.studio.canvas = studio_canvas::Canvas::default();
                 state.studio.draft = None;
                 state.studio.selected = None;
                 state.studio.status = "This file contains no compositions".into();
@@ -681,7 +693,16 @@ pub(super) unsafe fn wheel(state: &mut State, delta: i32, mut point: POINT) -> b
         state.studio.scroll = (state.studio.scroll as i32 - if delta > 0 { 3 } else { -3 })
             .clamp(0, count.saturating_sub(visible) as i32) as usize;
     } else {
-        return false;
+        if GetKeyState(17) < 0 {
+            state.studio.canvas.zoom(
+                if delta > 0 { 1 } else { -1 },
+                f64::from(state.width) / f64::from(state.scale),
+                f64::from(state.height) / f64::from(state.scale),
+            );
+            ReleaseCapture();
+        } else {
+            return false;
+        }
     }
     redraw(state);
     true
@@ -738,6 +759,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
     p.fill(0, 127, width, 1, 0);
     p.fill(250, 128, 1, height - 128, 0);
     p.fill(right, 128, 1, height - 128, 0);
+    studio_canvas::paint(state, p, width, height);
     p.text(
         &format!("{}{}", view.title(), if view.dirty() { " *" } else { "" }),
         46,
@@ -810,6 +832,21 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         GREEN,
         DT_LEFT,
     );
+    for (label, x, width, step) in [
+        ("−", right - 170, 35, -1),
+        ("FIT", right - 130, 65, 0),
+        ("+", right - 60, 35, 1),
+    ] {
+        button(
+            p,
+            label,
+            x,
+            135,
+            width,
+            Control::Zoom(step),
+            !view.busy && !view.dialog,
+        );
+    }
     let clip = SaveDC(p.dc);
     IntersectClipRect(p.dc, 0, p.px(168), p.px(250), state.height);
     let ids = view.visible_ids();
@@ -942,10 +979,10 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
     paragraph(
         p,
         message,
-        270,
-        190,
-        (right - 290).max(1),
-        90,
+        right + 10,
+        400,
+        230,
+        130,
         if view.failed { 0xfd4949 } else { MUTED },
     );
     if view.dropdown {
@@ -979,7 +1016,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
 #[cfg(test)]
 pub(super) fn diagnostics(state: &State) -> Value {
     let view = &state.studio;
-    json!({"open":view.open,"busy":view.busy,"dialog":view.dialog,"dirty":view.dirty(),"renaming":view.renaming,"status":view.status,"failed":view.failed,"pending":state.pending,
+    json!({"open":view.open,"busy":view.busy,"dialog":view.dialog,"dirty":view.dirty(),"renaming":view.renaming,"status":view.status,"failed":view.failed,"pending":state.pending,"selected_leds":view.canvas.count(),"canvas_notes":view.canvas.notes,
         "index":view.index,"profiles":view.archive.as_ref().map_or(0,|archive|archive.profile_count()),"selected":view.selected,
         "undo":view.draft.as_ref().map_or(0,Draft::undo_len),"redo":view.draft.as_ref().map_or(0,Draft::redo_len),
         "rows":view.draft.as_ref().map(|draft|draft.layers().iter().map(|row|json!({"id":row.id,"title":row.title,"visible":row.visible})).collect::<Vec<_>>()).unwrap_or_default()})

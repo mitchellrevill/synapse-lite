@@ -21,7 +21,8 @@ exit. No OS-shutdown/crash persistence guarantee is established by this flow.
 The view uses the recovered Studio panel/row dimensions documented in
 [STUDIO-DRAFT.md](STUDIO-DRAFT.md). This is a partial functional editor, not visual
 or behavioral parity with stock Studio. Text actions currently stand in for some
-source icons. Canvas, LED layout/selection, effect properties and algorithms,
+source icons. A partial [source-path canvas and LED selection](STUDIO-CANVAS.md)
+is now implemented for explicit Ornata placements. Effect properties and algorithms,
 gradients, add/delete/reorder/group operations, preview, device output and full
 composition-management controls remain to implement. Actual stock file acceptance
 and the user's saved composition have not been tested; current fixtures are
@@ -42,5 +43,6 @@ production paint output for review; this is not a stock pixel comparison.
 The file-picker selection and unsaved-modal button results are injected at the
 test boundary; Windows' common file-dialog UI is not automated by this test.
 Other paths use the same production dispatch, worker, writer and close guard.
+The native test also checks canvas LED clicks, marquee cancellation and zoom.
 The serial core/CLI/tray suites and optimized builds also pass. The full-goal
 three-run100MB memory target remains unverified.
