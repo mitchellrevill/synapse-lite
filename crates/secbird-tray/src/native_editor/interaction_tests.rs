@@ -1733,6 +1733,49 @@ fn native_assignment_mouse_labels_and_drawer_have_source_hit_targets() {
                 let before = controller_sim.state().log.len();
                 let before_store =
                     std::fs::read(controller_directory.join("profiles.json")).unwrap();
+                // Exercise the shared host strip through its actual hit map,
+                // not the old fixed block coordinates. Presentation stays read-only.
+                let host = || {
+                    let mut v = Value::Null;
+                    SendMessageW(hwnd, RUNTIME_TEST_QUERY, 0, &mut v as *mut Value as isize);
+                    v["host_tabs"].clone()
+                };
+                let initial = host();
+                if initial["icons_loaded"] != 5 {
+                    return Err("Shared host source icons were not provisioned/loaded".into());
+                }
+                let selected = initial["selected"].clone();
+                let home = &initial["tabs"][0];
+                let point = |tab: &Value| {
+                    (tab["x"].as_i64().unwrap() + tab["width"].as_i64().unwrap() / 2,
+                     tab["y"].as_i64().unwrap() + tab["height"].as_i64().unwrap() / 2)
+                };
+                let (hx, hy) = point(home);
+                let packed = (hx as u32 | (hy as u32) << 16) as isize;
+                let mut batch = json!({"x":hx,"y":hy});
+                SendMessageW(hwnd, RUNTIME_TEST_QUERY, 6, &mut batch as *mut Value as isize);
+                let down = &batch["host_tabs"];
+                if down["hover"] != "" || down["pressed"] != "" {
+                    return Err(format!("Host hover/press did not reach shared component: {down}"));
+                }
+                SendMessageW(hwnd, WM_LBUTTONUP, 0, packed);
+                redraw(hwnd);
+                if !host()["selected"].is_null() || !host()["pressed"].is_null() {
+                    return Err("Home did not clear selection/pressed state".into());
+                }
+                let dashboard = host();
+                let target = dashboard["tabs"].as_array().unwrap().iter()
+                    .find(|tab| tab["id"] == selected).unwrap();
+                let (dx, dy) = point(target);
+                lighting_click(hwnd, dx as f64 / scale, dy as f64 / scale, scale);
+                redraw(hwnd);
+                if host()["selected"] != selected {
+                    return Err("Shared host device tab did not restore device view".into());
+                }
+                SendMessageW(hwnd, WM_MOUSELEAVE, 0, 0);
+                if !host()["hover"].is_null() {
+                    return Err("Shared host hover survived mouse leave".into());
+                }
                 let query = || {
                     let mut v = Value::Null;
                     SendMessageW(
@@ -1801,7 +1844,7 @@ fn native_assignment_mouse_labels_and_drawer_have_source_hit_targets() {
                 }
                 PostMessageW(hwnd, WM_CLOSE, 0, 0);
                 Ok(
-                    json!({"primary_left_disabled":true,"source_mouse_label_click":true,"drawer_filter_choices":true,"source_drawer_anchor_230":true,"escape_cancels":true,"sim_commands_added":0,"profile_bytes_unchanged":true,"physical_discovery_disabled":true}),
+                    json!({"shared_host_home_device_navigation":true,"shared_host_hover_press_leave":true,"primary_left_disabled":true,"source_mouse_label_click":true,"drawer_filter_choices":true,"source_drawer_anchor_230":true,"escape_cancels":true,"sim_commands_added":0,"profile_bytes_unchanged":true,"physical_discovery_disabled":true}),
                 )
             }
         })();

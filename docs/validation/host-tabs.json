@@ -1,0 +1,163 @@
+{
+  "date": "2026-10-28",
+  "scope": "shared host visual surface and overflow layout; incomplete inventory stage1",
+  "unit_tests": {
+    "passed": 3,
+    "renderer": "real GDI+ pixels at 125%",
+    "pixel_parity": false
+  },
+  "native_mouse": {
+    "drawer_filter_choices": true,
+    "escape_cancels": true,
+    "physical_discovery_disabled": true,
+    "primary_left_disabled": true,
+    "profile_bytes_unchanged": true,
+    "shared_host_home_device_navigation": true,
+    "shared_host_hover_press_leave": true,
+    "sim_commands_added": 0,
+    "source_drawer_anchor_230": true,
+    "source_mouse_label_click": true,
+    "source_host_icons_loaded": 5
+  },
+  "native_frame": {
+    "all_eight_resize_targets": true,
+    "cached_layout_tracks_client": true,
+    "header_drag_and_close_control": true,
+    "host_offset_css": 42,
+    "maximize_restore_buttons_work": true,
+    "minimum_track_size_css": [
+      1000,
+      650
+    ],
+    "observations": [
+      {
+        "bounds": {
+          "client": [
+            1600,
+            900
+          ],
+          "inset": [
+            0,
+            0
+          ],
+          "maximized": false,
+          "outer": [
+            1600,
+            900
+          ]
+        },
+        "mode": "normal"
+      },
+      {
+        "bounds": {
+          "client": [
+            1250,
+            813
+          ],
+          "inset": [
+            0,
+            0
+          ],
+          "maximized": false,
+          "outer": [
+            1250,
+            813
+          ]
+        },
+        "mode": "minimum"
+      },
+      {
+        "bounds": {
+          "client": [
+            1325,
+            875
+          ],
+          "inset": [
+            0,
+            0
+          ],
+          "maximized": false,
+          "outer": [
+            1325,
+            875
+          ]
+        },
+        "mode": "narrow"
+      },
+      {
+        "bounds": {
+          "client": [
+            1600,
+            900
+          ],
+          "inset": [
+            0,
+            0
+          ],
+          "maximized": false,
+          "outer": [
+            1600,
+            900
+          ]
+        },
+        "mode": "normal-restored"
+      },
+      {
+        "bounds": {
+          "client": [
+            2560,
+            1380
+          ],
+          "inset": [
+            0,
+            0
+          ],
+          "maximized": true,
+          "outer": [
+            2560,
+            1380
+          ]
+        },
+        "mode": "maximized"
+      },
+      {
+        "bounds": {
+          "client": [
+            1600,
+            900
+          ],
+          "inset": [
+            0,
+            0
+          ],
+          "maximized": false,
+          "outer": [
+            1600,
+            900
+          ]
+        },
+        "mode": "restore"
+      }
+    ],
+    "observed_host_boundary_px": 53,
+    "physical_discovery_disabled": true,
+    "profile_bytes_unchanged": true,
+    "restore_position_unchanged": true,
+    "scale": 1.25,
+    "sim_commands_added": 0
+  },
+  "source_evidence": {
+    "parent": "ev_f5d0ae84cd9569f21e46bed18474e9ab4cae411fb4a69b84889765bc0e344ec7",
+    "module_view": "ev_5568d6dba4505af6f9e7a58df4e6a95de67894b7368d8f73ce9e3fa968dc8ac9",
+    "semantic_coverage": "partial",
+    "semantic_unknowns": 6060
+  },
+  "not_validated": [
+    "full raster identity",
+    "multi-device overflow native runtime",
+    "tab dragging and close workflows",
+    "physical hardware",
+    "complete build memory or network acceptance"
+  ],
+  "test_harness_note": "Transient hover/press is queried atomically on the window thread via actual Win32 message handlers; cursor is not moved. Separate controller messages allowed legitimate TrackMouseEvent leave to interleave."
+}

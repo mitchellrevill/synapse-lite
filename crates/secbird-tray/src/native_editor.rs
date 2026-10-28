@@ -41,6 +41,7 @@ mod interaction_tests;
 mod lighting_layout;
 mod lighting_view;
 mod image_render;
+mod host_tabs;
 mod performance_layout;
 mod performance_view;
 mod power_layout;
@@ -359,6 +360,7 @@ impl Tab {
 enum Action {
     Home,
     Device(String),
+    HostScroll(i32),
     Tab(Tab),
     Refresh,
     ProfileMenu,
@@ -657,6 +659,7 @@ fn worker(
 
 struct Fonts {
     source_text: source_text::Renderer,
+    tab: HFONT,
     tiny: HFONT,
     small: HFONT,
     normal: HFONT,
@@ -700,6 +703,7 @@ impl Fonts {
         };
         Self {
             source_text: source_text::Renderer::new(assets),
+            tab: make("Roboto", 12, 300),
             tiny: make("Roboto", 10, 400),
             small: make("Roboto", 12, 400),
             normal: make("Roboto", 14, 400),
@@ -716,6 +720,7 @@ impl Drop for Fonts {
     fn drop(&mut self) {
         unsafe {
             for font in [
+                self.tab,
                 self.tiny,
                 self.small,
                 self.normal,
@@ -845,6 +850,7 @@ impl Drop for Bitmap {
 }
 
 struct State {
+    host_tabs: RefCell<host_tabs::View>,
     customize_background: RefCell<dot_background::Cache>,
     hwnd: HWND,
     scale: f32,
@@ -2052,7 +2058,7 @@ impl State {
         }
         if !matches!(
             &action,
-            Action::Assignment(_) | Action::Minimize | Action::Maximize
+            Action::Assignment(_) | Action::Minimize | Action::Maximize | Action::HostScroll(_)
         ) && self.assignment.draft.is_some()
         {
             if self
@@ -2076,6 +2082,7 @@ impl State {
             return;
         }
         match action {
+            Action::HostScroll(direction) => host_tabs::scroll(self, direction),
             Action::Assignment(control) => assignment_view::action(self, control),
             Action::Close => {
                 PostMessageW(self.hwnd, WM_CLOSE, 0, 0);
@@ -2670,53 +2677,7 @@ unsafe fn paint(state: &mut State, dc: HDC) {
     };
     p.fill(0, 0, width, height, BG);
     p.fill(0, 0, width, 42, 0);
-    p.fill(8, 8, 178, 34, if state.selected.is_none() { BG } else { 0 });
-    p.text(
-        "SYNAPSE",
-        25,
-        8,
-        145,
-        34,
-        p.fonts.small,
-        if state.selected.is_none() {
-            TEXT
-        } else {
-            MUTED
-        },
-        DT_LEFT,
-    );
-    p.hits.push(Hit {
-        rect: p.rect(8, 0, 178, 42),
-        action: Action::Home,
-    });
-    for (index, device) in state.devices().iter().enumerate() {
-        let x = 190 + index as i32 * 218;
-        if x + 218 > width - 150 {
-            break;
-        }
-        let id = device["id"].as_str().unwrap_or("");
-        if Some(id) == state.selected.as_deref() {
-            p.fill(x, 8, 214, 34, BG);
-            p.line(x, 8, 214, GREEN);
-        }
-        p.text(
-            &device["name"]
-                .as_str()
-                .unwrap_or("RAZER DEVICE")
-                .to_uppercase(),
-            x + 12,
-            9,
-            190,
-            32,
-            p.fonts.small,
-            TEXT,
-            DT_LEFT,
-        );
-        p.hits.push(Hit {
-            rect: p.rect(x, 0, 214, 42),
-            action: Action::Device(id.to_string()),
-        });
-    }
+    host_tabs::paint(state, &mut p, width);
     for (index, (label, action)) in [
         ("—", Action::Minimize),
         ("□", Action::Maximize),
@@ -3732,6 +3693,19 @@ unsafe extern "system" fn window_proc(
     }
     #[cfg(test)]
     if message == RUNTIME_TEST_QUERY {
+        if wparam == 6 {
+            // One UI-thread batch tests transient hover/press state without
+            // moving the user's cursor. Otherwise TrackMouseEvent legitimately
+            // queues WM_MOUSELEAVE between a controller's separate messages.
+            let point = &*(lparam as *const Value);
+            let x = point["x"].as_u64().unwrap() as u32;
+            let y = point["y"].as_u64().unwrap() as u32;
+            let packed = (x | y << 16) as isize;
+            SendMessageW(hwnd, WM_MOUSEMOVE, 0, packed);
+            SendMessageW(hwnd, WM_LBUTTONDOWN, 1, packed);
+            SendMessageW(hwnd, RUNTIME_TEST_QUERY, 0, lparam);
+            return 0;
+        }
         if let Ok(state) = (*pointer).try_borrow() {
             *(lparam as *mut Value) = json!({
                 "capture":state.lighting_capture,
@@ -3740,7 +3714,8 @@ unsafe extern "system" fn window_proc(
                 "failures":state.failures.outstanding(),
                 "pending":state.pending,
                 "brightness":state.lighting.intent.brightness.as_ref().map(|b|b.value),
-                "status":state.status,"failed":state.failed
+                "status":state.status,"failed":state.failed,
+                "host_tabs":host_tabs::diagnostics(&state)
             });
         }
         return 0;
@@ -3789,6 +3764,11 @@ unsafe extern "system" fn window_proc(
         )
     {
         return 0;
+    }
+    if state.profile_modal.is_none()
+        && matches!(message, WM_MOUSEMOVE | WM_MOUSELEAVE | WM_LBUTTONDOWN | WM_LBUTTONUP | WM_CANCELMODE)
+    {
+        host_tabs::pointer(&state, message, lparam);
     }
     if state.profile_modal.is_some() {
         match message {
@@ -4015,6 +3995,15 @@ unsafe extern "system" fn window_proc(
                     y: ((lparam as u32 >> 16) & 0xffff) as i16 as i32,
                 },
             );
+            0
+        }
+        WM_MOUSEWHEEL if {
+            let mut point = POINT { x: (lparam as u32 & 0xffff) as i16 as i32, y: ((lparam as u32 >> 16) & 0xffff) as i16 as i32 };
+            ScreenToClient(hwnd, &mut point);
+            host_tabs::contains(&state, point)
+        } => {
+            host_tabs::wheel(&state, ((wparam >> 16) as u16 as i16) as i32);
+            InvalidateRect(hwnd, null(), 0);
             0
         }
         WM_MOUSEWHEEL if assignment_view::covered(&state) => {
@@ -4528,6 +4517,7 @@ fn run_window(
             .spawn(move || worker(engine, jobs_rx, replies_tx))
             .map_err(|e| e.to_string())?;
         let mut state = Box::new(RefCell::new(State {
+            host_tabs: RefCell::new(host_tabs::View::default()),
             customize_background: RefCell::new(dot_background::Cache::default()),
             hwnd: null_mut(),
             scale: initial_scale,
@@ -4598,6 +4588,11 @@ fn run_window(
                     && !layout.source_sha256.is_empty()
             }),
             icons: [
+                "host-synapse",
+                "host-mouse",
+                "host-keyboard",
+                "host-scroll-left",
+                "host-scroll-right",
                 "minimize",
                 "maximize",
                 "restore",
