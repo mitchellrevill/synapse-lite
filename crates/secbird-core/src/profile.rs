@@ -33,6 +33,8 @@ pub struct Zone {
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Profile {
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub snap_tap: Option<crate::snap_tap::Settings>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dynamic_sensitivity: Option<crate::dynamic_sensitivity::DynamicSensitivity>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rotation: Option<crate::dynamic_sensitivity::Rotation>,
@@ -559,6 +561,11 @@ impl Profile {
         }
         if let Some(g) = &self.game_mode {
             push(format!("gaming mode: {g}"), g.parse().and_then(|g| dev.set_game_mode(g)));
+        }
+        if self.snap_tap.is_some() || crate::profile_compat::source_snap_tap(self).is_some() {
+            push("Snap Tap".into(), Err(Error::Unsupported(
+                "Snap Tap intent is retained; selected-device host input routing and recovery are not yet implemented".into(),
+            )));
         }
         // No firmware color/effect projection may brighten an old driver-mode
         // frame before reporting the host-runtime limitation. Host shadows clear

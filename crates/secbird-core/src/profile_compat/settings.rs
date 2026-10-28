@@ -74,6 +74,35 @@ pub(super) fn import_keyboard_lighting(
     Ok(())
 }
 
+pub(super) fn import_snap_tap(
+    source: &Value,
+    profile: &mut Profile,
+    name: &str,
+    warnings: &mut Vec<String>,
+) {
+    let Some(raw) = source.get("snapTap") else { return; };
+    match serde_json::from_value::<crate::snap_tap::Settings>(raw.clone()) {
+        Ok(settings) if settings.validate().is_ok() => {
+            profile.snap_tap = Some(settings);
+            warnings.push(format!("{name}: Snap Tap intent is retained; host input routing and recovery are not yet implemented"));
+        }
+        _ => warnings.push(format!("{name}: unsupported Snap Tap settings retained without replay")),
+    }
+}
+
+pub(super) fn export_snap_tap(profile: &Profile, decoded: &mut Map<String, Value>) -> Result<()> {
+    let Some(settings) = &profile.snap_tap else { return Ok(()); };
+    settings.validate()?;
+    let original = decoded.get("snapTap").cloned()
+        .and_then(|value| serde_json::from_value::<crate::snap_tap::Settings>(value).ok());
+    if original.as_ref() != Some(settings) {
+        // Pair arrays replace as a unit. A deleted pair must not be resurrected.
+        merge_object(decoded.entry("snapTap").or_insert(json!({})),
+            serde_json::to_value(settings).map_err(|e| invalid(e.to_string()))?)?;
+    }
+    Ok(())
+}
+
 /// Return true when typed source intent owns brightness and policy export.
 /// Old native profiles without the typed field retain their previous overlay rules.
 pub(super) fn export_keyboard_lighting(

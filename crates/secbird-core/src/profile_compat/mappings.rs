@@ -21,7 +21,7 @@ fn key_ids() -> &'static [KeyId] {
     })
 }
 
-fn key_usage(id: &str) -> Option<u8> {
+pub(super) fn key_usage(id: &str) -> Option<u8> {
     key_ids()
         .iter()
         .find(|key| key.id == id)

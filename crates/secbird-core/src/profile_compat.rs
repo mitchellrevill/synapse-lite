@@ -16,6 +16,16 @@ pub mod gui;
 mod mappings;
 mod settings;
 
+pub(crate) fn source_key_usage(id: &str) -> Option<u8> {
+    mappings::key_usage(id)
+}
+
+/// Retained source intent also exists in native backups saved before typed
+/// Snap Tap support. Reading it must not rewrite the user's profile store.
+pub fn source_snap_tap(profile: &Profile) -> Option<&Value> {
+    profile.extra.get(SOURCE)?.get("decoded")?.get("snapTap")
+}
+
 #[cfg(test)]
 mod expanded_tests;
 
@@ -369,10 +379,11 @@ fn translate_profile(
     }
     mappings::import(source, &mut profile, pid, name, warnings)?;
     if pid == 605 {
+        settings::import_snap_tap(source, &mut profile, name, warnings);
         settings::import_game_mode(source, &mut profile, name, warnings)?;
         settings::import_keyboard_lighting(source, &mut profile, name, warnings)?;
-        let zone = profile.lighting.entry("backlight".into()).or_default();
         if let Some(quick) = source.get("quickEffects") {
+            let zone = profile.lighting.entry("backlight".into()).or_default();
             let id = integer(quick.get("selectedEffectId"), 0, 255, "selectedEffectId")?;
             let setting = quick
                 .get("selectedEffectSetting")
@@ -426,6 +437,8 @@ fn translate_profile(
             || (matches!(pid, 196 | 197)
                 && ((key == "rotation" && profile.rotation.is_some())
                     || (key == "dynamicSensitivity" && profile.dynamic_sensitivity.is_some())))
+            || (pid == 605
+                && key == "snapTap")
             || (pid == 605
                 && [
                     "brightness",
@@ -577,12 +590,14 @@ pub fn export_synapse4(store: &Store, device_key: &str) -> Result<ExportReport> 
                 || profile.lighting_settings.is_some()
                 || !profile.keys.is_empty()
                 || profile.game_mode.is_some()
+                || profile.snap_tap.is_some()
             {
                 return Err(Error::Unsupported(format!("{name}: mouse lighting, keyboard colors or gaming mode have no matching Synapse mouse fields")));
             }
         }
         mappings::export(profile, decoded_object, pid)?;
         if pid == 605 {
+            settings::export_snap_tap(profile, decoded_object)?;
             settings::export_game_mode(profile, decoded_object)?;
             let source_lighting =
                 settings::export_keyboard_lighting(profile, decoded_object, source.is_none())?;

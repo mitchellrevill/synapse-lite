@@ -3,6 +3,33 @@ use crate::buttons::{Action, Layer};
 use crate::features::DpiStages;
 
 #[test]
+fn ornata_snap_tap_preserves_source_shape_and_pair_edits_without_claiming_replay() {
+    let source=json!({"guid":"snap-fixture","name":"Fixture","mappings":[],
+        "snapTap":{"isEnabled":true,"future":{"keep":true},"keyList":[
+            {"id":1,"key1":"KEY_A","key2":"KEY_D","futurePair":7}]}});
+    let mut imported=import_document(&document(source.clone(),605)).unwrap();
+    assert!(imported.store.devices["025D"].profiles["Fixture"].snap_tap.is_some());
+    assert!(imported.warnings.iter().any(|w|w.contains("host input routing")));
+    assert_eq!(payload(&imported.store,"025D","Fixture"),source);
+    let native=import_document(&imported.store.native_bytes().unwrap()).unwrap();
+    assert_eq!(payload(&native.store,"025D","Fixture"),source);
+    let settings=imported.store.devices.get_mut("025D").unwrap().profiles.get_mut("Fixture").unwrap().snap_tap.as_mut().unwrap();
+    assert!(!settings.plan().is_ok(),"unknown extensions must not silently run");
+    settings.is_enabled=false;
+    settings.key_list.clear();
+    let changed=payload(&imported.store,"025D","Fixture");
+    assert_eq!(changed["snapTap"]["isEnabled"],false);
+    assert_eq!(changed["snapTap"]["keyList"],json!([]));
+    assert_eq!(changed["snapTap"]["future"],source["snapTap"]["future"]);
+    let mut unsupported=source.clone();
+    unsupported["snapTap"]["keyList"][0]["key2"]=json!("KEY_A");
+    let imported=import_document(&document(unsupported.clone(),605)).unwrap();
+    assert!(imported.store.devices["025D"].profiles["Fixture"].snap_tap.is_none());
+    assert!(imported.warnings.iter().any(|w|w.contains("unsupported Snap Tap")));
+    assert_eq!(payload(&imported.store,"025D","Fixture"),unsupported);
+}
+
+#[test]
 fn advanced_import_notices_follow_the_settings_actually_translated() {
     let source = json!({"guid":"advanced-notices","name":"Fixture","mappings":[],
         "rotation":{"isEnabled":true,"value":5},
