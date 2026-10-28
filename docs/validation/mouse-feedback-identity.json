@@ -1,0 +1,21 @@
+{
+  "child_exit_success": true,
+  "deadline_ms": 8000,
+  "elapsed_ms": 182,
+  "probe": "raw_mouse_identity_metadata_only",
+  "result": {
+    "input_records_read": 0,
+    "input_registrations": 0,
+    "interface": 0,
+    "live_handle_revalidated": true,
+    "matching_active_container": true,
+    "pid": "00C4",
+    "query_only": true,
+    "raw_handle_nonzero": true,
+    "raw_mouse_count_for_exact_identity": 1,
+    "restore_count": 0,
+    "selection": "VID/PID/interface + nonzero ContainerId; collection paths may differ",
+    "set_count": 0,
+    "status": "success"
+  }
+}

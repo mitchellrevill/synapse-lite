@@ -104,6 +104,29 @@ fn native_advanced_modes_curve_drag_rotation_and_recovery() {
                     )?;
                 }
                 redraw(hwnd);
+                let zoom_store = std::fs::read(directory.join("profiles.json")).unwrap();
+                let zoom_sets = sets();
+                let scroll_before = query()["advanced"]["scroll"].clone();
+                SendMessageW(
+                    hwnd,
+                    WM_MOUSEWHEEL,
+                    ((-120i16 as u16 as usize) << 16) | 8,
+                    0,
+                );
+                if query()["advanced"]["zoom"] != json!([20., 0.5]) {
+                    return Err("Ctrl+wheel did not zoom both axes out".into());
+                }
+                SendMessageW(hwnd, WM_MOUSEWHEEL, (120usize << 16) | 8, 0);
+                if query()["advanced"]["zoom"] != json!([15., 0.25])
+                    || query()["advanced"]["scroll"] != scroll_before
+                    || sets() != zoom_sets
+                    || std::fs::read(directory.join("profiles.json")).unwrap() != zoom_store
+                {
+                    return Err("Ctrl+wheel changed hardware/profile data or page scroll".into());
+                }
+                if query()["mouse_feedback"]["registered"] != false {
+                    return Err("Simulator unexpectedly registered physical input".into());
+                }
                 let before = query()["advanced"]["intent"]["points"].clone();
                 let px = x + 40. + 70. + 20. / 105. * 1010.;
                 let py = 343. + 280. - 1.1 / 1.5 * 260.;
@@ -120,11 +143,51 @@ fn native_advanced_modes_curve_drag_rotation_and_recovery() {
                 if query()["advanced"]["intent"]["points"] == before {
                     return Err("Curve point did not change".into());
                 }
+                if query()["advanced"]["intent"]["templateId"] != 3 {
+                    return Err("Dragged curve retained a preset template and could be reset by stock Synapse".into());
+                }
                 let saved = Store::load(&directory.join("profiles.json")).unwrap();
                 if saved.devices[&key].profiles["Other"] != Default::default()
                     || saved.devices[&key].profiles["Default"].extra["opaque"] != "preserve"
                 {
                     return Err("Advanced overwrote another profile or opaque data".into());
+                }
+                redraw(hwnd);
+                lighting_click(hwnd, x + 40. + 952. + 75., 319., scale);
+                if query()["advanced"]["template_open"] != true {
+                    return Err("Template dropdown did not open".into());
+                }
+                SendMessageW(hwnd, WM_KEYDOWN, 0x26, 0);
+                SendMessageW(hwnd, WM_KEYDOWN, 0x0d, 0);
+                wait_for(
+                    || ready() && query()["advanced"]["intent"]["templateId"] == 2,
+                    "Jump template dropdown selection",
+                )?;
+                let seed_points = query()["advanced"]["intent"]["points"].clone();
+                if seed_points[1]["x"] != 9.0 {
+                    return Err("Dropdown did not load the source Jump template".into());
+                }
+                redraw(hwnd);
+                lighting_click(hwnd, x + 40. + 952. + 75., 319., scale);
+                SendMessageW(hwnd, WM_KEYDOWN, 0x28, 0);
+                SendMessageW(hwnd, WM_KEYDOWN, 0x0d, 0);
+                wait_for(
+                    || ready() && query()["advanced"]["intent"]["templateId"] == 3,
+                    "None template selection",
+                )?;
+                if query()["advanced"]["intent"]["points"] != seed_points {
+                    return Err("None template replaced the current curve".into());
+                }
+                redraw(hwnd);
+                let before_menu = std::fs::read(directory.join("profiles.json")).unwrap();
+                let count = sets();
+                lighting_click(hwnd, x + 40. + 952. + 75., 319., scale);
+                SendMessageW(hwnd, WM_KEYDOWN, 0x1b, 0);
+                if query()["advanced"]["template_open"] != false
+                    || sets() != count
+                    || std::fs::read(directory.join("profiles.json")).unwrap() != before_menu
+                {
+                    return Err("Closing template dropdown changed saved/device data".into());
                 }
                 // Scroll the source Rotation card into view and use its real slider hit.
                 for _ in 0..7 {
@@ -139,6 +202,10 @@ fn native_advanced_modes_curve_drag_rotation_and_recovery() {
                     "Rotation enabled",
                 )?;
                 redraw(hwnd);
+                lighting_click(hwnd, rx + 86., 723. - scroll + 97., scale);
+                if query()["advanced"]["tool_requested"] != true {
+                    return Err("Rotation tool link did not route its action".into());
+                }
                 let sy = 723. - scroll + 329.;
                 let start = position(rx + 300., sy, scale);
                 let end = position(rx + 48. + (20. + 44.) / 88. * 504., sy, scale);

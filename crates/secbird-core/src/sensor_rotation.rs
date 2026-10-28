@@ -244,7 +244,7 @@ fn container_for_path(path: &str) -> io::Result<Guid> {
     Ok(container)
 }
 
-fn hid_identity(path: &str) -> io::Result<(u16, u8)> {
+pub(crate) fn hid_identity(path: &str) -> io::Result<(u16, u8)> {
     let lower = path.to_ascii_lowercase();
     let identity = lower
         .strip_prefix(r"\\?\hid#")
@@ -273,6 +273,18 @@ fn hid_identity(path: &str) -> io::Result<(u16, u8)> {
         u16::from_str_radix(pid, 16).map_err(|_| invalid("Invalid HID product"))?,
         u8::from_str_radix(mi, 16).map_err(|_| invalid("Invalid HID interface"))?,
     ))
+}
+
+/// Equality-only Windows container identity for sibling HID interfaces. The
+/// representation is private to the core and is never a profile/device key.
+pub(crate) fn interface_container_id(path: &str) -> io::Result<[u8; 16]> {
+    let guid = container_for_path(path)?;
+    let mut bytes = [0_u8; 16];
+    bytes[..4].copy_from_slice(&guid.a.to_le_bytes());
+    bytes[4..6].copy_from_slice(&guid.b.to_le_bytes());
+    bytes[6..8].copy_from_slice(&guid.c.to_le_bytes());
+    bytes[8..].copy_from_slice(&guid.d);
+    Ok(bytes)
 }
 
 fn unique_match<T>(mut candidates: Vec<T>) -> io::Result<T> {

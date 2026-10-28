@@ -1330,7 +1330,7 @@ impl App {
 }
 
 /// Open a web page in the default browser.
-fn open_url(url: &str) {
+pub(crate) fn open_url(url: &str) {
     unsafe { ShellExecuteW(null_mut(), wide("open").as_ptr(), wide(url).as_ptr(), null(), null(), SW_SHOWNORMAL) };
 }
 

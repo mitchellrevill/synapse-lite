@@ -8,11 +8,13 @@ pub(super) enum Control {
     Enable,
     Mode(u8),
     Template(u8),
+    TemplateMenu,
     Zoom(bool, i8),
     Point(usize),
     Retry,
     RotationEnable,
     RotationSlider,
+    RotationTool,
 }
 pub(super) struct View {
     owner: Option<(String, String)>,
@@ -26,6 +28,10 @@ pub(super) struct View {
     pub(super) scroll: f64,
     gap_x: f64,
     gap_y: f64,
+    template_open: bool,
+    template_highlight: u8,
+    #[cfg(test)]
+    tool_requested: bool,
 }
 impl Default for View {
     fn default() -> Self {
@@ -41,6 +47,10 @@ impl Default for View {
             scroll: 0.,
             gap_x: 15.,
             gap_y: 0.25,
+            template_open: false,
+            template_highlight: 0,
+            #[cfg(test)]
+            tool_requested: false,
         }
     }
 }
@@ -50,6 +60,20 @@ fn owner(state: &State) -> Option<(String, String)> {
         return None;
     }
     Some((d["id"].as_str()?.into(), d["active"].as_str()?.into()))
+}
+pub(super) fn feedback_owner(state: &State) -> Option<(String, String)> {
+    let owner = owner(state)?;
+    if state.read_only_smoke
+        || state.restricted_actions
+        || state.calibration.loading
+        || state.pending > 0
+        || !state.advanced.available
+        || state.advanced.intent.state != 1
+        || state.advanced.owner.as_ref() != Some(&owner)
+    {
+        return None;
+    }
+    Some(owner)
 }
 pub(super) fn sync(state: &mut State) {
     let Some(current) = owner(state) else { return };
@@ -80,6 +104,7 @@ pub(super) fn sync(state: &mut State) {
     state.advanced.intent = intent;
     state.advanced.available = data["available"] == true;
     state.advanced.drag = None;
+    state.advanced.template_open = false;
     let rotation = &snapshot["rotation"];
     let mut intent =
         serde_json::from_value::<Rotation>(rotation["intent"].clone()).unwrap_or_default();
@@ -134,6 +159,22 @@ unsafe fn commit(state: &mut State) {
     calibration_view::request(state, true);
 }
 pub(super) unsafe fn action(state: &mut State, control: Control) {
+    if matches!(control, Control::RotationTool) {
+        if state.read_only_smoke
+            || state.restricted_actions
+            || !state.advanced.rotation_available
+            || !state.advanced.rotation.is_enabled
+        {
+            return;
+        }
+        #[cfg(not(test))]
+        crate::win::open_url("https://www.razer.com/technology/mouse-rotation-tool");
+        #[cfg(test)]
+        {
+            state.advanced.tool_requested = true;
+        }
+        return;
+    }
     if matches!(control, Control::Retry) {
         calibration_view::request(state, true);
         return;
@@ -167,8 +208,9 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
         }
         Control::Mode(mode) if on => {
             state.advanced.intent.mode = mode;
-            if mode == 3 && state.advanced.intent.points.is_empty() {
-                let seed = state.advanced.intent.template_id.min(2);
+            state.advanced.template_open = false;
+            if mode == 3 && state.advanced.intent.template_id < 3 {
+                let seed = state.advanced.intent.template_id;
                 if let Err(error) = state.advanced.intent.seed(seed) {
                     state.error(&error.to_string());
                     return;
@@ -177,11 +219,16 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
             commit(state);
         }
         Control::Template(template) if on && state.advanced.intent.mode == 3 => {
+            state.advanced.template_open = false;
             if let Err(error) = state.advanced.intent.seed(template) {
                 state.error(&error.to_string());
                 return;
             }
             commit(state);
+        }
+        Control::TemplateMenu if on && state.advanced.intent.mode == 3 => {
+            state.advanced.template_open = !state.advanced.template_open;
+            state.advanced.template_highlight = state.advanced.intent.template_id.min(3);
         }
         Control::Zoom(horizontal, delta) if on && state.advanced.intent.mode == 3 => {
             if horizontal {
@@ -298,6 +345,9 @@ pub(super) unsafe fn finish(state: &mut State) {
             {
                 Ok(samples) => {
                     state.advanced.intent.custom_sensor_accelerations = samples.to_vec();
+                    // Stock marks a dragged curve as None rather than leaving
+                    // a preset template that would reseed it on the next load.
+                    state.advanced.intent.template_id = 3;
                     commit(state);
                 }
                 Err(error) => {
@@ -316,8 +366,22 @@ pub(super) fn cancel(state: &mut State) {
         state.advanced.rotation = before;
     }
 }
-pub(super) unsafe fn wheel(state: &mut State, delta: i16) {
+pub(super) unsafe fn wheel(state: &mut State, delta: i16, control: bool) {
     if capturing(state) {
+        return;
+    }
+    state.advanced.template_open = false;
+    if control {
+        if enabled(state)
+            && state.advanced.intent.state == 1
+            && state.advanced.intent.mode == 3
+            && delta != 0
+        {
+            let direction = if delta > 0 { -1. } else { 1. };
+            state.advanced.gap_x = (state.advanced.gap_x + direction * 5.).clamp(5., 40.);
+            state.advanced.gap_y = (state.advanced.gap_y + direction * 0.25).clamp(0.25, 1.);
+        }
+        InvalidateRect(state.hwnd, null(), 0);
         return;
     }
     state.advanced.scroll = (state.advanced.scroll - f64::from(delta) / 120. * 60.)
@@ -442,23 +506,32 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>) {
     if custom {
         p.text(
             "SELECT A TEMPLATE",
-            cx + 580,
+            cx + 762,
             cy - 37,
             180,
             27,
-            p.fonts.small,
+            p.fonts.normal,
             TEXT,
+            DT_RIGHT,
+        );
+        p.fill(cx + 952, cy - 37, 150, 27, 0x222222);
+        p.text(
+            ["Classic", "Natural", "Jump", "None"]
+                [state.advanced.intent.template_id.min(3) as usize],
+            cx + 962,
+            cy - 37,
+            118,
+            27,
+            p.fonts.normal,
+            if on { TEXT } else { MUTED },
             DT_LEFT,
         );
-        for (i, label) in ["Classic", "Natural", "Jump", "None"].iter().enumerate() {
-            p.button(
-                label,
-                cx + 760 + i as i32 * 85,
-                cy - 37,
-                80,
-                Action::Advanced(Control::Template(i as u8)),
-                state.advanced.intent.template_id == i as u8,
-            );
+        p.image(state.icons.get("expand"), cx + 1082, cy - 28, 10, 10);
+        if enabled && on {
+            p.hits.push(Hit {
+                rect: p.rect(cx + 952, cy - 37, 150, 27),
+                action: Action::Advanced(Control::TemplateMenu),
+            });
         }
         for (horizontal, zx, zy) in [(false, cx, cy - 37), (true, cx + 1042, cy + 320)] {
             p.button(
@@ -566,17 +639,50 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>) {
                 } else {
                     GREEN
                 };
-                let mut previous = None;
+                let mut line = Vec::with_capacity(1011);
+                let mut fill = Vec::new();
+                let feedback = if on {
+                    state.mouse_feedback.value().clamp(0., max_x)
+                } else {
+                    0.
+                };
+                let physical = |(x, y): (f64, f64)| POINT {
+                    x: p.px(x.clamp(-32768., 32768.).round() as i32),
+                    y: p.px(y.clamp(-32768., 32768.).round() as i32),
+                };
+                if feedback > 0. {
+                    fill.push(physical((f64::from(cx) + 70., chart_y + 280.)));
+                }
                 for n in 0..=1010 {
                     let speed = f64::from(n) / 1010. * max_x;
                     if let Ok(ratio) = curve.interpolate(speed) {
-                        let current = map(Point { x: speed, y: ratio });
-                        if let Some(last) = previous {
-                            segment(p, last, current, line_color, 1);
+                        let current = physical(map(Point { x: speed, y: ratio }));
+                        line.push(current);
+                        if feedback > 0. && speed <= feedback {
+                            fill.push(current);
                         }
-                        previous = Some(current);
                     }
                 }
+                if feedback > 0. {
+                    if let Ok(ratio) = curve.interpolate(feedback) {
+                        fill.push(physical(map(Point {
+                            x: feedback,
+                            y: ratio,
+                        })));
+                        fill.push(physical((
+                            f64::from(cx) + 70. + feedback / max_x * 1010.,
+                            chart_y + 280.,
+                        )));
+                    }
+                }
+                image_render::draw_plot(
+                    p.dc,
+                    &line,
+                    &fill,
+                    line_color,
+                    if custom { 0x4de4790f } else { 0x4d44d62c },
+                    state.scale,
+                );
                 if custom {
                     for (index, point) in points.iter().enumerate() {
                         let (px, py) = map(*point);
@@ -637,6 +743,31 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>) {
             );
         }
     }
+    if on
+        && available
+        && !state.calibration.loading
+        && state.pending == 0
+        && state.mouse_feedback.error().is_some()
+    {
+        p.button(
+            "RETRY LIVE GRAPH",
+            cx,
+            cy + 320,
+            150,
+            Action::Advanced(Control::Retry),
+            false,
+        );
+        p.text(
+            "Speed feedback unavailable",
+            cx + 160,
+            cy + 320,
+            300,
+            27,
+            p.fonts.small,
+            MUTED,
+            DT_LEFT,
+        );
+    }
     // Rotation uses its own source-backed controller; never simulate it with cursor hooks.
     let rx = ((f64::from(state.width) / f64::from(state.scale) - 600.) / 2.).round() as i32;
     let ry = (723. - state.advanced.scroll).round() as i32;
@@ -667,11 +798,61 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>) {
         rx + 40,
         ry + 72,
         520,
-        40,
+        17,
         p.fonts.normal,
         TEXT,
         DT_LEFT,
     );
+    p.text(
+        "Use",
+        rx + 40,
+        ry + 89,
+        26,
+        17,
+        p.fonts.normal,
+        TEXT,
+        DT_LEFT,
+    );
+    p.text(
+        "this tool",
+        rx + 66,
+        ry + 89,
+        48,
+        17,
+        p.fonts.normal,
+        if state.advanced.rotation.is_enabled {
+            TEXT
+        } else {
+            MUTED
+        },
+        DT_LEFT,
+    );
+    p.line(
+        rx + 66,
+        ry + 105,
+        47,
+        if state.advanced.rotation.is_enabled {
+            TEXT
+        } else {
+            MUTED
+        },
+    );
+    p.text(
+        "to find your suitable angle.",
+        rx + 118,
+        ry + 89,
+        440,
+        17,
+        p.fonts.normal,
+        TEXT,
+        DT_LEFT,
+    );
+    if state.advanced.rotation_available && state.advanced.rotation.is_enabled {
+        p.hits.push(Hit {
+            rect: p.rect(rx + 66, ry + 89, 48, 17),
+            action: Action::Advanced(Control::RotationTool),
+        });
+    }
     let rotation = &state.advanced.rotation;
     let rotation_enabled = allowed(state) && state.advanced.rotation_available;
     p.button(
@@ -779,9 +960,97 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>) {
             );
         }
     }
+    if state.advanced.template_open && enabled && on && custom {
+        for (index, label) in ["Classic", "Natural", "Jump", "None"].iter().enumerate() {
+            let row_y = cy - 10 + index as i32 * 27;
+            p.fill(
+                cx + 952,
+                row_y,
+                150,
+                27,
+                if state.advanced.template_highlight as usize == index {
+                    0x393939
+                } else {
+                    0x222222
+                },
+            );
+            p.text(
+                label,
+                cx + 962,
+                row_y,
+                130,
+                27,
+                p.fonts.normal,
+                if state.advanced.intent.template_id as usize == index {
+                    GREEN
+                } else {
+                    TEXT
+                },
+                DT_LEFT,
+            );
+            p.hits.push(Hit {
+                rect: p.rect(cx + 952, row_y, 150, 27),
+                action: Action::Advanced(Control::Template(index as u8)),
+            });
+        }
+    }
     RestoreDC(p.dc, saved);
 }
 #[cfg(test)]
 pub(super) fn diagnostics(state: &State) -> Value {
-    json!({"available":state.advanced.available,"intent":state.advanced.intent,"drag":capturing(state),"scroll":state.advanced.scroll,"rotation":state.advanced.rotation,"rotation_available":state.advanced.rotation_available})
+    json!({"available":state.advanced.available,"intent":state.advanced.intent,"drag":capturing(state),"scroll":state.advanced.scroll,"rotation":state.advanced.rotation,"rotation_available":state.advanced.rotation_available,"zoom":[state.advanced.gap_x,state.advanced.gap_y],"template_open":state.advanced.template_open,"tool_requested":state.advanced.tool_requested})
+}
+
+pub(super) unsafe fn outside(state: &mut State, point: POINT) {
+    if !state.advanced.template_open {
+        return;
+    }
+    let (card_x, chart_y) = geometry(state);
+    let rect = RECT {
+        left: state.px((card_x + 992.).round() as i32),
+        top: state.px((chart_y - 37.).round() as i32),
+        right: state.px((card_x + 1142.).round() as i32),
+        bottom: state.px((chart_y + 98.).round() as i32),
+    };
+    if PtInRect(&rect, point) == 0 {
+        state.advanced.template_open = false;
+        InvalidateRect(state.hwnd, null(), 0);
+    }
+}
+pub(super) unsafe fn hover(state: &mut State, point: POINT) {
+    if !state.advanced.template_open {
+        return;
+    }
+    let (card_x, chart_y) = geometry(state);
+    let x = f64::from(point.x) / f64::from(state.scale);
+    let y = f64::from(point.y) / f64::from(state.scale);
+    if x >= card_x + 992. && x < card_x + 1142. && y >= chart_y - 10. && y < chart_y + 98. {
+        let row = ((y - chart_y + 10.) / 27.).floor() as u8;
+        if state.advanced.template_highlight != row {
+            state.advanced.template_highlight = row;
+            InvalidateRect(state.hwnd, null(), 0);
+        }
+    }
+}
+pub(super) unsafe fn template_key(state: &mut State, key: usize) -> bool {
+    if !state.advanced.template_open {
+        return false;
+    }
+    match key as u16 {
+        0x1b => state.advanced.template_open = false,
+        0x26 => state.advanced.template_highlight = (state.advanced.template_highlight + 3) % 4,
+        0x28 => state.advanced.template_highlight = (state.advanced.template_highlight + 1) % 4,
+        0x0d => {
+            let selected = state.advanced.template_highlight;
+            action(state, Control::Template(selected));
+        }
+        0x09 => {
+            state.advanced.template_open = false;
+            InvalidateRect(state.hwnd, null(), 0);
+            return false;
+        }
+        _ => return false,
+    }
+    InvalidateRect(state.hwnd, null(), 0);
+    true
 }

@@ -95,9 +95,32 @@ pub(super) unsafe fn draw_rotated(dc:HDC,bitmap:*mut gp::GpBitmap,rect:RECT,widt
     gp::GdipDeleteGraphics(graphics);
 }
 
+/// One batched antialiased curve and translucent feedback polygon, rather than
+/// creating a separate GDI pen for every segment on every feedback frame.
+pub(super) unsafe fn draw_plot(dc:HDC,line:&[POINT],fill:&[POINT],line_color:u32,fill_color:u32,stroke:f32){
+    if line.len()<2{return;}
+    let mut graphics=null_mut();if gp::GdipCreateFromHDC(dc,&mut graphics)!=gp::Ok{return;}
+    gp::GdipSetSmoothingMode(graphics,gp::SmoothingModeAntiAlias);
+    if fill.len()>=3 {
+        let polygon:Vec<_>=fill.iter().map(|p|gp::Point{X:p.x,Y:p.y}).collect();let mut brush=null_mut();
+        if gp::GdipCreateSolidFill(fill_color,&mut brush)==gp::Ok{gp::GdipFillPolygonI(graphics,brush.cast(),polygon.as_ptr(),polygon.len() as i32,gp::FillModeWinding);gp::GdipDeleteBrush(brush.cast());}
+    }
+    let points:Vec<_>=line.iter().map(|p|gp::Point{X:p.x,Y:p.y}).collect();let mut pen=null_mut();
+    if gp::GdipCreatePen1(0xff000000|line_color,stroke,gp::UnitPixel,&mut pen)==gp::Ok{gp::GdipDrawLinesI(graphics,pen,points.as_ptr(),points.len() as i32);gp::GdipDeletePen(pen);}
+    gp::GdipDeleteGraphics(graphics);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn live_plot_alpha_preserves_the_grid_background_and_respects_the_chart_clip(){unsafe{
+        let _runtime=Runtime::start().unwrap();let mut info:BITMAPINFO=std::mem::zeroed();info.bmiHeader.biSize=std::mem::size_of::<BITMAPINFOHEADER>() as u32;info.bmiHeader.biWidth=40;info.bmiHeader.biHeight=-40;info.bmiHeader.biPlanes=1;info.bmiHeader.biBitCount=32;let mut bits=null_mut();let surface=CreateDIBSection(null_mut(),&info,DIB_RGB_COLORS,&mut bits,null_mut(),0);assert!(!surface.is_null());let dc=CreateCompatibleDC(null_mut());let old=SelectObject(dc,surface);let brush=CreateSolidBrush(rgb(0x111111));let r=RECT{left:0,top:0,right:40,bottom:40};FillRect(dc,&r,brush);IntersectClipRect(dc,10,10,30,30);
+        draw_plot(dc,&[POINT{x:0,y:11},POINT{x:39,y:11}],&[POINT{x:0,y:0},POINT{x:39,y:0},POINT{x:39,y:39},POINT{x:0,y:39}],GREEN,0x4d44d62c,1.);
+        SelectClipRgn(dc,null_mut());let outside=GetPixel(dc,5,20);let inside=GetPixel(dc,20,20);SelectObject(dc,old);DeleteObject(brush);DeleteObject(surface);DeleteDC(dc);
+        assert_eq!(outside,rgb(0x111111));let channels=[inside&255,(inside>>8)&255,(inside>>16)&255];for(actual,expected)in channels.into_iter().zip([32u32,76,25]){assert!(actual.abs_diff(expected)<=1,"Unexpected live fill alpha: {channels:?}");}
+    }}
 
     #[test]
     fn fractional_scaling_filters_alpha_edges_instead_of_stepping() {

@@ -81,11 +81,12 @@ firmware filter SET/restore remain unverified.
 
 ## Remaining acceptance
 
-This is functional native coverage, not pixel-for-pixel acceptance. Template
-selection is currently a compact button group rather than the stock dropdown;
-chart labels, switches, tooltips, disabled fading and exact font baselines need
-comparison. Live mouse-speed fill, Ctrl+wheel zoom and the linked Rotation tool
-are not implemented in this checkpoint. Receiver/filter SET/restore, stock
+This is functional native coverage, not pixel-for-pixel acceptance. The template
+dropdown, live selected-mouse speed fill, Ctrl+wheel zoom and Rotation tool link
+are now implemented; see [Advanced feedback](ADVANCED-FEEDBACK.md). Dragging marks
+a curve as None to preserve its source save/reload semantics. Chart labels,
+switches, help/tooltips, disabled fading and exact font baselines still need
+comparison. Receiver/filter SET/restore, stock
 re-import acceptance, optical tracking, unplug/replug and sleep/wake remain to
 verify. Connection/profile replay is covered by four isolated engine tests;
 physical reconnect behavior is a separate acceptance item.

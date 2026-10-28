@@ -35,6 +35,8 @@ pub mod sensor_curve;
 pub mod sensor_rotation;
 #[cfg(windows)]
 pub mod sensor_rotation_control;
+#[cfg(windows)]
+pub mod mouse_input_identity;
 pub mod net;
 pub mod ornata_frame;
 pub mod ornata_identity;

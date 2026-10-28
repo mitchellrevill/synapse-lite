@@ -45,6 +45,9 @@ mod host_tabs;
 mod host_tab_model;
 mod calibration_view;
 mod advanced_view;
+mod mouse_speed;
+mod mouse_feedback;
+mod mouse_input_worker;
 mod performance_layout;
 mod performance_view;
 mod power_layout;
@@ -495,7 +498,7 @@ struct Reply {
 }
 
 enum WorkerReply {
-    Sensor((String, String), Result<Value, String>),
+    Sensor((String, String), Result<(Value,mouse_feedback::BindingResult), String>),
     User(Reply),
     CachedLighting(runtime_status::Response),
 }
@@ -517,7 +520,13 @@ fn worker(
         let job = match job {
             Job::SensorRead(id, profile) => {
                 let result=engine.lock().map_err(|_|"Device worker is unavailable".to_string())
-                    .and_then(|mut engine|server::mouse_sensor_snapshot(&mut engine,&id,&profile).map_err(|e|e.to_string()));
+                    .and_then(|mut engine|{
+                        let view=server::mouse_sensor_snapshot(&mut engine,&id,&profile).map_err(|e|e.to_string())?;
+                        let binding=if view["dynamic"]["available"]==true&&view["dynamic"]["raw"]["state"]==1 {
+                            engine.devices().iter().find(|d|d.key()==id).ok_or_else(||"Selected mouse disconnected".to_string()).and_then(|device|secbird_core::mouse_input_identity::discover(device).map_err(|e|e.to_string()))
+                        }else{Err("Live graph is inactive".into())};
+                        Ok((view,binding))
+                    });
                 if replies.send(WorkerReply::Sensor((id,profile),result)).is_err() { break; }
                 continue;
             }
@@ -871,6 +880,7 @@ impl Drop for Bitmap {
 struct State {
     calibration: calibration_view::View,
     advanced: advanced_view::View,
+    mouse_feedback: mouse_feedback::Observer,
     host_tabs: RefCell<host_tabs::View>,
     customize_background: RefCell<dot_background::Cache>,
     hwnd: HWND,
@@ -1726,7 +1736,10 @@ impl State {
             let reply = match message {
                 WorkerReply::Sensor(owner,result) => {
                     self.pending=self.pending.saturating_sub(1);
-                    calibration_view::receive(self,owner,result);
+                    match result {
+                        Ok((view,binding))=>{calibration_view::receive(self,owner.clone(),Ok(view));mouse_feedback::receive(self,owner,binding);}
+                        Err(error)=>{calibration_view::receive(self,owner,Err(error));mouse_feedback::stop(self);}
+                    }
                     continue;
                 }
                 WorkerReply::User(reply) => reply,
@@ -2176,7 +2189,7 @@ impl State {
                 self.rebuild_fields();
                 calibration_view::request(self,true);
             }
-            Action::Refresh => self.queue(Job::Rescan),
+            Action::Refresh => {mouse_feedback::stop(self);self.calibration.owner=None;self.queue(Job::Rescan);}
             Action::ProfileMenu => {
                 self.profile_open = !self.profile_open;
                 self.profile_offset = 0;
@@ -2382,6 +2395,7 @@ impl State {
                 );
             }
         }
+        mouse_feedback::reconcile(self);
         InvalidateRect(self.hwnd, null(), 0);
     }
 
@@ -3486,6 +3500,7 @@ unsafe extern "system" fn window_proc(
             let pointer = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut RefCell<State>;
             if !pointer.is_null() {
                 if let Ok(mut state) = (*pointer).try_borrow_mut() {
+                    mouse_feedback::stop(&mut state);
                     if state.assignment.draft.as_ref().is_some_and(|d| d.dirty) {
                         state.assignment.pending = Some(assignment_model::Transition::External);
                         state.assignment_next = Some(Box::new(Action::Close));
@@ -3521,6 +3536,8 @@ unsafe extern "system" fn window_proc(
             return 0;
         }
         WM_DESTROY => {
+            let pointer=GetWindowLongPtrW(hwnd,GWLP_USERDATA) as *mut RefCell<State>;
+            if !pointer.is_null(){if let Ok(mut state)=(*pointer).try_borrow_mut(){mouse_feedback::stop(&mut state);}}
             WINDOW.store(0, Ordering::Release);
             KillTimer(hwnd, RESPONSE_TIMER);
             KillTimer(hwnd, SMOKE_TIMER);
@@ -3538,6 +3555,11 @@ unsafe extern "system" fn window_proc(
     let pointer = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut RefCell<State>;
     if pointer.is_null() {
         return DefWindowProcW(hwnd, message, wparam, lparam);
+    }
+    if message==mouse_feedback::NOTIFY {
+        if let Ok(mut state)=(*pointer).try_borrow_mut(){mouse_feedback::notification(&mut state);}
+        else{PostMessageW(hwnd,mouse_feedback::NOTIFY,0,0);}
+        return 0;
     }
     if message == FAILURE_DIALOG {
         let message = match (*pointer).try_borrow_mut() {
@@ -3793,7 +3815,7 @@ unsafe extern "system" fn window_proc(
                 "pending":state.pending,
                 "brightness":state.lighting.intent.brightness.as_ref().map(|b|b.value),
                 "status":state.status,"failed":state.failed,
-                "host_tabs":host_tabs::diagnostics(&state),"calibration":calibration_view::diagnostics(&state),"advanced":advanced_view::diagnostics(&state)
+                "host_tabs":host_tabs::diagnostics(&state),"calibration":calibration_view::diagnostics(&state),"advanced":advanced_view::diagnostics(&state),"mouse_feedback":mouse_feedback::diagnostics(&state)
             });
         }
         return 0;
@@ -4027,11 +4049,14 @@ unsafe extern "system" fn window_proc(
             state.height = client.bottom;
             state.hits.clear();
             state.rebuild_fields();
+            mouse_feedback::reconcile(&mut state);
             InvalidateRect(hwnd, null(), 0);
             0
         }
+        WM_SHOWWINDOW => {if wparam==0{mouse_feedback::stop(&mut state);}else{mouse_feedback::reconcile(&mut state);}0}
         WM_ERASEBKGND => 1,
         WM_PAINT => {
+            mouse_feedback::reconcile(&mut state);
             let mut ps: PAINTSTRUCT = std::mem::zeroed();
             let dc = BeginPaint(hwnd, &mut ps);
             let buffer = CreateCompatibleDC(dc);
@@ -4091,6 +4116,7 @@ unsafe extern "system" fn window_proc(
         WM_MOUSEMOVE if advanced_view::capturing(&state) => {
             advanced_view::pointer(&mut state,POINT{x:(lparam as u32 & 0xffff) as i16 as i32,y:((lparam as u32>>16)&0xffff) as i16 as i32});0
         }
+        WM_MOUSEMOVE if state.tab==Tab::Advanced=>{advanced_view::hover(&mut state,POINT{x:(lparam as u32&0xffff) as i16 as i32,y:((lparam as u32>>16)&0xffff) as i16 as i32});0}
         WM_MOUSEMOVE if state.lighting_capture => {
             let point = state.lighting_point(POINT {
                 x: (lparam as u32 & 0xffff) as i16 as i32,
@@ -4214,6 +4240,7 @@ unsafe extern "system" fn window_proc(
                 x: (lparam as u32 & 0xffff) as i16 as i32,
                 y: ((lparam as u32 >> 16) & 0xffff) as i16 as i32,
             };
+            advanced_view::outside(&mut state,point);
             let logical = state.lighting_point(point);
             let update = lighting_view::outside(&mut state, logical);
             state.lighting_update(update);
@@ -4296,7 +4323,7 @@ unsafe extern "system" fn window_proc(
             0
         }
         WM_MOUSEWHEEL if state.tab==Tab::Advanced => {
-            advanced_view::wheel(&mut state,(wparam>>16) as u16 as i16);0
+            advanced_view::wheel(&mut state,(wparam>>16) as u16 as i16,wparam&0x0008!=0);0
         }
         WM_MOUSEWHEEL if state.tab == Tab::Performance && state.performance.is_some() => {
             if let Some((g, _)) = performance_view::layout(&state) {
@@ -4421,6 +4448,7 @@ unsafe extern "system" fn window_proc(
             0
         }
         WM_KEYDOWN => {
+            if state.tab==Tab::Advanced&&advanced_view::template_key(&mut state,wparam){return 0;}
             if wparam == 27 && state.assignment.draft.is_some() {
                 let control = if state.assignment.pending.is_some() {
                     assignment_view::Control::Dismiss
@@ -4619,6 +4647,7 @@ fn run_window(
         let mut state = Box::new(RefCell::new(State {
             calibration: calibration_view::View::default(),
             advanced: advanced_view::View::default(),
+            mouse_feedback: mouse_feedback::Observer::default(),
             host_tabs: RefCell::new(host_tabs::View::load()),
             customize_background: RefCell::new(dot_background::Cache::default()),
             hwnd: null_mut(),

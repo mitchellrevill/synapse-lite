@@ -1,0 +1,15 @@
+{
+  "accepted_records": 623,
+  "injected_movement": false,
+  "movement_observed": true,
+  "paths_or_serials_emitted": false,
+  "peak_reported_count_per_ms": 4.689815596450748,
+  "pid": "00C4",
+  "query_only_device": true,
+  "registration_flags": 8448,
+  "registration_restored": true,
+  "registration_verified": true,
+  "set_count": 0,
+  "stop_speed_zero": true,
+  "worker_ended": true
+}
