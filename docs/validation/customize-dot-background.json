@@ -1,0 +1,138 @@
+{
+  "authority": "recovered source CSS, independent network-blocked browser raster versus native Rust raster",
+  "vendor_javascript_executed": false,
+  "browser": "156.0.4314.42",
+  "source_sha256": "cb6c673798b7e9bc844829d41cea64b5a0ab2d389f8863604df3bdcccc68138c",
+  "rules": [
+    ".dot-bg{background:linear-gradient(90deg,#222 20px,#0000 1%) 50%,linear-gradient(#222 20px,#0000 1%) 50%,#5d5d5d;background-size:22px 22px;position:relative}",
+    ".dot-bg .dim-corner{background:radial-gradient(#0000,#222);height:100%;left:0;position:absolute;top:0;width:100%;z-index:0}"
+  ],
+  "rows": [
+    {
+      "fixture": "source-770-1",
+      "width": 770,
+      "height": 340,
+      "maximum_channel_error": 1,
+      "mean_channel_error": 0.27118029029793733,
+      "pixels_over_2": 0
+    },
+    {
+      "fixture": "source-1000-1",
+      "width": 1000,
+      "height": 340,
+      "maximum_channel_error": 1,
+      "mean_channel_error": 0.24036470588235295,
+      "pixels_over_2": 0
+    },
+    {
+      "fixture": "source-1220-1",
+      "width": 1220,
+      "height": 340,
+      "maximum_channel_error": 1,
+      "mean_channel_error": 0.24044117647058824,
+      "pixels_over_2": 0
+    },
+    {
+      "fixture": "source-770-1.25",
+      "width": 963,
+      "height": 425,
+      "maximum_channel_error": 11,
+      "mean_channel_error": 0.2731073239264553,
+      "pixels_over_2": 425
+    },
+    {
+      "fixture": "source-1000-1.25",
+      "width": 1250,
+      "height": 425,
+      "maximum_channel_error": 2,
+      "mean_channel_error": 0.2665694117647059,
+      "pixels_over_2": 0
+    },
+    {
+      "fixture": "source-1220-1.25",
+      "width": 1525,
+      "height": 425,
+      "maximum_channel_error": 2,
+      "mean_channel_error": 0.26610607521697205,
+      "pixels_over_2": 0
+    },
+    {
+      "fixture": "source-770-1.5",
+      "width": 1155,
+      "height": 510,
+      "maximum_channel_error": 2,
+      "mean_channel_error": 0.28840505899329427,
+      "pixels_over_2": 0
+    },
+    {
+      "fixture": "source-1000-1.5",
+      "width": 1500,
+      "height": 510,
+      "maximum_channel_error": 2,
+      "mean_channel_error": 0.2566718954248366,
+      "pixels_over_2": 0
+    },
+    {
+      "fixture": "source-1220-1.5",
+      "width": 1830,
+      "height": 510,
+      "maximum_channel_error": 2,
+      "mean_channel_error": 0.25647808850316084,
+      "pixels_over_2": 0
+    },
+    {
+      "fixture": "source-770-2",
+      "width": 1540,
+      "height": 680,
+      "maximum_channel_error": 2,
+      "mean_channel_error": 0.2803409090909091,
+      "pixels_over_2": 0
+    },
+    {
+      "fixture": "source-1000-2",
+      "width": 2000,
+      "height": 680,
+      "maximum_channel_error": 2,
+      "mean_channel_error": 0.2803205882352941,
+      "pixels_over_2": 0
+    },
+    {
+      "fixture": "source-1220-2",
+      "width": 2440,
+      "height": 680,
+      "maximum_channel_error": 2,
+      "mean_channel_error": 0.28023445033751204,
+      "pixels_over_2": 0
+    }
+  ],
+  "pixel_identity_proven": false,
+  "product_source": [
+    {
+      "product": 196,
+      "css_sha256": "cb6c673798b7e9bc844829d41cea64b5a0ab2d389f8863604df3bdcccc68138c",
+      "rules": [
+        ".config-wrapper{height:340px;margin:0 auto auto;max-width:1220px;min-width:770px;width:100%}",
+        ".dot-bg{background:linear-gradient(90deg,#222 20px,#0000 1%) 50%,linear-gradient(#222 20px,#0000 1%) 50%,#5d5d5d;background-size:22px 22px;position:relative}",
+        ".dot-bg .dim-corner{background:radial-gradient(#0000,#222);height:100%;left:0;position:absolute;top:0;width:100%;z-index:0}"
+      ],
+      "renderer_sha256": "f99b1f88ca9496a77cab258d05814a312b876873cb5c586841c28a732db78c42",
+      "class_offset_utf8": 5355448
+    },
+    {
+      "product": 605,
+      "css_sha256": "d8038bcd55d84e4f57b6c09057fe78e5c4a2495def92e0e259b2b72f861746e4",
+      "rules": [
+        ".config-wrapper{height:340px}",
+        ".dot-bg{background:linear-gradient(90deg,#222 20px,#0000 1%) 50%,linear-gradient(#222 20px,#0000 1%) 50%,#5d5d5d;background-size:22px 22px;position:relative}",
+        ".dot-bg .dim-corner{background:radial-gradient(#0000,#222);height:100%;left:0;position:absolute;top:0;width:100%;z-index:0}"
+      ],
+      "renderer_sha256": "307e2b199037ed53a8fde90d76fc67a9a3766a9361fb152e7820d8bf05f19c65",
+      "class_offset_utf8": 8374375
+    }
+  ],
+  "mouse_cycle_alpha": {
+    "source_sha256": "7aed6d5cfe69c0e81d680d49ffda722253c17461f65fea40bb3ce6f3f87a8ba7",
+    "output_sha256": "43e002def50c80444da697732c2efd4a8a2bc5b7c933aff0473770ea5debec91",
+    "premultiplied_source_pixels_match": true
+  }
+}

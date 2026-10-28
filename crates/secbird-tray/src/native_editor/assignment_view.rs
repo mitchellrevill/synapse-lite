@@ -372,6 +372,10 @@ pub(super) unsafe fn paint_customize(s: &State, p: &mut Painter) -> bool {
     let (w, h) = dimensions(s);
     let clip = SaveDC(p.dc);
     IntersectClipRect(p.dc, 0, p.px(128), s.width, s.height);
+    let center = geo::keyboard_center(w, s.assignment.drawer) - s.assignment.scroll_x;
+    let width = (w - if s.assignment.drawer { 230.0 } else { 0.0 }).clamp(770.0, 1220.0);
+    let background = r(center - width / 2.0, 148.0 - s.assignment.scroll_y, width, 340.0);
+    s.customize_background.borrow_mut().draw(p.dc, box_px(p, background), background, p.scale as f64);
     if s.device().is_some_and(|d| d["pid"] == "025D") {
         let v = viewport(s);
         if s.keyboard_customize.is_none() || s.keyboard_layout.is_none() {
@@ -1514,7 +1518,7 @@ pub(super) unsafe fn repeat(s: &mut State) {
 
 #[cfg(test)]
 pub(super) fn diagnostics(s: &State) -> Value {
-    json!({"drawer":s.assignment.drawer,"drawer_scroll":s.assignment.drawer_scroll,"drawer_count":visible_inputs(s).len(),"customized_only":s.assignment.customized_only,"filter_open":s.assignment.filter_open,"rail_expanded":s.assignment.draft.as_ref().is_some_and(|d|d.rail_expanded),"rail_scroll":s.assignment.draft.as_ref().map(|d|d.rail_scroll),"source_icons":s.icons.keys().filter(|key|key.starts_with("assignment-")).count()})
+    json!({"background_ready":s.customize_background.borrow().ready(),"drawer":s.assignment.drawer,"drawer_scroll":s.assignment.drawer_scroll,"drawer_count":visible_inputs(s).len(),"customized_only":s.assignment.customized_only,"filter_open":s.assignment.filter_open,"rail_expanded":s.assignment.draft.as_ref().is_some_and(|d|d.rail_expanded),"rail_scroll":s.assignment.draft.as_ref().map(|d|d.rail_scroll),"source_icons":s.icons.keys().filter(|key|key.starts_with("assignment-")).count()})
 }
 #[cfg(test)]
 pub(super) unsafe fn font_diagnostics(s: &State) -> Value {

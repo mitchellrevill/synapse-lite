@@ -1760,6 +1760,9 @@ fn native_assignment_mouse_labels_and_drawer_have_source_hit_targets() {
                 let right = g.buttons[1];
                 lighting_click(hwnd, right.x + right.width / 2.0, right.y + 15.0, scale);
                 let opened = query();
+                if opened["view"]["background_ready"] != true {
+                    return Err("Mouse Customize did not render its source background".into());
+                }
                 if opened["input"] != "RightClick" || opened["category"] != "DEFAULT" {
                     return Err(format!(
                         "Source right label did not open correct input: {opened}"
@@ -1779,6 +1782,9 @@ fn native_assignment_mouse_labels_and_drawer_have_source_hit_targets() {
                 // source drawer key binding region, not guessed mouse-image boxes.
                 lighting_click(hwnd, 100.0, 195.0 + 50.0 + 25.0, scale);
                 let drawer = query();
+                if drawer["view"]["background_ready"] != true {
+                    return Err("Opening the drawer lost the source background".into());
+                }
                 if drawer["input"] != "RightClick" || drawer["popup"]["x"] != 230.0 {
                     return Err(format!("Drawer source anchor failed: {drawer}"));
                 }

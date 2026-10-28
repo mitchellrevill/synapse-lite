@@ -66,6 +66,7 @@ def main():
     # The keyboard's model art is not a claim about the user's physical key layout.
     for product, pattern, name in (
         ("196", "prd-3x.311c6ba5.avif*", "mouse.bmp"),
+        ("196", "litat2m-profile-button-3x.e01e76b1.avif*", "icon-assignment-mouse-cycle.bmp"),
         ("605", "prd.ecc687ec.avif*", "keyboard.bmp"),
     ):
         source = unique(products / product / "ui/static/media", pattern)

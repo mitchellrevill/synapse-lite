@@ -35,6 +35,7 @@ mod assignment_view;
 mod color_editor_layout;
 mod color_editor_view;
 mod feedback;
+mod dot_background;
 #[cfg(test)]
 mod interaction_tests;
 mod lighting_layout;
@@ -844,6 +845,7 @@ impl Drop for Bitmap {
 }
 
 struct State {
+    customize_background: RefCell<dot_background::Cache>,
     hwnd: HWND,
     scale: f32,
     width: i32,
@@ -1521,6 +1523,7 @@ impl State {
             "fidelity": "partial source-derived native port; pixel identity unproven"
         });
         report["source_text_fallback"] = json!(self.fonts.source_text.diagnostic());
+        report["customize_background_cached"] = json!(self.customize_background.borrow().ready());
         report["source_text_cached_layouts"] = json!(self.fonts.source_text.metrics().cached_layouts);
         report["active_native_runtime"] = active_runtime.unwrap_or(Value::Null);
         report["uniform_worker_disabled"] = json!(!self.lighting_probe);
@@ -4525,6 +4528,7 @@ fn run_window(
             .spawn(move || worker(engine, jobs_rx, replies_tx))
             .map_err(|e| e.to_string())?;
         let mut state = Box::new(RefCell::new(State {
+            customize_background: RefCell::new(dot_background::Cache::default()),
             hwnd: null_mut(),
             scale: initial_scale,
             width: 1280,
