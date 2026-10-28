@@ -1,7 +1,7 @@
 //! Local composition editor. File work bypasses the device engine entirely.
 use super::*;
 use secbird_core::studio::{
-    document::{Draft, Kind, SaveCheckpoint},
+    document::{Draft, Kind, SaveCheckpoint, SelectedColor},
     Archive,
 };
 use std::{collections::BTreeMap, fs::File, os::windows::ffi::OsStringExt};
@@ -10,6 +10,7 @@ use windows_sys::Win32::UI::Controls::Dialogs::*;
 pub(super) const DIALOG: u32 = WM_APP + 112;
 pub(super) const EXIT_REQUEST: u32 = WM_APP + 114;
 pub(super) const NAME: u16 = 2100;
+pub(super) const COLOR: u16 = 2101;
 
 #[derive(Clone)]
 pub(super) enum Control {
@@ -27,6 +28,8 @@ pub(super) enum Control {
     Undo,
     Redo,
     Zoom(i32),
+    ApplyColor,
+    Erase,
 }
 #[derive(Clone, Copy)]
 enum Next {
@@ -48,6 +51,8 @@ pub(super) struct View {
     expanded: BTreeMap<String, bool>,
     renaming: bool,
     name: String,
+    color: String,
+    selected_color: Option<SelectedColor>,
     dropdown: bool,
     profile_scroll: usize,
     scroll: usize,
@@ -195,6 +200,41 @@ impl View {
             .map(String::as_str)
             .unwrap_or("Chroma Studio")
     }
+    fn is_static(&self) -> bool {
+        self.draft.as_ref().is_some_and(|draft| {
+            draft.layers().iter().any(|row| {
+                Some(&row.id) == self.selected.as_ref()
+                    && row.kind == Kind::Layer
+                    && row.effect.as_deref() == Some("static")
+            })
+        })
+    }
+}
+
+pub(super) fn selection_changed(state: &mut State) {
+    let view = &mut state.studio;
+    view.selected_color = None;
+    if !view.is_static() {
+        return;
+    }
+    let result = view
+        .draft
+        .as_ref()
+        .unwrap()
+        .static_selection_color(view.selected.as_deref().unwrap(), &view.canvas.selection());
+    match result {
+        Ok(value) => {
+            view.selected_color = Some(value);
+            view.color = match value {
+                SelectedColor::Uniform(Some(color)) => format!("{color:06X}"),
+                _ => "00FF00".into(),
+            };
+        }
+        Err(error) => {
+            view.status = error.to_string();
+            view.failed = true;
+        }
+    }
 }
 fn error(state: &mut State, message: impl Into<String>) {
     state.studio.status = message.into();
@@ -262,6 +302,7 @@ unsafe fn proceed(state: &mut State, next: Next) {
             if let Err(message) = state.studio.profile(index) {
                 error(state, message);
             }
+            selection_changed(state);
         }
         Next::Close => {
             PostMessageW(state.hwnd, WM_CLOSE, 0, 0);
@@ -338,6 +379,10 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
         redraw(state);
         return;
     }
+    let update_color = matches!(
+        &control,
+        Control::Select(_) | Control::Undo | Control::Redo | Control::ApplyColor | Control::Erase
+    );
     match control {
         Control::Enter => {}
         Control::Open => transition(state, Next::Open),
@@ -384,6 +429,45 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
             finish_name(state);
         }
         Control::CancelRename => state.studio.renaming = false,
+        Control::ApplyColor | Control::Erase => {
+            let erase = matches!(control, Control::Erase);
+            let selection = state.studio.canvas.selection();
+            let result = (|| -> Result<bool, String> {
+                let id = state
+                    .studio
+                    .selected
+                    .as_deref()
+                    .ok_or("Select an effect layer")?;
+                let draft = state
+                    .studio
+                    .draft
+                    .as_mut()
+                    .ok_or("Open a composition first")?;
+                if erase {
+                    draft.erase_leds(id, &selection).map_err(|e| e.to_string())
+                } else {
+                    let text = state.studio.color.trim().trim_start_matches('#');
+                    if text.len() != 6 {
+                        return Err("Enter a six-digit RGB colour".into());
+                    }
+                    let color = u32::from_str_radix(text, 16)
+                        .map_err(|_| "Enter a six-digit RGB colour".to_string())?;
+                    draft
+                        .set_static_color(id, &selection, color)
+                        .map_err(|e| e.to_string())
+                }
+            })();
+            match result {
+                Ok(changed) => {
+                    if changed {
+                        state.studio.status =
+                            "Selected LEDs updated · save the composition to keep changes".into();
+                    }
+                    state.studio.failed = false;
+                }
+                Err(message) => error(state, message),
+            }
+        }
         Control::Zoom(steps) => {
             state.studio.canvas.zoom(
                 steps,
@@ -416,6 +500,9 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
                 error(state, message);
             }
         }
+    }
+    if update_color {
+        selection_changed(state);
     }
     redraw(state);
 }
@@ -468,6 +555,7 @@ pub(super) unsafe fn receive(state: &mut State, response: Response) {
     };
     match result {
         Ok(()) => {
+            selection_changed(state);
             if let Some(next) = state.studio.next.take() {
                 proceed(state, next);
             }
@@ -572,6 +660,7 @@ pub(super) unsafe fn dialog(hwnd: HWND, pointer: *mut RefCell<State>, kind: usiz
                 if let Some(draft) = &mut state.studio.draft {
                     draft.discard();
                 }
+                selection_changed(&mut state);
                 if let Some(next) = state.studio.next.take() {
                     proceed(&mut state, next);
                 }
@@ -626,7 +715,20 @@ pub(super) unsafe fn dialog(hwnd: HWND, pointer: *mut RefCell<State>, kind: usiz
 }
 
 pub(super) unsafe fn rebuild_fields(state: &mut State) {
-    if !state.studio.open || !state.studio.renaming {
+    if !state.studio.open {
+        return;
+    }
+    if state.studio.is_static() {
+        let text = state.studio.color.clone();
+        let right = (state.width as f32 / state.scale) as i32 - 250;
+        state.retained_fields.remove(&COLOR);
+        state.field(COLOR, &text, right + 10, 285, 130);
+        if let Some(&edit) = state.fields.get(&COLOR) {
+            SendMessageW(edit, EM_SETLIMITTEXT, 7, 0);
+            SendMessageW(edit, WM_SETFONT, state.fonts.normal as usize, 1);
+        }
+    }
+    if !state.studio.renaming {
         return;
     }
     let ids = state.studio.visible_ids();
@@ -652,8 +754,13 @@ pub(super) unsafe fn rebuild_fields(state: &mut State) {
     }
 }
 pub(super) fn command(state: &mut State, id: u16, notification: u16) -> bool {
-    if id == NAME && notification == EN_CHANGE as u16 {
-        state.studio.name = state.raw_text(NAME);
+    if matches!(id, NAME | COLOR) && notification == EN_CHANGE as u16 {
+        let text = state.raw_text(id);
+        if id == NAME {
+            state.studio.name = text;
+        } else {
+            state.studio.color = text;
+        }
         true
     } else {
         false
@@ -665,6 +772,7 @@ pub(super) fn key(state: &State, key: usize, control: bool, edit: bool) -> Optio
     }
     match (key, control) {
         (13, _) if state.studio.renaming => Some(Control::CommitRename),
+        (13, _) if edit => Some(Control::ApplyColor),
         (27, _) if state.studio.renaming => Some(Control::CancelRename),
         (0x53, true) => Some(Control::Save),
         (0x4f, true) => Some(Control::Open),
@@ -953,15 +1061,55 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
             true,
         );
     }
-    paragraph(
-        p,
-        "Effect properties and lighting preview are not available yet.",
-        right + 10,
-        274,
-        230,
-        88,
-        MUTED,
-    );
+    if view.is_static() {
+        p.text(
+            match view.selected_color {
+                Some(SelectedColor::Mixed) => "COLOUR · MIXED",
+                Some(SelectedColor::Uniform(None)) => "COLOUR · UNASSIGNED",
+                Some(SelectedColor::Empty) => "SELECT LEDS TO COLOUR",
+                _ => "COLOUR",
+            },
+            right + 10,
+            246,
+            230,
+            32,
+            p.fonts.small,
+            TEXT,
+            DT_LEFT,
+        );
+        if let Ok(color) = u32::from_str_radix(view.color.trim().trim_start_matches('#'), 16) {
+            p.fill(right + 160, 285, 55, 27, color & 0xffffff);
+        }
+        let enabled = view.editable() && view.canvas.count() > 0 && view.selected_color.is_some();
+        button(
+            p,
+            "APPLY TO SELECTION",
+            right + 10,
+            330,
+            200,
+            Control::ApplyColor,
+            enabled,
+        );
+        button(
+            p,
+            "ERASE SELECTION",
+            right + 10,
+            368,
+            200,
+            Control::Erase,
+            enabled,
+        );
+    } else {
+        paragraph(
+            p,
+            "Effect properties and lighting preview are not available yet.",
+            right + 10,
+            274,
+            230,
+            88,
+            MUTED,
+        );
+    }
     button(
         p,
         "SAVE",
@@ -1016,7 +1164,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
 #[cfg(test)]
 pub(super) fn diagnostics(state: &State) -> Value {
     let view = &state.studio;
-    json!({"open":view.open,"busy":view.busy,"dialog":view.dialog,"dirty":view.dirty(),"renaming":view.renaming,"status":view.status,"failed":view.failed,"pending":state.pending,"selected_leds":view.canvas.count(),"canvas_notes":view.canvas.notes,
+    json!({"open":view.open,"busy":view.busy,"dialog":view.dialog,"dirty":view.dirty(),"renaming":view.renaming,"status":view.status,"failed":view.failed,"pending":state.pending,"selected_leds":view.canvas.count(),"canvas_notes":view.canvas.notes,"color":view.color,
         "index":view.index,"profiles":view.archive.as_ref().map_or(0,|archive|archive.profile_count()),"selected":view.selected,
         "undo":view.draft.as_ref().map_or(0,Draft::undo_len),"redo":view.draft.as_ref().map_or(0,Draft::redo_len),
         "rows":view.draft.as_ref().map(|draft|draft.layers().iter().map(|row|json!({"id":row.id,"title":row.title,"visible":row.visible})).collect::<Vec<_>>()).unwrap_or_default()})

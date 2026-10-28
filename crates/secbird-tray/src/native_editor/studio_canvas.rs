@@ -353,6 +353,10 @@ impl Canvas {
             _ => return false,
         }
         InvalidateRect(state.hwnd, null(), 0);
+        if message == WM_LBUTTONUP {
+            studio_view::selection_changed(state);
+            state.rebuild_fields();
+        }
         true
     }
     pub fn zoom(&mut self, steps: i32, width: f64, height: f64) {
@@ -370,6 +374,19 @@ impl Canvas {
     }
     pub fn count(&self) -> usize {
         self.selected.len()
+    }
+    pub fn selection(&self) -> Vec<secbird_core::studio::document::LedSelection> {
+        self.selected
+            .iter()
+            .filter_map(|(device, key)| {
+                let (row, col) = key.split_once(':')?;
+                Some(secbird_core::studio::document::LedSelection {
+                    device: device.clone(),
+                    row: row.parse().ok()?,
+                    col: col.parse().ok()?,
+                })
+            })
+            .collect()
     }
 }
 

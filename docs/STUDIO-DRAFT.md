@@ -1,7 +1,8 @@
 # Studio layer draft model
 
-`studio::document::Draft` now implements local layer-title and visibility edits,
-separate saved/working content, discard and20 undo/redo steps. It has no device
+`studio::document::Draft` implements local layer-title, visibility and
+[Static region edits](STUDIO-REGIONS.md), separate saved/working content,
+discard and bounded undo/redo. It has no device
 access, file I/O or preview engine. The native Studio page now uses this model
 for local file editing; canvas editing and effect playback remain unfinished.
 
@@ -17,11 +18,12 @@ for local file editing; canvas editing and effect playback remain unfinished.
   restores each child's original state. Missing visibility remains distinct from
   false and is removed again when undo restores its original absence.
 - Undo/redo restores only the changed leaves. New edits drop redo. History caps
-  at20 edits; saved and current documents share immutable storage until changed.
-- Dirty tracking compares the currently editable layer metadata to its saved
-  state. Returning manually or through Undo to saved values clears dirty, despite
-  ancestor JSON whitespace changing. This projection must be extended before
-  adding edit families beyond titles/visibility.
+  at20 edits and8MiB of payload; large regions can evict entries earlier. Saved
+  and current documents share immutable storage until changed.
+- Dirty tracking compares editable metadata and raw region leaves to saved
+  state. Returning manually or through Undo to saved values clears dirty despite
+  ancestor whitespace changing. Future edit families need corresponding dirty
+  tracking; opaque item fields are not interpreted.
 - `checkpoint` captures the exact document offered to persistence. After a
   successful write, `accept_saved(checkpoint)` establishes that snapshot as the
   local baseline. Newer working edits remain dirty; checkpoints from another
@@ -42,7 +44,8 @@ saved changes. The draft checkpoint does not perform that archive/store commit.
 
 ## Preservation and admission
 
-Only explicit `title`/`visible` values change. Device placements, regions, LED
+Title/visibility operations change only their explicit values; regional edits
+have a separate [preservation contract](STUDIO-REGIONS.md). Device placements, LED
 identity metadata, effect-wide and regional parameters, unknown fields and large
 numeric literals remain raw JSON. Modified ancestor objects/arrays are serialized
 again; whitespace and escaping of their keys may differ. Ordinary numeric trees
@@ -58,7 +61,7 @@ certify any device, layout, LED assignment or effect runtime.
 
 The model allows at most512 layer/group entries, layer IDs up to512 bytes, text values
 up to4096 bytes on open and bounded object/array decoding. The parent8MiB/depth/
-structural budgets still apply. History stores changed title/boolean leaves,
+structural budgets still apply. History stores changed title/boolean/region-array leaves,
 not20 copies of a potentially8MiB composition. These are design bounds, not a
 measurement proving complete-build RAM acceptance.
 
@@ -89,7 +92,7 @@ shaped synthetic data, not actual stock compositions. A separate asynchronous
 save-acknowledgement regression verifies that newer edits remain dirty, foreign
 checkpoints are inert and discard returns to the snapshot actually acknowledged.
 
-382 core tests (six intentionally ignored), three CLI tests, one doc test and233
+391 core tests (six intentionally ignored), three CLI tests, one doc test and233
 serial tray tests pass. An additional opt-in native Studio interaction test uses
 an actual window/message loop and simulated device transport. See
 [native Studio](STUDIO-NATIVE.md) for its scope and remaining gaps.

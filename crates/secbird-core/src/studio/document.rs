@@ -17,7 +17,12 @@ use std::{
     },
 };
 
+#[path = "regions.rs"]
+mod regions;
+pub use regions::{LedSelection, SelectedColor};
+
 pub const MAX_HISTORY: usize = 20;
+pub const MAX_HISTORY_BYTES: usize = 8 * 1024 * 1024;
 pub const MAX_LAYERS: usize = 512;
 static SESSION: AtomicU64 = AtomicU64::new(0);
 
@@ -189,7 +194,13 @@ fn rows(raw: &RawValue) -> Result<Vec<LayerRow>> {
                 kind: kind.clone(),
                 parent: parent.map(str::to_owned),
                 visible: item.visible()?,
-                opened: if kind == Kind::Group { item.get("opened").map(|raw|serde_json::from_str(raw.get()).map_err(invalid)).transpose()? } else { None },
+                opened: if kind == Kind::Group {
+                    item.get("opened")
+                        .map(|raw| serde_json::from_str(raw.get()).map_err(invalid))
+                        .transpose()?
+                } else {
+                    None
+                },
                 effect,
             });
             if kind == Kind::Group {
@@ -220,6 +231,74 @@ struct Change {
     after: Box<RawValue>,
 }
 struct Edit(Vec<Change>);
+impl Edit {
+    fn bytes(&self) -> usize {
+        self.0
+            .iter()
+            .map(|change| {
+                change.id.len()
+                    + change.after.get().len()
+                    + change.before.as_ref().map_or(0, |raw| raw.get().len())
+            })
+            .sum()
+    }
+}
+
+/// Borrow region leaves directly from the two documents; large raw JSON is not
+/// cloned just to compute dirty state. Only fields this editor changes matter.
+fn regions_equal(left: &RawValue, right: &RawValue) -> Result<bool> {
+    #[derive(Deserialize)]
+    struct Node<'a> {
+        #[serde(borrow, rename = "type")]
+        kind: Option<&'a RawValue>,
+        #[serde(borrow)]
+        regions: Option<&'a RawValue>,
+        #[serde(borrow)]
+        layers: Option<&'a RawValue>,
+    }
+    fn compare(left: &RawValue, right: &RawValue, root: bool) -> Result<bool> {
+        let a: Node = serde_json::from_str(left.get()).map_err(invalid)?;
+        let b: Node = serde_json::from_str(right.get()).map_err(invalid)?;
+        if !root {
+            let kind_a = a
+                .kind
+                .map(|raw| serde_json::from_str::<String>(raw.get()).map_err(invalid))
+                .transpose()?;
+            let kind_b = b
+                .kind
+                .map(|raw| serde_json::from_str::<String>(raw.get()).map_err(invalid))
+                .transpose()?;
+            if kind_a != kind_b {
+                return Ok(false);
+            }
+            match kind_a.as_deref() {
+                Some("layer") => {
+                    return Ok(a.regions.map(RawValue::get) == b.regions.map(RawValue::get))
+                }
+                Some("group") => {}
+                _ => return Ok(true),
+            }
+        }
+        match (a.layers, b.layers) {
+            (None, None) => Ok(true),
+            (Some(a), Some(b)) => {
+                let a: Vec<&RawValue> = serde_json::from_str(a.get()).map_err(invalid)?;
+                let b: Vec<&RawValue> = serde_json::from_str(b.get()).map_err(invalid)?;
+                if a.len() != b.len() {
+                    return Ok(false);
+                }
+                for (a, b) in a.iter().zip(&b) {
+                    if !compare(a, b, false)? {
+                        return Ok(false);
+                    }
+                }
+                Ok(true)
+            }
+            _ => Ok(false),
+        }
+    }
+    compare(left, right, true)
+}
 
 fn item(raw: &RawValue, id: &str) -> Result<Option<Object>> {
     fn find(items: &[Box<RawValue>], id: &str, nested: bool) -> Result<Option<Object>> {
@@ -303,6 +382,7 @@ pub struct Draft {
     rows: Vec<LayerRow>,
     undo: VecDeque<Edit>,
     redo: VecDeque<Edit>,
+    regions_dirty: bool,
 }
 
 /// Exact snapshot offered to persistence. No Clone: acknowledgement consumes
@@ -341,6 +421,7 @@ impl Draft {
             rows,
             undo: VecDeque::new(),
             redo: VecDeque::new(),
+            regions_dirty: false,
         })
     }
     pub fn json(&self) -> &str {
@@ -350,7 +431,7 @@ impl Draft {
         &self.rows
     }
     pub fn is_dirty(&self) -> bool {
-        self.rows != self.saved_rows
+        self.rows != self.saved_rows || self.regions_dirty
     }
     pub fn undo_len(&self) -> usize {
         self.undo.len()
@@ -364,12 +445,21 @@ impl Draft {
             return Ok(false);
         }
         let edit = Edit(changes);
+        if edit.bytes() > MAX_HISTORY_BYTES {
+            return Err(invalid(
+                "region edit exceeds the 8 MiB reversible-history budget",
+            ));
+        }
         let candidate = rewrite(&self.current, &edit, false)?;
         let candidate_rows = rows(&candidate)?;
+        let regions_dirty = !regions_equal(&candidate, &self.saved)?;
         self.current = candidate.into();
         self.rows = candidate_rows;
+        self.regions_dirty = regions_dirty;
         self.undo.push_back(edit);
-        if self.undo.len() > MAX_HISTORY {
+        while self.undo.len() > MAX_HISTORY
+            || self.undo.iter().map(Edit::bytes).sum::<usize>() > MAX_HISTORY_BYTES
+        {
             self.undo.pop_front();
         }
         self.redo.clear();
@@ -431,8 +521,10 @@ impl Draft {
         };
         let candidate = rewrite(&self.current, edit, true)?;
         let candidate_rows = rows(&candidate)?;
+        let regions_dirty = !regions_equal(&candidate, &self.saved)?;
         self.current = candidate.into();
         self.rows = candidate_rows;
+        self.regions_dirty = regions_dirty;
         self.redo
             .push_back(self.undo.pop_back().expect("validated undo entry"));
         Ok(true)
@@ -443,8 +535,10 @@ impl Draft {
         };
         let candidate = rewrite(&self.current, edit, false)?;
         let candidate_rows = rows(&candidate)?;
+        let regions_dirty = !regions_equal(&candidate, &self.saved)?;
         self.current = candidate.into();
         self.rows = candidate_rows;
+        self.regions_dirty = regions_dirty;
         self.undo
             .push_back(self.redo.pop_back().expect("validated redo entry"));
         Ok(true)
@@ -460,13 +554,16 @@ impl Draft {
         if checkpoint.owner != self.owner {
             return Err(invalid("save checkpoint belongs to a different draft"));
         }
+        let regions_dirty = !regions_equal(&self.current, &checkpoint.raw)?;
         self.saved = checkpoint.raw;
         self.saved_rows = checkpoint.rows;
+        self.regions_dirty = regions_dirty;
         Ok(())
     }
     pub fn discard(&mut self) {
         self.current = self.saved.clone();
         self.rows = self.saved_rows.clone();
+        self.regions_dirty = false;
         self.undo.clear();
         self.redo.clear();
     }
@@ -476,6 +573,16 @@ impl Draft {
 mod tests {
     use super::*;
     const PROFILE: &str = r#"{"id":"composition","title":"Desk","devices":[{"id":"offline","unknown":9007199254740993123456789}],"layers":[{"id":"group","type":"group","title":"Group","visible":true,"opened":true,"future":1.2300e-7,"layers":[{"id":"a","groupId":"group","type":"layer","name":"static","title":"STATIC","visible":false,"params":{},"regions":[{"params":{"color":65280},"devices":[{"id":"offline","leds":[{"row":0,"col":1,"inputData":"{\"Key\":\"A\"}"}]}]}]},{"id":"b","type":"layer","name":"spectrum","title":"SPECTRUM_CYCLING","visible":true,"regions":[]}]}],"unknown":{"value":9.9900e+100}}"#;
+    #[test]
+    fn dirty_check_does_not_interpret_unknown_items_layers_or_regions() {
+        let raw = r#"{"id":"p","title":"T","devices":[],"layers":[{"id":"future","type":"unknown","title":"Opaque","layers":17,"regions":{"opaque":9.9900e+100}}]}"#;
+        let mut draft = Draft::open(raw).unwrap();
+        draft.rename_layer("future", "Renamed").unwrap();
+        assert!(draft.is_dirty());
+        assert!(draft.json().contains("9.9900e+100"));
+        draft.undo().unwrap();
+        assert!(!draft.is_dirty());
+    }
     #[test]
     fn group_visibility_is_one_reversible_transaction_and_preserves_regions() {
         let mut draft = Draft::open(PROFILE).unwrap();

@@ -5008,7 +5008,7 @@ fn run_window(
                 break;
             }
             if message.message == WM_KEYDOWN && GetKeyState(18) >= 0 {
-                let studio_action=studio_view::key(&state.borrow(),message.wParam,GetKeyState(17)<0,GetDlgCtrlID(message.hwnd)as u16==studio_view::NAME);
+                let studio_action=studio_view::key(&state.borrow(),message.wParam,GetKeyState(17)<0,matches!(GetDlgCtrlID(message.hwnd)as u16,studio_view::NAME|studio_view::COLOR));
                 if let Some(control)=studio_action {state.borrow_mut().action(Action::Studio(control));continue;}
                 let action = host_tabs::shortcut_action(&state.borrow(), message.wParam,
                     GetKeyState(17) < 0, GetKeyState(16) < 0);

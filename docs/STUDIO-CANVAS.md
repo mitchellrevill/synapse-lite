@@ -4,8 +4,9 @@ The native Studio file editor now draws Ornata LED outlines from the shipped
 Studio SVG rather than reusing the differently scaled Customize geometry.
 Single click replaces selection, Ctrl-click toggles it, and drag selects LED
 bounds. Canceling a drag restores the prior selection. Zoom/Fit and navigation
-do not dirty a composition. Selection is transient; it does not yet assign LEDs
-to effect regions or submit lighting frames.
+do not dirty a composition. Selection is transient;
+[Static property controls](STUDIO-REGIONS.md) can now assign/erase its region
+memberships. These local operations do not submit lighting frames.
 
 ## Data and source boundary
 

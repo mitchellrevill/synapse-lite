@@ -142,6 +142,59 @@ fn native_studio_edits_save_failure_and_exit_recovery() {
                 click(440.0, 100.0);
                 click(60.0, 228.0);
                 check(query()["selected"] == "a", "child selection failed")?;
+                let color_edit = || GetDlgItem(hwnd, i32::from(studio_view::COLOR));
+                if color_edit().is_null() {
+                    return Err("Static RGB field missing".into());
+                }
+                SendMessageW(
+                    color_edit(),
+                    WM_SETTEXT,
+                    0,
+                    wide("GG0000").as_ptr() as isize,
+                );
+                click(right + 100.0, 343.0);
+                check(
+                    query()["failed"] == true && query()["dirty"] == false,
+                    "invalid RGB mutated composition",
+                )?;
+                SendMessageW(
+                    color_edit(),
+                    WM_SETTEXT,
+                    0,
+                    wide("FF0000").as_ptr() as isize,
+                );
+                SendMessageW(hwnd, READ_ONLY_TEST_SET, 1, 0);
+                click(right + 100.0, 343.0);
+                check(
+                    query()["dirty"] == false,
+                    "read-only Static edit changed composition",
+                )?;
+                SendMessageW(hwnd, READ_ONLY_TEST_SET, 0, 0);
+                click(right + 100.0, 343.0);
+                check(
+                    query()["dirty"] == true && query()["color"] == "FF0000",
+                    "native RGB did not update selected memberships",
+                )?;
+                click(440.0, 100.0);
+                check(
+                    query()["dirty"] == false,
+                    "region-only undo did not return clean",
+                )?;
+                click(515.0, 100.0);
+                check(
+                    query()["dirty"] == true && query()["color"] == "FF0000",
+                    "region-only redo failed",
+                )?;
+                click(right + 100.0, 381.0);
+                check(
+                    query()["dirty"] == false,
+                    "erase did not return to unassigned baseline",
+                )?;
+                click(440.0, 100.0);
+                check(
+                    query()["dirty"] == true && query()["color"] == "FF0000",
+                    "erase undo failed",
+                )?;
                 let rename = |name: &str| -> Result<(), String> {
                     click(right + 60.0, 193.0);
                     let edit = GetDlgItem(hwnd, i32::from(studio_view::NAME));
@@ -171,6 +224,21 @@ fn native_studio_edits_save_failure_and_exit_recovery() {
                 )?;
                 let archive =
                     secbird_core::studio::Archive::parse(&bytes).map_err(|e| e.to_string())?;
+                let saved_draft =
+                    secbird_core::studio::document::Draft::open(archive.profile_json(0).unwrap())
+                        .map_err(|e| e.to_string())?;
+                let selected = [1, 4].map(|col| secbird_core::studio::document::LedSelection {
+                    device: "keyboard".into(),
+                    row: 0,
+                    col,
+                });
+                check(
+                    saved_draft
+                        .static_selection_color("a", &selected)
+                        .map_err(|e| e.to_string())?
+                        == secbird_core::studio::document::SelectedColor::Uniform(Some(0xff0000)),
+                    "saved RGB assignments lost",
+                )?;
                 check(
                     archive
                         .profile_json(0)
@@ -291,6 +359,7 @@ fn native_studio_edits_save_failure_and_exit_recovery() {
                 "save_failure_keeps_draft_and_file":true,"navigation_keeps_draft":true,
                 "invalid_hidden_rename_recovery":true,
                 "source_led_hit_marquee_cancel_zoom":true,
+                "static_region_native_rgb_erase_history_save":true,"invalid_and_readonly_rgb_inert":true,
                 "tray_exit_cancel_and_discard":true,"device_profiles_unchanged":true,"no_device_sets":true}),
                 )
             }

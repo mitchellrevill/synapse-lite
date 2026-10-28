@@ -22,7 +22,8 @@ The view uses the recovered Studio panel/row dimensions documented in
 [STUDIO-DRAFT.md](STUDIO-DRAFT.md). This is a partial functional editor, not visual
 or behavioral parity with stock Studio. Text actions currently stand in for some
 source icons. A partial [source-path canvas and LED selection](STUDIO-CANVAS.md)
-is now implemented for explicit Ornata placements. Effect properties and algorithms,
+is implemented for explicit Ornata placements, with
+[Static region colour/erase](STUDIO-REGIONS.md). Other effect properties and algorithms,
 gradients, add/delete/reorder/group operations, preview, device output and full
 composition-management controls remain to implement. Actual stock file acceptance
 and the user's saved composition have not been tested; current fixtures are
