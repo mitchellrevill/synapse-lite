@@ -80,6 +80,10 @@ handling need physical validation, including keys held during transitions.
 See [driver contract](DRIVER-CONTROL.md) and
 [keyboard packet planning](KEYBOARD-SYMBOLIC-BRIDGE.md).
 
+The bounded [output completion ledger](KEYBOARD-OUTPUT-RECOVERY.md) now tracks
+local claims, late completions and uncertain releases. It is not wired to live
+input submission and does not establish native selector ownership.
+
 The source-style pair editor, Fn+left Shift shortcut, Gaming Mode shared
 interactions and actual activation remain unfinished. The running a29eb3d preview
 has no new Snap Tap control from this backend checkpoint. This does not satisfy

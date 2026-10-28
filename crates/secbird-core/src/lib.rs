@@ -23,6 +23,7 @@ pub mod error;
 pub mod firmware;
 pub mod features;
 pub mod keyboard_symbolic_bridge;
+pub mod keyboard_output_ledger;
 #[cfg(windows)]
 pub mod keyboard_notifications;
 #[cfg(windows)]
