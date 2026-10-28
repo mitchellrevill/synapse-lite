@@ -1,0 +1,38 @@
+{
+  "format": "synapse-lite-device-asset-acquisition-v1",
+  "catalog_sha256": "f087e20349b803a11fa8299bfcb2e2c28c9e875c21aaa9242279655a22bc62e9",
+  "hardware_support_verified": false,
+  "stages": {
+    "products": {
+      "counts": {
+        "available": 666,
+        "missing": 2
+      },
+      "unique_primary_ids_with_available_resources": 333,
+      "available_bytes": 3643324,
+      "planning_todos": 0,
+      "capture_report_sha256": "24fa5269de1c90f5b6916302ce23fbdcbeacc63839ef63649e62a115e3b00bec"
+    },
+    "lighting": {
+      "counts": {
+        "available": 585,
+        "missing": 175,
+        "todo": 3
+      },
+      "unique_primary_ids_with_available_resources": 277,
+      "available_bytes": 297278360,
+      "planning_todos": 1,
+      "capture_report_sha256": "72518b0b3fdf1812c221d795bbd08b1ee7afd4ffc4f869ad63ecaefd78774cc2"
+    },
+    "dashboard": {
+      "counts": {
+        "available": 653,
+        "missing": 110
+      },
+      "unique_primary_ids_with_available_resources": 298,
+      "available_bytes": 17760436,
+      "planning_todos": 1,
+      "capture_report_sha256": "e140b0d7c680c134e7ed0cecb28a4f6cdc0c58fabe9894ec04d413f00fe8d218"
+    }
+  }
+}

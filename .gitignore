@@ -1,5 +1,6 @@
 extracted/
 target/
+__pycache__/
 
 # third-party agent skill (installed locally, not ours)
 .claude/
