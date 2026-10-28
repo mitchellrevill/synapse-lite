@@ -122,6 +122,17 @@ pub fn write(path: &Path, bytes: &[u8]) -> Result<(), String> {
     if bytes.len() > MAX_PROFILE_BYTES {
         return Err("Profile export exceeds the 2 MiB interchange budget".into());
     }
+    atomic_write(path, bytes)
+}
+
+pub(super) fn write_studio(path: &Path, bytes: &[u8]) -> Result<(), String> {
+    if bytes.len() > secbird_core::studio::MAX_DOCUMENT_BYTES {
+        return Err("Studio export exceeds the 8 MiB interchange budget".into());
+    }
+    atomic_write(path, bytes)
+}
+
+fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), String> {
     let parent = path.parent().ok_or("Export path has no parent directory")?;
     let mut pending = None;
     for _ in 0..8 {
@@ -176,6 +187,31 @@ mod tests {
         assert_eq!(read(&path).unwrap(), b"complete new document");
         assert!(write(&path, &vec![0; MAX_PROFILE_BYTES + 1]).is_err());
         assert_eq!(std::fs::read(&path).unwrap(), b"complete new document");
+        assert_eq!(std::fs::read_dir(&folder).unwrap().count(), 1);
+        std::fs::remove_file(path).unwrap();
+        std::fs::remove_dir(folder).unwrap();
+    }
+
+    #[test]
+    fn studio_budget_does_not_expand_profile_exports_or_damage_existing_files() {
+        let folder = std::env::temp_dir().join(format!(
+            "studio-file-budget-{}-{}",
+            std::process::id(),
+            SAVE_SEQUENCE.fetch_add(1, Ordering::Relaxed)
+        ));
+        std::fs::create_dir_all(&folder).unwrap();
+        let path = folder.join("composition.ChromaEffects");
+        let bytes = vec![b' '; MAX_PROFILE_BYTES + 1];
+        assert!(write(&path, &bytes).is_err());
+        assert!(!path.exists());
+        write_studio(&path, &bytes).unwrap();
+        assert_eq!(std::fs::read(&path).unwrap(), bytes);
+        assert!(write_studio(
+            &path,
+            &vec![0; secbird_core::studio::MAX_DOCUMENT_BYTES + 1]
+        )
+        .is_err());
+        assert_eq!(std::fs::read(&path).unwrap(), bytes);
         assert_eq!(std::fs::read_dir(&folder).unwrap().count(), 1);
         std::fs::remove_file(path).unwrap();
         std::fs::remove_dir(folder).unwrap();

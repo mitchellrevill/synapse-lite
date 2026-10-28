@@ -620,6 +620,10 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
             if wparam != 0 { with_app(|app| app.shutdown_lighting()); }
             0
         }
+        WM_CLOSE => {
+            if !native_editor::defer_process_exit(hwnd) {DestroyWindow(hwnd);}
+            0
+        }
         WM_DESTROY => {
             with_app(|app| {
                 app.shutdown_lighting();
@@ -1311,7 +1315,7 @@ impl App {
                 }
             }
             ID_EXIT => unsafe {
-                DestroyWindow(self.hwnd);
+                PostMessageW(self.hwnd,WM_CLOSE,0,0);
             },
             id if id >= ID_PROFILE_BASE => {
                 let idx = (id - ID_PROFILE_BASE) as usize;

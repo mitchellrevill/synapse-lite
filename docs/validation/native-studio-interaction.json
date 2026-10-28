@@ -1,0 +1,14 @@
+{
+  "actual_hwnd": true,
+  "device_profiles_unchanged": true,
+  "group_visibility_undo_redo": true,
+  "invalid_hidden_rename_recovery": true,
+  "native_rename": true,
+  "navigation_keeps_draft": true,
+  "no_device_sets": true,
+  "save_failure_keeps_draft_and_file": true,
+  "simulated_only": true,
+  "tray_exit_cancel_and_discard": true,
+  "two_composition_saves_preserved": true,
+  "unknown_literals_preserved": true
+}

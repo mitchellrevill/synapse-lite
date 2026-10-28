@@ -397,7 +397,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, window: i32) {
         "host-synapse",
         8,
         home_outer,
-        state.selected.is_none(),
+        state.selected.is_none() && !state.studio.open,
     );
     p.hits.push(Hit {
         rect: css_rect(p, 8.0, 8.0, home_outer, 34.0),

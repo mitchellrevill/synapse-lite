@@ -1,0 +1,1041 @@
+//! Local composition editor. File work bypasses the device engine entirely.
+use super::*;
+use secbird_core::studio::{
+    document::{Draft, Kind, SaveCheckpoint},
+    Archive,
+};
+use std::{collections::BTreeMap, fs::File, os::windows::ffi::OsStringExt};
+use windows_sys::Win32::UI::Controls::Dialogs::*;
+
+pub(super) const DIALOG: u32 = WM_APP + 112;
+pub(super) const EXIT_REQUEST: u32 = WM_APP + 114;
+pub(super) const NAME: u16 = 2100;
+
+#[derive(Clone)]
+pub(super) enum Control {
+    Enter,
+    Open,
+    Save,
+    Profiles,
+    Profile(usize),
+    Select(String),
+    Visibility(String),
+    Expand(String),
+    Rename,
+    CommitRename,
+    CancelRename,
+    Undo,
+    Redo,
+}
+#[derive(Clone, Copy)]
+enum Next {
+    Open,
+    Profile(usize),
+    Close,
+}
+
+#[derive(Default)]
+pub(super) struct View {
+    pub open: bool,
+    archive: Option<Arc<Archive>>,
+    titles: Vec<String>,
+    draft: Option<Draft>,
+    path: Option<PathBuf>,
+    index: usize,
+    selected: Option<String>,
+    expanded: BTreeMap<String, bool>,
+    renaming: bool,
+    name: String,
+    dropdown: bool,
+    profile_scroll: usize,
+    scroll: usize,
+    epoch: u64,
+    busy: bool,
+    dialog: bool,
+    next: Option<Next>,
+    status: String,
+    failed: bool,
+    #[cfg(test)]
+    pub test_decision: Option<i32>,
+}
+pub(super) enum Request {
+    Read {
+        epoch: u64,
+        path: PathBuf,
+    },
+    Save {
+        epoch: u64,
+        path: PathBuf,
+        index: usize,
+        archive: Arc<Archive>,
+        checkpoint: SaveCheckpoint,
+    },
+}
+pub(super) enum Response {
+    Read {
+        epoch: u64,
+        path: PathBuf,
+        result: Result<Arc<Archive>, String>,
+    },
+    Save {
+        epoch: u64,
+        path: PathBuf,
+        result: Result<(Arc<Archive>, SaveCheckpoint), String>,
+    },
+}
+
+pub(super) fn work(request: Request) -> Response {
+    match request {
+        Request::Read { epoch, path } => {
+            let result = File::open(&path)
+                .map_err(|error| error.to_string())
+                .and_then(|file| {
+                    Archive::read(file)
+                        .map(Arc::new)
+                        .map_err(|error| error.to_string())
+                });
+            Response::Read {
+                epoch,
+                path,
+                result,
+            }
+        }
+        Request::Save {
+            epoch,
+            path,
+            index,
+            archive,
+            checkpoint,
+        } => {
+            let result = (|| {
+                let bytes = archive
+                    .replace_profile_bytes(index, checkpoint.json())
+                    .map_err(|error| error.to_string())?;
+                let replacement = Archive::parse(&bytes).map_err(|error| error.to_string())?;
+                profile_files::write_studio(&path, &bytes)?;
+                Ok((Arc::new(replacement), checkpoint))
+            })();
+            Response::Save {
+                epoch,
+                path,
+                result,
+            }
+        }
+    }
+}
+
+impl View {
+    fn dirty(&self) -> bool {
+        self.draft.as_ref().is_some_and(Draft::is_dirty)
+    }
+    fn editable(&self) -> bool {
+        self.draft.is_some() && !self.busy && !self.dialog
+    }
+    fn profile(&mut self, index: usize) -> Result<(), String> {
+        let archive = self
+            .archive
+            .as_ref()
+            .ok_or("Open a Studio composition file first")?;
+        let raw = archive
+            .profile_json(index)
+            .ok_or("Composition is no longer available")?;
+        self.index = index;
+        self.epoch = self
+            .epoch
+            .checked_add(1)
+            .ok_or("Studio session limit reached")?;
+        self.draft = None;
+        self.selected = None;
+        self.expanded.clear();
+        self.scroll = 0;
+        self.dropdown = false;
+        self.renaming = false;
+        match Draft::open(raw) {
+            Ok(draft) => {
+                self.selected = draft.layers().first().map(|row| row.id.clone());
+                self.draft = Some(draft);
+                self.status = "File edits only · lighting preview unavailable".into();
+                self.failed = false;
+            }
+            Err(error) => {
+                self.status = error.to_string();
+                self.failed = true;
+            }
+        }
+        Ok(())
+    }
+    fn visible_ids(&self) -> Vec<String> {
+        let Some(draft) = &self.draft else {
+            return vec![];
+        };
+        draft
+            .layers()
+            .iter()
+            .filter(|row| {
+                row.parent.as_ref().is_none_or(|parent| {
+                    self.expanded.get(parent).copied().unwrap_or_else(|| {
+                        draft
+                            .layers()
+                            .iter()
+                            .find(|group| group.id == *parent)
+                            .and_then(|group| group.opened)
+                            .unwrap_or(false)
+                    })
+                })
+            })
+            .map(|row| row.id.clone())
+            .collect()
+    }
+    fn title(&self) -> &str {
+        self.titles
+            .get(self.index)
+            .map(String::as_str)
+            .unwrap_or("Chroma Studio")
+    }
+}
+fn error(state: &mut State, message: impl Into<String>) {
+    state.studio.status = message.into();
+    state.studio.failed = true;
+}
+unsafe fn redraw(state: &mut State) {
+    state.rebuild_fields();
+    InvalidateRect(state.hwnd, null(), 0);
+}
+fn cancel_exit(state: &mut State) {
+    state.exit_tray = None;
+    state.closing = false;
+}
+
+pub(super) unsafe fn read_path(state: &mut State, path: PathBuf) {
+    let Some(epoch) = state.studio.epoch.checked_add(1) else {
+        error(state, "Studio session limit reached");
+        return;
+    };
+    state.studio.epoch = epoch;
+    state.studio.busy = true;
+    state.studio.status = "Opening composition file…".into();
+    let before = (state.pending, state.pending_jobs.len());
+    state.queue(Job::Studio(Request::Read { epoch, path }));
+    if before == (state.pending, state.pending_jobs.len()) {
+        state.studio.busy = false;
+        state.studio.next = None;
+        cancel_exit(state);
+        error(state, "Studio file operation was not accepted");
+    }
+}
+pub(super) unsafe fn save_path(state: &mut State, path: PathBuf) {
+    let Some(archive) = state.studio.archive.clone() else {
+        return;
+    };
+    let Some(draft) = &state.studio.draft else {
+        return;
+    };
+    let checkpoint = draft.checkpoint();
+    let request = Request::Save {
+        epoch: state.studio.epoch,
+        path,
+        index: state.studio.index,
+        archive,
+        checkpoint,
+    };
+    state.studio.busy = true;
+    state.studio.status = "Saving composition file…".into();
+    let before = (state.pending, state.pending_jobs.len());
+    state.queue(Job::Studio(request));
+    if before == (state.pending, state.pending_jobs.len()) {
+        state.studio.busy = false;
+        state.studio.next = None;
+        cancel_exit(state);
+        error(state, "Studio save was not accepted");
+    }
+}
+
+unsafe fn proceed(state: &mut State, next: Next) {
+    match next {
+        Next::Open => {
+            PostMessageW(state.hwnd, DIALOG, 0, 0);
+        }
+        Next::Profile(index) => {
+            if let Err(message) = state.studio.profile(index) {
+                error(state, message);
+            }
+        }
+        Next::Close => {
+            PostMessageW(state.hwnd, WM_CLOSE, 0, 0);
+        }
+    }
+}
+unsafe fn transition(state: &mut State, next: Next) {
+    if state.studio.dirty() {
+        state.studio.next = Some(next);
+        PostMessageW(state.hwnd, DIALOG, 2, 0);
+    } else {
+        proceed(state, next);
+    }
+}
+fn finish_name(state: &mut State) -> bool {
+    if !state.studio.renaming {
+        return true;
+    }
+    let result = match (&mut state.studio.draft, &state.studio.selected) {
+        (Some(draft), Some(id)) => draft
+            .rename_layer(id, &state.studio.name)
+            .map_err(|error| error.to_string()),
+        _ => Err("Selected layer is no longer available".into()),
+    };
+    match result {
+        Ok(_) => {
+            state.studio.renaming = false;
+            true
+        }
+        Err(message) => {
+            error(state, message);
+            false
+        }
+    }
+}
+pub(super) unsafe fn block_close(state: &mut State) -> bool {
+    if !finish_name(state) {
+        state.studio.open = true;
+        state.selected = None;
+        redraw(state);
+        cancel_exit(state);
+        return true;
+    }
+    if state.studio.busy || state.studio.dialog {
+        state.studio.next = Some(Next::Close);
+        return true;
+    }
+    if state.studio.dirty() {
+        transition(state, Next::Close);
+        return true;
+    }
+    false
+}
+
+pub(super) unsafe fn action(state: &mut State, control: Control) {
+    if matches!(control, Control::Enter) {
+        state.studio.open = true;
+        state.selected = None;
+        state.profile_open = false;
+        state.profile_actions = false;
+        mouse_feedback::stop(state);
+        state.sync_performance(true);
+        redraw(state);
+        return;
+    }
+    if state.studio.busy || state.studio.dialog {
+        return;
+    }
+    if !matches!(
+        control,
+        Control::Rename | Control::CommitRename | Control::CancelRename
+    ) && !finish_name(state)
+    {
+        redraw(state);
+        return;
+    }
+    match control {
+        Control::Enter => {}
+        Control::Open => transition(state, Next::Open),
+        Control::Save => {
+            if finish_name(state) && state.studio.draft.is_some() {
+                PostMessageW(state.hwnd, DIALOG, 1, 0);
+            }
+        }
+        Control::Profiles => state.studio.dropdown = !state.studio.dropdown,
+        Control::Profile(index) => transition(state, Next::Profile(index)),
+        Control::Select(id) => {
+            state.studio.selected = Some(id);
+            state.studio.renaming = false;
+        }
+        Control::Expand(id) => {
+            let old = state
+                .studio
+                .expanded
+                .get(&id)
+                .copied()
+                .or_else(|| {
+                    state
+                        .studio
+                        .draft
+                        .as_ref()
+                        .and_then(|draft| draft.layers().iter().find(|row| row.id == id))
+                        .and_then(|row| row.opened)
+                })
+                .unwrap_or(false);
+            state.studio.expanded.insert(id, !old);
+        }
+        Control::Rename => {
+            if let Some(row) = state.studio.draft.as_ref().and_then(|draft| {
+                draft
+                    .layers()
+                    .iter()
+                    .find(|row| Some(&row.id) == state.studio.selected.as_ref())
+            }) {
+                state.studio.name = row.title.clone();
+                state.studio.renaming = true;
+            }
+        }
+        Control::CommitRename => {
+            finish_name(state);
+        }
+        Control::CancelRename => state.studio.renaming = false,
+        control => {
+            let result = if let Some(draft) = &mut state.studio.draft {
+                match control {
+                    Control::Visibility(id) => {
+                        let on = draft
+                            .layers()
+                            .iter()
+                            .find(|row| row.id == id)
+                            .and_then(|row| row.visible)
+                            .unwrap_or(false);
+                        draft.set_visible(&id, !on)
+                    }
+                    Control::Undo => draft.undo(),
+                    Control::Redo => draft.redo(),
+                    _ => Ok(false),
+                }
+                .map_err(|error| error.to_string())
+            } else {
+                Ok(false)
+            };
+            if let Err(message) = result {
+                error(state, message);
+            }
+        }
+    }
+    redraw(state);
+}
+
+pub(super) unsafe fn receive(state: &mut State, response: Response) {
+    let epoch = match &response {
+        Response::Read { epoch, .. } | Response::Save { epoch, .. } => *epoch,
+    };
+    if epoch != state.studio.epoch {
+        return;
+    }
+    state.studio.busy = false;
+    let result = match response {
+        Response::Read { path, result, .. } => result.and_then(|archive| {
+            state.studio.titles = (0..archive.profile_count())
+                .map(|index| {
+                    archive
+                        .profile_header(index)
+                        .ok()
+                        .and_then(|header| header.title)
+                        .unwrap_or_else(|| format!("Composition {}", index + 1))
+                })
+                .collect();
+            state.studio.archive = Some(archive);
+            state.studio.path = Some(path);
+            if state.studio.archive.as_ref().unwrap().profile_count() == 0 {
+                state.studio.draft = None;
+                state.studio.selected = None;
+                state.studio.status = "This file contains no compositions".into();
+                Ok(())
+            } else {
+                state.studio.profile(0)
+            }
+        }),
+        Response::Save { path, result, .. } => result.and_then(|(archive, checkpoint)| {
+            state
+                .studio
+                .draft
+                .as_mut()
+                .ok_or("Composition changed before save completed")?
+                .accept_saved(checkpoint)
+                .map_err(|error| error.to_string())?;
+            state.studio.archive = Some(archive);
+            state.studio.path = Some(path);
+            state.studio.status = "Composition file saved · lighting preview unavailable".into();
+            state.studio.failed = false;
+            Ok(())
+        }),
+    };
+    match result {
+        Ok(()) => {
+            if let Some(next) = state.studio.next.take() {
+                proceed(state, next);
+            }
+        }
+        Err(message) => {
+            state.studio.open = true;
+            state.selected = None;
+            error(state, message);
+            state.studio.next = None;
+            cancel_exit(state);
+        }
+    }
+    redraw(state);
+}
+
+unsafe fn choose(hwnd: HWND, save: bool, initial: &str) -> Result<Option<PathBuf>, String> {
+    let filter = wide("Chroma Studio compositions\0*.ChromaEffects\0All files\0*.*\0");
+    let extension = wide("ChromaEffects");
+    let title = wide(if save {
+        "Save composition file"
+    } else {
+        "Open composition file"
+    });
+    let mut buffer = vec![0u16; 32768];
+    let initial = wide(initial);
+    if initial.len() > buffer.len() {
+        return Err("Studio file name is too long".into());
+    }
+    buffer[..initial.len()].copy_from_slice(&initial);
+    let mut options: OPENFILENAMEW = std::mem::zeroed();
+    options.lStructSize = std::mem::size_of::<OPENFILENAMEW>() as u32;
+    options.hwndOwner = hwnd;
+    options.lpstrFilter = filter.as_ptr();
+    options.nFilterIndex = 1;
+    options.lpstrFile = buffer.as_mut_ptr();
+    options.nMaxFile = buffer.len() as u32;
+    options.lpstrTitle = title.as_ptr();
+    options.lpstrDefExt = extension.as_ptr();
+    options.Flags = OFN_EXPLORER
+        | OFN_NOCHANGEDIR
+        | OFN_PATHMUSTEXIST
+        | if save {
+            OFN_OVERWRITEPROMPT
+        } else {
+            OFN_FILEMUSTEXIST
+        };
+    let accepted = if save {
+        GetSaveFileNameW(&mut options)
+    } else {
+        GetOpenFileNameW(&mut options)
+    };
+    if accepted == 0 {
+        let code = CommDlgExtendedError();
+        return if code == 0 {
+            Ok(None)
+        } else {
+            Err(format!("Windows file dialog failed: {code:#x}"))
+        };
+    }
+    let end = buffer
+        .iter()
+        .position(|c| *c == 0)
+        .ok_or("Unterminated Studio file path")?;
+    Ok(Some(std::ffi::OsString::from_wide(&buffer[..end]).into()))
+}
+
+pub(super) unsafe fn dialog(hwnd: HWND, pointer: *mut RefCell<State>, kind: usize) {
+    let epoch = {
+        let Ok(mut state) = (*pointer).try_borrow_mut() else {
+            return;
+        };
+        if state.restricted_actions || state.studio.busy || state.studio.dialog {
+            return;
+        }
+        state.studio.dialog = true;
+        state.studio.epoch
+    };
+    if kind == 2 {
+        #[cfg(test)]
+        let decision = (*pointer).borrow_mut().studio.test_decision.take();
+        #[cfg(not(test))]
+        let decision: Option<i32> = None;
+        let choice = decision.unwrap_or_else(|| {
+            MessageBoxW(
+                hwnd,
+                wide("Save changes to this Studio composition?").as_ptr(),
+                wide("Chroma Studio").as_ptr(),
+                MB_YESNOCANCEL | MB_ICONQUESTION,
+            )
+        });
+        let mut state = (*pointer).borrow_mut();
+        state.studio.dialog = false;
+        if state.studio.epoch != epoch {
+            cancel_exit(&mut state);
+            return;
+        }
+        match choice {
+            IDYES => {
+                PostMessageW(hwnd, DIALOG, 1, 0);
+            }
+            IDNO => {
+                if let Some(draft) = &mut state.studio.draft {
+                    draft.discard();
+                }
+                if let Some(next) = state.studio.next.take() {
+                    proceed(&mut state, next);
+                }
+            }
+            _ => {
+                state.studio.next = None;
+                cancel_exit(&mut state);
+            }
+        }
+        redraw(&mut state);
+        return;
+    }
+    let initial = (*pointer)
+        .borrow()
+        .studio
+        .path
+        .as_ref()
+        .map(|path| path.to_string_lossy().into_owned())
+        .unwrap_or_else(|| {
+            if kind == 1 {
+                "Chroma Studio.ChromaEffects".into()
+            } else {
+                String::new()
+            }
+        });
+    let chosen = choose(hwnd, kind == 1, &initial);
+    let mut state = (*pointer).borrow_mut();
+    state.studio.dialog = false;
+    if state.studio.epoch != epoch {
+        cancel_exit(&mut state);
+        return;
+    }
+    match chosen {
+        Ok(Some(path)) => {
+            if kind == 1 {
+                save_path(&mut state, path)
+            } else {
+                read_path(&mut state, path)
+            }
+        }
+        Ok(None) => {
+            state.studio.next = None;
+            cancel_exit(&mut state);
+        }
+        Err(message) => {
+            state.studio.next = None;
+            cancel_exit(&mut state);
+            error(&mut state, message);
+        }
+    }
+    redraw(&mut state);
+}
+
+pub(super) unsafe fn rebuild_fields(state: &mut State) {
+    if !state.studio.open || !state.studio.renaming {
+        return;
+    }
+    let ids = state.studio.visible_ids();
+    let Some(index) = ids
+        .iter()
+        .position(|id| Some(id) == state.studio.selected.as_ref())
+    else {
+        return;
+    };
+    if index < state.studio.scroll {
+        return;
+    }
+    let y = 168 + (index - state.studio.scroll) as i32 * 40;
+    if y + 32 > state.content_bottom_css() as i32 {
+        return;
+    }
+    let text = state.studio.name.clone();
+    state.retained_fields.remove(&NAME);
+    state.field(NAME, &text, 38, y + 6, 165);
+    if let Some(&edit) = state.fields.get(&NAME) {
+        SendMessageW(edit, EM_SETLIMITTEXT, 32, 0);
+        SendMessageW(edit, WM_SETFONT, state.fonts.normal as usize, 1);
+    }
+}
+pub(super) fn command(state: &mut State, id: u16, notification: u16) -> bool {
+    if id == NAME && notification == EN_CHANGE as u16 {
+        state.studio.name = state.raw_text(NAME);
+        true
+    } else {
+        false
+    }
+}
+pub(super) fn key(state: &State, key: usize, control: bool, edit: bool) -> Option<Control> {
+    if !state.studio.open {
+        return None;
+    }
+    match (key, control) {
+        (13, _) if state.studio.renaming => Some(Control::CommitRename),
+        (27, _) if state.studio.renaming => Some(Control::CancelRename),
+        (0x53, true) => Some(Control::Save),
+        (0x4f, true) => Some(Control::Open),
+        (0x5a, true) if !edit => Some(Control::Undo),
+        (0x59, true) if !edit => Some(Control::Redo),
+        _ => None,
+    }
+}
+pub(super) unsafe fn wheel(state: &mut State, delta: i32, mut point: POINT) -> bool {
+    if !state.studio.open {
+        return false;
+    }
+    ScreenToClient(state.hwnd, &mut point);
+    if state.studio.dropdown {
+        let count = state
+            .studio
+            .archive
+            .as_ref()
+            .map_or(0, |archive| archive.profile_count());
+        state.studio.profile_scroll = (state.studio.profile_scroll as i32
+            - if delta > 0 { 1 } else { -1 })
+        .clamp(0, count.saturating_sub(7) as i32) as usize;
+    } else if (point.x as f32 / state.scale) < 250.0 {
+        let count = state.studio.visible_ids().len();
+        let visible = ((state.content_bottom_css() - 168.0) / 40.0).max(1.0) as usize;
+        state.studio.scroll = (state.studio.scroll as i32 - if delta > 0 { 3 } else { -3 })
+            .clamp(0, count.saturating_sub(visible) as i32) as usize;
+    } else {
+        return false;
+    }
+    redraw(state);
+    true
+}
+
+unsafe fn button(
+    p: &mut Painter,
+    label: &str,
+    x: i32,
+    y: i32,
+    width: i32,
+    control: Control,
+    enabled: bool,
+) {
+    p.fill(x, y, width, 27, if enabled { 0x303030 } else { 0x252525 });
+    p.text(
+        label,
+        x + 4,
+        y,
+        width - 8,
+        27,
+        p.fonts.small,
+        if enabled { TEXT } else { 0x555555 },
+        DT_CENTER,
+    );
+    if enabled {
+        p.hits.push(Hit {
+            rect: p.rect(x, y, width, 27),
+            action: Action::Studio(control),
+        });
+    }
+}
+unsafe fn paragraph(p: &Painter, text: &str, x: i32, y: i32, width: i32, height: i32, color: u32) {
+    let previous = SelectObject(p.dc, p.fonts.normal);
+    SetBkMode(p.dc, TRANSPARENT as i32);
+    SetTextColor(p.dc, rgb(color));
+    let mut rect = p.rect(x, y, width, height);
+    DrawTextW(
+        p.dc,
+        wide(text).as_ptr(),
+        -1,
+        &mut rect,
+        DT_LEFT | DT_WORDBREAK | DT_NOPREFIX,
+    );
+    SelectObject(p.dc, previous);
+}
+
+pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i32) {
+    let view = &state.studio;
+    let right = width - 250;
+    p.fill(0, 80, width, height - 80, BG);
+    p.fill(0, 128, 250, height - 128, 0x181818);
+    p.fill(right, 128, 250, height - 128, PANEL);
+    p.fill(0, 127, width, 1, 0);
+    p.fill(250, 128, 1, height - 128, 0);
+    p.fill(right, 128, 1, height - 128, 0);
+    p.text(
+        &format!("{}{}", view.title(), if view.dirty() { " *" } else { "" }),
+        46,
+        87,
+        222,
+        28,
+        p.fonts.normal,
+        TEXT,
+        DT_LEFT,
+    );
+    if view.archive.is_some() {
+        p.text("▾", 254, 87, 20, 28, p.fonts.normal, TEXT, DT_CENTER);
+        p.hits.push(Hit {
+            rect: p.rect(46, 87, 230, 28),
+            action: Action::Studio(Control::Profiles),
+        });
+    }
+    button(
+        p,
+        "OPEN FILE",
+        300,
+        87,
+        95,
+        Control::Open,
+        !view.busy && !view.dialog,
+    );
+    button(
+        p,
+        "UNDO",
+        410,
+        87,
+        65,
+        Control::Undo,
+        view.editable()
+            && view
+                .draft
+                .as_ref()
+                .is_some_and(|draft| draft.undo_len() > 0),
+    );
+    button(
+        p,
+        "REDO",
+        485,
+        87,
+        65,
+        Control::Redo,
+        view.editable()
+            && view
+                .draft
+                .as_ref()
+                .is_some_and(|draft| draft.redo_len() > 0),
+    );
+    p.text(
+        "EFFECT LAYERS",
+        10,
+        128,
+        230,
+        40,
+        p.fonts.small,
+        TEXT,
+        DT_LEFT,
+    );
+    p.text(
+        "STUDIO",
+        270,
+        128,
+        (right - 285).max(1),
+        40,
+        p.fonts.normal,
+        GREEN,
+        DT_LEFT,
+    );
+    let clip = SaveDC(p.dc);
+    IntersectClipRect(p.dc, 0, p.px(168), p.px(250), state.height);
+    let ids = view.visible_ids();
+    if let Some(draft) = &view.draft {
+        for (index, id) in ids.iter().enumerate().skip(view.scroll) {
+            let y = 168 + (index - view.scroll) as i32 * 40;
+            if y >= height {
+                break;
+            }
+            let row = draft.layers().iter().find(|row| row.id == *id).unwrap();
+            let selected = view.selected.as_deref() == Some(&row.id);
+            if selected {
+                p.fill(0, y, 250, 40, 0x353535);
+            }
+            if row.kind == Kind::Group {
+                let opened = view
+                    .expanded
+                    .get(id)
+                    .copied()
+                    .or(row.opened)
+                    .unwrap_or(false);
+                p.text(
+                    if opened { "−" } else { "+" },
+                    4,
+                    y,
+                    24,
+                    40,
+                    p.fonts.normal,
+                    MUTED,
+                    DT_CENTER,
+                );
+                p.hits.push(Hit {
+                    rect: p.rect(0, y, 27, 40),
+                    action: Action::Studio(Control::Expand(id.clone())),
+                });
+            }
+            let x = if row.parent.is_some() { 35 } else { 28 };
+            if !(selected && view.renaming) {
+                p.text(&row.title, x, y, 180 - x, 40, p.fonts.normal, TEXT, DT_LEFT);
+            }
+            p.hits.push(Hit {
+                rect: p.rect(28, y, 152, 40),
+                action: Action::Studio(Control::Select(id.clone())),
+            });
+            button(
+                p,
+                if row.visible == Some(true) {
+                    "HIDE"
+                } else {
+                    "SHOW"
+                },
+                188,
+                y + 6,
+                54,
+                Control::Visibility(id.clone()),
+                view.editable(),
+            );
+        }
+    }
+    RestoreDC(p.dc, clip);
+    let selected = view.draft.as_ref().and_then(|draft| {
+        draft
+            .layers()
+            .iter()
+            .find(|row| Some(&row.id) == view.selected.as_ref())
+    });
+    p.text(
+        selected
+            .map(|row| row.title.as_str())
+            .unwrap_or("PROPERTIES"),
+        right + 10,
+        128,
+        230,
+        40,
+        p.fonts.normal,
+        GREEN,
+        DT_LEFT,
+    );
+    button(
+        p,
+        if view.renaming {
+            "APPLY NAME"
+        } else {
+            "RENAME LAYER"
+        },
+        right + 10,
+        180,
+        150,
+        if view.renaming {
+            Control::CommitRename
+        } else {
+            Control::Rename
+        },
+        view.editable() && selected.is_some(),
+    );
+    if view.renaming {
+        button(
+            p,
+            "CANCEL",
+            right + 10,
+            220,
+            100,
+            Control::CancelRename,
+            true,
+        );
+    }
+    paragraph(
+        p,
+        "Effect properties and lighting preview are not available yet.",
+        right + 10,
+        274,
+        230,
+        88,
+        MUTED,
+    );
+    button(
+        p,
+        "SAVE",
+        right + 75,
+        height - 40,
+        100,
+        Control::Save,
+        view.editable() && (view.dirty() || view.renaming),
+    );
+    let message = if view.status.is_empty() {
+        "Open a .ChromaEffects file to edit its layers."
+    } else {
+        &view.status
+    };
+    paragraph(
+        p,
+        message,
+        270,
+        190,
+        (right - 290).max(1),
+        90,
+        if view.failed { 0xfd4949 } else { MUTED },
+    );
+    if view.dropdown {
+        let count = view
+            .archive
+            .as_ref()
+            .map_or(0, |archive| archive.profile_count());
+        let visible = count.saturating_sub(view.profile_scroll).min(7);
+        p.fill(46, 116, 270, visible as i32 * 28, 0);
+        for index in view.profile_scroll..view.profile_scroll + visible {
+            let title = &view.titles[index];
+            let y = 116 + (index - view.profile_scroll) as i32 * 28;
+            p.text(
+                &title,
+                52,
+                y,
+                254,
+                28,
+                p.fonts.normal,
+                if view.index == index { GREEN } else { TEXT },
+                DT_LEFT,
+            );
+            p.hits.push(Hit {
+                rect: p.rect(46, y, 270, 28),
+                action: Action::Studio(Control::Profile(index)),
+            });
+        }
+    }
+}
+
+#[cfg(test)]
+pub(super) fn diagnostics(state: &State) -> Value {
+    let view = &state.studio;
+    json!({"open":view.open,"busy":view.busy,"dialog":view.dialog,"dirty":view.dirty(),"renaming":view.renaming,"status":view.status,"failed":view.failed,"pending":state.pending,
+        "index":view.index,"profiles":view.archive.as_ref().map_or(0,|archive|archive.profile_count()),"selected":view.selected,
+        "undo":view.draft.as_ref().map_or(0,Draft::undo_len),"redo":view.draft.as_ref().map_or(0,Draft::redo_len),
+        "rows":view.draft.as_ref().map(|draft|draft.layers().iter().map(|row|json!({"id":row.id,"title":row.title,"visible":row.visible})).collect::<Vec<_>>()).unwrap_or_default()})
+}
+
+/// Render our own window state for review, without reading another app's pixels.
+#[cfg(test)]
+pub(super) unsafe fn capture_frame(state: &mut State, path: &Path) -> bool {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Graphics::GdiPlus as gp;
+    let source = GetDC(state.hwnd);
+    if source.is_null() {
+        return false;
+    }
+    let dc = CreateCompatibleDC(source);
+    let bitmap = CreateCompatibleBitmap(source, state.width, state.height);
+    ReleaseDC(state.hwnd, source);
+    if dc.is_null() || bitmap.is_null() {
+        if !dc.is_null() {
+            DeleteDC(dc);
+        }
+        if !bitmap.is_null() {
+            DeleteObject(bitmap);
+        }
+        return false;
+    }
+    let old = SelectObject(dc, bitmap);
+    super::paint(state, dc);
+    SelectObject(dc, old);
+    let mut image = null_mut();
+    let created = gp::GdipCreateBitmapFromHBITMAP(bitmap, null_mut(), &mut image);
+    let encoder = windows_sys::core::GUID {
+        data1: 0x557cf406,
+        data2: 0x1a04,
+        data3: 0x11d3,
+        data4: [0x9a, 0x73, 0, 0, 0xf8, 0x1e, 0xf3, 0x2e],
+    };
+    let filename: Vec<u16> = path.as_os_str().encode_wide().chain(Some(0)).collect();
+    let saved = created == gp::Ok
+        && gp::GdipSaveImageToFile(image.cast(), filename.as_ptr(), &encoder, null()) == gp::Ok;
+    if !image.is_null() {
+        gp::GdipDisposeImage(image.cast());
+    }
+    DeleteObject(bitmap);
+    DeleteDC(dc);
+    saved
+}
+
+#[cfg(test)]
+pub(super) fn reset_test(state: &mut State) {
+    if let Some(draft) = &mut state.studio.draft {
+        draft.discard();
+    }
+    state.studio.renaming = false;
+    state.studio.name.clear();
+    state.studio.next = None;
+    state.studio.test_decision = Some(IDNO);
+    state.exit_tray = None;
+}

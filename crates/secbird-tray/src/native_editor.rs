@@ -63,6 +63,7 @@ mod source_layout;
 mod source_text;
 mod viewport;
 mod window_frame;
+mod studio_view;
 
 const CLASS: &str = "SynapseLiteNativeEditor";
 const RESPONSE_TIMER: usize = 71;
@@ -89,6 +90,8 @@ const LIGHTING_DROPDOWN_TEST: u32 = WM_APP + 109;
 #[cfg(test)]
 const READ_ONLY_TEST_SET: u32 = WM_APP + 106;
 #[cfg(test)]
+const STUDIO_TEST: u32 = WM_APP + 115;
+#[cfg(test)]
 const ASSIGNMENT_TEST_QUERY: u32 = WM_APP + 107;
 const FAILURE_DIALOG: u32 = WM_APP + 93;
 const FAILURE_TITLE: &str = "Synapse Lite - Action failed";
@@ -114,6 +117,19 @@ const COMPAT_NOTICES: u16 = 108;
 const PERFORMANCE_INPUT: u16 = 120;
 static WINDOW: AtomicUsize = AtomicUsize::new(0);
 static OPENING: AtomicBool = AtomicBool::new(false);
+
+/// Tray exit waits for the owned editor's ordinary close/unsaved flow. An
+/// acknowledgement from an older window cannot bypass a newly opened editor.
+pub(crate) fn defer_process_exit(tray: HWND) -> bool {
+    let editor=WINDOW.load(Ordering::Acquire) as HWND;
+    if editor.is_null() {return false;}
+    unsafe {
+        if PostMessageW(editor,studio_view::EXIT_REQUEST,0,tray as isize)==0 {
+            return WINDOW.load(Ordering::Acquire)!=0;
+        }
+    }
+    true
+}
 
 #[link(name = "user32")]
 extern "system" {
@@ -364,6 +380,7 @@ impl Tab {
 
 #[derive(Clone)]
 enum Action {
+    Studio(studio_view::Control),
     Home,
     Device(String),
     HostScroll(i32),
@@ -437,6 +454,7 @@ struct Hit {
 }
 
 enum Job {
+    Studio(studio_view::Request),
     SensorRead(String, String),
     CachedLighting(runtime_status::Request),
     Profiles(profile_modal_model::Request),
@@ -498,6 +516,7 @@ struct Reply {
 }
 
 enum WorkerReply {
+    Studio(studio_view::Response),
     Sensor((String, String), Result<(Value,mouse_feedback::BindingResult), String>),
     User(Reply),
     CachedLighting(runtime_status::Response),
@@ -518,6 +537,10 @@ fn worker(
         .map(|engine| engine.lighting_status_reader());
     for job in jobs {
         let job = match job {
+            Job::Studio(request) => {
+                if replies.send(WorkerReply::Studio(studio_view::work(request))).is_err() {break;}
+                continue;
+            }
             Job::SensorRead(id, profile) => {
                 let result=engine.lock().map_err(|_|"Device worker is unavailable".to_string())
                     .and_then(|mut engine|{
@@ -653,6 +676,7 @@ fn worker(
                     server::dispatch(&mut engine, "GET", "/api/state", &[])
                 }
                 Job::CachedLighting(_)
+                | Job::Studio(_)
                 | Job::SensorRead(..)
                 | Job::Profiles(_)
                 | Job::ImportFile { .. }
@@ -878,6 +902,8 @@ impl Drop for Bitmap {
 }
 
 struct State {
+    studio: studio_view::View,
+    exit_tray: Option<HWND>,
     calibration: calibration_view::View,
     advanced: advanced_view::View,
     mouse_feedback: mouse_feedback::Observer,
@@ -958,7 +984,7 @@ impl Drop for State {
 
 impl State {
     fn source_viewport(&self) -> bool {
-        self.device()
+        self.studio.open || self.device()
             .and_then(|d| d["pid"].as_str())
             .is_some_and(|pid| viewport::covered(pid, self.tab.title()))
     }
@@ -1734,6 +1760,11 @@ impl State {
     unsafe fn collect(&mut self) {
         while let Ok(message) = self.replies.try_recv() {
             let reply = match message {
+                WorkerReply::Studio(response) => {
+                    self.pending=self.pending.saturating_sub(1);
+                    studio_view::receive(self,response);
+                    continue;
+                }
                 WorkerReply::Sensor(owner,result) => {
                     self.pending=self.pending.saturating_sub(1);
                     match result {
@@ -1760,6 +1791,7 @@ impl State {
             }
             // Smoke-only selection follows the real read-only device snapshot.
             if let Some(view) = self.smoke_view.take() {
+                if view=="studio" {self.studio.open=true;self.selected=None;}
                 let target = match view.as_str() {
                     "mouse-performance"
                     | "mouse-performance-polling"
@@ -1974,6 +2006,10 @@ impl State {
             self.focus = 0;
             return;
         }
+        if self.studio.open {
+            studio_view::rebuild_fields(self);
+            return;
+        }
         let Some(device) = self.device().cloned() else {
             return;
         };
@@ -2129,6 +2165,7 @@ impl State {
             return;
         }
         match action {
+            Action::Studio(control) => studio_view::action(self,control),
             Action::Calibration(control) => calibration_view::action(self,control),
             Action::Advanced(control) => advanced_view::action(self,control),
             Action::HostClose(id) => host_tabs::close(self, &id),
@@ -2154,6 +2191,7 @@ impl State {
                 );
             }
             Action::Home => {
+                self.studio.open=false;
                 host_tabs::remember(self);
                 self.renaming = None;
                 self.profile_actions = false;
@@ -2164,6 +2202,7 @@ impl State {
                 self.rebuild_fields();
             }
             Action::Device(id) => {
+                self.studio.open=false;
                 if !host_tabs::open(self, &id) { return; }
                 host_tabs::remember(self);
                 let page = self.host_tabs.borrow().pages.get(&id).copied().unwrap_or(Tab::Customize);
@@ -2782,10 +2821,10 @@ unsafe fn paint(state: &mut State, dc: HDC) {
         action: Action::Refresh,
     });
     let device = state.device().cloned();
-    let title = device
+    let title = if state.studio.open { "RAZER CHROMA STUDIO" } else { device
         .as_ref()
         .and_then(|d| d["name"].as_str())
-        .unwrap_or("RAZER SYNAPSE");
+        .unwrap_or("RAZER SYNAPSE") };
     let title = title.to_uppercase();
     if !p.source_text(
         &title,
@@ -2810,7 +2849,9 @@ unsafe fn paint(state: &mut State, dc: HDC) {
         );
     }
     p.line(0, 79, width, 0);
-    if let Some(device) = device {
+    if state.studio.open {
+        studio_view::paint(state,&mut p,width,height);
+    } else if let Some(device) = device {
         let center = (width / 2).max(420);
         let active = device["active"].as_str().unwrap_or("Default");
         if state.renaming.is_none() {
@@ -3343,6 +3384,7 @@ unsafe fn paint(state: &mut State, dc: HDC) {
         }
     } else {
         p.text("DEVICES", 30, 104, 300, 32, p.fonts.heading, GREEN, DT_LEFT);
+        p.button("CHROMA STUDIO",width-225,104,195,Action::Studio(studio_view::Control::Enter),false);
         for (index, device) in state.devices().iter().enumerate() {
             let x = 30 + (index as i32 % 4) * 285;
             let y = 158 + (index as i32 / 4) * 280;
@@ -3500,6 +3542,7 @@ unsafe extern "system" fn window_proc(
             let pointer = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut RefCell<State>;
             if !pointer.is_null() {
                 if let Ok(mut state) = (*pointer).try_borrow_mut() {
+                    if studio_view::block_close(&mut state) {return 0;}
                     mouse_feedback::stop(&mut state);
                     if state.assignment.draft.as_ref().is_some_and(|d| d.dirty) {
                         state.assignment.pending = Some(assignment_model::Transition::External);
@@ -3536,9 +3579,12 @@ unsafe extern "system" fn window_proc(
             return 0;
         }
         WM_DESTROY => {
-            let pointer=GetWindowLongPtrW(hwnd,GWLP_USERDATA) as *mut RefCell<State>;
-            if !pointer.is_null(){if let Ok(mut state)=(*pointer).try_borrow_mut(){mouse_feedback::stop(&mut state);}}
             WINDOW.store(0, Ordering::Release);
+            let pointer=GetWindowLongPtrW(hwnd,GWLP_USERDATA) as *mut RefCell<State>;
+            if !pointer.is_null(){if let Ok(mut state)=(*pointer).try_borrow_mut(){
+                mouse_feedback::stop(&mut state);
+                if let Some(tray)=state.exit_tray.take(){PostMessageW(tray,WM_CLOSE,1,hwnd as isize);}
+            }}
             KillTimer(hwnd, RESPONSE_TIMER);
             KillTimer(hwnd, SMOKE_TIMER);
             KillTimer(hwnd, CACHED_LIGHTING_TIMER);
@@ -3555,6 +3601,33 @@ unsafe extern "system" fn window_proc(
     let pointer = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut RefCell<State>;
     if pointer.is_null() {
         return DefWindowProcW(hwnd, message, wparam, lparam);
+    }
+    if message==studio_view::DIALOG {studio_view::dialog(hwnd,pointer,wparam);return 0;}
+    #[cfg(test)]
+    if message==STUDIO_TEST {
+        if let Ok(mut state)=(*pointer).try_borrow_mut() {
+            match wparam {
+                0=>state.action(Action::Studio(studio_view::Control::Enter)),
+                1=>{let value=&*(lparam as *const Value);studio_view::read_path(&mut state,PathBuf::from(value.as_str().unwrap()));},
+                2=>{*(lparam as *mut Value)=studio_view::diagnostics(&state);},
+                3=>{let value=&*(lparam as *const Value);studio_view::save_path(&mut state,PathBuf::from(value.as_str().unwrap()));},
+                4=>state.studio.test_decision=Some(lparam as i32),
+                5=>studio_view::reset_test(&mut state),
+                6=>{let value=&*(lparam as *const Value);return studio_view::capture_frame(&mut state,Path::new(value.as_str().unwrap())) as isize;},
+                _=>{},
+            }
+        }
+        return 0;
+    }
+    if message==studio_view::EXIT_REQUEST {
+        let tray=lparam as HWND;
+        let mut process=0;
+        GetWindowThreadProcessId(tray,&mut process);
+        if process==std::process::id() {
+            if let Ok(mut state)=(*pointer).try_borrow_mut(){state.exit_tray=Some(tray);}
+            ShowWindow(hwnd,SW_SHOW);SetForegroundWindow(hwnd);PostMessageW(hwnd,WM_CLOSE,0,0);
+        }
+        return 0;
     }
     if message==mouse_feedback::NOTIFY {
         if let Ok(mut state)=(*pointer).try_borrow_mut(){mouse_feedback::notification(&mut state);}
@@ -3857,6 +3930,9 @@ unsafe extern "system" fn window_proc(
         }
         return DefWindowProcW(hwnd, message, wparam, lparam);
     };
+    if message==WM_COMMAND && studio_view::command(&mut state,(wparam&0xffff)as u16,((wparam>>16)&0xffff)as u16) {return 0;}
+    if message==WM_MOUSEWHEEL && studio_view::wheel(&mut state,((wparam>>16)as u16 as i16)as i32,
+        POINT{x:(lparam as u32&0xffff)as i16 as i32,y:((lparam as u32>>16)&0xffff)as i16 as i32}) {return 0;}
     if state.restricted_actions
         && matches!(
             message,
@@ -4645,6 +4721,8 @@ fn run_window(
             .spawn(move || worker(engine, jobs_rx, replies_tx))
             .map_err(|e| e.to_string())?;
         let mut state = Box::new(RefCell::new(State {
+            studio: studio_view::View::default(),
+            exit_tray: None,
             calibration: calibration_view::View::default(),
             advanced: advanced_view::View::default(),
             mouse_feedback: mouse_feedback::Observer::default(),
@@ -4926,6 +5004,8 @@ fn run_window(
                 break;
             }
             if message.message == WM_KEYDOWN && GetKeyState(18) >= 0 {
+                let studio_action=studio_view::key(&state.borrow(),message.wParam,GetKeyState(17)<0,GetDlgCtrlID(message.hwnd)as u16==studio_view::NAME);
+                if let Some(control)=studio_action {state.borrow_mut().action(Action::Studio(control));continue;}
                 let action = host_tabs::shortcut_action(&state.borrow(), message.wParam,
                     GetKeyState(17) < 0, GetKeyState(16) < 0);
                 if let Some(action) = action {

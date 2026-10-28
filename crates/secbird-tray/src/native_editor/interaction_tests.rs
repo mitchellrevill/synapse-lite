@@ -5,6 +5,8 @@
 mod calibration;
 #[path="advanced_interaction_tests.rs"]
 mod advanced;
+#[path="studio_interaction_tests.rs"]
+mod studio;
 use super::*;
 use secbird_core::{commands as cmd, sim::Sim, Store};
 use std::time::Instant;

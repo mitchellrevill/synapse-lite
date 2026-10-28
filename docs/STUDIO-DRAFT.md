@@ -2,8 +2,8 @@
 
 `studio::document::Draft` now implements local layer-title and visibility edits,
 separate saved/working content, discard and20 undo/redo steps. It has no device
-access, file I/O, preview engine or native controls. This is the state model for
-the Studio page, not a delivered canvas editor.
+access, file I/O or preview engine. The native Studio page now uses this model
+for local file editing; canvas editing and effect playback remain unfinished.
 
 ## Implemented local behavior
 
@@ -77,7 +77,8 @@ The source's full Save path also normalizes effect parameters and device ledRef,
 handles generated-media histories, remote persistence and preview restoration.
 Those operations are not implemented by local `accept_saved`. Cross-save history
 behavior here is the explicit local API contract, not a claim of full native
-save parity. Selection snapshots and expanded-group UI are separate future work.
+save parity. The native view keeps selection and expanded-group overrides outside
+document history; it reads the source `opened` flag without rewriting it.
 
 Nine new draft tests cover group cascade/recovery, rename/dirty/save/discard,
 history limits, failed edits, empty/missing fields, archive replacement preserving
@@ -88,11 +89,12 @@ shaped synthetic data, not actual stock compositions. A separate asynchronous
 save-acknowledgement regression verifies that newer edits remain dirty, foreign
 checkpoints are inert and discard returns to the snapshot actually acknowledged.
 
-382 core tests (six intentionally ignored), three CLI tests and one doc test
-pass; optimized CLI/tray builds pass. The earlier229 serial tray tests cover the
-file-codec checkpoint; no new GUI Studio behavior is claimed by those results.
+382 core tests (six intentionally ignored), three CLI tests, one doc test and230
+serial tray tests pass. An additional opt-in native Studio interaction test uses
+an actual window/message loop and simulated device transport. See
+[native Studio](STUDIO-NATIVE.md) for its scope and remaining gaps.
 
-## Native view still required
+## Native layout source
 
 Recovered cached EditorCanvas JS SHA256
 `190a2ef92615861142a1585b6cbffa578d2a716069f8d430cb6bd63ca103e5c6`

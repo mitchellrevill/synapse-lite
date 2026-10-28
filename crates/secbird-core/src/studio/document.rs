@@ -35,6 +35,7 @@ pub struct LayerRow {
     pub kind: Kind,
     pub parent: Option<String>,
     pub visible: Option<bool>,
+    pub opened: Option<bool>,
     pub effect: Option<String>,
 }
 
@@ -188,6 +189,7 @@ fn rows(raw: &RawValue) -> Result<Vec<LayerRow>> {
                 kind: kind.clone(),
                 parent: parent.map(str::to_owned),
                 visible: item.visible()?,
+                opened: if kind == Kind::Group { item.get("opened").map(|raw|serde_json::from_str(raw.get()).map_err(invalid)).transpose()? } else { None },
                 effect,
             });
             if kind == Kind::Group {
