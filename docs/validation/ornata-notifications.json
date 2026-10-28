@@ -1,0 +1,26 @@
+{
+  "hid_sets": 0,
+  "input_submissions": 0,
+  "key_identities_or_text_emitted": false,
+  "observed_break_records": 0,
+  "observed_make_records": 0,
+  "paths_or_serials_emitted": false,
+  "redirection_changes": 0,
+  "scope": "explicit passive selected-Ornata filter notifications; no interception or generated input",
+  "selector_mutations": 0,
+  "snapshot": {
+    "association_verified": true,
+    "cancel_requested": true,
+    "error": null,
+    "finished": true,
+    "keyboard_records": 0,
+    "other_records": 0,
+    "pending_drained": true,
+    "received_records": 0,
+    "subscription_disabled": true,
+    "subscription_enabled": true
+  },
+  "stop_completed": true,
+  "human_confirmed_press_during_sample": true,
+  "physical_input_delivery_verified": false
+}

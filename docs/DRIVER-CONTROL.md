@@ -26,6 +26,13 @@ Decompiler signatures are estimates: its one-byte estimate for a receive request
 
 ## Runtime status
 
+The later [selected keyboard notification transport](KEYBOARD-NOTIFICATIONS.md)
+adds an explicit passive subscription API independently of this GET-only reader.
+Normal025D role2 notifications use type1, not solely the type0xB alternate helper
+in the original ABI notes. Physical subscription/cancellation cleanup passed;
+confirmed physical typing still produced zero events, so delivery remains
+unverified. No interception or key-submission API is enabled by that checkpoint.
+
 The Rust reader successfully enumerated the installed keyboard 025D and wired mouse 00C4 endpoints. With stock Synapse running, it received four keyboard-endpoint selectors and one mouse-endpoint selector, all 292 bytes. The next mouse index produced generic Windows error 31. See [the redacted runtime summary](validation/driver-control.json).
 
 Seven core tests cover endpoint scope, FFI layout, keyboard/mouse field boundaries, opaque kinds, short replies and IOCTL fields. CLI parsing rejects unsupported limits before spawning a child. These tests and read-only queries do not establish hook ownership, input interception, crash recovery, wireless behavior, or a Rust kernel-driver replacement. Those remain outstanding.
