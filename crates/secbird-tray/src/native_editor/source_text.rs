@@ -1,4 +1,4 @@
-//! Natural DirectWrite for the two measured source text roles. See docs/TEXT-METRICS.md.
+//! Natural DirectWrite for three measured source text roles. See docs/TEXT-METRICS.md.
 //! The C++ bridge is built against official Windows SDK COM declarations.
 //! A caller must retain a creation/draw failure and expose its GDI fallback;
 //! this module never silently chooses another font or text renderer.
@@ -33,7 +33,7 @@ pub(super) struct Failure {
 impl fmt::Display for Failure {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let reason = match self.status {
-            1 => "invalid or out-of-bound heading request",
+            1 => "invalid or out-of-bound text request",
             2 => "DirectWrite Factory5 unavailable",
             3 => "exact private source fonts unavailable",
             4 => "natural text layout failed",
@@ -41,7 +41,7 @@ impl fmt::Display for Failure {
             6 => "natural glyph rendering failed",
             7 => "text bitmap copy failed",
             8 => "text allocation failed",
-            9 => "heading contains unsupported glyphs or controls",
+            9 => "label contains unsupported glyphs or controls",
             _ => "unknown text pilot failure",
         };
         write!(f, "{reason} (HRESULT 0x{:08X})", self.hresult as u32)
@@ -54,6 +54,7 @@ impl std::error::Error for Failure {}
 pub(super) enum Role {
     AssignmentHeading = 0,
     ToolbarTitle = 1,
+    HostTab = 2,
 }
 #[derive(Clone, Copy, Debug)]
 pub(super) struct SourceBox {
@@ -66,10 +67,19 @@ extern "C" {
     fn sl_source_text_create(
         heading_file: *const u16,
         toolbar_file: *const u16,
+        tab_file: *const u16,
         result: *mut *mut c_void,
         error: *mut i32,
     ) -> u32;
     fn sl_source_text_destroy(context: *mut c_void);
+    fn sl_source_text_measure(
+        context: *mut c_void,
+        role: u32,
+        text: *const u16,
+        length: u32,
+        metrics: *mut Metrics,
+        error: *mut i32,
+    ) -> u32;
     fn sl_source_text_draw(
         context: *mut c_void,
         destination: *mut c_void,
@@ -111,12 +121,14 @@ impl TextPilot {
         };
         let heading = path("RazerF5-Regular.ttf")?;
         let toolbar = path("Roboto-Regular.ttf")?;
+        let tab = path("Roboto-Light.ttf")?;
         let mut context = std::ptr::null_mut();
         let mut hresult = 0;
         let status = unsafe {
             sl_source_text_create(
                 heading.as_ptr(),
                 toolbar.as_ptr(),
+                tab.as_ptr(),
                 &mut context,
                 &mut hresult,
             )
@@ -134,8 +146,36 @@ impl TextPilot {
         })
     }
 
+    pub fn measure(&mut self, text: &str, role: Role) -> Result<Metrics, Failure> {
+        if text.len() > 1024 {
+            return Err(Failure {
+                status: 1,
+                hresult: 0x80070057u32 as i32,
+            });
+        }
+        let text: Vec<u16> = text.encode_utf16().collect();
+        let mut metrics = Metrics::default();
+        let mut hresult = 0;
+        let status = unsafe {
+            sl_source_text_measure(
+                self.context.as_ptr(),
+                role as u32,
+                text.as_ptr(),
+                text.len() as u32,
+                &mut metrics,
+                &mut hresult,
+            )
+        };
+        if status == 0 {
+            Ok(metrics)
+        } else {
+            Err(Failure { status, hresult })
+        }
+    }
+
     /// Render one fixed source role with natural advances: RazerF5-16/400
-    /// left/baseline15 or Roboto14/400 centered/baseline23. SourceBox uses
+    /// left/baseline15, Roboto14/400 centered/baseline23, or Roboto12/300
+    /// host tabs left/baseline11 from their14px title box. SourceBox uses
     /// absolute client CSS pixels, Clip uses physical pixels. Clip rounding is
     /// compensated before drawing; source baselines remain fractional.
     /// Pass the source uppercase label (this does not perform localization).
@@ -218,6 +258,18 @@ impl Renderer {
         self.last_metrics.get()
     }
 
+    pub fn measure(&self, text: &str, role: Role) -> Option<Metrics> {
+        let mut state = self.state.borrow_mut();
+        let Ok(pilot) = &mut *state else { return None };
+        match pilot.measure(text, role) {
+            Ok(metrics) => Some(metrics),
+            Err(failure) => {
+                *state = Err(failure);
+                None
+            }
+        }
+    }
+
     pub unsafe fn draw(
         &self,
         destination: *mut c_void,
@@ -280,10 +332,11 @@ mod tests {
             assert!(!bitmap.is_null());
             let old = SelectObject(dc, bitmap);
             let mut results = Vec::new();
-            for scale in [1.0_f32, 1.25] {
+            for scale in [1.0_f32, 1.25, 1.5, 2.0] {
                 for (role, label, advance, baseline) in [
                     (Role::AssignmentHeading, "MOUSE FUNCTION", 127.3120, 204.0),
                     (Role::ToolbarTitle, "RAZER ORNATA V2", 119.9570, 212.0),
+                    (Role::HostTab, "SYNAPSE", 51.73242188, 200.0),
                 ] {
                     let clip = Clip {
                         x: 0,
@@ -291,6 +344,8 @@ mod tests {
                         width: 512,
                         height: 64,
                     };
+                    let measured = pilot.measure(label, role).unwrap();
+                    assert!((measured.advance_css - advance).abs() < 0.001);
                     let result = pilot
                         .draw(
                             dc,
@@ -317,5 +372,35 @@ mod tests {
                 assert!((result.source_baseline_physical - baseline).abs() < 0.001);
             }
         }
+    }
+
+    #[test]
+    #[ignore = "Requires SYNAPSE_LITE_TEST_FONT_DIR pointing to recovered local fonts"]
+    fn tab_measurement_matches_dom_quantum_and_stays_in_shared_cache() {
+        let assets = std::env::var_os("SYNAPSE_LITE_TEST_FONT_DIR").expect("local font directory");
+        let mut pilot = TextPilot::new(Path::new(&assets)).unwrap();
+        for (label, dom, expected_slot) in [
+            ("SYNAPSE", 51.734375, 108),
+            ("DEATHADDER V3 HYPERSPEED", 168.078125, 224),
+            ("ORNATA V2", 62.28125, 118),
+            ("AVATAR TO FI FFI", 92.78125, 149),
+        ] {
+            let m = pilot.measure(label, Role::HostTab).unwrap();
+            assert!((m.advance_css - dom).abs() < 1.0 / 64.0);
+            assert_eq!((m.advance_css + 56.0).round() as i32, expected_slot);
+            assert!((m.layout_baseline_css - 11.40234375).abs() < 0.0001);
+        }
+        for i in 0..50 {
+            pilot.measure(&format!("TAB {i}"), Role::HostTab).unwrap();
+        }
+        assert_eq!(
+            pilot
+                .measure("SYNAPSE", Role::HostTab)
+                .unwrap()
+                .cached_layouts,
+            32
+        );
+        assert!(pilot.measure("", Role::HostTab).is_err());
+        assert!(pilot.measure(&"X".repeat(257), Role::HostTab).is_err());
     }
 }

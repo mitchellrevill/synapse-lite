@@ -1,0 +1,2352 @@
+{
+  "authority": "controlled inert CSS/font replay",
+  "browser": "156.0.4314.50",
+  "network": false,
+  "vendor_javascript_executed": false,
+  "screenshots": false,
+  "source": {
+    "css_sha256": "30e429ff6289bd694e8c519a73ef42f7cb181e11c8687d44fe59893ecf95792c",
+    "font_stylesheet_sha256": "1b726723338e6e29f5875c3b030b9a3786a19937ef89368f149fdd3ec30e00e3",
+    "font_sha256": "8cb65fe121080cb8721fb9b643f6b096d133d4b72b8575f6529ec458613dcc78",
+    "font_bytes": 35468,
+    "original_font_mapping": "@font-face{font-family:Roboto;font-style:normal;font-weight:300;font-display:swap;src:local('Roboto Light'),local('Roboto-Light'),url('../fonts/Roboto-Light.woff2') format('woff2'),url('../fonts/Roboto-Light.woff') format('woff')}"
+  },
+  "rows": [
+    {
+      "scale": 1,
+      "offset": 0,
+      "text": "SYNAPSE",
+      "rendered_text": "SYNAPSE",
+      "devicePixelRatio": 1,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8,
+        "y": 8,
+        "width": 107.734375,
+        "height": 34,
+        "clientWidth": 108,
+        "offsetWidth": 108
+      },
+      "content": {
+        "x": 9,
+        "y": 9,
+        "width": 105.734375,
+        "height": 32
+      },
+      "title": {
+        "x": 51,
+        "y": 18,
+        "width": 51.734375,
+        "height": 14,
+        "clientWidth": 52,
+        "offsetWidth": 52,
+        "scrollWidth": 52
+      },
+      "label": {
+        "x": 51,
+        "y": 18,
+        "width": 51.734375,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51,
+        "y": 18,
+        "width": 51.734375,
+        "height": 14
+      },
+      "baseline_css": 29,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 51.732421875,
+          "normal": 51.732421875,
+          "none": 51.626953125
+        },
+        "advance_css": 51.732421875,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 29,
+        "dom_advance": 51.734375
+      }
+    },
+    {
+      "scale": 1,
+      "offset": 0,
+      "text": "DEATHADDER V3 HYPERSPEED",
+      "rendered_text": "DEATHADDER V3 HYPERSPEED",
+      "devicePixelRatio": 1,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8,
+        "y": 8,
+        "width": 224.078125,
+        "height": 34,
+        "clientWidth": 224,
+        "offsetWidth": 224
+      },
+      "content": {
+        "x": 9,
+        "y": 9,
+        "width": 222.078125,
+        "height": 32
+      },
+      "title": {
+        "x": 51,
+        "y": 18,
+        "width": 168.078125,
+        "height": 14,
+        "clientWidth": 168,
+        "offsetWidth": 168,
+        "scrollWidth": 168
+      },
+      "label": {
+        "x": 51,
+        "y": 18,
+        "width": 168.078125,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51,
+        "y": 18,
+        "width": 168.078125,
+        "height": 14
+      },
+      "baseline_css": 29,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 168.0703125,
+          "normal": 168.0703125,
+          "none": 168.884765625
+        },
+        "advance_css": 168.0703125,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 29,
+        "dom_advance": 168.078125
+      }
+    },
+    {
+      "scale": 1,
+      "offset": 0,
+      "text": "ORNATA V2",
+      "rendered_text": "ORNATA V2",
+      "devicePixelRatio": 1,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8,
+        "y": 8,
+        "width": 118.28125,
+        "height": 34,
+        "clientWidth": 118,
+        "offsetWidth": 118
+      },
+      "content": {
+        "x": 9,
+        "y": 9,
+        "width": 116.28125,
+        "height": 32
+      },
+      "title": {
+        "x": 51,
+        "y": 18,
+        "width": 62.28125,
+        "height": 14,
+        "clientWidth": 62,
+        "offsetWidth": 62,
+        "scrollWidth": 62
+      },
+      "label": {
+        "x": 51,
+        "y": 18,
+        "width": 62.28125,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51,
+        "y": 18,
+        "width": 62.28125,
+        "height": 14
+      },
+      "baseline_css": 29,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 62.267578125,
+          "normal": 62.267578125,
+          "none": 63.380859375
+        },
+        "advance_css": 62.267578125,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 29,
+        "dom_advance": 62.28125
+      }
+    },
+    {
+      "scale": 1,
+      "offset": 0,
+      "text": "AVATAR To fi ffi",
+      "rendered_text": "AVATAR TO FI FFI",
+      "devicePixelRatio": 1,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8,
+        "y": 8,
+        "width": 148.78125,
+        "height": 34,
+        "clientWidth": 149,
+        "offsetWidth": 149
+      },
+      "content": {
+        "x": 9,
+        "y": 9,
+        "width": 146.78125,
+        "height": 32
+      },
+      "title": {
+        "x": 51,
+        "y": 18,
+        "width": 92.78125,
+        "height": 14,
+        "clientWidth": 93,
+        "offsetWidth": 93,
+        "scrollWidth": 93
+      },
+      "label": {
+        "x": 51,
+        "y": 18,
+        "width": 92.78125,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51,
+        "y": 18,
+        "width": 92.78125,
+        "height": 14
+      },
+      "baseline_css": 29,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 93.01171875,
+          "normal": 92.77734375,
+          "none": 95.34375
+        },
+        "advance_css": 92.77734375,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 29,
+        "dom_advance": 92.78125
+      }
+    },
+    {
+      "scale": 1,
+      "offset": 0.25,
+      "text": "SYNAPSE",
+      "rendered_text": "SYNAPSE",
+      "devicePixelRatio": 1,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8.25,
+        "y": 8.25,
+        "width": 107.734375,
+        "height": 34,
+        "clientWidth": 108,
+        "offsetWidth": 108
+      },
+      "content": {
+        "x": 9.25,
+        "y": 9.25,
+        "width": 105.734375,
+        "height": 32
+      },
+      "title": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 51.734375,
+        "height": 14,
+        "clientWidth": 52,
+        "offsetWidth": 52,
+        "scrollWidth": 52
+      },
+      "label": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 51.734375,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 51.734375,
+        "height": 14
+      },
+      "baseline_css": 29.25,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 51.732421875,
+          "normal": 51.732421875,
+          "none": 51.626953125
+        },
+        "advance_css": 51.732421875,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 29.25,
+        "dom_advance": 51.734375
+      }
+    },
+    {
+      "scale": 1,
+      "offset": 0.25,
+      "text": "DEATHADDER V3 HYPERSPEED",
+      "rendered_text": "DEATHADDER V3 HYPERSPEED",
+      "devicePixelRatio": 1,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8.25,
+        "y": 8.25,
+        "width": 224.078125,
+        "height": 34,
+        "clientWidth": 224,
+        "offsetWidth": 224
+      },
+      "content": {
+        "x": 9.25,
+        "y": 9.25,
+        "width": 222.078125,
+        "height": 32
+      },
+      "title": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 168.078125,
+        "height": 14,
+        "clientWidth": 168,
+        "offsetWidth": 168,
+        "scrollWidth": 168
+      },
+      "label": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 168.078125,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 168.078125,
+        "height": 14
+      },
+      "baseline_css": 29.25,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 168.0703125,
+          "normal": 168.0703125,
+          "none": 168.884765625
+        },
+        "advance_css": 168.0703125,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 29.25,
+        "dom_advance": 168.078125
+      }
+    },
+    {
+      "scale": 1,
+      "offset": 0.25,
+      "text": "ORNATA V2",
+      "rendered_text": "ORNATA V2",
+      "devicePixelRatio": 1,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8.25,
+        "y": 8.25,
+        "width": 118.28125,
+        "height": 34,
+        "clientWidth": 118,
+        "offsetWidth": 118
+      },
+      "content": {
+        "x": 9.25,
+        "y": 9.25,
+        "width": 116.28125,
+        "height": 32
+      },
+      "title": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 62.28125,
+        "height": 14,
+        "clientWidth": 62,
+        "offsetWidth": 62,
+        "scrollWidth": 62
+      },
+      "label": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 62.28125,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 62.28125,
+        "height": 14
+      },
+      "baseline_css": 29.25,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 62.267578125,
+          "normal": 62.267578125,
+          "none": 63.380859375
+        },
+        "advance_css": 62.267578125,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 29.25,
+        "dom_advance": 62.28125
+      }
+    },
+    {
+      "scale": 1,
+      "offset": 0.25,
+      "text": "AVATAR To fi ffi",
+      "rendered_text": "AVATAR TO FI FFI",
+      "devicePixelRatio": 1,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8.25,
+        "y": 8.25,
+        "width": 148.78125,
+        "height": 34,
+        "clientWidth": 149,
+        "offsetWidth": 149
+      },
+      "content": {
+        "x": 9.25,
+        "y": 9.25,
+        "width": 146.78125,
+        "height": 32
+      },
+      "title": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 92.78125,
+        "height": 14,
+        "clientWidth": 93,
+        "offsetWidth": 93,
+        "scrollWidth": 93
+      },
+      "label": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 92.78125,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 92.78125,
+        "height": 14
+      },
+      "baseline_css": 29.25,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 93.01171875,
+          "normal": 92.77734375,
+          "none": 95.34375
+        },
+        "advance_css": 92.77734375,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 29.25,
+        "dom_advance": 92.78125
+      }
+    },
+    {
+      "scale": 1.25,
+      "offset": 0,
+      "text": "SYNAPSE",
+      "rendered_text": "SYNAPSE",
+      "devicePixelRatio": 1.25,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8,
+        "y": 8,
+        "width": 107.734375,
+        "height": 34,
+        "clientWidth": 108,
+        "offsetWidth": 108
+      },
+      "content": {
+        "x": 9,
+        "y": 9,
+        "width": 105.734375,
+        "height": 32
+      },
+      "title": {
+        "x": 51,
+        "y": 18,
+        "width": 51.734375,
+        "height": 14,
+        "clientWidth": 52,
+        "offsetWidth": 52,
+        "scrollWidth": 52
+      },
+      "label": {
+        "x": 51,
+        "y": 18,
+        "width": 51.734375,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51,
+        "y": 18,
+        "width": 51.734375,
+        "height": 14
+      },
+      "baseline_css": 29,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 51.732421875,
+          "normal": 51.732421875,
+          "none": 51.626953125
+        },
+        "advance_css": 51.732421875,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 36.25,
+        "dom_advance": 64.66796875
+      }
+    },
+    {
+      "scale": 1.25,
+      "offset": 0,
+      "text": "DEATHADDER V3 HYPERSPEED",
+      "rendered_text": "DEATHADDER V3 HYPERSPEED",
+      "devicePixelRatio": 1.25,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8,
+        "y": 8,
+        "width": 224.078125,
+        "height": 34,
+        "clientWidth": 224,
+        "offsetWidth": 224
+      },
+      "content": {
+        "x": 9,
+        "y": 9,
+        "width": 222.078125,
+        "height": 32
+      },
+      "title": {
+        "x": 51,
+        "y": 18,
+        "width": 168.078125,
+        "height": 14,
+        "clientWidth": 168,
+        "offsetWidth": 168,
+        "scrollWidth": 168
+      },
+      "label": {
+        "x": 51,
+        "y": 18,
+        "width": 168.078125,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51,
+        "y": 18,
+        "width": 168.078125,
+        "height": 14
+      },
+      "baseline_css": 29,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 168.0703125,
+          "normal": 168.0703125,
+          "none": 168.884765625
+        },
+        "advance_css": 168.0703125,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 36.25,
+        "dom_advance": 210.09765625
+      }
+    },
+    {
+      "scale": 1.25,
+      "offset": 0,
+      "text": "ORNATA V2",
+      "rendered_text": "ORNATA V2",
+      "devicePixelRatio": 1.25,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8,
+        "y": 8,
+        "width": 118.28125,
+        "height": 34,
+        "clientWidth": 118,
+        "offsetWidth": 118
+      },
+      "content": {
+        "x": 9,
+        "y": 9,
+        "width": 116.28125,
+        "height": 32
+      },
+      "title": {
+        "x": 51,
+        "y": 18,
+        "width": 62.28125,
+        "height": 14,
+        "clientWidth": 62,
+        "offsetWidth": 62,
+        "scrollWidth": 62
+      },
+      "label": {
+        "x": 51,
+        "y": 18,
+        "width": 62.28125,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51,
+        "y": 18,
+        "width": 62.28125,
+        "height": 14
+      },
+      "baseline_css": 29,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 62.267578125,
+          "normal": 62.267578125,
+          "none": 63.380859375
+        },
+        "advance_css": 62.267578125,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 36.25,
+        "dom_advance": 77.8515625
+      }
+    },
+    {
+      "scale": 1.25,
+      "offset": 0,
+      "text": "AVATAR To fi ffi",
+      "rendered_text": "AVATAR TO FI FFI",
+      "devicePixelRatio": 1.25,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8,
+        "y": 8,
+        "width": 148.78125,
+        "height": 34,
+        "clientWidth": 149,
+        "offsetWidth": 149
+      },
+      "content": {
+        "x": 9,
+        "y": 9,
+        "width": 146.78125,
+        "height": 32
+      },
+      "title": {
+        "x": 51,
+        "y": 18,
+        "width": 92.78125,
+        "height": 14,
+        "clientWidth": 93,
+        "offsetWidth": 93,
+        "scrollWidth": 93
+      },
+      "label": {
+        "x": 51,
+        "y": 18,
+        "width": 92.78125,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51,
+        "y": 18,
+        "width": 92.78125,
+        "height": 14
+      },
+      "baseline_css": 29,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 93.01171875,
+          "normal": 92.77734375,
+          "none": 95.34375
+        },
+        "advance_css": 92.77734375,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 36.25,
+        "dom_advance": 115.9765625
+      }
+    },
+    {
+      "scale": 1.25,
+      "offset": 0.25,
+      "text": "SYNAPSE",
+      "rendered_text": "SYNAPSE",
+      "devicePixelRatio": 1.25,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8.25,
+        "y": 8.25,
+        "width": 107.734375,
+        "height": 34,
+        "clientWidth": 108,
+        "offsetWidth": 108
+      },
+      "content": {
+        "x": 9.25,
+        "y": 9.25,
+        "width": 105.734375,
+        "height": 32
+      },
+      "title": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 51.734375,
+        "height": 14,
+        "clientWidth": 52,
+        "offsetWidth": 52,
+        "scrollWidth": 52
+      },
+      "label": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 51.734375,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 51.734375,
+        "height": 14
+      },
+      "baseline_css": 29.25,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 51.732421875,
+          "normal": 51.732421875,
+          "none": 51.626953125
+        },
+        "advance_css": 51.732421875,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 36.5625,
+        "dom_advance": 64.66796875
+      }
+    },
+    {
+      "scale": 1.25,
+      "offset": 0.25,
+      "text": "DEATHADDER V3 HYPERSPEED",
+      "rendered_text": "DEATHADDER V3 HYPERSPEED",
+      "devicePixelRatio": 1.25,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8.25,
+        "y": 8.25,
+        "width": 224.078125,
+        "height": 34,
+        "clientWidth": 224,
+        "offsetWidth": 224
+      },
+      "content": {
+        "x": 9.25,
+        "y": 9.25,
+        "width": 222.078125,
+        "height": 32
+      },
+      "title": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 168.078125,
+        "height": 14,
+        "clientWidth": 168,
+        "offsetWidth": 168,
+        "scrollWidth": 168
+      },
+      "label": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 168.078125,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 168.078125,
+        "height": 14
+      },
+      "baseline_css": 29.25,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 168.0703125,
+          "normal": 168.0703125,
+          "none": 168.884765625
+        },
+        "advance_css": 168.0703125,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 36.5625,
+        "dom_advance": 210.09765625
+      }
+    },
+    {
+      "scale": 1.25,
+      "offset": 0.25,
+      "text": "ORNATA V2",
+      "rendered_text": "ORNATA V2",
+      "devicePixelRatio": 1.25,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8.25,
+        "y": 8.25,
+        "width": 118.28125,
+        "height": 34,
+        "clientWidth": 118,
+        "offsetWidth": 118
+      },
+      "content": {
+        "x": 9.25,
+        "y": 9.25,
+        "width": 116.28125,
+        "height": 32
+      },
+      "title": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 62.28125,
+        "height": 14,
+        "clientWidth": 62,
+        "offsetWidth": 62,
+        "scrollWidth": 62
+      },
+      "label": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 62.28125,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 62.28125,
+        "height": 14
+      },
+      "baseline_css": 29.25,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 62.267578125,
+          "normal": 62.267578125,
+          "none": 63.380859375
+        },
+        "advance_css": 62.267578125,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 36.5625,
+        "dom_advance": 77.8515625
+      }
+    },
+    {
+      "scale": 1.25,
+      "offset": 0.25,
+      "text": "AVATAR To fi ffi",
+      "rendered_text": "AVATAR TO FI FFI",
+      "devicePixelRatio": 1.25,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8.25,
+        "y": 8.25,
+        "width": 148.78125,
+        "height": 34,
+        "clientWidth": 149,
+        "offsetWidth": 149
+      },
+      "content": {
+        "x": 9.25,
+        "y": 9.25,
+        "width": 146.78125,
+        "height": 32
+      },
+      "title": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 92.78125,
+        "height": 14,
+        "clientWidth": 93,
+        "offsetWidth": 93,
+        "scrollWidth": 93
+      },
+      "label": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 92.78125,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 92.78125,
+        "height": 14
+      },
+      "baseline_css": 29.25,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 93.01171875,
+          "normal": 92.77734375,
+          "none": 95.34375
+        },
+        "advance_css": 92.77734375,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 36.5625,
+        "dom_advance": 115.9765625
+      }
+    },
+    {
+      "scale": 1.5,
+      "offset": 0,
+      "text": "SYNAPSE",
+      "rendered_text": "SYNAPSE",
+      "devicePixelRatio": 1.5,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8,
+        "y": 8,
+        "width": 107.734375,
+        "height": 34,
+        "clientWidth": 108,
+        "offsetWidth": 108
+      },
+      "content": {
+        "x": 9,
+        "y": 9,
+        "width": 105.734375,
+        "height": 32
+      },
+      "title": {
+        "x": 51,
+        "y": 18,
+        "width": 51.734375,
+        "height": 14,
+        "clientWidth": 52,
+        "offsetWidth": 52,
+        "scrollWidth": 52
+      },
+      "label": {
+        "x": 51,
+        "y": 18,
+        "width": 51.734375,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51,
+        "y": 18,
+        "width": 51.734375,
+        "height": 14
+      },
+      "baseline_css": 29,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 51.732421875,
+          "normal": 51.732421875,
+          "none": 51.626953125
+        },
+        "advance_css": 51.732421875,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 43.5,
+        "dom_advance": 77.6015625
+      }
+    },
+    {
+      "scale": 1.5,
+      "offset": 0,
+      "text": "DEATHADDER V3 HYPERSPEED",
+      "rendered_text": "DEATHADDER V3 HYPERSPEED",
+      "devicePixelRatio": 1.5,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8,
+        "y": 8,
+        "width": 224.078125,
+        "height": 34,
+        "clientWidth": 224,
+        "offsetWidth": 224
+      },
+      "content": {
+        "x": 9,
+        "y": 9,
+        "width": 222.078125,
+        "height": 32
+      },
+      "title": {
+        "x": 51,
+        "y": 18,
+        "width": 168.078125,
+        "height": 14,
+        "clientWidth": 168,
+        "offsetWidth": 168,
+        "scrollWidth": 168
+      },
+      "label": {
+        "x": 51,
+        "y": 18,
+        "width": 168.078125,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51,
+        "y": 18,
+        "width": 168.078125,
+        "height": 14
+      },
+      "baseline_css": 29,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 168.0703125,
+          "normal": 168.0703125,
+          "none": 168.884765625
+        },
+        "advance_css": 168.0703125,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 43.5,
+        "dom_advance": 252.1171875
+      }
+    },
+    {
+      "scale": 1.5,
+      "offset": 0,
+      "text": "ORNATA V2",
+      "rendered_text": "ORNATA V2",
+      "devicePixelRatio": 1.5,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8,
+        "y": 8,
+        "width": 118.28125,
+        "height": 34,
+        "clientWidth": 118,
+        "offsetWidth": 118
+      },
+      "content": {
+        "x": 9,
+        "y": 9,
+        "width": 116.28125,
+        "height": 32
+      },
+      "title": {
+        "x": 51,
+        "y": 18,
+        "width": 62.28125,
+        "height": 14,
+        "clientWidth": 62,
+        "offsetWidth": 62,
+        "scrollWidth": 62
+      },
+      "label": {
+        "x": 51,
+        "y": 18,
+        "width": 62.28125,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51,
+        "y": 18,
+        "width": 62.28125,
+        "height": 14
+      },
+      "baseline_css": 29,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 62.267578125,
+          "normal": 62.267578125,
+          "none": 63.380859375
+        },
+        "advance_css": 62.267578125,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 43.5,
+        "dom_advance": 93.421875
+      }
+    },
+    {
+      "scale": 1.5,
+      "offset": 0,
+      "text": "AVATAR To fi ffi",
+      "rendered_text": "AVATAR TO FI FFI",
+      "devicePixelRatio": 1.5,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8,
+        "y": 8,
+        "width": 148.78125,
+        "height": 34,
+        "clientWidth": 149,
+        "offsetWidth": 149
+      },
+      "content": {
+        "x": 9,
+        "y": 9,
+        "width": 146.78125,
+        "height": 32
+      },
+      "title": {
+        "x": 51,
+        "y": 18,
+        "width": 92.78125,
+        "height": 14,
+        "clientWidth": 93,
+        "offsetWidth": 93,
+        "scrollWidth": 93
+      },
+      "label": {
+        "x": 51,
+        "y": 18,
+        "width": 92.78125,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51,
+        "y": 18,
+        "width": 92.78125,
+        "height": 14
+      },
+      "baseline_css": 29,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 93.01171875,
+          "normal": 92.77734375,
+          "none": 95.34375
+        },
+        "advance_css": 92.77734375,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 43.5,
+        "dom_advance": 139.171875
+      }
+    },
+    {
+      "scale": 1.5,
+      "offset": 0.25,
+      "text": "SYNAPSE",
+      "rendered_text": "SYNAPSE",
+      "devicePixelRatio": 1.5,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8.25,
+        "y": 8.25,
+        "width": 107.734375,
+        "height": 34,
+        "clientWidth": 108,
+        "offsetWidth": 108
+      },
+      "content": {
+        "x": 9.25,
+        "y": 9.25,
+        "width": 105.734375,
+        "height": 32
+      },
+      "title": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 51.734375,
+        "height": 14,
+        "clientWidth": 52,
+        "offsetWidth": 52,
+        "scrollWidth": 52
+      },
+      "label": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 51.734375,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 51.734375,
+        "height": 14
+      },
+      "baseline_css": 29.25,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 51.732421875,
+          "normal": 51.732421875,
+          "none": 51.626953125
+        },
+        "advance_css": 51.732421875,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 43.875,
+        "dom_advance": 77.6015625
+      }
+    },
+    {
+      "scale": 1.5,
+      "offset": 0.25,
+      "text": "DEATHADDER V3 HYPERSPEED",
+      "rendered_text": "DEATHADDER V3 HYPERSPEED",
+      "devicePixelRatio": 1.5,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8.25,
+        "y": 8.25,
+        "width": 224.078125,
+        "height": 34,
+        "clientWidth": 224,
+        "offsetWidth": 224
+      },
+      "content": {
+        "x": 9.25,
+        "y": 9.25,
+        "width": 222.078125,
+        "height": 32
+      },
+      "title": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 168.078125,
+        "height": 14,
+        "clientWidth": 168,
+        "offsetWidth": 168,
+        "scrollWidth": 168
+      },
+      "label": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 168.078125,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 168.078125,
+        "height": 14
+      },
+      "baseline_css": 29.25,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 168.0703125,
+          "normal": 168.0703125,
+          "none": 168.884765625
+        },
+        "advance_css": 168.0703125,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 43.875,
+        "dom_advance": 252.1171875
+      }
+    },
+    {
+      "scale": 1.5,
+      "offset": 0.25,
+      "text": "ORNATA V2",
+      "rendered_text": "ORNATA V2",
+      "devicePixelRatio": 1.5,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8.25,
+        "y": 8.25,
+        "width": 118.28125,
+        "height": 34,
+        "clientWidth": 118,
+        "offsetWidth": 118
+      },
+      "content": {
+        "x": 9.25,
+        "y": 9.25,
+        "width": 116.28125,
+        "height": 32
+      },
+      "title": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 62.28125,
+        "height": 14,
+        "clientWidth": 62,
+        "offsetWidth": 62,
+        "scrollWidth": 62
+      },
+      "label": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 62.28125,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 62.28125,
+        "height": 14
+      },
+      "baseline_css": 29.25,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 62.267578125,
+          "normal": 62.267578125,
+          "none": 63.380859375
+        },
+        "advance_css": 62.267578125,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 43.875,
+        "dom_advance": 93.421875
+      }
+    },
+    {
+      "scale": 1.5,
+      "offset": 0.25,
+      "text": "AVATAR To fi ffi",
+      "rendered_text": "AVATAR TO FI FFI",
+      "devicePixelRatio": 1.5,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8.25,
+        "y": 8.25,
+        "width": 148.78125,
+        "height": 34,
+        "clientWidth": 149,
+        "offsetWidth": 149
+      },
+      "content": {
+        "x": 9.25,
+        "y": 9.25,
+        "width": 146.78125,
+        "height": 32
+      },
+      "title": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 92.78125,
+        "height": 14,
+        "clientWidth": 93,
+        "offsetWidth": 93,
+        "scrollWidth": 93
+      },
+      "label": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 92.78125,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 92.78125,
+        "height": 14
+      },
+      "baseline_css": 29.25,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 93.01171875,
+          "normal": 92.77734375,
+          "none": 95.34375
+        },
+        "advance_css": 92.77734375,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 43.875,
+        "dom_advance": 139.171875
+      }
+    },
+    {
+      "scale": 2,
+      "offset": 0,
+      "text": "SYNAPSE",
+      "rendered_text": "SYNAPSE",
+      "devicePixelRatio": 2,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8,
+        "y": 8,
+        "width": 107.734375,
+        "height": 34,
+        "clientWidth": 108,
+        "offsetWidth": 108
+      },
+      "content": {
+        "x": 9,
+        "y": 9,
+        "width": 105.734375,
+        "height": 32
+      },
+      "title": {
+        "x": 51,
+        "y": 18,
+        "width": 51.734375,
+        "height": 14,
+        "clientWidth": 52,
+        "offsetWidth": 52,
+        "scrollWidth": 52
+      },
+      "label": {
+        "x": 51,
+        "y": 18,
+        "width": 51.734375,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51,
+        "y": 18,
+        "width": 51.734375,
+        "height": 14
+      },
+      "baseline_css": 29,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 51.732421875,
+          "normal": 51.732421875,
+          "none": 51.626953125
+        },
+        "advance_css": 51.732421875,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 58,
+        "dom_advance": 103.46875
+      }
+    },
+    {
+      "scale": 2,
+      "offset": 0,
+      "text": "DEATHADDER V3 HYPERSPEED",
+      "rendered_text": "DEATHADDER V3 HYPERSPEED",
+      "devicePixelRatio": 2,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8,
+        "y": 8,
+        "width": 224.078125,
+        "height": 34,
+        "clientWidth": 224,
+        "offsetWidth": 224
+      },
+      "content": {
+        "x": 9,
+        "y": 9,
+        "width": 222.078125,
+        "height": 32
+      },
+      "title": {
+        "x": 51,
+        "y": 18,
+        "width": 168.078125,
+        "height": 14,
+        "clientWidth": 168,
+        "offsetWidth": 168,
+        "scrollWidth": 168
+      },
+      "label": {
+        "x": 51,
+        "y": 18,
+        "width": 168.078125,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51,
+        "y": 18,
+        "width": 168.078125,
+        "height": 14
+      },
+      "baseline_css": 29,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 168.0703125,
+          "normal": 168.0703125,
+          "none": 168.884765625
+        },
+        "advance_css": 168.0703125,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 58,
+        "dom_advance": 336.15625
+      }
+    },
+    {
+      "scale": 2,
+      "offset": 0,
+      "text": "ORNATA V2",
+      "rendered_text": "ORNATA V2",
+      "devicePixelRatio": 2,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8,
+        "y": 8,
+        "width": 118.28125,
+        "height": 34,
+        "clientWidth": 118,
+        "offsetWidth": 118
+      },
+      "content": {
+        "x": 9,
+        "y": 9,
+        "width": 116.28125,
+        "height": 32
+      },
+      "title": {
+        "x": 51,
+        "y": 18,
+        "width": 62.28125,
+        "height": 14,
+        "clientWidth": 62,
+        "offsetWidth": 62,
+        "scrollWidth": 62
+      },
+      "label": {
+        "x": 51,
+        "y": 18,
+        "width": 62.28125,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51,
+        "y": 18,
+        "width": 62.28125,
+        "height": 14
+      },
+      "baseline_css": 29,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 62.267578125,
+          "normal": 62.267578125,
+          "none": 63.380859375
+        },
+        "advance_css": 62.267578125,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 58,
+        "dom_advance": 124.5625
+      }
+    },
+    {
+      "scale": 2,
+      "offset": 0,
+      "text": "AVATAR To fi ffi",
+      "rendered_text": "AVATAR TO FI FFI",
+      "devicePixelRatio": 2,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8,
+        "y": 8,
+        "width": 148.78125,
+        "height": 34,
+        "clientWidth": 149,
+        "offsetWidth": 149
+      },
+      "content": {
+        "x": 9,
+        "y": 9,
+        "width": 146.78125,
+        "height": 32
+      },
+      "title": {
+        "x": 51,
+        "y": 18,
+        "width": 92.78125,
+        "height": 14,
+        "clientWidth": 93,
+        "offsetWidth": 93,
+        "scrollWidth": 93
+      },
+      "label": {
+        "x": 51,
+        "y": 18,
+        "width": 92.78125,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51,
+        "y": 18,
+        "width": 92.78125,
+        "height": 14
+      },
+      "baseline_css": 29,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 93.01171875,
+          "normal": 92.77734375,
+          "none": 95.34375
+        },
+        "advance_css": 92.77734375,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 58,
+        "dom_advance": 185.5625
+      }
+    },
+    {
+      "scale": 2,
+      "offset": 0.25,
+      "text": "SYNAPSE",
+      "rendered_text": "SYNAPSE",
+      "devicePixelRatio": 2,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8.25,
+        "y": 8.25,
+        "width": 107.734375,
+        "height": 34,
+        "clientWidth": 108,
+        "offsetWidth": 108
+      },
+      "content": {
+        "x": 9.25,
+        "y": 9.25,
+        "width": 105.734375,
+        "height": 32
+      },
+      "title": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 51.734375,
+        "height": 14,
+        "clientWidth": 52,
+        "offsetWidth": 52,
+        "scrollWidth": 52
+      },
+      "label": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 51.734375,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 51.734375,
+        "height": 14
+      },
+      "baseline_css": 29.25,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 51.732421875,
+          "normal": 51.732421875,
+          "none": 51.626953125
+        },
+        "advance_css": 51.732421875,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 58.5,
+        "dom_advance": 103.46875
+      }
+    },
+    {
+      "scale": 2,
+      "offset": 0.25,
+      "text": "DEATHADDER V3 HYPERSPEED",
+      "rendered_text": "DEATHADDER V3 HYPERSPEED",
+      "devicePixelRatio": 2,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8.25,
+        "y": 8.25,
+        "width": 224.078125,
+        "height": 34,
+        "clientWidth": 224,
+        "offsetWidth": 224
+      },
+      "content": {
+        "x": 9.25,
+        "y": 9.25,
+        "width": 222.078125,
+        "height": 32
+      },
+      "title": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 168.078125,
+        "height": 14,
+        "clientWidth": 168,
+        "offsetWidth": 168,
+        "scrollWidth": 168
+      },
+      "label": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 168.078125,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 168.078125,
+        "height": 14
+      },
+      "baseline_css": 29.25,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 168.0703125,
+          "normal": 168.0703125,
+          "none": 168.884765625
+        },
+        "advance_css": 168.0703125,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 58.5,
+        "dom_advance": 336.15625
+      }
+    },
+    {
+      "scale": 2,
+      "offset": 0.25,
+      "text": "ORNATA V2",
+      "rendered_text": "ORNATA V2",
+      "devicePixelRatio": 2,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8.25,
+        "y": 8.25,
+        "width": 118.28125,
+        "height": 34,
+        "clientWidth": 118,
+        "offsetWidth": 118
+      },
+      "content": {
+        "x": 9.25,
+        "y": 9.25,
+        "width": 116.28125,
+        "height": 32
+      },
+      "title": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 62.28125,
+        "height": 14,
+        "clientWidth": 62,
+        "offsetWidth": 62,
+        "scrollWidth": 62
+      },
+      "label": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 62.28125,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 62.28125,
+        "height": 14
+      },
+      "baseline_css": 29.25,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 62.267578125,
+          "normal": 62.267578125,
+          "none": 63.380859375
+        },
+        "advance_css": 62.267578125,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 58.5,
+        "dom_advance": 124.5625
+      }
+    },
+    {
+      "scale": 2,
+      "offset": 0.25,
+      "text": "AVATAR To fi ffi",
+      "rendered_text": "AVATAR TO FI FFI",
+      "devicePixelRatio": 2,
+      "computed": {
+        "font": "300 12px Roboto, sans-serif",
+        "fontFamily": "Roboto, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "300",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontKerning": "auto",
+        "fontFeatureSettings": "normal"
+      },
+      "font_check": true,
+      "tab": {
+        "x": 8.25,
+        "y": 8.25,
+        "width": 148.78125,
+        "height": 34,
+        "clientWidth": 149,
+        "offsetWidth": 149
+      },
+      "content": {
+        "x": 9.25,
+        "y": 9.25,
+        "width": 146.78125,
+        "height": 32
+      },
+      "title": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 92.78125,
+        "height": 14,
+        "clientWidth": 93,
+        "offsetWidth": 93,
+        "scrollWidth": 93
+      },
+      "label": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 92.78125,
+        "height": 14
+      },
+      "dom_range": {
+        "x": 51.25,
+        "y": 18.25,
+        "width": 92.78125,
+        "height": 14
+      },
+      "baseline_css": 29.25,
+      "baseline_from_tab": 21,
+      "baseline_from_content": 20,
+      "baseline_from_title": 11,
+      "canvas": {
+        "kerning_variants": {
+          "auto": 93.01171875,
+          "normal": 92.77734375,
+          "none": 95.34375
+        },
+        "advance_css": 92.77734375,
+        "fontAscent": 11,
+        "fontDescent": 3,
+        "actualAscent": 9,
+        "actualDescent": 0
+      },
+      "physical": {
+        "baseline": 58.5,
+        "dom_advance": 185.5625
+      }
+    }
+  ]
+}

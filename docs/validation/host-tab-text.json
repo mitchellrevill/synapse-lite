@@ -1,0 +1,89 @@
+{
+  "authority": "shipped CSS/font + inert browser replay + isolated local SDK DirectWrite probe",
+  "source": {
+    "css_sha256": "30e429ff6289bd694e8c519a73ef42f7cb181e11c8687d44fe59893ecf95792c",
+    "font_stylesheet_sha256": "1b726723338e6e29f5875c3b030b9a3786a19937ef89368f149fdd3ec30e00e3",
+    "font_sha256": "8cb65fe121080cb8721fb9b643f6b096d133d4b72b8575f6529ec458613dcc78",
+    "font_bytes": 35468,
+    "original_font_mapping": "@font-face{font-family:Roboto;font-style:normal;font-weight:300;font-display:swap;src:local('Roboto Light'),local('Roboto-Light'),url('../fonts/Roboto-Light.woff2') format('woff2'),url('../fonts/Roboto-Light.woff') format('woff')}"
+  },
+  "browser": "156.0.4314.50",
+  "fixtures": 32,
+  "source_baseline": {
+    "from_outer_tab_top_css": 21,
+    "from_content_top_css": 20,
+    "from_title_top_css": 11,
+    "title_height_css": 14,
+    "tab_height_css": 34,
+    "default_tab_top_css": 8
+  },
+  "native_family": "Roboto",
+  "native_weight": 300,
+  "native_simulations": 0,
+  "legacy_ttf_family_name": "Roboto Light",
+  "legacy_family_lookup_in_collection": false,
+  "native_metrics": [
+    {
+      "text": "SYNAPSE",
+      "advance_css": 51.73242188,
+      "default_baseline_css": 11.40234375,
+      "default_line_height_css": 14.40234375
+    },
+    {
+      "text": "DEATHADDER V3 HYPERSPEED",
+      "advance_css": 168.0703125,
+      "default_baseline_css": 11.40234375,
+      "default_line_height_css": 14.40234375
+    },
+    {
+      "text": "ORNATA V2",
+      "advance_css": 62.26757812,
+      "default_baseline_css": 11.40234375,
+      "default_line_height_css": 14.40234375
+    },
+    {
+      "text": "AVATAR TO FI FFI",
+      "advance_css": 92.77734375,
+      "default_baseline_css": 11.40234375,
+      "default_line_height_css": 14.40234375
+    }
+  ],
+  "maximum_advance_difference_css": 0.013671879999996861,
+  "limitations": [
+    "Source font CSS allows system-local fonts first; replay forces archived exact TTF and does not prove live stock font choice.",
+    "Static CSS and controlled replay do not establish actual stock tab eligibility/runtime state.",
+    "No screenshot/raster equality or arbitrary scripts/fallback proof.",
+    "Default canvas auto kerning is not a general DOM-width authority.",
+    "Intrinsic CSS rect widths are fractional; source JS integer clientWidth positions do not make actual CSS widths integral."
+  ],
+  "network": false,
+  "vendor_javascript_executed": false,
+  "screenshots": false,
+  "live_apps_devices_profiles_touched": false,
+  "replay_reproduced_with_new_browser_version": true,
+  "original_probe_browser": "156.0.4314.42",
+  "geometry_advance_baseline_changes_between_versions": 0,
+  "native_checks": {
+    "linked_bridge_tests_passed": 3,
+    "scales": [
+      1,
+      1.25,
+      1.5,
+      2
+    ],
+    "source_font_bytes_total": 143080,
+    "layout_cache_total": 32,
+    "scratch_limit_physical": [
+      2048,
+      256
+    ],
+    "standalone_three_font_auth_and_ownership": true,
+    "standalone_loader_unregister_calls": 5,
+    "standalone_unregister_failures": 0,
+    "standalone_gdi_handles_restored": true,
+    "native_mouse_navigation_no_gdi_fallback": true,
+    "native_mouse_header_fractional_width_checked": true,
+    "hardware_validation": false,
+    "raster_parity": false
+  }
+}

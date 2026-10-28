@@ -1,4 +1,4 @@
-// Natural DirectWrite bridge for two measured native source text roles.
+// Natural DirectWrite bridge for three measured native source text roles.
 // Uses the Windows SDK's COM declarations; no handwritten DirectWrite vtables.
 #include <windows.h>
 #include <dwrite_3.h>
@@ -63,7 +63,7 @@ struct FontRead {
         if (handle == INVALID_HANDLE_VALUE) return HRESULT_FROM_WIN32(GetLastError());
         LARGE_INTEGER file_size{};
         if (!GetFileSizeEx(handle, &file_size)) return HRESULT_FROM_WIN32(GetLastError());
-        const unsigned expected_size = role == 0 ? 72204 : 35408;
+        const unsigned expected_size = role == 0 ? 72204 : role == 1 ? 35408 : 35468;
         if (file_size.QuadPart != expected_size) return DWRITE_E_FILEFORMAT;
         size = expected_size;
         bytes = static_cast<BYTE*>(HeapAlloc(GetProcessHeap(), 0, size));
@@ -78,10 +78,11 @@ struct FontRead {
             0xa8,0xfb,0x4f,0xf9,0xab,0x9f,0x71,0xe7,0xd0,0x1d,0x1b,0x87,0x33,0x0d,0x26,0xde
         };
         const BYTE toolbar_digest[32] = {0x99, 0x39, 0xae, 0x1e, 0xc7, 0x54, 0x15, 0xc4, 0xb6, 0xe8, 0x88, 0x9c, 0x95, 0x70, 0x4b, 0xfb, 0xcb, 0xfb, 0x9d, 0x42, 0x45, 0x20, 0x36, 0x05, 0xc1, 0x04, 0x4b, 0xa2, 0x18, 0x45, 0xca, 0x36};
+        const BYTE tab_digest[32] = {0x8c,0xb6,0x5f,0xe1,0x21,0x08,0x0c,0xb8,0x72,0x1f,0xb9,0xb6,0x43,0xf6,0xb0,0x96,0xd1,0x33,0xd4,0xb7,0x2b,0x85,0x75,0xf6,0x52,0x9e,0xc4,0x58,0x61,0x3d,0xcc,0x78};
         NTSTATUS status = BCryptHash(BCRYPT_SHA256_ALG_HANDLE, nullptr, 0, bytes,
             size, actual, sizeof(actual));
         if (status < 0) return HRESULT_FROM_NT(status);
-        return std::memcmp(actual, role == 0 ? heading_digest : toolbar_digest, sizeof(actual)) == 0 ? S_OK : DWRITE_E_FILEFORMAT;
+        return std::memcmp(actual, role == 0 ? heading_digest : role == 1 ? toolbar_digest : tab_digest, sizeof(actual)) == 0 ? S_OK : DWRITE_E_FILEFORMAT;
     }
 };
 
@@ -147,8 +148,8 @@ struct Context {
     ComPtr<IDWriteInMemoryFontFileLoader> loader;
     bool loader_registered = false;
     ComPtr<IDWriteFontCollection1> collection;
-    ComPtr<IDWriteFontFace> faces[2];
-    ComPtr<IDWriteTextFormat> formats[2];
+    ComPtr<IDWriteFontFace> faces[3];
+    ComPtr<IDWriteTextFormat> formats[3];
     ComPtr<IDWriteGdiInterop> interop;
     ComPtr<IDWriteRenderingParams> parameters;
     ComPtr<IDWriteBitmapRenderTarget> bitmap;
@@ -188,7 +189,7 @@ struct Context {
         loader.Reset();
     }
 
-    HRESULT initialize(const wchar_t* heading_file, const wchar_t* toolbar_file) {
+    HRESULT initialize(const wchar_t* heading_file, const wchar_t* toolbar_file, const wchar_t* tab_file) {
         HRESULT hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_ISOLATED,
             __uuidof(IDWriteFactory5), reinterpret_cast<IUnknown**>(factory.GetAddressOf()));
         if (FAILED(hr)) return hr;
@@ -197,8 +198,8 @@ struct Context {
         loader_registered = true;
         ComPtr<IDWriteFontSetBuilder1> builder;
         if (FAILED(hr = factory->CreateFontSetBuilder(&builder))) return hr;
-        const wchar_t* files[] = {heading_file, toolbar_file};
-        for (unsigned role = 0; role < 2; ++role) {
+        const wchar_t* files[] = {heading_file, toolbar_file, tab_file};
+        for (unsigned role = 0; role < 3; ++role) {
             FontRead source;
             if (FAILED(hr = source.authenticate(files[role], role))) return hr;
             ComPtr<IDWriteFontFile> font_file;
@@ -210,9 +211,9 @@ struct Context {
         ComPtr<IDWriteFontSet> set;
         if (FAILED(hr = builder->CreateFontSet(&set))) return hr;
         if (FAILED(hr = factory->CreateFontCollectionFromFontSet(set.Get(), &collection))) return hr;
-        const wchar_t* families[] = {L"RazerF5", L"Roboto"};
-        const float sizes[] = {16.0f, 14.0f};
-        for (unsigned role = 0; role < 2; ++role) {
+        const wchar_t* families[] = {L"RazerF5", L"Roboto", L"Roboto"};
+        const float sizes[] = {16.0f, 14.0f, 12.0f};
+        for (unsigned role = 0; role < 3; ++role) {
             UINT32 index = 0;
             BOOL exists = FALSE;
             if (FAILED(hr = collection->FindFamilyName(families[role], &index, &exists))) return hr;
@@ -220,12 +221,13 @@ struct Context {
             ComPtr<IDWriteFontFamily> family;
             ComPtr<IDWriteFont> font;
             if (FAILED(hr = collection->GetFontFamily(index, &family))) return hr;
-            if (FAILED(hr = family->GetFirstMatchingFont(DWRITE_FONT_WEIGHT_NORMAL,
+            if (FAILED(hr = family->GetFirstMatchingFont(role == 2 ? DWRITE_FONT_WEIGHT_LIGHT : DWRITE_FONT_WEIGHT_NORMAL,
                 DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE_NORMAL, &font))) return hr;
             if (font->GetSimulations() != DWRITE_FONT_SIMULATIONS_NONE) return DWRITE_E_NOFONT;
+            if (font->GetWeight() != (role == 2 ? DWRITE_FONT_WEIGHT_LIGHT : DWRITE_FONT_WEIGHT_NORMAL)) return DWRITE_E_NOFONT;
             if (FAILED(hr = font->CreateFontFace(&faces[role]))) return hr;
             if (FAILED(hr = factory->CreateTextFormat(families[role], collection.Get(),
-                DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
+                role == 2 ? DWRITE_FONT_WEIGHT_LIGHT : DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
                 DWRITE_FONT_STRETCH_NORMAL, sizes[role], L"en-US", &formats[role]))) return hr;
             if (FAILED(hr = formats[role]->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP))) return hr;
         }
@@ -293,14 +295,14 @@ unsigned failure(Status status, HRESULT value, HRESULT* error) {
 }
 } // namespace
 
-extern "C" unsigned sl_source_text_create(const wchar_t* heading_file, const wchar_t* toolbar_file, void** result,
+extern "C" unsigned sl_source_text_create(const wchar_t* heading_file, const wchar_t* toolbar_file, const wchar_t* tab_file, void** result,
                                            HRESULT* error) noexcept {
     if (result) *result = nullptr;
-    if (!heading_file || !toolbar_file || !result || !error) return failure(InvalidArgument, E_INVALIDARG, error);
+    if (!heading_file || !toolbar_file || !tab_file || !result || !error) return failure(InvalidArgument, E_INVALIDARG, error);
     void* storage = HeapAlloc(GetProcessHeap(), 0, sizeof(Context));
     if (!storage) return failure(AllocationFailure, E_OUTOFMEMORY, error);
     auto* context = new (storage) Context;
-    HRESULT hr = context->initialize(heading_file, toolbar_file);
+    HRESULT hr = context->initialize(heading_file, toolbar_file, tab_file);
     if (FAILED(hr)) {
         bool no_factory = !context->factory;
         context->~Context();
@@ -319,15 +321,32 @@ extern "C" void sl_source_text_destroy(void* context) noexcept {
     }
 }
 
+// Measurement and drawing share the same authenticated face and bounded LRU.
+// No DC, bitmap or glyph raster is needed to obtain a natural layout advance.
+extern "C" unsigned sl_source_text_measure(void* opaque, unsigned role,
+    const wchar_t* text, unsigned length, Metrics* metrics, HRESULT* error) noexcept {
+    if (!opaque || role > 2 || !text || !length || length > MaxText || !metrics || !error)
+        return failure(InvalidArgument, E_INVALIDARG, error);
+    auto* context = static_cast<Context*>(opaque);
+    if (!context->covers(role, text, length)) return failure(MissingGlyph, DWRITE_E_NOFONT, error);
+    Entry* entry = nullptr;
+    HRESULT hr = context->layout(role, text, length, &entry);
+    if (FAILED(hr)) return failure(LayoutFailure, hr, error);
+    *metrics = {entry->advance, entry->baseline, 0.0f, context->cached_layouts};
+    *error = S_OK;
+    return Ok;
+}
+
 // Clip coordinates are physical pixels; source box coordinates are CSS pixels.
 // Role0: assignment RazerF5 16/400, left aligned, source baseline15. Role1: Roboto14/400,
-// centered in the source box, source baseline23. No general styling interface.
+// centered in the source box, source baseline23. Role2: Roboto12/300 host
+// label left aligned, baseline11 from its14px title box. No general styling interface.
 // Compensate for clip rounding so the absolute source baseline stays fractional.
 extern "C" unsigned sl_source_text_draw(void* opaque, HDC destination, unsigned role,
     const wchar_t* text, unsigned length, int clip_x, int clip_y,
     unsigned width, unsigned height, float box_left_css, float box_top_css, float box_width_css, float scale,
     COLORREF color, Metrics* metrics, HRESULT* error) noexcept {
-    if (!opaque || !destination || role > 1 || !text || !length || length > MaxText || !metrics
+    if (!opaque || !destination || role > 2 || !text || !length || length > MaxText || !metrics
         || !error || !width || !height || width > MaxWidth || height > MaxHeight
         || !std::isfinite(scale) || scale < 0.5f || scale > 4.0f
         || !std::isfinite(box_left_css) || !std::isfinite(box_top_css)
@@ -356,8 +375,8 @@ extern "C" unsigned sl_source_text_draw(void* opaque, HDC destination, unsigned 
         void* renderer_storage = HeapAlloc(GetProcessHeap(), 0, sizeof(Renderer));
         if (!renderer_storage) return failure(AllocationFailure, E_OUTOFMEMORY, error);
         renderer.Attach(new (renderer_storage) Renderer(context->bitmap.Get(), context->parameters.Get(), color));
-        const float source_baseline = box_top_css + (role == 0 ? 15.0f : 23.0f);
-        const float x_css = box_left_css + (role == 0 ? 0.0f : (box_width_css - entry->advance) / 2.0f)
+        const float source_baseline = box_top_css + (role == 0 ? 15.0f : role == 1 ? 23.0f : 11.0f);
+        const float x_css = box_left_css + (role == 1 ? (box_width_css - entry->advance) / 2.0f : 0.0f)
             - static_cast<float>(clip_x) / scale;
         const float baseline_css = source_baseline - static_cast<float>(clip_y) / scale;
         hr = entry->layout->Draw(nullptr, renderer.Get(), x_css, baseline_css - entry->baseline);

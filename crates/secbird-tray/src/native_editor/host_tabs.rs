@@ -62,13 +62,29 @@ fn title(device: &Value) -> String {
     }
 }
 
-unsafe fn text_width(p: &Painter<'_>, text: &str) -> i32 {
+unsafe fn text_advance(p: &Painter<'_>, text: &str) -> f32 {
+    if let Some(metrics) = p
+        .fonts
+        .source_text
+        .measure(text, source_text::Role::HostTab)
+    {
+        return metrics.advance_css;
+    }
     let previous = SelectObject(p.dc, p.fonts.tab);
     let value = wide(text);
     let mut size: SIZE = std::mem::zeroed();
     GetTextExtentPoint32W(p.dc, value.as_ptr(), (value.len() - 1) as i32, &mut size);
     SelectObject(p.dc, previous);
-    (size.cx as f32 / p.scale).ceil() as i32
+    size.cx as f32 / p.scale
+}
+
+fn css_rect(p: &Painter<'_>, x: f32, y: f32, width: f32, height: f32) -> RECT {
+    RECT {
+        left: (x * p.scale).round() as i32,
+        top: (y * p.scale).round() as i32,
+        right: ((x + width) * p.scale).round() as i32,
+        bottom: ((y + height) * p.scale).round() as i32,
+    }
 }
 
 unsafe fn rounded_path(x: f32, y: f32, w: f32, h: f32, r: f32) -> *mut gp::GpPath {
@@ -89,7 +105,7 @@ unsafe fn surface(
     dc: HDC,
     scale: f32,
     x: i32,
-    width: i32,
+    width: f32,
     active: bool,
     hover: bool,
     pressed: bool,
@@ -101,7 +117,7 @@ unsafe fn surface(
     gp::GdipSetSmoothingMode(graphics, gp::SmoothingModeAntiAlias);
     let x = x as f32 * scale;
     let y = 8.0 * scale;
-    let width = width as f32 * scale;
+    let width = width * scale;
     let height = 34.0 * scale;
     let selected = active || pressed;
     for inset in [0.0, 1.0] {
@@ -159,7 +175,7 @@ unsafe fn label(
     text: &str,
     icon: &str,
     x: i32,
-    width: i32,
+    width: f32,
     active: bool,
 ) {
     let view = state.host_tabs.borrow();
@@ -168,34 +184,44 @@ unsafe fn label(
     surface(p.dc, p.scale, x, width, active, hover, pressed);
     p.image(state.icons.get(icon), x + 13, 15, 20, 20);
     let old_clip = SaveDC(p.dc);
-    let bounds = p.rect(x + 43, 9, width - 56, 32);
+    let bounds = css_rect(p, x as f32 + 43.0, 18.0, width - 56.0, 14.0);
     IntersectClipRect(p.dc, bounds.left, bounds.top, bounds.right, bounds.bottom);
-    // CSS clips the title instead of substituting an ellipsis. The GDI light
-    // font is an explicit remaining typography acceptance item.
-    let previous = SelectObject(p.dc, p.fonts.tab);
-    SetBkMode(p.dc, TRANSPARENT as i32);
-    SetTextColor(
-        p.dc,
-        rgb(if active || pressed {
-            0xcccccc
-        } else {
-            0x999999
-        }),
-    );
-    let mut bounds = bounds;
-    DrawTextW(
-        p.dc,
-        wide(text).as_ptr(),
-        -1,
-        &mut bounds,
-        DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX,
-    );
-    SelectObject(p.dc, previous);
+    // Natural layout and source baseline, with rounded physical clips debiased
+    // by the bridge. Keep the existing visible GDI fallback on failure.
+    let color = if active || pressed {
+        0xcccccc
+    } else {
+        0x999999
+    };
+    if !p.source_text(
+        text,
+        source_text::Role::HostTab,
+        source_text::SourceBox {
+            left: x as f32 + 43.0,
+            top: 18.0,
+            width: width - 56.0,
+        },
+        bounds,
+        color,
+    ) {
+        let previous = SelectObject(p.dc, p.fonts.tab);
+        SetBkMode(p.dc, TRANSPARENT as i32);
+        SetTextColor(p.dc, rgb(color));
+        let mut bounds = bounds;
+        DrawTextW(
+            p.dc,
+            wide(text).as_ptr(),
+            -1,
+            &mut bounds,
+            DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX,
+        );
+        SelectObject(p.dc, previous);
+    }
     RestoreDC(p.dc, old_clip);
-    if width > 186 && (!hover || active || pressed) {
+    if width > 186.0 && (!hover || active || pressed) {
         let mut graphics = null_mut();
         if gp::GdipCreateFromHDC(p.dc, &mut graphics) == gp::Ok {
-            let left = (x + width - 46) as f32 * p.scale;
+            let left = (x as f32 + width - 46.0) * p.scale;
             let a = gp::PointF { X: left, Y: 0.0 };
             let b = gp::PointF {
                 X: left + 45.0 * p.scale,
@@ -231,11 +257,18 @@ unsafe fn label(
 }
 
 pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, window: i32) {
-    let home = (text_width(p, "SYNAPSE") + 56).clamp(92, 242);
+    let home_outer = (text_advance(p, "SYNAPSE") + 56.0).clamp(92.0, 242.0);
+    // Browser clientWidth rounds the fractional CSS box for host positioning;
+    // retain the fractional box itself for painting and clipping.
+    let home = home_outer.round() as i32;
     let labels: Vec<_> = state.devices().iter().map(title).collect();
-    let widths: Vec<_> = labels
+    let outer_widths: Vec<_> = labels
         .iter()
-        .map(|s| (text_width(p, s) + 56).clamp(92, 242))
+        .map(|s| (text_advance(p, s) + 56.0).clamp(92.0, 242.0))
+        .collect();
+    let widths: Vec<i32> = outer_widths
+        .iter()
+        .map(|width| width.round() as i32)
         .collect();
     let g = layout(window, home, &widths);
     {
@@ -276,11 +309,11 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, window: i32) {
         "SYNAPSE",
         "host-synapse",
         8,
-        home,
+        home_outer,
         state.selected.is_none(),
     );
     p.hits.push(Hit {
-        rect: p.rect(8, 8, home, 34),
+        rect: css_rect(p, 8.0, 8.0, home_outer, 34.0),
         action: Action::Home,
     });
     let clip = p.rect(g.start, 0, g.viewport, 42);
@@ -303,10 +336,10 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, window: i32) {
                 &labels[index],
                 icon,
                 x,
-                width,
+                outer_widths[index],
                 state.selected.as_deref() == Some(id),
             );
-            let mut rect = p.rect(x, 8, width, 34);
+            let mut rect = css_rect(p, x as f32, 8.0, outer_widths[index], 34.0);
             rect.left = rect.left.max(clip.left);
             rect.right = rect.right.min(clip.right);
             p.hits.push(Hit {
@@ -383,6 +416,7 @@ pub(super) fn diagnostics(state: &State) -> Value {
     ];
     json!({"hover":v.hover,"pressed":v.pressed,"scroll":v.scroll,"maximum":v.max_scroll,
         "icons_loaded":icons.iter().filter(|icon| state.icons.contains_key(**icon)).count(),
+        "natural_text_available":state.fonts.source_text.diagnostic().is_none(),
         "selected":state.selected,"tabs":state.hits.iter().filter_map(|h| {
             let id = match &h.action { Action::Home if h.rect.top < state.px(42) => "", Action::Device(id) if h.rect.top < state.px(42) => id, _ => return None };
             Some(json!({"id":id,"x":h.rect.left,"y":h.rect.top,"width":h.rect.right-h.rect.left,"height":h.rect.bottom-h.rect.top}))
@@ -481,7 +515,7 @@ mod tests {
             assert!(!bitmap.is_null());
             let previous = SelectObject(dc, bitmap);
             PatBlt(dc, 0, 0, 260, 60, BLACKNESS);
-            surface(dc, 1.25, 8, 150, true, false, false);
+            surface(dc, 1.25, 8, 150.0, true, false, false);
             let border = GetPixel(dc, 50, 10);
             let green = (border >> 8) & 255;
             assert!(
@@ -495,7 +529,7 @@ mod tests {
                 "rounded corner must retain black host"
             );
             PatBlt(dc, 0, 0, 260, 60, BLACKNESS);
-            surface(dc, 1.25, 8, 150, false, true, false);
+            surface(dc, 1.25, 8, 150.0, false, true, false);
             assert!(GetPixel(dc, 50, 14) & 255 > GetPixel(dc, 50, 45) & 255);
             assert_eq!(
                 GetPixel(dc, 50, 30) & 255,

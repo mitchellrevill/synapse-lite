@@ -68,8 +68,10 @@ overflow geometry and real GDI+ selected/hover pixels at125% scaling.
 
 ## Remaining acceptance
 
-- Full pixel equality is unverified. Titles still use GDI light text and
-  integer-rounded advances, not browser natural text layout. The gradient
+- Full pixel equality is unverified. Titles now use authenticated natural
+  Roboto12/300, the measured source baseline, fractional painting/clips and
+  rounded slot positions. See the third-role evidence in `TEXT-METRICS.md`.
+  The gradient
   start is extended by one physical pixel to avoid GDI+ wrapping its first
   antialiased row; normalized browser comparisons must quantify the residual.
 - Source arrow hover/pressed/disabled art, smooth scroll/200ms tab animation,

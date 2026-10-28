@@ -1741,11 +1741,19 @@ fn native_assignment_mouse_labels_and_drawer_have_source_hit_targets() {
                     v["host_tabs"].clone()
                 };
                 let initial = host();
+                if initial["natural_text_available"] != true {
+                    return Err("Shared host text fell back from authenticated natural layout".into());
+                }
                 if initial["icons_loaded"] != 5 {
                     return Err("Shared host source icons were not provisioned/loaded".into());
                 }
                 let selected = initial["selected"].clone();
                 let home = &initial["tabs"][0];
+                let expected_home_width = ((8.0 + 107.732421875) * scale).round() as i64
+                    - (8.0 * scale).round() as i64;
+                if home["width"] != expected_home_width {
+                    return Err(format!("Host tab used rounded GDI advances: {initial}"));
+                }
                 let point = |tab: &Value| {
                     (tab["x"].as_i64().unwrap() + tab["width"].as_i64().unwrap() / 2,
                      tab["y"].as_i64().unwrap() + tab["height"].as_i64().unwrap() / 2)
