@@ -1,5 +1,5 @@
-//! Local Studio layer drafts. No device admission, effect engine or file I/O.
-//! Only explicit title/visibility leaves are changed; other JSON stays raw.
+//! Local Studio drafts and explicitly requested pure preview. No device/file I/O.
+//! Edited leaves stay explicit; unrelated profile JSON remains raw.
 use super::{check_complexity, invalid, BoundedOutput, MAX_DOCUMENT_BYTES};
 use crate::Result;
 use serde::{
@@ -23,6 +23,10 @@ pub use regions::{
     ColorProperty, GradientStop, LedSelection, SelectedColor, SelectedDuration, SelectedGradient,
     StopEdit, SPECTRUM_DURATIONS,
 };
+
+#[path = "preview.rs"]
+mod preview;
+pub use preview::Preview;
 
 pub const MAX_HISTORY: usize = 20;
 pub const MAX_HISTORY_BYTES: usize = 8 * 1024 * 1024;
@@ -395,6 +399,17 @@ pub struct SaveCheckpoint {
     raw: Arc<RawValue>,
     rows: Vec<LayerRow>,
 }
+/// Immutable background-reader token; never acknowledges a save or clones rows.
+#[derive(Clone)]
+pub struct ReadSnapshot {
+    owner: u64,
+    raw: Arc<RawValue>,
+}
+impl ReadSnapshot {
+    pub fn json(&self) -> &str {
+        self.raw.get()
+    }
+}
 impl SaveCheckpoint {
     pub fn json(&self) -> &str {
         self.raw.get()
@@ -429,6 +444,15 @@ impl Draft {
     }
     pub fn json(&self) -> &str {
         self.current.get()
+    }
+    pub fn read_snapshot(&self) -> ReadSnapshot {
+        ReadSnapshot {
+            owner: self.owner,
+            raw: self.current.clone(),
+        }
+    }
+    pub fn matches_snapshot(&self, snapshot: &ReadSnapshot) -> bool {
+        self.owner == snapshot.owner && Arc::ptr_eq(&self.current, &snapshot.raw)
     }
     pub fn layers(&self) -> &[LayerRow] {
         &self.rows

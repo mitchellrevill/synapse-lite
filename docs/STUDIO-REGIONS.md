@@ -4,7 +4,8 @@ Select a Static layer and LEDs, enter a six-digit RGB hex colour, then choose
 **Apply to Selection**. **Erase Selection** removes those LED memberships.
 Both operations support Undo/Redo and Save/Discard/Cancel. Mixed and unassigned
 selections differ; `000000` assigns black rather than erasing. These are local
-file edits, with no lighting output. The RGB field/swatch is a temporary control,
+file edits, with no hardware lighting output. **Local Preview** can now render
+the admitted Static/Spectrum/Fire composition on the canvas. The RGB field/swatch is a temporary control,
 not the stock colour picker or a claim of pixel parity.
 
 Fire now exposes independent **Hot** and **Cold** RGB fields. Select LEDs and
@@ -13,7 +14,8 @@ properties are retained, including mixed values. **None** removes only that
 colour property while keeping the LED in the effect. Erase removes membership.
 New Select assignments author only the touched field, without introducing
 red/orange brush defaults. Missing/mixed Fire values show an empty text field.
-These controls also edit files only; Fire animation is not yet rendered.
+These controls do not apply hardware lighting; Fire animation is available in
+[local preview](STUDIO-PREVIEW.md).
 
 ## Preservation
 
@@ -95,8 +97,8 @@ with separate source projection/mixed-field preservation and raw import limits.
 
 A pure [source-derived Fire renderer](FIRE-LIGHTING.md) and
 [native four-channel palette/blend math](LIGHTING-PIXELS.md) are implemented.
-They are not yet wired to the Studio canvas or device-output worker; these
-regional controls continue to edit files only.
+They now feed bounded local Studio preview. The device-output worker remains
+separate; these regional controls do not yet apply hardware lighting.
 
 Remaining scope includes the stock colour picker, layer creation/management,
 other effect parameters, retained algorithms/compositing, complete

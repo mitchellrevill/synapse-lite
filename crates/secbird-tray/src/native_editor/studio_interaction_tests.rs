@@ -101,6 +101,48 @@ fn native_studio_actual_stock_export_loads_geometry_and_preserves_profiles() {
                 if saved.profile_json(0) != source.profile_json(0) {
                     return Err("Actual raw profile changed during roundtrip".into());
                 }
+                lighting_click(hwnd, 630.0, 100.0, scale);
+                wait_for(
+                    || {
+                        query()["preview"]["current"] == true
+                            && query()["preview"]["frames"].as_u64().unwrap_or(0) >= 2
+                    },
+                    "actual composition preview ready",
+                )?;
+                if query()["preview"]["effects"] != 2
+                    || query()["dirty"] != false
+                    || query()["preview"]["bytes"].as_u64().unwrap_or(u64::MAX) >= 100000
+                {
+                    return Err("Local preview plan count, storage or read-only composition invariant failed".into());
+                }
+                let first_frame = query()["preview"]["frame"].clone();
+                wait_for(
+                    || query()["preview"]["frame"] != first_frame,
+                    "local Fire animation changes",
+                )?;
+                let capture = json!(folder.join("actual-live-preview.png").to_string_lossy());
+                if SendMessageW(hwnd, STUDIO_TEST, 6, &capture as *const Value as isize) != 1 {
+                    return Err("Local preview capture failed".into());
+                }
+                lighting_click(hwnd, 630.0, 100.0, scale);
+                if query()["preview"]["requested"] != false || query()["preview"]["frames"] != 0 {
+                    return Err("Local preview stop retained frame plan".into());
+                }
+                // Stopping/navigation during compilation must reject stale work;
+                // there is never more than one retained pending compile.
+                lighting_click(hwnd, 630.0, 100.0, scale);
+                lighting_click(hwnd, 65.0, 20.0, scale);
+                wait_for(
+                    || {
+                        query()["preview"]["requested"] == false
+                            && query()["preview"]["pending"] == false
+                    },
+                    "hidden preview stops and drains compile",
+                )?;
+                SendMessageW(hwnd, STUDIO_TEST, 0, 0);
+                if query()["preview"]["frames"] != 0 || query()["dirty"] != false {
+                    return Err("Hidden preview resumed or changed composition".into());
+                }
                 // Exercise independent regional edits through real native edit
                 // controls and production hit targets on the user's Fire layer.
                 use secbird_core::studio::document::{
@@ -131,10 +173,24 @@ fn native_studio_actual_stock_export_loads_geometry_and_preserves_profiles() {
                     return Err("Read-only Fire edit changed document".into());
                 }
                 SendMessageW(hwnd, READ_ONLY_TEST_SET, 0, 0);
+                lighting_click(hwnd, 630.0, 100.0, scale);
+                wait_for(
+                    || query()["preview"]["current"] == true,
+                    "preview before edit",
+                )?;
+                let prior_generation = query()["preview"]["generation"].as_u64().unwrap();
                 lighting_click(hwnd, right + 60.0, 333.0, scale);
                 if query()["dirty"] != true || query()["failed"] != false {
                     return Err("Fire Hot edit failed".into());
                 }
+                wait_for(
+                    || {
+                        query()["preview"]["generation"].as_u64().unwrap_or(0) > prior_generation
+                            && query()["preview"]["current"] == true
+                    },
+                    "preview recompiles current draft",
+                )?;
+                lighting_click(hwnd, 630.0, 100.0, scale);
                 let edited_path = folder.join("actual-fire-edited.ChromaEffects");
                 let save_path = json!(edited_path.to_string_lossy());
                 SendMessageW(hwnd, STUDIO_TEST, 3, &save_path as *const Value as isize);
@@ -319,7 +375,7 @@ fn native_studio_actual_stock_export_loads_geometry_and_preserves_profiles() {
                     return Err("Actual export paint capture failed".into());
                 }
                 Ok(
-                    json!({"actual_export":true,"simulated_transport_only":true,"profiles":1,"layers":2,"canvas_devices":1,"selectable_leds":109,"source_esc_hit":true,"raw_profile_roundtrip_exact":true,"whole_file_byte_identity_observed":bytes==original,"fire_native_hot_cold_independent_saved":true,"fire_none_undo_redo":true,"fire_read_only_guard":true,"spectrum_duration_preserves_gradient":true,"spectrum_preset_stop_none_save":true,"spectrum_add_delete_undo":true,"spectrum_invalid_percentage_refused":true,"spectrum_read_only_guard":true,"layer_switch_clears_selection":true,"source_file_unchanged":true,"device_profiles_unchanged":true,"no_device_sets":true}),
+                    json!({"actual_export":true,"simulated_transport_only":true,"profiles":1,"layers":2,"canvas_devices":1,"selectable_leds":109,"source_esc_hit":true,"raw_profile_roundtrip_exact":true,"whole_file_byte_identity_observed":bytes==original,"local_actual_composition_animates":true,"local_preview_does_not_dirty":true,"local_preview_stops_and_drains_when_hidden":true,"local_preview_recompiles_current_snapshot":true,"fire_native_hot_cold_independent_saved":true,"fire_none_undo_redo":true,"fire_read_only_guard":true,"spectrum_duration_preserves_gradient":true,"spectrum_preset_stop_none_save":true,"spectrum_add_delete_undo":true,"spectrum_invalid_percentage_refused":true,"spectrum_read_only_guard":true,"layer_switch_clears_selection":true,"source_file_unchanged":true,"device_profiles_unchanged":true,"no_device_sets":true}),
                 )
             }
         })();

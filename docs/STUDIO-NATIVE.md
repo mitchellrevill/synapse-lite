@@ -4,7 +4,9 @@ Open **Synapse → Chroma Studio** from the device dashboard, then **Open File**
 The native view can load a JSON-v1 `.ChromaEffects` archive, switch compositions,
 select layers/groups, expand groups, rename and toggle visibility, undo/redo, and
 save the edited archive. Group visibility updates children in one history step.
-These operations edit local files only; they do not apply lighting to hardware.
+These operations do not apply lighting to hardware. **Local Preview** now renders
+Static/Spectrum/Fire on the native canvas for the admitted Ornata placement;
+see [preview and mapping](STUDIO-PREVIEW.md).
 
 Saving runs on the existing background worker before acquiring the device-engine
 lock. A successful atomic write updates both the draft's saved checkpoint and the
@@ -27,17 +29,17 @@ is implemented for explicit Ornata placements, with
 Fire None clears one colour without erasing membership.
 [Spectrum duration, presets and regional stop editing](STUDIO-SPECTRUM.md) are
 also implemented with interim native controls. Other effect properties and algorithms,
-layer add/delete/reorder/group operations, preview, device output and full
+layer add/delete/reorder/group operations, broader preview admission, device output and full
 composition-management controls remain to implement. Stock's import preview
 recognizes the round-tripped file, and the
 [user's saved composition roundtrip](STUDIO-ACTUAL.md) now preserves exact data.
 Committed stock import and equivalent output remain unverified. Regional edit
 fixtures remain synthetic. Legacy ZIP/XML files are unsupported.
 
-The pure [Fire generator](FIRE-LIGHTING.md) and
-[palette/container blend primitives](LIGHTING-PIXELS.md) now have independent
-static-reference verification. They are not connected to this view or hardware;
-device/world-space mapping and ownership remain necessary before preview/output.
+The [Fire generator](FIRE-LIGHTING.md) and
+[palette/container blend primitives](LIGHTING-PIXELS.md) now feed local preview.
+They have independent static-reference verification; no hardware-output or
+stock optical/timing equivalence follows from the local view.
 
 ## Verification
 

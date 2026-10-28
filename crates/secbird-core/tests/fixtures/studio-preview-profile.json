@@ -1,0 +1,2572 @@
+{
+  "id": "synthetic",
+  "title": "Source mapping reference",
+  "devices": [
+    {
+      "id": "keyboard",
+      "productId": 605,
+      "editionId": 0,
+      "layout": 6,
+      "orientation": 0,
+      "x": 4520,
+      "y": 4840,
+      "config": {
+        "Version": 2,
+        "VID": 5426,
+        "PID": 605,
+        "EID": 0,
+        "Layout": 6,
+        "MatrixMaxRow": 7,
+        "MatrixMaxCol": 23,
+        "DeviceMaxRow": 6,
+        "DeviceMaxCol": 22,
+        "LedWidth": 0,
+        "LedHeight": 0,
+        "LedWidthOffset": 0,
+        "LedHeightOffset": 0,
+        "LedMatrix": [
+          {
+            "MatrixPos": [
+              0,
+              1
+            ],
+            "DevicePos": [
+              0,
+              1
+            ]
+          },
+          {
+            "MatrixPos": [
+              0,
+              4
+            ],
+            "DevicePos": [
+              0,
+              3
+            ]
+          },
+          {
+            "MatrixPos": [
+              0,
+              5
+            ],
+            "DevicePos": [
+              0,
+              4
+            ]
+          },
+          {
+            "MatrixPos": [
+              0,
+              6
+            ],
+            "DevicePos": [
+              0,
+              5
+            ]
+          },
+          {
+            "MatrixPos": [
+              0,
+              7
+            ],
+            "DevicePos": [
+              0,
+              6
+            ]
+          },
+          {
+            "MatrixPos": [
+              0,
+              8
+            ],
+            "DevicePos": [
+              0,
+              7
+            ]
+          },
+          {
+            "MatrixPos": [
+              0,
+              9
+            ],
+            "DevicePos": [
+              0,
+              8
+            ]
+          },
+          {
+            "MatrixPos": [
+              0,
+              10
+            ],
+            "DevicePos": [
+              0,
+              9
+            ]
+          },
+          {
+            "MatrixPos": [
+              0,
+              11
+            ],
+            "DevicePos": [
+              0,
+              10
+            ]
+          },
+          {
+            "MatrixPos": [
+              0,
+              12
+            ],
+            "DevicePos": [
+              0,
+              11
+            ]
+          },
+          {
+            "MatrixPos": [
+              0,
+              13
+            ],
+            "DevicePos": [
+              0,
+              12
+            ]
+          },
+          {
+            "MatrixPos": [
+              0,
+              14
+            ],
+            "DevicePos": [
+              0,
+              13
+            ]
+          },
+          {
+            "MatrixPos": [
+              0,
+              15
+            ],
+            "DevicePos": [
+              0,
+              14
+            ]
+          },
+          {
+            "MatrixPos": [
+              0,
+              16
+            ],
+            "DevicePos": [
+              0,
+              15
+            ]
+          },
+          {
+            "MatrixPos": [
+              0,
+              17
+            ],
+            "DevicePos": [
+              0,
+              16
+            ]
+          },
+          {
+            "MatrixPos": [
+              0,
+              18
+            ],
+            "DevicePos": [
+              0,
+              17
+            ]
+          },
+          {
+            "MatrixPos": [
+              0,
+              19
+            ],
+            "DevicePos": [
+              0,
+              18
+            ]
+          },
+          {
+            "MatrixPos": [
+              0,
+              20
+            ],
+            "DevicePos": [
+              0,
+              19
+            ]
+          },
+          {
+            "MatrixPos": [
+              0,
+              21
+            ],
+            "DevicePos": [
+              0,
+              20
+            ]
+          },
+          {
+            "MatrixPos": [
+              0,
+              22
+            ],
+            "DevicePos": [
+              0,
+              21
+            ]
+          },
+          {
+            "MatrixPos": [
+              1,
+              0
+            ],
+            "DevicePos": [
+              1,
+              0
+            ]
+          },
+          {
+            "MatrixPos": [
+              1,
+              1
+            ],
+            "DevicePos": [
+              1,
+              1
+            ]
+          },
+          {
+            "MatrixPos": [
+              1,
+              2
+            ],
+            "DevicePos": [
+              1,
+              2
+            ]
+          },
+          {
+            "MatrixPos": [
+              1,
+              3
+            ],
+            "DevicePos": [
+              1,
+              3
+            ]
+          },
+          {
+            "MatrixPos": [
+              1,
+              4
+            ],
+            "DevicePos": [
+              1,
+              4
+            ]
+          },
+          {
+            "MatrixPos": [
+              1,
+              5
+            ],
+            "DevicePos": [
+              1,
+              5
+            ]
+          },
+          {
+            "MatrixPos": [
+              1,
+              6
+            ],
+            "DevicePos": [
+              1,
+              6
+            ]
+          },
+          {
+            "MatrixPos": [
+              1,
+              7
+            ],
+            "DevicePos": [
+              1,
+              7
+            ]
+          },
+          {
+            "MatrixPos": [
+              1,
+              8
+            ],
+            "DevicePos": [
+              1,
+              8
+            ]
+          },
+          {
+            "MatrixPos": [
+              1,
+              9
+            ],
+            "DevicePos": [
+              1,
+              9
+            ]
+          },
+          {
+            "MatrixPos": [
+              1,
+              10
+            ],
+            "DevicePos": [
+              1,
+              10
+            ]
+          },
+          {
+            "MatrixPos": [
+              1,
+              11
+            ],
+            "DevicePos": [
+              1,
+              11
+            ]
+          },
+          {
+            "MatrixPos": [
+              1,
+              12
+            ],
+            "DevicePos": [
+              1,
+              12
+            ]
+          },
+          {
+            "MatrixPos": [
+              1,
+              13
+            ],
+            "DevicePos": [
+              1,
+              13
+            ]
+          },
+          {
+            "MatrixPos": [
+              1,
+              14
+            ],
+            "DevicePos": [
+              1,
+              14
+            ]
+          },
+          {
+            "MatrixPos": [
+              1,
+              16
+            ],
+            "DevicePos": [
+              1,
+              15
+            ]
+          },
+          {
+            "MatrixPos": [
+              1,
+              17
+            ],
+            "DevicePos": [
+              1,
+              16
+            ]
+          },
+          {
+            "MatrixPos": [
+              1,
+              18
+            ],
+            "DevicePos": [
+              1,
+              17
+            ]
+          },
+          {
+            "MatrixPos": [
+              1,
+              19
+            ],
+            "DevicePos": [
+              1,
+              18
+            ]
+          },
+          {
+            "MatrixPos": [
+              1,
+              20
+            ],
+            "DevicePos": [
+              1,
+              19
+            ]
+          },
+          {
+            "MatrixPos": [
+              1,
+              21
+            ],
+            "DevicePos": [
+              1,
+              20
+            ]
+          },
+          {
+            "MatrixPos": [
+              1,
+              22
+            ],
+            "DevicePos": [
+              1,
+              21
+            ]
+          },
+          {
+            "MatrixPos": [
+              2,
+              0
+            ],
+            "DevicePos": [
+              2,
+              0
+            ]
+          },
+          {
+            "MatrixPos": [
+              2,
+              1
+            ],
+            "DevicePos": [
+              2,
+              1
+            ]
+          },
+          {
+            "MatrixPos": [
+              2,
+              2
+            ],
+            "DevicePos": [
+              2,
+              2
+            ]
+          },
+          {
+            "MatrixPos": [
+              2,
+              3
+            ],
+            "DevicePos": [
+              2,
+              3
+            ]
+          },
+          {
+            "MatrixPos": [
+              2,
+              4
+            ],
+            "DevicePos": [
+              2,
+              4
+            ]
+          },
+          {
+            "MatrixPos": [
+              2,
+              5
+            ],
+            "DevicePos": [
+              2,
+              5
+            ]
+          },
+          {
+            "MatrixPos": [
+              2,
+              6
+            ],
+            "DevicePos": [
+              2,
+              6
+            ]
+          },
+          {
+            "MatrixPos": [
+              2,
+              7
+            ],
+            "DevicePos": [
+              2,
+              7
+            ]
+          },
+          {
+            "MatrixPos": [
+              2,
+              8
+            ],
+            "DevicePos": [
+              2,
+              8
+            ]
+          },
+          {
+            "MatrixPos": [
+              2,
+              9
+            ],
+            "DevicePos": [
+              2,
+              9
+            ]
+          },
+          {
+            "MatrixPos": [
+              2,
+              10
+            ],
+            "DevicePos": [
+              2,
+              10
+            ]
+          },
+          {
+            "MatrixPos": [
+              2,
+              11
+            ],
+            "DevicePos": [
+              2,
+              11
+            ]
+          },
+          {
+            "MatrixPos": [
+              2,
+              12
+            ],
+            "DevicePos": [
+              2,
+              12
+            ]
+          },
+          {
+            "MatrixPos": [
+              2,
+              13
+            ],
+            "DevicePos": [
+              2,
+              13
+            ]
+          },
+          {
+            "MatrixPos": [
+              2,
+              16
+            ],
+            "DevicePos": [
+              2,
+              15
+            ]
+          },
+          {
+            "MatrixPos": [
+              2,
+              17
+            ],
+            "DevicePos": [
+              2,
+              16
+            ]
+          },
+          {
+            "MatrixPos": [
+              2,
+              18
+            ],
+            "DevicePos": [
+              2,
+              17
+            ]
+          },
+          {
+            "MatrixPos": [
+              2,
+              19
+            ],
+            "DevicePos": [
+              2,
+              18
+            ]
+          },
+          {
+            "MatrixPos": [
+              2,
+              20
+            ],
+            "DevicePos": [
+              2,
+              19
+            ]
+          },
+          {
+            "MatrixPos": [
+              2,
+              21
+            ],
+            "DevicePos": [
+              2,
+              20
+            ]
+          },
+          {
+            "MatrixPos": [
+              2,
+              22
+            ],
+            "DevicePos": [
+              2,
+              21
+            ]
+          },
+          {
+            "MatrixPos": [
+              3,
+              0
+            ],
+            "DevicePos": [
+              3,
+              0
+            ]
+          },
+          {
+            "MatrixPos": [
+              3,
+              2
+            ],
+            "DevicePos": [
+              3,
+              1
+            ]
+          },
+          {
+            "MatrixPos": [
+              3,
+              3
+            ],
+            "DevicePos": [
+              3,
+              2
+            ]
+          },
+          {
+            "MatrixPos": [
+              3,
+              4
+            ],
+            "DevicePos": [
+              3,
+              3
+            ]
+          },
+          {
+            "MatrixPos": [
+              3,
+              5
+            ],
+            "DevicePos": [
+              3,
+              4
+            ]
+          },
+          {
+            "MatrixPos": [
+              3,
+              6
+            ],
+            "DevicePos": [
+              3,
+              5
+            ]
+          },
+          {
+            "MatrixPos": [
+              3,
+              7
+            ],
+            "DevicePos": [
+              3,
+              6
+            ]
+          },
+          {
+            "MatrixPos": [
+              3,
+              8
+            ],
+            "DevicePos": [
+              3,
+              7
+            ]
+          },
+          {
+            "MatrixPos": [
+              3,
+              9
+            ],
+            "DevicePos": [
+              3,
+              8
+            ]
+          },
+          {
+            "MatrixPos": [
+              3,
+              10
+            ],
+            "DevicePos": [
+              3,
+              9
+            ]
+          },
+          {
+            "MatrixPos": [
+              3,
+              11
+            ],
+            "DevicePos": [
+              3,
+              10
+            ]
+          },
+          {
+            "MatrixPos": [
+              3,
+              12
+            ],
+            "DevicePos": [
+              3,
+              11
+            ]
+          },
+          {
+            "MatrixPos": [
+              3,
+              13
+            ],
+            "DevicePos": [
+              3,
+              12
+            ]
+          },
+          {
+            "MatrixPos": [
+              3,
+              14
+            ],
+            "DevicePos": [
+              3,
+              13
+            ]
+          },
+          {
+            "MatrixPos": [
+              3,
+              15
+            ],
+            "DevicePos": [
+              3,
+              14
+            ]
+          },
+          {
+            "MatrixPos": [
+              3,
+              19
+            ],
+            "DevicePos": [
+              3,
+              18
+            ]
+          },
+          {
+            "MatrixPos": [
+              3,
+              20
+            ],
+            "DevicePos": [
+              3,
+              19
+            ]
+          },
+          {
+            "MatrixPos": [
+              3,
+              21
+            ],
+            "DevicePos": [
+              3,
+              20
+            ]
+          },
+          {
+            "MatrixPos": [
+              4,
+              0
+            ],
+            "DevicePos": [
+              4,
+              0
+            ]
+          },
+          {
+            "MatrixPos": [
+              4,
+              1
+            ],
+            "DevicePos": [
+              4,
+              1
+            ]
+          },
+          {
+            "MatrixPos": [
+              4,
+              2
+            ],
+            "DevicePos": [
+              4,
+              2
+            ]
+          },
+          {
+            "MatrixPos": [
+              4,
+              3
+            ],
+            "DevicePos": [
+              4,
+              3
+            ]
+          },
+          {
+            "MatrixPos": [
+              4,
+              4
+            ],
+            "DevicePos": [
+              4,
+              4
+            ]
+          },
+          {
+            "MatrixPos": [
+              4,
+              5
+            ],
+            "DevicePos": [
+              4,
+              5
+            ]
+          },
+          {
+            "MatrixPos": [
+              4,
+              6
+            ],
+            "DevicePos": [
+              4,
+              6
+            ]
+          },
+          {
+            "MatrixPos": [
+              4,
+              7
+            ],
+            "DevicePos": [
+              4,
+              7
+            ]
+          },
+          {
+            "MatrixPos": [
+              4,
+              8
+            ],
+            "DevicePos": [
+              4,
+              8
+            ]
+          },
+          {
+            "MatrixPos": [
+              4,
+              9
+            ],
+            "DevicePos": [
+              4,
+              9
+            ]
+          },
+          {
+            "MatrixPos": [
+              4,
+              10
+            ],
+            "DevicePos": [
+              4,
+              10
+            ]
+          },
+          {
+            "MatrixPos": [
+              4,
+              11
+            ],
+            "DevicePos": [
+              4,
+              11
+            ]
+          },
+          {
+            "MatrixPos": [
+              4,
+              12
+            ],
+            "DevicePos": [
+              4,
+              12
+            ]
+          },
+          {
+            "MatrixPos": [
+              4,
+              13
+            ],
+            "DevicePos": [
+              4,
+              14
+            ]
+          },
+          {
+            "MatrixPos": [
+              4,
+              17
+            ],
+            "DevicePos": [
+              4,
+              16
+            ]
+          },
+          {
+            "MatrixPos": [
+              4,
+              19
+            ],
+            "DevicePos": [
+              4,
+              18
+            ]
+          },
+          {
+            "MatrixPos": [
+              4,
+              20
+            ],
+            "DevicePos": [
+              4,
+              19
+            ]
+          },
+          {
+            "MatrixPos": [
+              4,
+              21
+            ],
+            "DevicePos": [
+              4,
+              20
+            ]
+          },
+          {
+            "MatrixPos": [
+              5,
+              0
+            ],
+            "DevicePos": [
+              5,
+              0
+            ]
+          },
+          {
+            "MatrixPos": [
+              5,
+              1
+            ],
+            "DevicePos": [
+              5,
+              1
+            ]
+          },
+          {
+            "MatrixPos": [
+              5,
+              2
+            ],
+            "DevicePos": [
+              5,
+              2
+            ]
+          },
+          {
+            "MatrixPos": [
+              5,
+              3
+            ],
+            "DevicePos": [
+              5,
+              3
+            ]
+          },
+          {
+            "MatrixPos": [
+              5,
+              7
+            ],
+            "DevicePos": [
+              5,
+              7
+            ]
+          },
+          {
+            "MatrixPos": [
+              5,
+              12
+            ],
+            "DevicePos": [
+              5,
+              11
+            ]
+          },
+          {
+            "MatrixPos": [
+              5,
+              13
+            ],
+            "DevicePos": [
+              5,
+              12
+            ]
+          },
+          {
+            "MatrixPos": [
+              5,
+              14
+            ],
+            "DevicePos": [
+              5,
+              13
+            ]
+          },
+          {
+            "MatrixPos": [
+              5,
+              15
+            ],
+            "DevicePos": [
+              5,
+              14
+            ]
+          },
+          {
+            "MatrixPos": [
+              5,
+              16
+            ],
+            "DevicePos": [
+              5,
+              15
+            ]
+          },
+          {
+            "MatrixPos": [
+              5,
+              17
+            ],
+            "DevicePos": [
+              5,
+              16
+            ]
+          },
+          {
+            "MatrixPos": [
+              5,
+              18
+            ],
+            "DevicePos": [
+              5,
+              17
+            ]
+          },
+          {
+            "MatrixPos": [
+              5,
+              20
+            ],
+            "DevicePos": [
+              5,
+              19
+            ]
+          },
+          {
+            "MatrixPos": [
+              5,
+              21
+            ],
+            "DevicePos": [
+              5,
+              20
+            ]
+          },
+          {
+            "MatrixPos": [
+              5,
+              22
+            ],
+            "DevicePos": [
+              4,
+              21
+            ]
+          }
+        ]
+      },
+      "leds": [
+        {
+          "row": 0,
+          "col": 19
+        },
+        {
+          "row": 0,
+          "col": 20
+        },
+        {
+          "row": 0,
+          "col": 21
+        },
+        {
+          "row": 0,
+          "col": 22
+        },
+        {
+          "row": 0,
+          "col": 1
+        },
+        {
+          "row": 0,
+          "col": 4
+        },
+        {
+          "row": 0,
+          "col": 5
+        },
+        {
+          "row": 0,
+          "col": 6
+        },
+        {
+          "row": 0,
+          "col": 7
+        },
+        {
+          "row": 0,
+          "col": 8
+        },
+        {
+          "row": 0,
+          "col": 9
+        },
+        {
+          "row": 0,
+          "col": 10
+        },
+        {
+          "row": 0,
+          "col": 11
+        },
+        {
+          "row": 0,
+          "col": 12
+        },
+        {
+          "row": 0,
+          "col": 13
+        },
+        {
+          "row": 0,
+          "col": 14
+        },
+        {
+          "row": 0,
+          "col": 15
+        },
+        {
+          "row": 0,
+          "col": 16
+        },
+        {
+          "row": 0,
+          "col": 17
+        },
+        {
+          "row": 0,
+          "col": 18
+        },
+        {
+          "row": 1,
+          "col": 1
+        },
+        {
+          "row": 1,
+          "col": 2
+        },
+        {
+          "row": 1,
+          "col": 3
+        },
+        {
+          "row": 1,
+          "col": 4
+        },
+        {
+          "row": 1,
+          "col": 5
+        },
+        {
+          "row": 1,
+          "col": 6
+        },
+        {
+          "row": 1,
+          "col": 7
+        },
+        {
+          "row": 1,
+          "col": 8
+        },
+        {
+          "row": 1,
+          "col": 9
+        },
+        {
+          "row": 1,
+          "col": 10
+        },
+        {
+          "row": 1,
+          "col": 11
+        },
+        {
+          "row": 1,
+          "col": 12
+        },
+        {
+          "row": 1,
+          "col": 13
+        },
+        {
+          "row": 1,
+          "col": 14
+        },
+        {
+          "row": 2,
+          "col": 1
+        },
+        {
+          "row": 2,
+          "col": 2
+        },
+        {
+          "row": 2,
+          "col": 3
+        },
+        {
+          "row": 2,
+          "col": 4
+        },
+        {
+          "row": 2,
+          "col": 5
+        },
+        {
+          "row": 2,
+          "col": 6
+        },
+        {
+          "row": 2,
+          "col": 7
+        },
+        {
+          "row": 2,
+          "col": 8
+        },
+        {
+          "row": 2,
+          "col": 9
+        },
+        {
+          "row": 2,
+          "col": 10
+        },
+        {
+          "row": 2,
+          "col": 11
+        },
+        {
+          "row": 2,
+          "col": 12
+        },
+        {
+          "row": 2,
+          "col": 13
+        },
+        {
+          "row": 3,
+          "col": 15
+        },
+        {
+          "row": 3,
+          "col": 2
+        },
+        {
+          "row": 3,
+          "col": 3
+        },
+        {
+          "row": 3,
+          "col": 4
+        },
+        {
+          "row": 3,
+          "col": 5
+        },
+        {
+          "row": 3,
+          "col": 6
+        },
+        {
+          "row": 3,
+          "col": 7
+        },
+        {
+          "row": 3,
+          "col": 8
+        },
+        {
+          "row": 3,
+          "col": 9
+        },
+        {
+          "row": 3,
+          "col": 10
+        },
+        {
+          "row": 3,
+          "col": 11
+        },
+        {
+          "row": 3,
+          "col": 12
+        },
+        {
+          "row": 3,
+          "col": 14
+        },
+        {
+          "row": 3,
+          "col": 13
+        },
+        {
+          "row": 4,
+          "col": 1
+        },
+        {
+          "row": 4,
+          "col": 2
+        },
+        {
+          "row": 4,
+          "col": 3
+        },
+        {
+          "row": 4,
+          "col": 4
+        },
+        {
+          "row": 4,
+          "col": 5
+        },
+        {
+          "row": 4,
+          "col": 6
+        },
+        {
+          "row": 4,
+          "col": 7
+        },
+        {
+          "row": 4,
+          "col": 8
+        },
+        {
+          "row": 4,
+          "col": 9
+        },
+        {
+          "row": 4,
+          "col": 10
+        },
+        {
+          "row": 4,
+          "col": 11
+        },
+        {
+          "row": 4,
+          "col": 12
+        },
+        {
+          "row": 4,
+          "col": 13
+        },
+        {
+          "row": 5,
+          "col": 1
+        },
+        {
+          "row": 5,
+          "col": 2
+        },
+        {
+          "row": 5,
+          "col": 3
+        },
+        {
+          "row": 5,
+          "col": 7
+        },
+        {
+          "row": 5,
+          "col": 12
+        },
+        {
+          "row": 5,
+          "col": 13
+        },
+        {
+          "row": 5,
+          "col": 14
+        },
+        {
+          "row": 5,
+          "col": 15
+        },
+        {
+          "row": 1,
+          "col": 16
+        },
+        {
+          "row": 1,
+          "col": 17
+        },
+        {
+          "row": 1,
+          "col": 18
+        },
+        {
+          "row": 2,
+          "col": 16
+        },
+        {
+          "row": 2,
+          "col": 17
+        },
+        {
+          "row": 2,
+          "col": 18
+        },
+        {
+          "row": 4,
+          "col": 17
+        },
+        {
+          "row": 5,
+          "col": 16
+        },
+        {
+          "row": 5,
+          "col": 17
+        },
+        {
+          "row": 5,
+          "col": 18
+        },
+        {
+          "row": 1,
+          "col": 19
+        },
+        {
+          "row": 1,
+          "col": 20
+        },
+        {
+          "row": 1,
+          "col": 21
+        },
+        {
+          "row": 1,
+          "col": 22
+        },
+        {
+          "row": 2,
+          "col": 19
+        },
+        {
+          "row": 2,
+          "col": 20
+        },
+        {
+          "row": 2,
+          "col": 21
+        },
+        {
+          "row": 2,
+          "col": 22
+        },
+        {
+          "row": 3,
+          "col": 19
+        },
+        {
+          "row": 3,
+          "col": 20
+        },
+        {
+          "row": 3,
+          "col": 21
+        },
+        {
+          "row": 4,
+          "col": 19
+        },
+        {
+          "row": 4,
+          "col": 20
+        },
+        {
+          "row": 4,
+          "col": 21
+        },
+        {
+          "row": 5,
+          "col": 22
+        },
+        {
+          "row": 5,
+          "col": 20
+        },
+        {
+          "row": 5,
+          "col": 21
+        }
+      ]
+    }
+  ],
+  "layers": [
+    {
+      "id": "fire",
+      "type": "layer",
+      "name": "fire",
+      "value": 8,
+      "title": "Fire",
+      "visible": true,
+      "params": {},
+      "regions": [
+        {
+          "params": {
+            "color": 8405024
+          },
+          "devices": [
+            {
+              "id": "keyboard",
+              "leds": [
+                {
+                  "row": 0,
+                  "col": 19
+                },
+                {
+                  "row": 0,
+                  "col": 20
+                },
+                {
+                  "row": 0,
+                  "col": 21
+                },
+                {
+                  "row": 0,
+                  "col": 22
+                },
+                {
+                  "row": 0,
+                  "col": 1
+                },
+                {
+                  "row": 0,
+                  "col": 4
+                },
+                {
+                  "row": 0,
+                  "col": 5
+                },
+                {
+                  "row": 0,
+                  "col": 6
+                },
+                {
+                  "row": 0,
+                  "col": 7
+                },
+                {
+                  "row": 0,
+                  "col": 8
+                },
+                {
+                  "row": 0,
+                  "col": 9
+                },
+                {
+                  "row": 0,
+                  "col": 10
+                },
+                {
+                  "row": 0,
+                  "col": 11
+                },
+                {
+                  "row": 0,
+                  "col": 12
+                },
+                {
+                  "row": 0,
+                  "col": 13
+                },
+                {
+                  "row": 0,
+                  "col": 14
+                },
+                {
+                  "row": 0,
+                  "col": 15
+                },
+                {
+                  "row": 0,
+                  "col": 16
+                },
+                {
+                  "row": 0,
+                  "col": 17
+                },
+                {
+                  "row": 0,
+                  "col": 18
+                },
+                {
+                  "row": 1,
+                  "col": 1
+                },
+                {
+                  "row": 1,
+                  "col": 2
+                },
+                {
+                  "row": 1,
+                  "col": 3
+                },
+                {
+                  "row": 1,
+                  "col": 4
+                },
+                {
+                  "row": 1,
+                  "col": 5
+                },
+                {
+                  "row": 1,
+                  "col": 6
+                },
+                {
+                  "row": 1,
+                  "col": 7
+                },
+                {
+                  "row": 1,
+                  "col": 8
+                },
+                {
+                  "row": 1,
+                  "col": 9
+                },
+                {
+                  "row": 1,
+                  "col": 10
+                },
+                {
+                  "row": 1,
+                  "col": 11
+                },
+                {
+                  "row": 1,
+                  "col": 12
+                },
+                {
+                  "row": 1,
+                  "col": 13
+                },
+                {
+                  "row": 1,
+                  "col": 14
+                },
+                {
+                  "row": 2,
+                  "col": 1
+                },
+                {
+                  "row": 2,
+                  "col": 2
+                },
+                {
+                  "row": 2,
+                  "col": 3
+                },
+                {
+                  "row": 2,
+                  "col": 4
+                },
+                {
+                  "row": 2,
+                  "col": 5
+                },
+                {
+                  "row": 2,
+                  "col": 6
+                },
+                {
+                  "row": 2,
+                  "col": 7
+                },
+                {
+                  "row": 2,
+                  "col": 8
+                },
+                {
+                  "row": 2,
+                  "col": 9
+                },
+                {
+                  "row": 2,
+                  "col": 10
+                },
+                {
+                  "row": 2,
+                  "col": 11
+                },
+                {
+                  "row": 2,
+                  "col": 12
+                },
+                {
+                  "row": 2,
+                  "col": 13
+                },
+                {
+                  "row": 3,
+                  "col": 15
+                },
+                {
+                  "row": 3,
+                  "col": 2
+                },
+                {
+                  "row": 3,
+                  "col": 3
+                },
+                {
+                  "row": 3,
+                  "col": 4
+                },
+                {
+                  "row": 3,
+                  "col": 5
+                },
+                {
+                  "row": 3,
+                  "col": 6
+                },
+                {
+                  "row": 3,
+                  "col": 7
+                },
+                {
+                  "row": 3,
+                  "col": 8
+                },
+                {
+                  "row": 3,
+                  "col": 9
+                },
+                {
+                  "row": 3,
+                  "col": 10
+                },
+                {
+                  "row": 3,
+                  "col": 11
+                },
+                {
+                  "row": 3,
+                  "col": 12
+                },
+                {
+                  "row": 3,
+                  "col": 14
+                },
+                {
+                  "row": 3,
+                  "col": 13
+                },
+                {
+                  "row": 4,
+                  "col": 1
+                },
+                {
+                  "row": 4,
+                  "col": 2
+                },
+                {
+                  "row": 4,
+                  "col": 3
+                },
+                {
+                  "row": 4,
+                  "col": 4
+                },
+                {
+                  "row": 4,
+                  "col": 5
+                },
+                {
+                  "row": 4,
+                  "col": 6
+                },
+                {
+                  "row": 4,
+                  "col": 7
+                },
+                {
+                  "row": 4,
+                  "col": 8
+                },
+                {
+                  "row": 4,
+                  "col": 9
+                },
+                {
+                  "row": 4,
+                  "col": 10
+                },
+                {
+                  "row": 4,
+                  "col": 11
+                },
+                {
+                  "row": 4,
+                  "col": 12
+                },
+                {
+                  "row": 4,
+                  "col": 13
+                },
+                {
+                  "row": 5,
+                  "col": 1
+                },
+                {
+                  "row": 5,
+                  "col": 2
+                },
+                {
+                  "row": 5,
+                  "col": 3
+                },
+                {
+                  "row": 5,
+                  "col": 7
+                },
+                {
+                  "row": 5,
+                  "col": 12
+                },
+                {
+                  "row": 5,
+                  "col": 13
+                },
+                {
+                  "row": 5,
+                  "col": 14
+                },
+                {
+                  "row": 5,
+                  "col": 15
+                },
+                {
+                  "row": 1,
+                  "col": 16
+                },
+                {
+                  "row": 1,
+                  "col": 17
+                },
+                {
+                  "row": 1,
+                  "col": 18
+                },
+                {
+                  "row": 2,
+                  "col": 16
+                },
+                {
+                  "row": 2,
+                  "col": 17
+                },
+                {
+                  "row": 2,
+                  "col": 18
+                },
+                {
+                  "row": 4,
+                  "col": 17
+                },
+                {
+                  "row": 5,
+                  "col": 16
+                },
+                {
+                  "row": 5,
+                  "col": 17
+                },
+                {
+                  "row": 5,
+                  "col": 18
+                },
+                {
+                  "row": 1,
+                  "col": 19
+                },
+                {
+                  "row": 1,
+                  "col": 20
+                },
+                {
+                  "row": 1,
+                  "col": 21
+                },
+                {
+                  "row": 1,
+                  "col": 22
+                },
+                {
+                  "row": 2,
+                  "col": 19
+                },
+                {
+                  "row": 2,
+                  "col": 20
+                },
+                {
+                  "row": 2,
+                  "col": 21
+                },
+                {
+                  "row": 2,
+                  "col": 22
+                },
+                {
+                  "row": 3,
+                  "col": 19
+                },
+                {
+                  "row": 3,
+                  "col": 20
+                },
+                {
+                  "row": 3,
+                  "col": 21
+                },
+                {
+                  "row": 4,
+                  "col": 19
+                },
+                {
+                  "row": 4,
+                  "col": 20
+                },
+                {
+                  "row": 4,
+                  "col": 21
+                },
+                {
+                  "row": 5,
+                  "col": 22
+                },
+                {
+                  "row": 5,
+                  "col": 20
+                },
+                {
+                  "row": 5,
+                  "col": 21
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "spectrum",
+      "type": "layer",
+      "name": "spectrum",
+      "value": 4,
+      "title": "Spectrum",
+      "visible": true,
+      "params": {},
+      "regions": [
+        {
+          "params": {
+            "duration": 37740,
+            "colorStops": [
+              {
+                "Stop": 0,
+                "Color": 16718079
+              },
+              {
+                "Stop": 18,
+                "Color": 16715792
+              },
+              {
+                "Stop": 28,
+                "Color": 16744448
+              },
+              {
+                "Stop": 35,
+                "Color": 15728384
+              },
+              {
+                "Stop": 42,
+                "Color": 14679808
+              },
+              {
+                "Stop": 49,
+                "Color": 65280
+              },
+              {
+                "Stop": 52,
+                "Color": 65535
+              },
+              {
+                "Stop": 64,
+                "Color": 1595647
+              },
+              {
+                "Stop": 77,
+                "Color": 1595647
+              },
+              {
+                "Stop": 100,
+                "Color": 16718079
+              }
+            ]
+          },
+          "devices": [
+            {
+              "id": "keyboard",
+              "leds": [
+                {
+                  "row": 0,
+                  "col": 19
+                },
+                {
+                  "row": 0,
+                  "col": 20
+                },
+                {
+                  "row": 0,
+                  "col": 21
+                },
+                {
+                  "row": 0,
+                  "col": 22
+                },
+                {
+                  "row": 0,
+                  "col": 1
+                },
+                {
+                  "row": 0,
+                  "col": 4
+                },
+                {
+                  "row": 0,
+                  "col": 5
+                },
+                {
+                  "row": 0,
+                  "col": 6
+                },
+                {
+                  "row": 0,
+                  "col": 7
+                },
+                {
+                  "row": 0,
+                  "col": 8
+                },
+                {
+                  "row": 0,
+                  "col": 9
+                },
+                {
+                  "row": 0,
+                  "col": 10
+                },
+                {
+                  "row": 0,
+                  "col": 11
+                },
+                {
+                  "row": 0,
+                  "col": 12
+                },
+                {
+                  "row": 0,
+                  "col": 13
+                },
+                {
+                  "row": 0,
+                  "col": 14
+                },
+                {
+                  "row": 0,
+                  "col": 15
+                },
+                {
+                  "row": 0,
+                  "col": 16
+                },
+                {
+                  "row": 0,
+                  "col": 17
+                },
+                {
+                  "row": 0,
+                  "col": 18
+                },
+                {
+                  "row": 1,
+                  "col": 1
+                },
+                {
+                  "row": 1,
+                  "col": 2
+                },
+                {
+                  "row": 1,
+                  "col": 3
+                },
+                {
+                  "row": 1,
+                  "col": 4
+                },
+                {
+                  "row": 1,
+                  "col": 5
+                },
+                {
+                  "row": 1,
+                  "col": 6
+                },
+                {
+                  "row": 1,
+                  "col": 7
+                },
+                {
+                  "row": 1,
+                  "col": 8
+                },
+                {
+                  "row": 1,
+                  "col": 9
+                },
+                {
+                  "row": 1,
+                  "col": 10
+                },
+                {
+                  "row": 1,
+                  "col": 11
+                },
+                {
+                  "row": 1,
+                  "col": 12
+                },
+                {
+                  "row": 1,
+                  "col": 13
+                },
+                {
+                  "row": 1,
+                  "col": 14
+                },
+                {
+                  "row": 2,
+                  "col": 1
+                },
+                {
+                  "row": 2,
+                  "col": 2
+                },
+                {
+                  "row": 2,
+                  "col": 3
+                },
+                {
+                  "row": 2,
+                  "col": 4
+                },
+                {
+                  "row": 2,
+                  "col": 5
+                },
+                {
+                  "row": 2,
+                  "col": 6
+                },
+                {
+                  "row": 2,
+                  "col": 7
+                },
+                {
+                  "row": 2,
+                  "col": 8
+                },
+                {
+                  "row": 2,
+                  "col": 9
+                },
+                {
+                  "row": 2,
+                  "col": 10
+                },
+                {
+                  "row": 2,
+                  "col": 11
+                },
+                {
+                  "row": 2,
+                  "col": 12
+                },
+                {
+                  "row": 2,
+                  "col": 13
+                },
+                {
+                  "row": 3,
+                  "col": 15
+                },
+                {
+                  "row": 3,
+                  "col": 2
+                },
+                {
+                  "row": 3,
+                  "col": 3
+                },
+                {
+                  "row": 3,
+                  "col": 4
+                },
+                {
+                  "row": 3,
+                  "col": 5
+                },
+                {
+                  "row": 3,
+                  "col": 6
+                },
+                {
+                  "row": 3,
+                  "col": 7
+                },
+                {
+                  "row": 3,
+                  "col": 8
+                },
+                {
+                  "row": 3,
+                  "col": 9
+                },
+                {
+                  "row": 3,
+                  "col": 10
+                },
+                {
+                  "row": 3,
+                  "col": 11
+                },
+                {
+                  "row": 3,
+                  "col": 12
+                },
+                {
+                  "row": 3,
+                  "col": 14
+                },
+                {
+                  "row": 3,
+                  "col": 13
+                },
+                {
+                  "row": 4,
+                  "col": 1
+                },
+                {
+                  "row": 4,
+                  "col": 2
+                },
+                {
+                  "row": 4,
+                  "col": 3
+                },
+                {
+                  "row": 4,
+                  "col": 4
+                },
+                {
+                  "row": 4,
+                  "col": 5
+                },
+                {
+                  "row": 4,
+                  "col": 6
+                },
+                {
+                  "row": 4,
+                  "col": 7
+                },
+                {
+                  "row": 4,
+                  "col": 8
+                },
+                {
+                  "row": 4,
+                  "col": 9
+                },
+                {
+                  "row": 4,
+                  "col": 10
+                },
+                {
+                  "row": 4,
+                  "col": 11
+                },
+                {
+                  "row": 4,
+                  "col": 12
+                },
+                {
+                  "row": 4,
+                  "col": 13
+                },
+                {
+                  "row": 5,
+                  "col": 1
+                },
+                {
+                  "row": 5,
+                  "col": 2
+                },
+                {
+                  "row": 5,
+                  "col": 3
+                },
+                {
+                  "row": 5,
+                  "col": 7
+                },
+                {
+                  "row": 5,
+                  "col": 12
+                },
+                {
+                  "row": 5,
+                  "col": 13
+                },
+                {
+                  "row": 5,
+                  "col": 14
+                },
+                {
+                  "row": 5,
+                  "col": 15
+                },
+                {
+                  "row": 1,
+                  "col": 16
+                },
+                {
+                  "row": 1,
+                  "col": 17
+                },
+                {
+                  "row": 1,
+                  "col": 18
+                },
+                {
+                  "row": 2,
+                  "col": 16
+                },
+                {
+                  "row": 2,
+                  "col": 17
+                },
+                {
+                  "row": 2,
+                  "col": 18
+                },
+                {
+                  "row": 4,
+                  "col": 17
+                },
+                {
+                  "row": 5,
+                  "col": 16
+                },
+                {
+                  "row": 5,
+                  "col": 17
+                },
+                {
+                  "row": 5,
+                  "col": 18
+                },
+                {
+                  "row": 1,
+                  "col": 19
+                },
+                {
+                  "row": 1,
+                  "col": 20
+                },
+                {
+                  "row": 1,
+                  "col": 21
+                },
+                {
+                  "row": 1,
+                  "col": 22
+                },
+                {
+                  "row": 2,
+                  "col": 19
+                },
+                {
+                  "row": 2,
+                  "col": 20
+                },
+                {
+                  "row": 2,
+                  "col": 21
+                },
+                {
+                  "row": 2,
+                  "col": 22
+                },
+                {
+                  "row": 3,
+                  "col": 19
+                },
+                {
+                  "row": 3,
+                  "col": 20
+                },
+                {
+                  "row": 3,
+                  "col": 21
+                },
+                {
+                  "row": 4,
+                  "col": 19
+                },
+                {
+                  "row": 4,
+                  "col": 20
+                },
+                {
+                  "row": 4,
+                  "col": 21
+                },
+                {
+                  "row": 5,
+                  "col": 22
+                },
+                {
+                  "row": 5,
+                  "col": 20
+                },
+                {
+                  "row": 5,
+                  "col": 21
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

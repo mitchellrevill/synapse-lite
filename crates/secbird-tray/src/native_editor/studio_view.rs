@@ -1,14 +1,23 @@
 //! Local composition editor. File work bypasses the device engine entirely.
 use super::*;
 use secbird_core::studio::{
-    document::{ColorProperty, Draft, Kind, SaveCheckpoint, SelectedColor},
+    document::{ColorProperty, Draft, Kind, Preview, ReadSnapshot, SaveCheckpoint, SelectedColor},
     Archive,
 };
 use std::{collections::BTreeMap, fs::File, os::windows::ffi::OsStringExt};
 use windows_sys::Win32::UI::Controls::Dialogs::*;
 
+#[path = "studio_preview.rs"]
+mod playback;
 #[path = "studio_spectrum.rs"]
 mod spectrum;
+pub(super) const PREVIEW_TIMER: usize = 79;
+pub(super) unsafe fn preview_tick(state: &mut State) {
+    playback::tick(state);
+}
+pub(super) fn preview_color(state: &State, device: &str, key: &str) -> Option<u32> {
+    playback::color(state, device, key)
+}
 
 pub(super) const DIALOG: u32 = WM_APP + 112;
 pub(super) const EXIT_REQUEST: u32 = WM_APP + 114;
@@ -38,6 +47,7 @@ pub(super) enum Control {
     ApplyCold,
     ClearColor(bool),
     Spectrum(spectrum::Control),
+    Preview,
     Erase,
 }
 #[derive(Clone, Copy)]
@@ -65,6 +75,7 @@ pub(super) struct View {
     cold: String,
     selected_cold: Option<SelectedColor>,
     spectrum: spectrum::Properties,
+    playback: playback::Playback,
     dropdown: bool,
     profile_scroll: usize,
     scroll: usize,
@@ -78,6 +89,12 @@ pub(super) struct View {
     pub test_decision: Option<i32>,
 }
 pub(super) enum Request {
+    Preview {
+        epoch: u64,
+        generation: u64,
+        snapshot: ReadSnapshot,
+        random_state: u32,
+    },
     Read {
         epoch: u64,
         path: PathBuf,
@@ -91,6 +108,12 @@ pub(super) enum Request {
     },
 }
 pub(super) enum Response {
+    Preview {
+        epoch: u64,
+        generation: u64,
+        snapshot: ReadSnapshot,
+        result: Result<Box<Preview>, String>,
+    },
     Read {
         epoch: u64,
         path: PathBuf,
@@ -105,6 +128,22 @@ pub(super) enum Response {
 
 pub(super) fn work(request: Request) -> Response {
     match request {
+        Request::Preview {
+            epoch,
+            generation,
+            snapshot,
+            random_state,
+        } => {
+            let result = Preview::from_snapshot(&snapshot, random_state)
+                .map(Box::new)
+                .map_err(|e| e.to_string());
+            Response::Preview {
+                epoch,
+                generation,
+                snapshot,
+                result,
+            }
+        }
         Request::Read { epoch, path } => {
             let result = File::open(&path)
                 .map_err(|error| error.to_string())
@@ -151,6 +190,7 @@ impl View {
         self.draft.is_some() && !self.busy && !self.dialog
     }
     fn profile(&mut self, index: usize) -> Result<(), String> {
+        self.playback.clear_frame();
         let archive = self
             .archive
             .as_ref()
@@ -174,7 +214,7 @@ impl View {
             Ok(draft) => {
                 self.selected = draft.layers().first().map(|row| row.id.clone());
                 self.draft = Some(draft);
-                self.status = "File edits only · lighting preview unavailable".into();
+                self.status = "Choose Local Preview to animate the canvas".into();
                 self.failed = false;
             }
             Err(error) => {
@@ -487,6 +527,7 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
             finish_name(state);
         }
         Control::CancelRename => state.studio.renaming = false,
+        Control::Preview => playback::toggle(state),
         Control::Spectrum(control) => spectrum::action(state, control),
         Control::ApplyColor | Control::ApplyCold | Control::ClearColor(_) | Control::Erase => {
             let erase = matches!(control, Control::Erase);
@@ -586,8 +627,21 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
 }
 
 pub(super) unsafe fn receive(state: &mut State, response: Response) {
+    let response = match response {
+        Response::Preview {
+            epoch,
+            generation,
+            snapshot,
+            result,
+        } => {
+            playback::receive(state, epoch, generation, snapshot, result);
+            return;
+        }
+        other => other,
+    };
     let epoch = match &response {
         Response::Read { epoch, .. } | Response::Save { epoch, .. } => *epoch,
+        Response::Preview { .. } => unreachable!(),
     };
     if epoch != state.studio.epoch {
         return;
@@ -626,10 +680,16 @@ pub(super) unsafe fn receive(state: &mut State, response: Response) {
                 .map_err(|error| error.to_string())?;
             state.studio.archive = Some(archive);
             state.studio.path = Some(path);
-            state.studio.status = "Composition file saved · lighting preview unavailable".into();
+            state.studio.status = if state.studio.playback.active() {
+                "Composition saved · local preview only"
+            } else {
+                "Composition file saved · local preview is stopped"
+            }
+            .into();
             state.studio.failed = false;
             Ok(())
         }),
+        Response::Preview { .. } => unreachable!(),
     };
     match result {
         Ok(()) => {
@@ -1022,6 +1082,19 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
                 .as_ref()
                 .is_some_and(|draft| draft.redo_len() > 0),
     );
+    button(
+        p,
+        if view.playback.active() {
+            "STOP PREVIEW"
+        } else {
+            "LOCAL PREVIEW"
+        },
+        565,
+        87,
+        130,
+        Control::Preview,
+        view.editable(),
+    );
     p.text(
         "EFFECT LAYERS",
         10,
@@ -1323,7 +1396,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
 pub(super) fn diagnostics(state: &State) -> Value {
     let view = &state.studio;
     json!({"open":view.open,"busy":view.busy,"dialog":view.dialog,"dirty":view.dirty(),"renaming":view.renaming,"status":view.status,"failed":view.failed,"pending":state.pending,"selected_leds":view.canvas.count(),"canvas_notes":view.canvas.notes,"canvas_devices":view.canvas.device_count(),"canvas_selectable_leds":view.canvas.selectable_count(),"color":view.color,
-        "index":view.index,"profiles":view.archive.as_ref().map_or(0,|archive|archive.profile_count()),"selected":view.selected,
+        "preview":playback::diagnostics(state),"index":view.index,"profiles":view.archive.as_ref().map_or(0,|archive|archive.profile_count()),"selected":view.selected,
         "undo":view.draft.as_ref().map_or(0,Draft::undo_len),"redo":view.draft.as_ref().map_or(0,Draft::redo_len),
         "rows":view.draft.as_ref().map(|draft|draft.layers().iter().map(|row|json!({"id":row.id,"title":row.title,"visible":row.visible})).collect::<Vec<_>>()).unwrap_or_default()})
 }

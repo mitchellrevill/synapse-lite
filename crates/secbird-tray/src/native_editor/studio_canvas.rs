@@ -101,6 +101,9 @@ impl Device {
 }
 
 impl Canvas {
+    pub fn can_preview(&self) -> bool {
+        self.devices.len() == 1 && self.notes.is_empty()
+    }
     pub fn load(raw: &str, assets: &Path) -> Self {
         let mut canvas = Self::default();
         let result = (|| -> Result<(), String> {
@@ -462,7 +465,9 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
                 0x444444
             };
             let pen = CreatePen(PS_SOLID, 2, rgb(color));
-            let brush = CreateSolidBrush(rgb(0x111111));
+            let fill = studio_view::preview_color(state, &device.placement.id, &key.input_id)
+                .unwrap_or(0x111111);
+            let brush = CreateSolidBrush(rgb(fill));
             let old_pen = SelectObject(p.dc, pen);
             let old_brush = SelectObject(p.dc, brush);
             if device.geometry.trace_key_path(

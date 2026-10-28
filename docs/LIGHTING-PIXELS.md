@@ -61,7 +61,11 @@ factory wrappers, so graph module count0 and dynamic dependencies remain unknown
 their syntax coverage is not proof of executing the complete app.
 
 The codec replaces missing colours with sentinel0x64000000, adds missing0/100
-anchors, sorts stops, sets Spectrum Mode0 and emits Studio Fire's fixed preset.
+anchors, sets Spectrum Mode0 and emits Studio Fire's fixed preset. A later
+controlled replay corrected the initial sorting interpretation: its sorted
+temporary is discarded by the effect switch, so Spectrum receives original
+array order with anchors. Unsorted/duplicate stops trigger the native
+initializer's fallback. See [local preview](STUDIO-PREVIEW.md).
 Native API conversion swaps RGB/BGR once, preserving the sentinel. The recovered
 container formula treats its high byte as inverse percentage coverage. This
 closes the earlier high-byte interpretation gap for the admitted pixel math.
@@ -76,5 +80,6 @@ deltas, None, opacity, masks and nonblack mode. Tests also cover caller order,
 black initialization and atomic refusal. All pass in debug and optimized builds.
 
 Reference vectors are derived from static instructions, not executed vendor
-output. This module is connected to the pure Fire renderer, but no Studio preview,
-hardware-output, timing, optical or complete-build memory claim follows from it.
+output. This module is connected to Fire and bounded local Studio preview. It
+does not establish hardware output, stock timing, optical parity or complete-build
+memory acceptance.

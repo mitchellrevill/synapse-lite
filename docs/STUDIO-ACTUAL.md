@@ -65,6 +65,12 @@ focused analysis. No vendor JS was executed by REA.
 
 ## Stock resource sample
 
+The actual original composition also passes the later isolated native local
+preview check: two effects animate on the109-key source canvas, preview leaves
+the draft clean, stops/drains when hidden, and recompiles after a Hot edit.
+No device SET or original/profile-store mutation occurs. See
+[local preview](STUDIO-PREVIEW.md) for admitted mapping and timing boundaries.
+
 The later Fire editing regression opens this same private export in an isolated
 native window with simulated transport. It verifies Hot and Cold saves independently,
 partner preservation, None undo/redo, read-only refusal and unchanged original

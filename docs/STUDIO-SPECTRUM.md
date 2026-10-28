@@ -8,8 +8,9 @@ colour inserts None); Delete removes the selected stop. These actions participat
 in the same bounded Undo/Redo, Save and Discard history as other regional edits.
 Changing layers clears LED selection, as the source does.
 
-This is local file authoring. It does not play the composition, send frames,
-claim equivalent physical colours or establish complete Studio parity. Duration
+These controls author local files. [Local Preview](STUDIO-PREVIEW.md) now renders
+the admitted Static/Spectrum/Fire composition on the canvas, without hardware
+frames or physical-colour acceptance. This is not complete Studio parity. Duration
 buttons, numbered preset buttons and percent/hex fields are interim controls;
 the stock slider, gradient popup/drag handles, colour picker, remembered custom
 tile and complete panel scrolling remain to implement. The current native test

@@ -3591,6 +3591,7 @@ unsafe extern "system" fn window_proc(
             KillTimer(hwnd, RESPONSE_TIMER);
             KillTimer(hwnd, SMOKE_TIMER);
             KillTimer(hwnd, CACHED_LIGHTING_TIMER);
+            KillTimer(hwnd, studio_view::PREVIEW_TIMER);
             KillTimer(hwnd, CACHED_FEEDBACK_RETRY);
             PostQuitMessage(0);
             return 0;
@@ -4621,6 +4622,10 @@ unsafe extern "system" fn window_proc(
         }
         WM_TIMER if wparam == CACHED_LIGHTING_TIMER => {
             state.request_cached_lighting();
+            0
+        }
+        WM_TIMER if wparam == studio_view::PREVIEW_TIMER => {
+            studio_view::preview_tick(&mut state);
             0
         }
         WM_TIMER if wparam == RESPONSE_TIMER => {

@@ -63,6 +63,7 @@ pub mod sim;
 pub mod source_macro;
 pub mod snap_tap;
 pub mod studio;
+pub mod spectrum_lighting;
 pub mod transport;
 pub mod uniform_lighting;
 pub mod update;

@@ -5,11 +5,10 @@ generation and replay math: Mode0, Rate160, Seed100, infinite cycles,25fps.
 Seed100 means100 keyframes, not a random seed. Five interpolated frames per
 keyframe yield a500-frame cycle. No random draws occur at cycle boundaries.
 
-This is a pure renderer, not connected Studio preview or hardware output yet.
-The app's existing Fire controls still edit composition files only. Native
-device/world-coordinate mapping, masks and ownership must be integrated before
-the renderer can be used as equivalent application playback. Do not substitute
-a device's advertised6×22 matrix for Studio's native world-coordinate region.
+This pure renderer now feeds [bounded local Studio preview](STUDIO-PREVIEW.md).
+Hardware output and its ownership/restoration remain unfinished. Do not
+substitute a device's advertised6×22 matrix for Studio's native world-coordinate
+region; local preview uses separately recovered mask bounds and logical sampling.
 
 ## Generation and storage
 
@@ -87,6 +86,6 @@ transparency across intensity changes and atomic refusal without phase advance.
 These pass in debug and optimized builds. The reference never loads vendor code.
 
 This is independent reconstruction evidence, not an executed vendor oracle or
-optical observation. Full Studio frame mapping/compositing, live scheduler,
-physical output, recovery, current-stock phase and final resource checks remain
+optical observation. Full Studio mapping beyond the admitted local preview,
+source scheduler/phase, physical output, recovery and final resource checks remain
 unverified. The full application goal remains active.

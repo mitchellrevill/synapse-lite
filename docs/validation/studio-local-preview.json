@@ -1,0 +1,40 @@
+{
+  "scope": "source-derived local native canvas preview only; no hardware output",
+  "core_passed": 420,
+  "core_ignored": 6,
+  "tray_passed": 234,
+  "tray_ignored": 27,
+  "optimized_preview_passed": 4,
+  "optimized_spectrum_passed": 4,
+  "native_actual_export_passed": true,
+  "native_existing_editor_recovery_passed": true,
+  "combined_reference_frames": 500,
+  "logical_pixels_per_frame": 161,
+  "source_selected_leds": 109,
+  "native_mask_bounds": [
+    1,
+    0,
+    23,
+    6
+  ],
+  "local_preview_plan_under_100000_bytes": true,
+  "compiler_pending_bound": 1,
+  "preview_changes_profile_data": false,
+  "device_sets_submitted": false,
+  "stock_timing_optical_acceptance": false,
+  "full_build_memory_acceptance": false,
+  "fixtures": [
+    {
+      "file": "studio-preview-profile.json",
+      "sha256": "32b82e814be413faa10a67a45a10c9781890f4983183b69963689fc9c0110e9e"
+    },
+    {
+      "file": "studio-preview-reference.json",
+      "sha256": "ce5f22be56b4f45c9ecb4e45d4b2ee7b499649993fc4f9f7c87f6a5038bfbb32"
+    },
+    {
+      "file": "studio-native-codec-replay.json",
+      "sha256": "774ccb46c97c7427117e45fcd823a8b447a454cbba6bc614b2747eec345147ac"
+    }
+  ]
+}
