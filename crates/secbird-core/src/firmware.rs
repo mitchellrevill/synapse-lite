@@ -37,28 +37,6 @@ struct Manifest {
     latest: Option<Latest>,
 }
 
-#[derive(Deserialize)]
-struct CatalogEntry {
-    #[serde(rename = "productId")]
-    product: u16,
-    /// A number, or a list when a product has several receivers.
-    #[serde(default, rename = "dongleId")]
-    dongle: serde_json::Value,
-    #[serde(default, rename = "bleId")]
-    ble: serde_json::Value,
-}
-
-impl CatalogEntry {
-    fn answers_for(&self, pid: u16) -> bool {
-        let has = |v: &serde_json::Value| match v {
-            serde_json::Value::Number(n) => n.as_u64() == Some(u64::from(pid)),
-            serde_json::Value::Array(list) => list.iter().any(|n| n.as_u64() == Some(u64::from(pid))),
-            _ => false,
-        };
-        self.product == pid || has(&self.dongle) || has(&self.ble)
-    }
-}
-
 /// What a check found for one device.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Status {
@@ -138,9 +116,14 @@ fn parse_manifest(text: &str) -> Result<Option<Latest>> {
 }
 
 fn product_of(pid: u16, catalog: &str) -> Result<Option<u16>> {
-    let list: Vec<CatalogEntry> =
-        serde_json::from_str(catalog).map_err(|e| Error::Db(format!("Razer device list: {e}")))?;
-    Ok(list.iter().find(|e| e.answers_for(pid)).map(|e| e.product))
+    use crate::device_catalog::{Catalog, Resolution};
+    match Catalog::parse(catalog)?.resolve(pid) {
+        Resolution::Unknown => Ok(None),
+        Resolution::Unique(product) => Ok(Some(product)),
+        Resolution::Ambiguous(products) => Err(Error::Unsupported(format!(
+            "connection ID {pid} belongs to multiple catalogue products {products:?}; choose the product explicitly"
+        ))),
+    }
 }
 
 /// HTTPS GET from apps.razer.com. `None` on 404 (no manifest for that product).
@@ -186,6 +169,12 @@ mod tests {
         assert!(pro.url.starts_with("https://"));
         assert_eq!(latest_for(171).unwrap(), Some(pro), "its receiver maps to it");
         assert_eq!(latest_for(0xFFF1).unwrap(), None, "unknown product");
+    }
+
+    #[test]
+    fn shared_receiver_does_not_select_an_arbitrary_updater() {
+        let list = r#"[{"productId":2594,"dongleId":2593},{"productId":2595,"dongleId":2593}]"#;
+        assert!(matches!(product_of(2593, list), Err(Error::Unsupported(_))));
     }
 
     #[test]

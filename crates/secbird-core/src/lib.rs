@@ -16,6 +16,7 @@ pub mod commands;
 pub mod debloat;
 pub mod db;
 pub mod device;
+pub mod device_catalog;
 #[cfg(windows)]
 pub mod driver_control;
 pub mod effects;

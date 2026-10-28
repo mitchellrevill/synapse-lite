@@ -4,6 +4,7 @@ use std::process::ExitCode;
 #[cfg(windows)]
 mod control_probe;
 mod studio_files;
+mod catalog_files;
 
 const USAGE: &str = "\
 Synapse Lite - device controls based on Secretarybird beta
@@ -11,6 +12,7 @@ Synapse Lite - device controls based on Secretarybird beta
 USAGE: secbird [-d PID] <command> [args]
 
 STUDIO FILES (local interchange only; does not apply lighting):
+  catalog inspect FILE      Inspect a local Razer catalogue without opening hardware
   studio inspect FILE       List compositions in a JSON-v1 .ChromaEffects file
   studio export INPUT OUTPUT all|NUMBER...
                             Export selected compositions to a new file (1-based numbers)
@@ -163,6 +165,10 @@ fn run(mut args: Vec<String>) -> Result<(), Error> {
     if command == "studio" {
         if selector.is_some() { return Err(Error::InvalidArg("studio file commands do not use -d".into())); }
         return studio_files::run(&args[1..]);
+    }
+    if command == "catalog" {
+        if selector.is_some() { return Err(Error::InvalidArg("catalog file commands do not use -d".into())); }
+        return catalog_files::run(&args[1..]);
     }
     if command == "update" {
         match secbird_core::update::check()? {
