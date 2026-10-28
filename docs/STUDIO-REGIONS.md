@@ -1,4 +1,4 @@
-# Static region editing
+# Static and Fire region editing
 
 Select a Static layer and LEDs, enter a six-digit RGB hex colour, then choose
 **Apply to Selection**. **Erase Selection** removes those LED memberships.
@@ -6,6 +6,14 @@ Both operations support Undo/Redo and Save/Discard/Cancel. Mixed and unassigned
 selections differ; `000000` assigns black rather than erasing. These are local
 file edits, with no lighting output. The RGB field/swatch is a temporary control,
 not the stock colour picker or a claim of pixel parity.
+
+Fire now exposes independent **Hot** and **Cold** RGB fields. Select LEDs and
+apply either field independently; the partner colour and all other regional
+properties are retained, including mixed values. **None** removes only that
+colour property while keeping the LED in the effect. Erase removes membership.
+New Select assignments author only the touched field, without introducing
+red/orange brush defaults. Missing/mixed Fire values show an empty text field.
+These controls also edit files only; Fire animation is not yet rendered.
 
 ## Preservation
 
@@ -23,8 +31,8 @@ Merging requires identical full non-device region metadata and, for memberships,
 identical non-LED device metadata. This is stricter than merging by colour alone
 so unknown data cannot disappear. Selected overlaps, conflicting Static IDs,
 invalid colours, ambiguous inventories and excessive partitions refuse atomically.
-The core also supports generic erase; its native button currently appears only
-for Static. Other archive profiles and envelope fields retain their existing
+The core also supports generic erase; its native button appears for Static and
+Fire. Other archive profiles and envelope fields retain their existing
 raw-preservation contract.
 
 Source: cached Studio main SHA256
@@ -59,6 +67,28 @@ exit recovery. It submits no device SETs and does not alter device profiles.
 The regional-edit fixture is synthetic. The separate
 [actual stock roundtrip](STUDIO-ACTUAL.md) preserves the real composition;
 committed stock re-import and equivalent lighting remain unverified.
+
+The Fire extension adds three core regressions for independent mixed-region
+edits, clear versus erase, omitted partner defaults, exact undo/redo, unknown
+literal preservation and atomic refusal of conflicting effect IDs. The full
+core library passes397 tests (six ignored);233 ordinary tray tests pass
+(27 ignored). The isolated real-window test opens the actual private Fire /
+Spectrum export using simulated transport, edits both native Fire fields,
+saves and reads the result, checks partner preservation, exercises None history
+and the read-only guard, and verifies no device SET or profile-store mutation.
+See [native evidence](validation/native-studio-actual-file.json).
+
+Fire source is cached chunk941 SHA256
+`d5696fe5dcc4f75670c85a7cda0cd6c63834d79f7581748c4a925682253ccb89`,
+module5591, plus shared picker chunk606 SHA256
+`04b31567b57a5cf0b37bb4c2d7f81d1efa868aba4a33498e121ecbc1452e0c5e`.
+The former emits independent `color` / `color2` patches; the latter authors
+None as an undefined property, omitted on serialization. Main's selection
+reducer around109300–111200 retains untouched mixed fields separately and
+initializes Select differently from Pen/Bucket. Offsets are normalized decoded
+characters. Source/API namespace Fire8 is not a firmware effect number.
+Full picker geometry/interaction, Pen/Bucket and live-version equality remain
+unverified. Static inspection establishes authoring semantics, not execution.
 
 Remaining scope includes the stock colour picker, layer creation/management,
 other effect parameters and gradients, retained algorithms/compositing, complete

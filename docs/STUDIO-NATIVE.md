@@ -23,7 +23,8 @@ The view uses the recovered Studio panel/row dimensions documented in
 or behavioral parity with stock Studio. Text actions currently stand in for some
 source icons. A partial [source-path canvas and LED selection](STUDIO-CANVAS.md)
 is implemented for explicit Ornata placements, with
-[Static region colour/erase](STUDIO-REGIONS.md). Other effect properties and algorithms,
+[Static and independent Fire Hot/Cold region colour/erase](STUDIO-REGIONS.md).
+Fire None clears one colour without erasing membership. Other effect properties and algorithms,
 gradients, add/delete/reorder/group operations, preview, device output and full
 composition-management controls remain to implement. Stock's import preview
 recognizes the round-tripped file, and the

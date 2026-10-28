@@ -101,6 +101,94 @@ fn native_studio_actual_stock_export_loads_geometry_and_preserves_profiles() {
                 if saved.profile_json(0) != source.profile_json(0) {
                     return Err("Actual raw profile changed during roundtrip".into());
                 }
+                // Exercise independent regional edits through real native edit
+                // controls and production hit targets on the user's Fire layer.
+                use secbird_core::studio::document::{
+                    ColorProperty, Draft, LedSelection, SelectedColor,
+                };
+                let id = state["selected"].as_str().ok_or("No Fire layer selected")?;
+                let baseline =
+                    Draft::open(source.profile_json(0).unwrap()).map_err(|e| e.to_string())?;
+                let device: Value = serde_json::from_str(source.profile_json(0).unwrap()).unwrap();
+                let selection = [LedSelection {
+                    device: device["devices"][0]["id"].as_str().unwrap().into(),
+                    row: 0,
+                    col: 1,
+                }];
+                let original_cold = baseline
+                    .selection_color(id, &selection, ColorProperty::FireCold)
+                    .map_err(|e| e.to_string())?;
+                let right = width - 250.0;
+                let hot = GetDlgItem(hwnd, i32::from(studio_view::COLOR));
+                let cold = GetDlgItem(hwnd, i32::from(studio_view::COLD));
+                if hot.is_null() || cold.is_null() {
+                    return Err("Fire colour fields missing".into());
+                }
+                SendMessageW(hot, WM_SETTEXT, 0, wide("123456").as_ptr() as isize);
+                SendMessageW(hwnd, READ_ONLY_TEST_SET, 1, 0);
+                lighting_click(hwnd, right + 60.0, 333.0, scale);
+                if query()["dirty"] != false {
+                    return Err("Read-only Fire edit changed document".into());
+                }
+                SendMessageW(hwnd, READ_ONLY_TEST_SET, 0, 0);
+                lighting_click(hwnd, right + 60.0, 333.0, scale);
+                if query()["dirty"] != true || query()["failed"] != false {
+                    return Err("Fire Hot edit failed".into());
+                }
+                let edited_path = folder.join("actual-fire-edited.ChromaEffects");
+                let save_path = json!(edited_path.to_string_lossy());
+                SendMessageW(hwnd, STUDIO_TEST, 3, &save_path as *const Value as isize);
+                wait_for(|| query()["busy"] == false, "Fire edited save")?;
+                let edited = secbird_core::studio::Archive::parse(
+                    &std::fs::read(&edited_path).map_err(|e| e.to_string())?,
+                )
+                .map_err(|e| e.to_string())?;
+                let edited =
+                    Draft::open(edited.profile_json(0).unwrap()).map_err(|e| e.to_string())?;
+                if edited
+                    .selection_color(id, &selection, ColorProperty::FireHot)
+                    .map_err(|e| e.to_string())?
+                    != SelectedColor::Uniform(Some(0x123456))
+                    || edited
+                        .selection_color(id, &selection, ColorProperty::FireCold)
+                        .map_err(|e| e.to_string())?
+                        != original_cold
+                {
+                    return Err("Fire saved Hot/Cold independence failed".into());
+                }
+                // Cold-only change, explicit None and undo/redo must leave Hot.
+                let cold = GetDlgItem(hwnd, i32::from(studio_view::COLD));
+                SendMessageW(cold, WM_SETTEXT, 0, wide("654321").as_ptr() as isize);
+                lighting_click(hwnd, right + 60.0, 436.0, scale);
+                lighting_click(hwnd, right + 180.0, 436.0, scale);
+                lighting_click(hwnd, 440.0, 100.0, scale);
+                SendMessageW(hwnd, STUDIO_TEST, 3, &save_path as *const Value as isize);
+                wait_for(|| query()["busy"] == false, "Fire Cold save")?;
+                let edited = secbird_core::studio::Archive::parse(
+                    &std::fs::read(&edited_path).map_err(|e| e.to_string())?,
+                )
+                .map_err(|e| e.to_string())?;
+                let edited =
+                    Draft::open(edited.profile_json(0).unwrap()).map_err(|e| e.to_string())?;
+                if edited
+                    .selection_color(id, &selection, ColorProperty::FireHot)
+                    .map_err(|e| e.to_string())?
+                    != SelectedColor::Uniform(Some(0x123456))
+                    || edited
+                        .selection_color(id, &selection, ColorProperty::FireCold)
+                        .map_err(|e| e.to_string())?
+                        != SelectedColor::Uniform(Some(0x654321))
+                {
+                    return Err("Fire Cold edit or None undo failed".into());
+                }
+                lighting_click(hwnd, 515.0, 100.0, scale);
+                if query()["dirty"] != true {
+                    return Err("Fire None redo lost dirty state".into());
+                }
+                lighting_click(hwnd, 440.0, 100.0, scale);
+                if query()["dirty"] != false {
+                    return Err("Fire None undo lost saved checkpoint".into());
+                }
                 if std::fs::read(&input).unwrap() != original
                     || std::fs::read(folder.join("profiles.json")).unwrap() != store_before
                 {
@@ -119,7 +207,7 @@ fn native_studio_actual_stock_export_loads_geometry_and_preserves_profiles() {
                     return Err("Actual export paint capture failed".into());
                 }
                 Ok(
-                    json!({"actual_export":true,"simulated_transport_only":true,"profiles":1,"layers":2,"canvas_devices":1,"selectable_leds":109,"source_esc_hit":true,"raw_profile_roundtrip_exact":true,"whole_file_byte_identity_observed":bytes==original,"source_file_unchanged":true,"device_profiles_unchanged":true,"no_device_sets":true}),
+                    json!({"actual_export":true,"simulated_transport_only":true,"profiles":1,"layers":2,"canvas_devices":1,"selectable_leds":109,"source_esc_hit":true,"raw_profile_roundtrip_exact":true,"whole_file_byte_identity_observed":bytes==original,"fire_native_hot_cold_independent_saved":true,"fire_none_undo_redo":true,"fire_read_only_guard":true,"source_file_unchanged":true,"device_profiles_unchanged":true,"no_device_sets":true}),
                 )
             }
         })();

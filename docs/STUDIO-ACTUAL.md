@@ -65,6 +65,15 @@ focused analysis. No vendor JS was executed by REA.
 
 ## Stock resource sample
 
+The later Fire editing regression opens this same private export in an isolated
+native window with simulated transport. It verifies Hot and Cold saves independently,
+partner preservation, None undo/redo, read-only refusal and unchanged original
+export/device profiles. The initial unedited roundtrip remains byte-identical;
+the edited composition is saved separately. See
+[regional editing](STUDIO-REGIONS.md) and
+[native evidence](validation/native-studio-actual-file.json). This is file editing,
+not Fire playback or stock import acceptance of edited colours.
+
 The separate [stock baseline](STOCK-STUDIO-BASELINE.md) records startup and
 Studio samples, executable/raw-trace hashes, process scope and limitations.
 It is not full Synapse workload or replacement memory acceptance.

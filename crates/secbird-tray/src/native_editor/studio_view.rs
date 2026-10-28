@@ -1,7 +1,7 @@
 //! Local composition editor. File work bypasses the device engine entirely.
 use super::*;
 use secbird_core::studio::{
-    document::{Draft, Kind, SaveCheckpoint, SelectedColor},
+    document::{ColorProperty, Draft, Kind, SaveCheckpoint, SelectedColor},
     Archive,
 };
 use std::{collections::BTreeMap, fs::File, os::windows::ffi::OsStringExt};
@@ -11,6 +11,7 @@ pub(super) const DIALOG: u32 = WM_APP + 112;
 pub(super) const EXIT_REQUEST: u32 = WM_APP + 114;
 pub(super) const NAME: u16 = 2100;
 pub(super) const COLOR: u16 = 2101;
+pub(super) const COLD: u16 = 2102;
 
 #[derive(Clone)]
 pub(super) enum Control {
@@ -29,6 +30,8 @@ pub(super) enum Control {
     Redo,
     Zoom(i32),
     ApplyColor,
+    ApplyCold,
+    ClearColor(bool),
     Erase,
 }
 #[derive(Clone, Copy)]
@@ -53,6 +56,8 @@ pub(super) struct View {
     name: String,
     color: String,
     selected_color: Option<SelectedColor>,
+    cold: String,
+    selected_cold: Option<SelectedColor>,
     dropdown: bool,
     profile_scroll: usize,
     scroll: usize,
@@ -201,38 +206,73 @@ impl View {
             .unwrap_or("Chroma Studio")
     }
     fn is_static(&self) -> bool {
-        self.draft.as_ref().is_some_and(|draft| {
-            draft.layers().iter().any(|row| {
-                Some(&row.id) == self.selected.as_ref()
-                    && row.kind == Kind::Layer
-                    && row.effect.as_deref() == Some("static")
-            })
-        })
+        self.effect() == Some("static")
+    }
+    fn is_fire(&self) -> bool {
+        self.effect() == Some("fire")
+    }
+    fn effect(&self) -> Option<&str> {
+        self.draft
+            .as_ref()?
+            .layers()
+            .iter()
+            .find(|row| Some(&row.id) == self.selected.as_ref() && row.kind == Kind::Layer)?
+            .effect
+            .as_deref()
+    }
+    fn color_property(&self, cold: bool) -> Option<ColorProperty> {
+        match (self.effect()?, cold) {
+            ("static", false) => Some(ColorProperty::Static),
+            ("fire", false) => Some(ColorProperty::FireHot),
+            ("fire", true) => Some(ColorProperty::FireCold),
+            _ => None,
+        }
     }
 }
 
 pub(super) fn selection_changed(state: &mut State) {
     let view = &mut state.studio;
     view.selected_color = None;
-    if !view.is_static() {
+    view.selected_cold = None;
+    let Some(property) = view.color_property(false) else {
         return;
-    }
-    let result = view
-        .draft
-        .as_ref()
-        .unwrap()
-        .static_selection_color(view.selected.as_deref().unwrap(), &view.canvas.selection());
+    };
+    let result = view.draft.as_ref().unwrap().selection_color(
+        view.selected.as_deref().unwrap(),
+        &view.canvas.selection(),
+        property,
+    );
     match result {
         Ok(value) => {
             view.selected_color = Some(value);
             view.color = match value {
                 SelectedColor::Uniform(Some(color)) => format!("{color:06X}"),
-                _ => "00FF00".into(),
+                _ if property == ColorProperty::Static => "00FF00".into(),
+                _ => String::new(),
             };
         }
         Err(error) => {
             view.status = error.to_string();
             view.failed = true;
+        }
+    }
+    if view.is_fire() {
+        match view.draft.as_ref().unwrap().selection_color(
+            view.selected.as_deref().unwrap(),
+            &view.canvas.selection(),
+            ColorProperty::FireCold,
+        ) {
+            Ok(value) => {
+                view.selected_cold = Some(value);
+                view.cold = match value {
+                    SelectedColor::Uniform(Some(color)) => format!("{color:06X}"),
+                    _ => String::new(),
+                };
+            }
+            Err(error) => {
+                view.status = error.to_string();
+                view.failed = true;
+            }
         }
     }
 }
@@ -381,7 +421,13 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
     }
     let update_color = matches!(
         &control,
-        Control::Select(_) | Control::Undo | Control::Redo | Control::ApplyColor | Control::Erase
+        Control::Select(_)
+            | Control::Undo
+            | Control::Redo
+            | Control::ApplyColor
+            | Control::ApplyCold
+            | Control::ClearColor(_)
+            | Control::Erase
     );
     match control {
         Control::Enter => {}
@@ -429,8 +475,11 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
             finish_name(state);
         }
         Control::CancelRename => state.studio.renaming = false,
-        Control::ApplyColor | Control::Erase => {
+        Control::ApplyColor | Control::ApplyCold | Control::ClearColor(_) | Control::Erase => {
             let erase = matches!(control, Control::Erase);
+            let cold = matches!(control, Control::ApplyCold | Control::ClearColor(true));
+            let clear = matches!(control, Control::ClearColor(_));
+            let property = state.studio.color_property(cold);
             let selection = state.studio.canvas.selection();
             let result = (|| -> Result<bool, String> {
                 let id = state
@@ -446,14 +495,30 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
                 if erase {
                     draft.erase_leds(id, &selection).map_err(|e| e.to_string())
                 } else {
-                    let text = state.studio.color.trim().trim_start_matches('#');
-                    if text.len() != 6 {
-                        return Err("Enter a six-digit RGB colour".into());
-                    }
-                    let color = u32::from_str_radix(text, 16)
-                        .map_err(|_| "Enter a six-digit RGB colour".to_string())?;
+                    let text = if cold {
+                        &state.studio.cold
+                    } else {
+                        &state.studio.color
+                    };
+                    let text = text.trim().trim_start_matches('#');
+                    let color = if clear {
+                        None
+                    } else {
+                        if text.len() != 6 {
+                            return Err("Enter a six-digit RGB colour".into());
+                        }
+                        Some(
+                            u32::from_str_radix(text, 16)
+                                .map_err(|_| "Enter a six-digit RGB colour".to_string())?,
+                        )
+                    };
                     draft
-                        .set_static_color(id, &selection, color)
+                        .set_selection_color(
+                            id,
+                            &selection,
+                            property.ok_or("Select a supported colour property")?,
+                            color,
+                        )
                         .map_err(|e| e.to_string())
                 }
             })();
@@ -718,7 +783,7 @@ pub(super) unsafe fn rebuild_fields(state: &mut State) {
     if !state.studio.open {
         return;
     }
-    if state.studio.is_static() {
+    if state.studio.color_property(false).is_some() {
         let text = state.studio.color.clone();
         let right = (state.width as f32 / state.scale) as i32 - 250;
         state.retained_fields.remove(&COLOR);
@@ -726,6 +791,15 @@ pub(super) unsafe fn rebuild_fields(state: &mut State) {
         if let Some(&edit) = state.fields.get(&COLOR) {
             SendMessageW(edit, EM_SETLIMITTEXT, 7, 0);
             SendMessageW(edit, WM_SETFONT, state.fonts.normal as usize, 1);
+        }
+        if state.studio.is_fire() {
+            let text = state.studio.cold.clone();
+            state.retained_fields.remove(&COLD);
+            state.field(COLD, &text, right + 10, 388, 130);
+            if let Some(&edit) = state.fields.get(&COLD) {
+                SendMessageW(edit, EM_SETLIMITTEXT, 7, 0);
+                SendMessageW(edit, WM_SETFONT, state.fonts.normal as usize, 1);
+            }
         }
     }
     if !state.studio.renaming {
@@ -754,10 +828,12 @@ pub(super) unsafe fn rebuild_fields(state: &mut State) {
     }
 }
 pub(super) fn command(state: &mut State, id: u16, notification: u16) -> bool {
-    if matches!(id, NAME | COLOR) && notification == EN_CHANGE as u16 {
+    if matches!(id, NAME | COLOR | COLD) && notification == EN_CHANGE as u16 {
         let text = state.raw_text(id);
         if id == NAME {
             state.studio.name = text;
+        } else if id == COLD {
+            state.studio.cold = text;
         } else {
             state.studio.color = text;
         }
@@ -772,7 +848,13 @@ pub(super) fn key(state: &State, key: usize, control: bool, edit: bool) -> Optio
     }
     match (key, control) {
         (13, _) if state.studio.renaming => Some(Control::CommitRename),
-        (13, _) if edit => Some(Control::ApplyColor),
+        (13, _) if edit => Some(
+            if unsafe { GetFocus() } == state.fields.get(&COLD).copied().unwrap_or(null_mut()) {
+                Control::ApplyCold
+            } else {
+                Control::ApplyColor
+            },
+        ),
         (27, _) if state.studio.renaming => Some(Control::CancelRename),
         (0x53, true) => Some(Control::Save),
         (0x4f, true) => Some(Control::Open),
@@ -1099,6 +1181,54 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
             Control::Erase,
             enabled,
         );
+    } else if view.is_fire() {
+        for (cold, title, value, text, y) in [
+            (false, "HOT", view.selected_color, &view.color, 246),
+            (true, "COLD", view.selected_cold, &view.cold, 349),
+        ] {
+            let label = match value {
+                Some(SelectedColor::Mixed) => format!("{title} · MIXED"),
+                Some(SelectedColor::Uniform(None)) => format!("{title} · NONE / UNASSIGNED"),
+                Some(SelectedColor::Empty) => format!("{title} · SELECT LEDS"),
+                _ => title.into(),
+            };
+            p.text(&label, right + 10, y, 230, 32, p.fonts.small, TEXT, DT_LEFT);
+            if let Ok(color) = u32::from_str_radix(text.trim().trim_start_matches('#'), 16) {
+                p.fill(right + 160, y + 39, 55, 27, color & 0xffffff);
+            }
+            let enabled = view.editable() && view.canvas.count() > 0 && value.is_some();
+            button(
+                p,
+                if cold { "APPLY COLD" } else { "APPLY HOT" },
+                right + 10,
+                y + 74,
+                130,
+                if cold {
+                    Control::ApplyCold
+                } else {
+                    Control::ApplyColor
+                },
+                enabled,
+            );
+            button(
+                p,
+                "NONE",
+                right + 150,
+                y + 74,
+                80,
+                Control::ClearColor(cold),
+                enabled,
+            );
+        }
+        button(
+            p,
+            "ERASE SELECTION",
+            right + 10,
+            466,
+            200,
+            Control::Erase,
+            view.editable() && view.canvas.count() > 0,
+        );
     } else {
         paragraph(
             p,
@@ -1128,7 +1258,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         p,
         message,
         right + 10,
-        400,
+        if view.is_fire() { 506 } else { 400 },
         230,
         130,
         if view.failed { 0xfd4949 } else { MUTED },

@@ -15,6 +15,47 @@ pub enum SelectedColor {
     Mixed,
 }
 
+/// Studio effect IDs and regional fields, distinct from firmware effect IDs.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ColorProperty {
+    Static,
+    FireHot,
+    FireCold,
+}
+impl ColorProperty {
+    fn effect(self) -> (&'static str, u16) {
+        match self {
+            Self::Static => ("static", 6),
+            Self::FireHot | Self::FireCold => ("fire", 8),
+        }
+    }
+    fn field(self) -> &'static str {
+        match self {
+            Self::Static | Self::FireHot => "color",
+            Self::FireCold => "color2",
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+enum RegionEdit {
+    Erase,
+    Color(ColorProperty, Option<u32>),
+}
+impl RegionEdit {
+    fn assigns(self) -> bool {
+        matches!(self, Self::Color(..))
+    }
+    fn apply(self, params: &mut Object) -> Result<()> {
+        if let Self::Color(property, color) = self {
+            // None is an explicit source picker clear, never JSON null.
+            let encoded = color.map(|color| encode(&color)).transpose()?;
+            params.set(property.field(), encoded.as_deref());
+        }
+        Ok(())
+    }
+}
+
 fn entries(object: &Object, key: &str) -> Result<Vec<Box<RawValue>>> {
     array(
         object
@@ -45,40 +86,46 @@ fn selected(selection: &[LedSelection]) -> Result<BTreeSet<LedSelection>> {
     }
     Ok(selection.iter().cloned().collect())
 }
+#[cfg(test)]
 fn region_color(region: &Object) -> Result<Option<u32>> {
+    property_color(region, ColorProperty::Static)
+}
+fn property_color(region: &Object, property: ColorProperty) -> Result<Option<u32>> {
     let params = Object::parse(
         region
             .get("params")
             .ok_or_else(|| invalid("region has no params"))?,
     )?;
     params
-        .get("color")
+        .get(property.field())
         .map(|value| {
             let color: u32 = serde_json::from_str(value.get()).map_err(invalid)?;
             if color > 0xffffff {
-                Err(invalid("Static color is outside RGB24"))
+                Err(invalid("color is outside RGB24"))
             } else {
                 Ok(color)
             }
         })
         .transpose()
 }
-fn layer(draft: &Draft, id: &str, static_only: bool) -> Result<Object> {
+fn layer(draft: &Draft, id: &str, property: Option<ColorProperty>) -> Result<Object> {
     let row = draft
         .rows
         .iter()
         .find(|row| row.id == id)
         .ok_or_else(|| invalid("unknown layer"))?;
-    if row.kind != Kind::Layer || static_only && row.effect.as_deref() != Some("static") {
+    if row.kind != Kind::Layer
+        || property.is_some_and(|property| row.effect.as_deref() != Some(property.effect().0))
+    {
         return Err(invalid(
             "selected layer does not support this region operation",
         ));
     }
     let item = item(&draft.current, id)?.ok_or_else(|| invalid("layer identity disappeared"))?;
-    if static_only {
+    if let Some(property) = property {
         if let Some(value) = item.get("value") {
-            if serde_json::from_str::<u16>(value.get()).map_err(invalid)? != 6 {
-                return Err(invalid("Static layer has a conflicting effect ID"));
+            if serde_json::from_str::<u16>(value.get()).map_err(invalid)? != property.effect().1 {
+                return Err(invalid("layer has a conflicting effect ID"));
             }
         }
     }
@@ -128,11 +175,20 @@ impl Draft {
         id: &str,
         selection: &[LedSelection],
     ) -> Result<SelectedColor> {
+        self.selection_color(id, selection, ColorProperty::Static)
+    }
+
+    pub fn selection_color(
+        &self,
+        id: &str,
+        selection: &[LedSelection],
+        property: ColorProperty,
+    ) -> Result<SelectedColor> {
         let selection = selected(selection)?;
         if selection.is_empty() {
             return Ok(SelectedColor::Empty);
         }
-        let item = layer(self, id, true)?;
+        let item = layer(self, id, Some(property))?;
         inventory(self, &selection)?;
         let mut colors: BTreeMap<LedSelection, Option<u32>> = BTreeMap::new();
         for raw in entries(&item, "regions")? {
@@ -149,7 +205,7 @@ impl Draft {
                 }
             }
             if !matching.is_empty() {
-                let color = region_color(&region)?;
+                let color = property_color(&region, property)?;
                 for key in matching {
                     if colors.insert(key, color).is_some() {
                         return Err(invalid("overlapping selected region memberships"));
@@ -174,29 +230,49 @@ impl Draft {
         selection: &[LedSelection],
         color: u32,
     ) -> Result<bool> {
-        if color > 0xffffff {
-            return Err(invalid("Static color is outside RGB24"));
+        self.set_selection_color(id, selection, ColorProperty::Static, Some(color))
+    }
+
+    /// Change only the chosen regional field. A clear keeps LED membership;
+    /// erasing membership is a separate operation. Unassigned Select edits do
+    /// not seed the partner Fire colour with brush defaults.
+    pub fn set_selection_color(
+        &mut self,
+        id: &str,
+        selection: &[LedSelection],
+        property: ColorProperty,
+        color: Option<u32>,
+    ) -> Result<bool> {
+        if color.is_some_and(|color| color > 0xffffff) {
+            return Err(invalid("color is outside RGB24"));
         }
-        if self.static_selection_color(id, selection)? == SelectedColor::Uniform(Some(color)) {
+        // Validate effect, inventory and overlaps before partitioning. None can
+        // still assign an unassigned LED, so it must not use the value shortcut.
+        let current = self.selection_color(id, selection, property)?;
+        if color.is_some() && current == SelectedColor::Uniform(color) {
             return Ok(false);
         }
-        self.edit_regions(id, selection, Some(color))
+        self.edit_regions(id, selection, RegionEdit::Color(property, color))
     }
     pub fn erase_leds(&mut self, id: &str, selection: &[LedSelection]) -> Result<bool> {
-        self.edit_regions(id, selection, None)
+        self.edit_regions(id, selection, RegionEdit::Erase)
     }
 
     fn edit_regions(
         &mut self,
         id: &str,
         selection: &[LedSelection],
-        color: Option<u32>,
+        edit: RegionEdit,
     ) -> Result<bool> {
         let selection = selected(selection)?;
         if selection.is_empty() {
             return Ok(false);
         }
-        let item = layer(self, id, color.is_some())?;
+        let property = match edit {
+            RegionEdit::Color(property, _) => Some(property),
+            RegionEdit::Erase => None,
+        };
+        let item = layer(self, id, property)?;
         let available = inventory(self, &selection)?;
         let mut seen = BTreeSet::new();
         let mut kept = Vec::new();
@@ -227,7 +303,7 @@ impl Draft {
                     continue;
                 }
                 changed = true;
-                if color.is_some() {
+                if edit.assigns() {
                     let mut selected_device = Object::parse(&raw)?;
                     selected_device.set("leds", Some(&encode(&chosen)?));
                     selected_devices.push(encode(&selected_device)?);
@@ -241,14 +317,14 @@ impl Draft {
                 kept.push(raw);
                 continue;
             }
-            if let Some(color) = color {
+            if edit.assigns() {
                 let mut new_region = Object::parse(&raw)?;
                 let mut params = Object::parse(
                     region
                         .get("params")
                         .ok_or_else(|| invalid("region has no params"))?,
                 )?;
-                params.set("color", Some(&encode(&color)?));
+                edit.apply(&mut params)?;
                 new_region.set("params", Some(&encode(&params)?));
                 new_region.set("devices", Some(&encode(&selected_devices)?));
                 added.push(encode(&new_region)?);
@@ -258,10 +334,10 @@ impl Draft {
                 kept.push(encode(&region)?);
             }
         }
-        if color.is_none() && seen.is_empty() {
+        if !edit.assigns() && seen.is_empty() {
             return Ok(false);
         }
-        if let Some(color) = color {
+        if edit.assigns() {
             let root = Object::parse(&self.current)?;
             let mut devices = Vec::new();
             for raw in entries(&root, "devices")? {
@@ -284,10 +360,9 @@ impl Draft {
             }
             if !devices.is_empty() {
                 let mut region = Object(vec![]);
-                region.set(
-                    "params",
-                    Some(&encode(&serde_json::json!({"color":color}))?),
-                );
+                let mut params = Object(vec![]);
+                edit.apply(&mut params)?;
+                region.set("params", Some(&encode(&params)?));
                 region.set("devices", Some(&encode(&devices)?));
                 added.push(encode(&region)?);
             }
@@ -369,6 +444,147 @@ mod tests {
             .collect()
     }
 
+    fn fire_profile() -> String {
+        PROFILE
+            .replace(r#""name":"static","value":6"#, r#""name":"fire","value":8"#)
+            .replace(
+                r#""color":65280,"future"#,
+                r#""color":65280,"color2":1122867,"future"#,
+            )
+            .replace(
+                r#""color":255,"future"#,
+                r#""color":255,"color2":4478310,"future"#,
+            )
+    }
+
+    #[test]
+    fn fire_hot_and_cold_patch_independently_across_mixed_regions_and_undo_exactly() {
+        let original = fire_profile();
+        let mut draft = Draft::open(&original).unwrap();
+        assert_eq!(
+            draft
+                .selection_color("a", &keys(&[1, 3]), ColorProperty::FireCold)
+                .unwrap(),
+            SelectedColor::Mixed
+        );
+        draft
+            .set_selection_color(
+                "a",
+                &keys(&[1, 3, 4]),
+                ColorProperty::FireHot,
+                Some(0xabcdef),
+            )
+            .unwrap();
+        for (col, cold) in [(1, Some(1122867)), (3, Some(4478310)), (4, None)] {
+            assert_eq!(
+                draft
+                    .selection_color("a", &keys(&[col]), ColorProperty::FireCold)
+                    .unwrap(),
+                SelectedColor::Uniform(cold)
+            );
+        }
+        draft
+            .set_selection_color("a", &keys(&[1, 3, 4]), ColorProperty::FireCold, Some(0))
+            .unwrap();
+        assert_eq!(
+            draft
+                .selection_color("a", &keys(&[1, 3, 4]), ColorProperty::FireHot)
+                .unwrap(),
+            SelectedColor::Uniform(Some(0xabcdef))
+        );
+        assert_eq!(
+            draft
+                .selection_color("a", &keys(&[2]), ColorProperty::FireHot)
+                .unwrap(),
+            SelectedColor::Uniform(Some(65280))
+        );
+        for literal in ["9007199254740993123456789", "1.2300e-7", "9.9900e+100"] {
+            assert!(draft.json().contains(literal));
+        }
+        draft.undo().unwrap();
+        draft.undo().unwrap();
+        assert!(!draft.is_dirty());
+        assert_eq!(
+            item(&draft.current, "a")
+                .unwrap()
+                .unwrap()
+                .get("regions")
+                .unwrap()
+                .get(),
+            item(&RawValue::from_string(original).unwrap(), "a")
+                .unwrap()
+                .unwrap()
+                .get("regions")
+                .unwrap()
+                .get()
+        );
+        draft.redo().unwrap();
+        assert_eq!(
+            draft
+                .selection_color("a", &keys(&[1, 3, 4]), ColorProperty::FireHot)
+                .unwrap(),
+            SelectedColor::Uniform(Some(0xabcdef))
+        );
+    }
+
+    #[test]
+    fn fire_none_removes_only_its_property_and_keeps_membership_distinct_from_erase() {
+        let mut draft = Draft::open(&fire_profile()).unwrap();
+        draft
+            .set_selection_color("a", &keys(&[1]), ColorProperty::FireHot, None)
+            .unwrap();
+        let raw = layer(&draft, "a", Some(ColorProperty::FireHot)).unwrap();
+        let cleared = entries(&raw, "regions")
+            .unwrap()
+            .into_iter()
+            .find(|raw| {
+                let region = Object::parse(raw).unwrap();
+                property_color(&region, ColorProperty::FireHot)
+                    .unwrap()
+                    .is_none()
+            })
+            .unwrap();
+        let region = Object::parse(&cleared).unwrap();
+        assert!(!region.get("params").unwrap().get().contains("null"));
+        assert_eq!(
+            property_color(&region, ColorProperty::FireCold).unwrap(),
+            Some(1122867)
+        );
+        assert!(!entries(&region, "devices").unwrap().is_empty());
+        // Select/None on an unassigned LED authors an empty params object. It
+        // does not seed Fire's red/orange brush defaults or erase membership.
+        draft
+            .set_selection_color("a", &keys(&[4]), ColorProperty::FireCold, None)
+            .unwrap();
+        assert!(draft.json().contains(r#""params":{}"#));
+        let assigned = draft.json().to_owned();
+        assert!(draft.erase_leds("a", &keys(&[4])).unwrap());
+        assert_ne!(draft.json(), assigned);
+        draft.undo().unwrap();
+        assert_eq!(draft.json(), assigned);
+    }
+
+    #[test]
+    fn fire_wrong_effect_invalid_color_and_conflicting_id_refuse_without_mutation() {
+        for raw in [
+            PROFILE.to_owned(),
+            fire_profile().replace(r#""value":8"#, r#""value":6"#),
+        ] {
+            let mut draft = Draft::open(&raw).unwrap();
+            assert!(draft
+                .set_selection_color("a", &keys(&[1]), ColorProperty::FireHot, Some(1))
+                .is_err());
+            assert_eq!(draft.json(), raw);
+            assert!(!draft.is_dirty());
+        }
+        let raw = fire_profile();
+        let mut draft = Draft::open(&raw).unwrap();
+        assert!(draft
+            .set_selection_color("a", &keys(&[1]), ColorProperty::FireCold, Some(0x1000000))
+            .is_err());
+        assert_eq!(draft.json(), raw);
+    }
+
     #[test]
     fn recolor_partitions_merges_and_preserves_unselected_and_offline_metadata() {
         let mut draft = Draft::open(PROFILE).unwrap();
@@ -385,7 +601,7 @@ mod tests {
                 SelectedColor::Uniform(Some(color))
             );
         }
-        let layer = layer(&draft, "a", true).unwrap();
+        let layer = layer(&draft, "a", Some(ColorProperty::Static)).unwrap();
         assert_eq!(entries(&layer, "regions").unwrap().len(), 3);
         for literal in [
             "9007199254740993123456789",
@@ -430,14 +646,26 @@ mod tests {
 
     #[test]
     fn exported_leds_form_assigns_without_rewriting_inventory_and_conflicts_are_atomic() {
-        let raw=PROFILE.replace("\"ledRef\":","\"leds\":");
-        let mut draft=Draft::open(&raw).unwrap();
-        draft.set_static_color("a",&keys(&[1,4]),0xabcdef).unwrap();
-        assert!(!draft.json().contains("ledRef"));assert!(draft.json().contains("9007199254740993123456789"));
-        assert_eq!(draft.static_selection_color("a",&keys(&[1,4])).unwrap(),SelectedColor::Uniform(Some(0xabcdef)));
-        let raw=PROFILE.replacen("\"ledRef\":[","\"leds\":[{\"row\":9,\"col\":9}],\"ledRef\":[",1);
-        let mut draft=Draft::open(&raw).unwrap();
-        assert!(draft.set_static_color("a",&keys(&[1]),0).is_err());assert_eq!(draft.json(),raw);assert!(!draft.is_dirty());
+        let raw = PROFILE.replace("\"ledRef\":", "\"leds\":");
+        let mut draft = Draft::open(&raw).unwrap();
+        draft
+            .set_static_color("a", &keys(&[1, 4]), 0xabcdef)
+            .unwrap();
+        assert!(!draft.json().contains("ledRef"));
+        assert!(draft.json().contains("9007199254740993123456789"));
+        assert_eq!(
+            draft.static_selection_color("a", &keys(&[1, 4])).unwrap(),
+            SelectedColor::Uniform(Some(0xabcdef))
+        );
+        let raw = PROFILE.replacen(
+            "\"ledRef\":[",
+            "\"leds\":[{\"row\":9,\"col\":9}],\"ledRef\":[",
+            1,
+        );
+        let mut draft = Draft::open(&raw).unwrap();
+        assert!(draft.set_static_color("a", &keys(&[1]), 0).is_err());
+        assert_eq!(draft.json(), raw);
+        assert!(!draft.is_dirty());
     }
 
     #[test]
@@ -453,7 +681,7 @@ mod tests {
             draft.static_selection_color("a", &keys(&[1, 4])).unwrap(),
             SelectedColor::Uniform(Some(0))
         );
-        let item = layer(&draft, "a", true).unwrap();
+        let item = layer(&draft, "a", Some(ColorProperty::Static)).unwrap();
         let regions = entries(&item, "regions").unwrap();
         let new = regions
             .iter()
