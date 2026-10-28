@@ -512,6 +512,9 @@ pub fn export_synapse4(store: &Store, device_key: &str) -> Result<ExportReport> 
     if device.power.is_some() {
         warnings.push("Device-wide Power settings are retained only in the native JSON backup; the Synapse profile format has no verified device-global Power field".into());
     }
+    if device.sensor_calibration.is_some() {
+        warnings.push("Device-wide Smart Tracking settings are retained in the native JSON backup; Synapse stores Calibration outside named profiles".into());
+    }
     let mut exported_guids = std::collections::BTreeSet::new();
     let mut guid_owners: BTreeMap<String, String> = BTreeMap::new();
     for (name, profile) in &device.profiles {
@@ -585,6 +588,8 @@ pub fn export_synapse4(store: &Store, device_key: &str) -> Result<ExportReport> 
                 || profile.dpi_stages.is_some()
                 || profile.performance.is_some()
                 || profile.sleep_minutes.is_some()
+                || profile.dynamic_sensitivity.is_some()
+                || profile.rotation.is_some()
             {
                 return Err(Error::Unsupported(format!(
                     "{name}: mouse performance settings cannot be exported for Ornata V2"

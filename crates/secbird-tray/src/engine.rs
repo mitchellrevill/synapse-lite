@@ -8,10 +8,12 @@ use std::time::{Duration, Instant, SystemTime};
 mod source_static;
 mod source_uniform;
 mod lighting_probe;
+mod sensor_runtime;
 #[cfg(test)]
 mod measurement_read_only;
 
 pub struct Engine {
+    sensor_rotation: HashMap<String,secbird_core::sensor_rotation_control::RotationController>,
     #[cfg(test)]
     simulated_only: bool,
     api: HidApi,
@@ -45,6 +47,7 @@ pub struct Engine {
 }
 
 const FINDER_PAUSE: Duration = Duration::from_secs(10 * 60);
+impl Drop for Engine {fn drop(&mut self){for error in self.shutdown_rotation(){eprintln!("{error}");}}}
 /// A wireless keyboard can miss the "back" write and answer ~20 s later (#52).
 const RELIGHT_FOR: Duration = Duration::from_secs(2 * 60);
 
@@ -91,6 +94,7 @@ impl Engine {
     fn from_api(api: HidApi) -> Self {
         let (lighting_publisher, lighting_reader) = crate::lighting_status::channel();
         Self {
+            sensor_rotation: HashMap::new(),
             #[cfg(test)]
             simulated_only: false,
             api,
@@ -165,7 +169,7 @@ impl Engine {
     /// Sticky process-lifetime measurement restriction, installed before startup.
     /// Existing handles and every later discovery are independently GET-only.
     pub(crate) fn enforce_measurement_read_only(&mut self) -> Result<()> {
-        if self.lighting_runtime.borrow().running || self.uniform_is_enabled() {
+        if self.lighting_runtime.borrow().running || self.uniform_is_enabled() || !self.sensor_rotation.is_empty() {
             return Err(secbird_core::Error::Unsupported(
                 "Read-only measurement must be enabled before runtime startup".into(),
             ));
@@ -501,6 +505,8 @@ impl Engine {
         #[cfg(test)]
         if self.simulated_only { return Vec::new(); }
         let before: HashSet<String> = self.devices.iter().map(|d| d.key()).collect();
+        let rotation_keys:Vec<_>=self.sensor_rotation.keys().cloned().collect();
+        for error in self.shutdown_rotation(){eprintln!("{error}");}
         self.host_static_results.borrow_mut().clear();
         self.reset_uniform_handles();
         self.devices.clear(); // close stale handles before reopening
@@ -527,6 +533,14 @@ impl Engine {
             })
             .collect();
         self.synapse = secbird_core::debloat::synapse_running();
+        // Rescan closes protocol handles. Restore then reacquire only the Rotation
+        // controllers we already owned, preserving their saved active intent.
+        for key in rotation_keys {
+            if let Some(device)=self.devices.iter().find(|device|device.key()==key){
+                let profile=self.effective_profile(device);
+                if let Err(error)=self.replay_rotation(&key,&profile){eprintln!("Rotation after rescan: {error}");}
+            }
+        }
         self.lighting_runtime.borrow_mut().invalidate_all();
         self.refresh_lighting_runtime();
         self.devices.iter().map(|d| d.key()).filter(|k| !before.contains(k)).collect()
@@ -735,6 +749,11 @@ impl Engine {
     }
     /// Release only our live overrides, with bounded attempts and ownership gates.
     pub fn shutdown_lighting_runtime(&mut self) -> Vec<String> {
+        let mut failures=self.shutdown_rotation();
+        failures.extend(self.shutdown_lighting_only());
+        failures
+    }
+    fn shutdown_lighting_only(&mut self)->Vec<String> {
         if self.measurement_read_only {
             return Vec::new();
         }
@@ -803,7 +822,7 @@ impl Engine {
             }
             let dev = &self.devices[index];
             let key = dev.key();
-            let report = match &mut store {
+            let mut report = match &mut store {
                 Ok(store) => {
                     let config = self.lighting_config(dev, store);
                     let runtime = self.lighting_runtime.borrow();
@@ -915,6 +934,7 @@ impl Engine {
                     failures: vec![format!("profiles.json: {error}")],
                 },
             };
+            if let Err(error)=self.replay_rotation(&key,&report.profile){report.failures.push(format!("Rotation: {error}"));}
             reports.push(report);
         }
         self.lighting_runtime.borrow_mut().invalidate(keys);

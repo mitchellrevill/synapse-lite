@@ -329,6 +329,12 @@ struct Body {
     #[serde(default)]
     critical_threshold_percent: Option<u8>,
     #[serde(default)]
+    tracking_distance_mm: Option<u8>,
+    #[serde(default)]
+    dynamic_sensitivity: Option<secbird_core::dynamic_sensitivity::DynamicSensitivity>,
+    #[serde(default)]
+    rotation: Option<secbird_core::dynamic_sensitivity::Rotation>,
+    #[serde(default)]
     lighting_settings: Option<secbird_core::lighting::LightingSettings>,
     #[serde(default)]
     source_effect_id: Option<u8>,
@@ -406,6 +412,30 @@ fn buttons_json(dev: &Device, store: &mut Store) -> Value {
 
 fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
     let b: Body = serde_json::from_slice(body).map_err(|e| Error::InvalidArg(e.to_string()))?;
+    if path=="/api/sensor-rotation" {
+        if b.id.is_empty() || b.expected_device.as_deref()!=Some(&b.id){return Err(Error::InvalidArg("Rotation requires the selected device identity".into()));}
+        let profile=b.expected_profile.as_deref().filter(|p|!p.is_empty()).ok_or_else(||Error::InvalidArg("Rotation requires the selected profile identity".into()))?;
+        engine.set_rotation(&b.id,profile,b.rotation.ok_or_else(||Error::InvalidArg("Rotation settings missing".into()))?)?;
+        return Ok(json!({"ok":true,"state":state(engine)}));
+    }
+    if path=="/api/dynamic-sensitivity" {
+        if b.id.is_empty() || b.expected_device.as_deref()!=Some(&b.id){return Err(Error::InvalidArg("Advanced requires the selected mouse identity".into()));}
+        let dev=engine.devices().iter().find(|d|d.key()==b.id).ok_or_else(||Error::InvalidArg("Selected mouse disconnected".into()))?;
+        let profile=b.expected_profile.as_deref().filter(|p|!p.is_empty()).ok_or_else(||Error::InvalidArg("Advanced requires the selected profile identity".into()))?;
+        let intent=b.dynamic_sensitivity.ok_or_else(||Error::InvalidArg("Sensitivity settings missing".into()))?;
+        let mut store=Store::load(&config_dir().join("profiles.json"))?;
+        secbird_core::dynamic_sensitivity::set_dynamic(dev,&mut store,&b.id,profile,intent)?;
+        return Ok(json!({"ok":true,"state":state(engine)}));
+    }
+    if path == "/api/calibration-tracking" {
+        let expected=b.expected_device.as_deref().filter(|s|!s.is_empty()).ok_or_else(||Error::InvalidArg("Calibration requires a device identity".into()))?;
+        if b.id!=expected { return Err(Error::InvalidArg("Calibration device identity changed".into())); }
+        let dev=engine.devices().iter().find(|dev|dev.key()==expected).ok_or_else(||Error::InvalidArg("Selected mouse is not connected".into()))?;
+        let mm=b.tracking_distance_mm.ok_or_else(||Error::InvalidArg("Tracking distance is missing".into()))?;
+        let mut store=Store::load(&config_dir().join("profiles.json"))?;
+        secbird_core::mouse_sensor::set_tracking_distance(dev,&mut store,expected,mm)?;
+        return Ok(json!({"ok":true,"state":state(engine)}));
+    }
     if path == "/api/sync" {
         return sync(engine, &b.color, &b.effect);
     }
@@ -907,6 +937,24 @@ pub(crate) fn export_profile_document(synapse_device: Option<&str>) -> Result<se
         bytes: store.native_bytes()?,
         warnings: Vec::new(),
     })
+}
+
+pub(crate) fn mouse_sensor_snapshot(engine: &mut Engine, id: &str, profile: &str) -> Result<Value, Error> {
+    let dev=engine.devices().iter().find(|d|d.key()==id).ok_or_else(||Error::InvalidArg("Selected mouse disconnected".into()))?;
+    if !matches!(dev.pid,196|197) { return Err(Error::Unsupported("Sensor controls are specific to DeathAdder V3 HyperSpeed".into())); }
+    let mut store=Store::load(&config_dir().join("profiles.json"))?;
+    if store.for_device(dev).active!=profile { return Err(Error::InvalidArg("Selected profile changed while reading sensor settings".into())); }
+    let calibration=match dev.calibration_raw() {
+        Ok(raw) => json!({"available":true,"tracking_distance_mm":raw.tracking_distance_mm(),"raw":raw}),
+        Err(error) => json!({"available":false,"error":error.to_string()}),
+    };
+    let dynamic=match dev.dynamic_raw(false) {
+        Ok(raw)=>json!({"available":true,"raw":raw,"intent":store.for_device(dev).active().dynamic_sensitivity}),
+        Err(error)=>json!({"available":false,"error":error.to_string()}),
+    };
+    let firmware=dev.firmware_version().ok();
+    let rotation=match engine.rotation_snapshot(id,profile){Ok(value)=>value,Err(error)=>json!({"available":false,"error":error.to_string()})};
+    Ok(json!({"device":id,"profile":profile,"calibration":calibration,"dynamic":dynamic,"rotation":rotation,"firmware":firmware}))
 }
 
 fn state(engine: &Engine) -> Value {

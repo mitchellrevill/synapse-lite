@@ -1,6 +1,10 @@
 //! Opt-in real HWND/message-loop checks using only the simulated transport.
 //! Run this test alone with --ignored --test-threads=1; it temporarily changes
 //! process-local config/smoke environment and opens one bounded native window.
+#[path="calibration_interaction_tests.rs"]
+mod calibration;
+#[path="advanced_interaction_tests.rs"]
+mod advanced;
 use super::*;
 use secbird_core::{commands as cmd, sim::Sim, Store};
 use std::time::Instant;

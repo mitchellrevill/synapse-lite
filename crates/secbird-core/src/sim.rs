@@ -52,6 +52,14 @@ pub type SimMacro = (Vec<u8>, Vec<u8>);
 /// Everything the simulated device remembers. Tests read and tweak it via [`Sim::state`].
 #[derive(Debug, Clone)]
 pub struct SimState {
+    /// Explicit196/197 sensor mock [proximityState,liftMode,rawHeight].
+    pub sensor_calibration: Option<[u8; 3]>,
+    /// Opt-in Advanced register bank: enable, mode, exact 250 float32 samples.
+    pub sensor_dynamic: Option<(u8,u8,Vec<u8>)>,
+    pub sensor_rotation: Option<[u8;3]>,
+    pub firmware_extended: Option<[u8;4]>,
+    pub fail_next_dynamic_curve: bool,
+    pub fail_next_calibration_lift: bool,
     /// The only transaction id the device answers; others get no reply.
     pub txid: u8,
     /// A mouse dock's own light, answering [`crate::device::DOCK_TXID`] like the #39 dock:
@@ -138,6 +146,12 @@ impl SimState {
             macro_recyclable: 0,
             idle_seconds: None,
             critical_threshold: None,
+            sensor_calibration: None,
+            sensor_dynamic: None,
+            sensor_rotation: None,
+            firmware_extended: None,
+            fail_next_dynamic_curve: false,
+            fail_next_calibration_lift: false,
             smart_dimming: None,
             game_mode: None,
             device_mode: None,
@@ -283,6 +297,9 @@ impl SimState {
         let known = |s: &Self, led: u8| s.leds.contains(&led);
         match c {
             c if c == cmd::FIRMWARE.get() => ok(vec![self.firmware.0, self.firmware.1]),
+            c if c == cmd::FIRMWARE_EXT.get()=>match self.firmware_extended {Some(version)=>ok(version.to_vec()),None=>(NotSupported,vec![])},
+            c if c==cmd::SENSOR_ANGLE.get()=>match self.sensor_rotation{Some(raw) if size==3&&a[0]==1=>ok(raw.to_vec()),_=>(NotSupported,vec![])},
+            cmd::SENSOR_ANGLE=>match &mut self.sensor_rotation{Some(raw) if size==3&&a[0]==1&&a[1]<=1=>{raw.copy_from_slice(&a[..3]);ok(raw.to_vec())},_=>(NotSupported,vec![])},
             c if c == Command::new(0, 0x84) => match self.device_mode {
                 Some(mode) => ok(vec![mode]),
                 None => (NotSupported, vec![]),
@@ -396,6 +413,41 @@ impl SimState {
                     }
                 }
             }
+            c if c.class==0x0b && matches!(c.id,0x90|0x91|0x10|0x11|0x93|0x13) => {
+                if let Some((state,mode,curve))=&mut self.sensor_dynamic {
+                    if matches!(c.id,0x90|0x91|0x10|0x11) && size==2 && a[0]==1 {
+                        match c.id {0x90=>ok(vec![1,*state]),0x91=>ok(vec![1,*mode]),0x10 if a[1]<=1=>{*state=a[1];ok(a[..2].to_vec())},0x11=>{*mode=a[1];ok(a[..2].to_vec())},_=>(Failed,vec![])}
+                    } else if size==37 && a[..3]==[1,3,250] && a[4]>0 && a[4]<=8 && usize::from(a[3])+usize::from(a[4])<=250 && curve.len()==1000 {
+                        let start=usize::from(a[3])*4;let end=start+usize::from(a[4])*4;
+                        if c.id==0x93 {let mut result=a[..37].to_vec();result[5..5+end-start].copy_from_slice(&curve[start..end]);ok(result)}
+                        else if self.fail_next_dynamic_curve {self.fail_next_dynamic_curve=false;(Failed,vec![])}
+                        else {curve[start..end].copy_from_slice(&a[5..5+end-start]);ok(a[..37].to_vec())}
+                    } else {(Failed,vec![])}
+                } else {(NotSupported,vec![])}
+            },
+            c if c == cmd::PROXIMITY_STATE.get() => match self.sensor_calibration {
+                Some(raw) if size==3 && a[..2]==[0,4] => ok(vec![0,4,raw[0]]),
+                _ => (NotSupported,vec![]),
+            },
+            c if c == cmd::PROXIMITY_LIFT.get() => match self.sensor_calibration {
+                Some(raw) if size==4 && a[..2]==[0,4] => ok(vec![0,4,raw[1],raw[2]]),
+                _ => (NotSupported,vec![]),
+            },
+            cmd::PROXIMITY_STATE => match &mut self.sensor_calibration {
+                Some(raw) if size==3 && a[..2]==[0,4] && a[2]<=1 => { raw[0]=a[2];ok(a[..3].to_vec()) },
+                _ => (NotSupported,vec![]),
+            },
+            cmd::PROXIMITY_LIFT => {
+                if self.fail_next_calibration_lift {
+                    self.fail_next_calibration_lift=false;
+                    (Failed,vec![])
+                } else {
+                    match &mut self.sensor_calibration {
+                        Some(raw) if size==4 && a[..2]==[0,4] => { raw[1]=a[2];raw[2]=a[3];ok(a[..4].to_vec()) },
+                        _ => (NotSupported,vec![]),
+                    }
+                }
+            },
             c if c == cmd::CRITICAL_LEVEL.get() => match (self.critical_threshold, size) {
                 (Some(raw), 1) => ok(vec![raw]),
                 (None, _) => (NotSupported, vec![]),

@@ -43,6 +43,8 @@ mod lighting_view;
 mod image_render;
 mod host_tabs;
 mod host_tab_model;
+mod calibration_view;
+mod advanced_view;
 mod performance_layout;
 mod performance_view;
 mod power_layout;
@@ -364,6 +366,8 @@ enum Action {
     HostScroll(i32),
     HostClose(String),
     HostMove(String, usize),
+    Calibration(calibration_view::Control),
+    Advanced(advanced_view::Control),
     Tab(Tab),
     Refresh,
     ProfileMenu,
@@ -430,6 +434,7 @@ struct Hit {
 }
 
 enum Job {
+    SensorRead(String, String),
     CachedLighting(runtime_status::Request),
     Profiles(profile_modal_model::Request),
     Refresh,
@@ -490,6 +495,7 @@ struct Reply {
 }
 
 enum WorkerReply {
+    Sensor((String, String), Result<Value, String>),
     User(Reply),
     CachedLighting(runtime_status::Response),
 }
@@ -509,6 +515,12 @@ fn worker(
         .map(|engine| engine.lighting_status_reader());
     for job in jobs {
         let job = match job {
+            Job::SensorRead(id, profile) => {
+                let result=engine.lock().map_err(|_|"Device worker is unavailable".to_string())
+                    .and_then(|mut engine|server::mouse_sensor_snapshot(&mut engine,&id,&profile).map_err(|e|e.to_string()));
+                if replies.send(WorkerReply::Sensor((id,profile),result)).is_err() { break; }
+                continue;
+            }
             Job::CachedLighting(request) => {
                 let response = match &status_reader {
                     Some(reader) => runtime_status::read(reader, request),
@@ -632,6 +644,7 @@ fn worker(
                     server::dispatch(&mut engine, "GET", "/api/state", &[])
                 }
                 Job::CachedLighting(_)
+                | Job::SensorRead(..)
                 | Job::Profiles(_)
                 | Job::ImportFile { .. }
                 | Job::ExportFile { .. } => return Err("File operation was not routed".into()),
@@ -661,6 +674,7 @@ fn worker(
 }
 
 struct Fonts {
+    calibration_welcome: HFONT,
     source_text: source_text::Renderer,
     tab: HFONT,
     tiny: HFONT,
@@ -706,6 +720,7 @@ impl Fonts {
         };
         Self {
             source_text: source_text::Renderer::new(assets),
+            calibration_welcome: make("RazerF5",26,400),
             tab: make("Roboto", 12, 300),
             tiny: make("Roboto", 10, 400),
             small: make("Roboto", 12, 400),
@@ -723,6 +738,7 @@ impl Drop for Fonts {
     fn drop(&mut self) {
         unsafe {
             for font in [
+                self.calibration_welcome,
                 self.tab,
                 self.tiny,
                 self.small,
@@ -853,6 +869,8 @@ impl Drop for Bitmap {
 }
 
 struct State {
+    calibration: calibration_view::View,
+    advanced: advanced_view::View,
     host_tabs: RefCell<host_tabs::View>,
     customize_background: RefCell<dot_background::Cache>,
     hwnd: HWND,
@@ -1579,7 +1597,7 @@ impl State {
                 &job,
                 Job::Profiles(profile_modal_model::Request::PreviewExport { .. })
             );
-        if self.restricted_actions && !matches!(&job, Job::Refresh) && !presentation_preview {
+        if self.restricted_actions && !matches!(&job, Job::Refresh | Job::SensorRead(..)) && !presentation_preview {
             return;
         }
         if self.pending > 0 {
@@ -1592,10 +1610,10 @@ impl State {
         if user_operation && !matches!(&job, Job::Refresh | Job::Rescan) {
             self.failures.new_operation();
         }
+        let sensor_read=matches!(&job,Job::SensorRead(..));
         if self.jobs.send(job).is_ok() {
             self.pending += 1;
-            self.status = "Working…".into();
-            self.failed = false;
+            if !sensor_read { self.status = "Working…".into();self.failed = false; }
             SetTimer(self.hwnd, RESPONSE_TIMER, 40, None);
             InvalidateRect(self.hwnd, null(), 0);
         } else {
@@ -1706,6 +1724,11 @@ impl State {
     unsafe fn collect(&mut self) {
         while let Ok(message) = self.replies.try_recv() {
             let reply = match message {
+                WorkerReply::Sensor(owner,result) => {
+                    self.pending=self.pending.saturating_sub(1);
+                    calibration_view::receive(self,owner,result);
+                    continue;
+                }
                 WorkerReply::User(reply) => reply,
                 WorkerReply::CachedLighting(response) => {
                     self.collect_cached_lighting(response);
@@ -1736,6 +1759,8 @@ impl State {
                     | "keyboard-profile-export"
                     | "keyboard-profile-cloud" => Some(("keyboard", Tab::Customize)),
                     "mouse-power" => Some(("mouse", Tab::Power)),
+                    "mouse-calibration" => Some(("mouse", Tab::Calibration)),
+                    "mouse-advanced" => Some(("mouse", Tab::Advanced)),
                     "keyboard-customize" => Some(("keyboard", Tab::Customize)),
                     _ => None,
                 };
@@ -1793,6 +1818,7 @@ impl State {
                 self.error("The selected device/profile changed; reopen the profile dialog");
             }
             assignment_view::sync(self);
+            calibration_view::request(self,false);
             self.sync_performance(false);
             if let Some(device) = self.device().cloned() {
                 let preserve=self.pending_jobs.iter().any(|job|matches!(job,Job::Action(path,_) if path.starts_with("/api/lighting-")||path.starts_with("/api/source-")));
@@ -2090,6 +2116,8 @@ impl State {
             return;
         }
         match action {
+            Action::Calibration(control) => calibration_view::action(self,control),
+            Action::Advanced(control) => advanced_view::action(self,control),
             Action::HostClose(id) => host_tabs::close(self, &id),
             Action::HostMove(id, target) => host_tabs::move_to(self, &id, target),
             Action::HostScroll(direction) => host_tabs::scroll(self, direction),
@@ -2146,6 +2174,7 @@ impl State {
                 ReleaseCapture();
                 self.sync_performance(true);
                 self.rebuild_fields();
+                calibration_view::request(self,true);
             }
             Action::Refresh => self.queue(Job::Rescan),
             Action::ProfileMenu => {
@@ -3203,9 +3232,11 @@ unsafe fn paint(state: &mut State, dc: HDC) {
                     }
                 }
             }
-            Tab::Calibration | Tab::Advanced | Tab::Help => {}
+            Tab::Calibration => calibration_view::paint(state,&mut p),
+            Tab::Advanced => advanced_view::paint(state,&mut p),
+            Tab::Help => {}
         }
-        if matches!(state.tab, Tab::Calibration | Tab::Advanced | Tab::Help) {
+        if matches!(state.tab, Tab::Help) {
             p.text(
                 if state.tab == Tab::Help {
                     "DEVICE INFORMATION"
@@ -3762,7 +3793,7 @@ unsafe extern "system" fn window_proc(
                 "pending":state.pending,
                 "brightness":state.lighting.intent.brightness.as_ref().map(|b|b.value),
                 "status":state.status,"failed":state.failed,
-                "host_tabs":host_tabs::diagnostics(&state)
+                "host_tabs":host_tabs::diagnostics(&state),"calibration":calibration_view::diagnostics(&state),"advanced":advanced_view::diagnostics(&state)
             });
         }
         return 0;
@@ -4057,6 +4088,9 @@ unsafe extern "system" fn window_proc(
             assignment_view::wheel(&mut state, ((wparam >> 16) as u16 as i16) as f64 / 120.0);
             0
         }
+        WM_MOUSEMOVE if advanced_view::capturing(&state) => {
+            advanced_view::pointer(&mut state,POINT{x:(lparam as u32 & 0xffff) as i16 as i32,y:((lparam as u32>>16)&0xffff) as i16 as i32});0
+        }
         WM_MOUSEMOVE if state.lighting_capture => {
             let point = state.lighting_point(POINT {
                 x: (lparam as u32 & 0xffff) as i16 as i32,
@@ -4116,6 +4150,7 @@ unsafe extern "system" fn window_proc(
             0
         }
         WM_CANCELMODE => {
+            advanced_view::cancel(&mut state);
             assignment_view::release(&mut state);
             let update = lighting_view::cancel(&mut state);
             state.lighting_update(update);
@@ -4142,6 +4177,9 @@ unsafe extern "system" fn window_proc(
             assignment_view::release(&mut state);
             InvalidateRect(hwnd, null(), 0);
             0
+        }
+        WM_CAPTURECHANGED if advanced_view::capturing(&state) => {
+            advanced_view::cancel(&mut state);InvalidateRect(hwnd,null(),0);0
         }
         WM_CAPTURECHANGED if state.lighting_capture => {
             let update = lighting_view::cancel(&mut state);
@@ -4228,6 +4266,9 @@ unsafe extern "system" fn window_proc(
             {
                 assignment_view::pointer(&mut state, point);
                 assignment_view::action(&mut state, control);
+            } else if let Some(Action::Advanced(control @ (advanced_view::Control::Point(_) | advanced_view::Control::RotationSlider)))=action {
+                advanced_view::action(&mut state,control);
+                if matches!(control,advanced_view::Control::RotationSlider){advanced_view::pointer(&mut state,point);}
             } else if let Some(Action::PowerSlider(kind, shape)) = action {
                 power_view::begin(&mut state, kind, shape);
                 power_view::pointer(&mut state, point);
@@ -4254,6 +4295,9 @@ unsafe extern "system" fn window_proc(
             state.lighting_update(update);
             0
         }
+        WM_MOUSEWHEEL if state.tab==Tab::Advanced => {
+            advanced_view::wheel(&mut state,(wparam>>16) as u16 as i16);0
+        }
         WM_MOUSEWHEEL if state.tab == Tab::Performance && state.performance.is_some() => {
             if let Some((g, _)) = performance_view::layout(&state) {
                 let bottom = (g.sensitivity_widget.y + g.sensitivity_widget.height)
@@ -4270,6 +4314,7 @@ unsafe extern "system" fn window_proc(
             0
         }
         WM_LBUTTONUP => {
+            if advanced_view::capturing(&state){advanced_view::pointer(&mut state,POINT{x:(lparam as u32 & 0xffff) as i16 as i32,y:((lparam as u32>>16)&0xffff) as i16 as i32});advanced_view::finish(&mut state);return 0;}
             if assignment_view::release(&mut state) {
                 return 0;
             }
@@ -4572,6 +4617,8 @@ fn run_window(
             .spawn(move || worker(engine, jobs_rx, replies_tx))
             .map_err(|e| e.to_string())?;
         let mut state = Box::new(RefCell::new(State {
+            calibration: calibration_view::View::default(),
+            advanced: advanced_view::View::default(),
             host_tabs: RefCell::new(host_tabs::View::load()),
             customize_background: RefCell::new(dot_background::Cache::default()),
             hwnd: null_mut(),
@@ -4663,6 +4710,7 @@ fn run_window(
                 "close",
                 "back",
                 "refresh",
+                "rotation-mouse",
                 "expand",
                 "profile-default",
                 "profile-close",

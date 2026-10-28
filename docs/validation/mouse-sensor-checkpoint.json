@@ -1,0 +1,113 @@
+{
+  "date": "2026-10-28",
+  "calibration_native": {
+    "actual_hwnd": true,
+    "low_high_readback": true,
+    "named_profiles_unchanged": true,
+    "readonly_no_io_or_save": true,
+    "simulated_only": true,
+    "welcome_saved": true
+  },
+  "advanced_native": {
+    "actual_hwnd": true,
+    "curve_commit_on_release": true,
+    "modes": [
+      1,
+      2,
+      3
+    ],
+    "profile_scope_preserved": true,
+    "readonly_no_write": true,
+    "rotation_baseline_restored": true,
+    "rotation_commit_on_release": true,
+    "simulator_only": true
+  },
+  "physical_get_only": {
+    "firmware": "1.10.1.0",
+    "interface": 0,
+    "pid": "00C4",
+    "query_only": true,
+    "registers": [
+      {
+        "args": [
+          0,
+          4,
+          0
+        ],
+        "command": "0B:83",
+        "name": "proximity_state",
+        "size": 3,
+        "status": "success"
+      },
+      {
+        "args": [
+          0,
+          4,
+          0,
+          0
+        ],
+        "command": "0B:8B",
+        "name": "lift_setting",
+        "size": 4,
+        "status": "success"
+      },
+      {
+        "args": [
+          1,
+          0
+        ],
+        "command": "0B:90",
+        "name": "dynamic_state",
+        "size": 2,
+        "status": "success"
+      },
+      {
+        "args": [
+          1,
+          0
+        ],
+        "command": "0B:91",
+        "name": "dynamic_mode",
+        "size": 2,
+        "status": "success"
+      }
+    ],
+    "txid": 31
+  },
+  "filter_get_only": {
+    "child_exit_success": true,
+    "deadline_ms": 8000,
+    "elapsed_ms": 233,
+    "probe": "vendor_filter_rotation_get_only",
+    "result": {
+      "association": "unique active HID/control ContainerId + exact PID/interface",
+      "association_verified": true,
+      "baseline_raw_degrees": 0,
+      "get_ioctl": "0x88883184",
+      "hid_usage": 2,
+      "hid_usage_page": 1,
+      "interface": 0,
+      "pid": "00C5",
+      "query_only": true,
+      "repeated_raw_degrees": 0,
+      "restore_count": 0,
+      "restoring_drop_present": false,
+      "rotation_get_count": 2,
+      "set_count": 0,
+      "status": "success",
+      "unchanged_between_reads": true
+    }
+  },
+  "physical_set_validation": {
+    "write_attempted": false,
+    "reason": "Reversible test refused before discovery/SET because stock Synapse was running"
+  },
+  "tests": {
+    "core_passed": 324,
+    "core_ignored": 6,
+    "tray_passed": 208,
+    "tray_ignored": 23,
+    "doc_passed": 1
+  },
+  "complete_build_acceptance": false
+}

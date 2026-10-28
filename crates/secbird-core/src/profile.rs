@@ -32,6 +32,10 @@ pub struct Zone {
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Profile {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dynamic_sensitivity: Option<crate::dynamic_sensitivity::DynamicSensitivity>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rotation: Option<crate::dynamic_sensitivity::Rotation>,
     #[serde(flatten)]
     pub extra: BTreeMap<String, serde_json::Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -99,6 +103,9 @@ pub struct DevicePower {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceProfiles {
+    /// Smart Tracking is device-wide, not part of named profile exports/replay.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sensor_calibration: Option<crate::mouse_sensor::CalibrationPreferences>,
     #[serde(flatten)]
     pub extra: BTreeMap<String, serde_json::Value>,
     pub active: String,
@@ -137,6 +144,7 @@ impl Default for DeviceProfiles {
         Self {
             extra: BTreeMap::new(),
             active: DEFAULT_PROFILE.into(),
+            sensor_calibration: None,
             profiles: BTreeMap::from([(DEFAULT_PROFILE.into(), Profile::default())]),
             lighting_off: false,
             onboard: None,
@@ -373,6 +381,7 @@ impl Store {
                 // The only copy of what the mouse's slot held before a "Save to mouse".
                 onboard: incoming.onboard.clone(),
                 power: incoming.power.clone(),
+                sensor_calibration: incoming.sensor_calibration.clone(),
             });
             crate::profile_compat::merge_extensions(&mut target.extra, incoming.extra);
             if let Some(incoming_power) = incoming.power {
@@ -524,6 +533,9 @@ impl Profile {
 
         if let Some(hz) = self.polling {
             push(format!("polling {hz} Hz"), dev.set_polling_rate(hz));
+        }
+        if let Some(intent)=&self.dynamic_sensitivity {
+            push("Dynamic Sensitivity".into(),dev.apply_dynamic_sensitivity(intent));
         }
         if let Some(performance) = &self.performance {
             push("DPI stage intent".into(), performance.apply(dev).map(|_| ()));

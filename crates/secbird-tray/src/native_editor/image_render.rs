@@ -83,6 +83,18 @@ pub(super) unsafe fn draw(dc: HDC, bitmap: *mut gp::GpBitmap, rect: RECT, width:
     gp::GdipDeleteGraphics(graphics);
 }
 
+pub(super) unsafe fn draw_rotated(dc:HDC,bitmap:*mut gp::GpBitmap,rect:RECT,width:i32,height:i32,angle:f32){
+    if bitmap.is_null(){return;}
+    let mut graphics=null_mut();if gp::GdipCreateFromHDC(dc,&mut graphics)!=gp::Ok{return;}
+    gp::GdipSetInterpolationMode(graphics,gp::InterpolationModeHighQualityBicubic);
+    gp::GdipSetPixelOffsetMode(graphics,gp::PixelOffsetModeHighQuality);
+    gp::GdipTranslateWorldTransform(graphics,(rect.left+rect.right) as f32/2.,(rect.top+rect.bottom) as f32/2.,gp::MatrixOrderAppend);
+    gp::GdipRotateWorldTransform(graphics,angle,gp::MatrixOrderPrepend);
+    let w=rect.right-rect.left;let h=rect.bottom-rect.top;
+    gp::GdipDrawImageRectRectI(graphics,bitmap.cast(),-w/2,-h/2,w,h,0,0,width,height,gp::UnitPixel,null(),0,null_mut());
+    gp::GdipDeleteGraphics(graphics);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -3,7 +3,7 @@ pub(super) fn covered(pid: &str, tab: &str) -> bool {
     matches!(
         (pid, tab),
         ("025D", "CUSTOMIZE" | "LIGHTING")
-            | ("00C4" | "00C5", "CUSTOMIZE" | "PERFORMANCE" | "POWER")
+            | ("00C4" | "00C5", "CUSTOMIZE" | "PERFORMANCE" | "POWER" | "CALIBRATION" | "ADVANCED")
     )
 }
 pub(super) fn bottom(client_height: f64, source: bool) -> f64 {
@@ -23,13 +23,14 @@ mod tests {
             ("025D", "LIGHTING"),
             ("00C4", "PERFORMANCE"),
             ("00C5", "POWER"),
+            ("00C4", "CALIBRATION"),
+            ("00C5", "ADVANCED"),
         ] {
             assert!(covered(pid, tab));
         }
         for (pid, tab) in [
             ("FFF3", "LIGHTING"),
             ("025D", "HELP"),
-            ("00C4", "CALIBRATION"),
             ("00C4", "LIGHTING"),
         ] {
             assert!(!covered(pid, tab));

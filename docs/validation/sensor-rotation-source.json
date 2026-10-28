@@ -1,0 +1,75 @@
+{
+  "feature": "software mouse sensor rotation using the installed vendor filter",
+  "status": "registered, compiled and integrated; mock and native simulated tests passed; physical GET-only endpoint verified; physical SET not performed",
+  "module": "crates/secbird-core/src/sensor_rotation.rs",
+  "scope": "Windows PID00C5 only; deliberately refuses PID00C4 until that installed handler is directly verified",
+  "sources": [
+    {
+      "artifact": "RazerAppEngine 4.0.827 CommonDLL/mapping_engine.dll",
+      "sha256": "6eabdfdedf797e042738b630d827c06f7a45dbe560ebaec96c66698f88f3320a",
+      "locations": {
+        "setter_export_rva": "0x39db0",
+        "getter_export_rva": "0x39550",
+        "set_driver_angle_rva": "0x114130",
+        "get_driver_call_rva": "0x113dea",
+        "device_io_control_wrapper_rva": "0x110d34",
+        "open_driver_rva": "0x1101d0",
+        "control_guid_rva": "0x383518",
+        "control_guid_enumeration_wrapper_rva": "0x11a6ee"
+      }
+    },
+    {
+      "artifact": "PID00c5Drv/Drivers/x64/RzDev_00c5.sys",
+      "sha256": "59912f2caa1ddff56039ac6e1b8a9570c9a3805f399dbf02282e9f086175bc37",
+      "rotation_dispatch_rva": "0x78c0",
+      "relative_mouse_record_transform_rva": "0x79a0"
+    },
+    {
+      "artifact": "extracted AppEngine modules/mapping_engine/win/index.js",
+      "sha256": "32b0dab3a1a83a970b2501608d53c6544cab0c9a2b47054d7bd9a660fe4133c0"
+    }
+  ],
+  "wire": {
+    "get_ioctl": "0x88883184",
+    "get_input_bytes": 0,
+    "get_output_bytes": 4,
+    "set_ioctl": "0x88883180",
+    "set_input_bytes": 4,
+    "set_output_bytes": 0,
+    "encoding": "little-endian 32-bit integer degrees; UI negative angles normalized modulo 360; baseline restored bit-exact",
+    "state_scope": "device context, not handle or profile; zero disables transformation",
+    "requested_degrees": [-44, 44]
+  },
+  "association": {
+    "discovery": "existing driver_control.enumerate_control_interfaces, present RZCONTROL class e3be005d-d130-4910-88ff-09ae02f680e9",
+    "proof": "selected Device.path parses as VID1532/PID00C5 and exact Device.interface; actual HID and candidate control paths must both resolve via SetupAPI to same nonzero GUID DEVPKEY_Device_ContainerId; exact PID and interface number; exactly one matching control endpoint",
+    "property": "DEVPKEY_Device_ContainerId: format GUID 8c7ed206-3f8a-4827-b3ab-ae9e1faefc6c, property 2, DEVPROP_TYPE_GUID 0x0d, exactly 16 bytes",
+    "refusals": ["unsupported PID", "missing or inactive interface", "missing/zero/wrong-type container GUID", "identity mismatch", "candidate identity lookup failure", "zero or multiple exact matches"],
+    "open": "fresh discovery and container revalidation, zero-access synchronous handle, share read/write, OPEN_EXISTING; request buffers owned until synchronous completion"
+  },
+  "ownership": {
+    "baseline": "GET at open, raw u32 preserved",
+    "set": "GET compare against own previous angle or original baseline before explicit SET; SET readback must exactly match",
+    "restore": "GET compare against own last intended value; preserve changes by other clients; exact original baseline SET plus GET verification",
+    "drop": "best effort ownership-aware restore; explicit restore required for observable error reporting",
+    "limits": [
+      "Driver has no compare-and-swap: another client can race between a GET and SET. Production integration must coordinate stock ownership before writes.",
+      "A crashed process cannot run Drop restoration; recovery across crashes remains an integration responsibility.",
+      "Synchronous vendor driver IOCTL can block; use a supervised worker for bounded UI responsiveness.",
+      "Runtime association, actual driver GET/SET and raw-input/game behavior have not been physically exercised.",
+      "Selected Device query-only policy is copied into the lease; read-only handles reject SET."
+    ]
+  },
+  "tests_passed": [
+    "source range/modulo conversion and little-endian bytes",
+    "HID identity, duplicate field and unique-candidate rejection",
+    "exact non-UI baseline restoration and idempotence",
+    "drop restores owned state",
+    "external changes preserved before SET and restore",
+    "SET readback mismatch and ambiguous completion recovery",
+    "query-only and invalid input never write",
+    "native SetupAPI ABI structure sizes"
+  ],
+  "analysis_limit": "New REA native function analysis timed out after240000ms; retained original bounded dumpbin excerpts and source provide these claims. No invented native decompilation Evidence IDs.",
+  "research_report": "work/sensor-protocols/ROTATION-FALLBACK.md"
+}

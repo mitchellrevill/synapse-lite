@@ -28,6 +28,13 @@ pub mod lighting_readback;
 pub mod log;
 pub mod macros;
 pub mod mouse_symbolic_bridge;
+pub mod mouse_sensor;
+pub mod dynamic_sensitivity;
+pub mod sensor_curve;
+#[cfg(windows)]
+pub mod sensor_rotation;
+#[cfg(windows)]
+pub mod sensor_rotation_control;
 pub mod net;
 pub mod ornata_frame;
 pub mod ornata_identity;

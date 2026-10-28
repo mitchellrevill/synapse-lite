@@ -8,9 +8,21 @@ use serde_json::{json, Map, Value};
 pub(super) fn import_mouse(
     source: &Value,
     profile: &mut Profile,
-    _name: &str,
-    _warnings: &mut Vec<String>,
+    name: &str,
+    warnings: &mut Vec<String>,
 ) -> Result<()> {
+    if let Some(raw)=source.get("rotation") {
+        match serde_json::from_value::<crate::dynamic_sensitivity::Rotation>(raw.clone()) {
+            Ok(intent) if intent.validate().is_ok()=>profile.rotation=Some(intent),
+            _=>warnings.push(format!("{name}: unsupported Rotation retained without hardware replay")),
+        }
+    }
+    if let Some(raw)=source.get("dynamicSensitivity") {
+        match serde_json::from_value::<crate::dynamic_sensitivity::DynamicSensitivity>(raw.clone()) {
+            Ok(intent) if intent.validate().is_ok()=>profile.dynamic_sensitivity=Some(intent),
+            _=>warnings.push(format!("{name}: unsupported Dynamic Sensitivity data retained without hardware replay")),
+        }
+    }
     // Installed196 reads sleep from hardware, independently of named profiles.
     // Keep an exported powerSavingValue opaque in the original decoded payload;
     // translating its template default would reset the device on profile activation.
@@ -164,6 +176,11 @@ pub(super) fn export_mouse(
     decoded: &mut Map<String, Value>,
     preserve_defaults: bool,
 ) -> Result<()> {
+    if let Some(intent)=&profile.rotation {intent.validate()?;merge_object(decoded.entry("rotation").or_insert(json!({})),serde_json::to_value(intent).map_err(|e|invalid(e.to_string()))?)?;}
+    if let Some(intent)=&profile.dynamic_sensitivity {
+        intent.validate()?;
+        merge_object(decoded.entry("dynamicSensitivity").or_insert(json!({})),serde_json::to_value(intent).map_err(|e|invalid(e.to_string()))?)?;
+    }
     if let Some(minutes) = profile.sleep_minutes {
         if !(1..=15).contains(&minutes) {
             return Err(invalid(
