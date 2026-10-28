@@ -1,5 +1,11 @@
 # Ornata source startup-mode experiment
 
+**Subsequent source-attribution experiment:** the combined Raw Input/vendor child
+observed52 MI01 raw and52 vendor sample records in mode3, then restored mode0 and
+cleaned up both channels. See [source attribution](ORNATA-INPUT-SOURCE.md). Earlier
+vendor-only zero-event samples remain historical observations; differences in
+window/registration setup and typing are not independently isolated.
+
 An explicit mode lease and separate opt-in experiment now reproduce the retained
 source startup's Normal0 → Driver3 → Normal0 transition. They do not install input
 hooks, redirect input, generate keys, send lighting frames or modify profiles.

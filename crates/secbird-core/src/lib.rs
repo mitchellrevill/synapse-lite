@@ -25,6 +25,8 @@ pub mod features;
 pub mod keyboard_symbolic_bridge;
 #[cfg(windows)]
 pub mod keyboard_notifications;
+#[cfg(windows)]
+pub mod keyboard_input_identity;
 pub mod lighting;
 pub mod lighting_readback;
 pub mod log;

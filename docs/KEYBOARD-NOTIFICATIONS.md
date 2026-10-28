@@ -1,5 +1,12 @@
 # Selected Ornata notification transport
 
+**Later delivery evidence:** the combined per-interface diagnostic observed52
+MI01 Raw Input records and52 vendor records during the gated driver-mode sample,
+with normal-mode restoration and cleanup. See [source attribution](ORNATA-INPUT-SOURCE.md).
+The zero-event sessions below are earlier, narrower observations; they no longer
+support a general claim that delivery is unavailable. Mode3 alone versus the
+combined window/registration setup has not been isolated.
+
 The Windows `keyboard_notifications` module explicitly opens a passive
 notification subscription on the selected Ornata's existing signed filter.
 It does not install selectors, enable input hooks, redirect input or submit keys.

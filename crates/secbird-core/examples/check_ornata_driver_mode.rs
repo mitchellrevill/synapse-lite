@@ -39,13 +39,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if args.len() != 3
         || !matches!(
             args[1].as_str(),
-            "--stock-driver-mode" | "--stock-driver-mode-gated"
+            "--stock-driver-mode" | "--stock-driver-mode-gated" | "--stock-driver-mode-raw-gated"
         )
     {
         return Err("Use <fresh-report.json> --stock-driver-mode <1..10>".into());
     }
     let seconds = args[2].parse::<u64>()?;
-    let gated = args[1] == "--stock-driver-mode-gated";
+    let raw = args[1] == "--stock-driver-mode-raw-gated";
+    let gated = raw || args[1] == "--stock-driver-mode-gated";
     let ready = std::path::Path::new(&args[0]).with_extension("ready.json");
     let signal = std::path::Path::new(&args[0]).with_extension("gate");
     if gated && (ready.exists() || signal.exists()) {
@@ -57,7 +58,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let child_exe = std::env::current_exe()?
         .parent()
         .ok_or("Missing executable directory")?
-        .join("observe_ornata_notifications.exe");
+        .join(if raw {
+            "observe_ornata_raw_sources.exe"
+        } else {
+            "observe_ornata_notifications.exe"
+        });
     if !child_exe.is_file() {
         return Err("Build the adjacent passive observation example first".into());
     }
@@ -145,6 +150,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             && report["snapshot"]["pending_drained"] == true
             && report["stop_completed"] == true
             && report["snapshot"]["error"].is_null()
+            && (!raw
+                || (report["raw_observation_valid"] == true
+                    && report["raw_registration_removed"] == true))
     });
     let report = json!({"scope":"explicit source startup mode3 experiment with parent-owned observed-mode rollback; source canonical zero parameter; passive notifications only",
         "baseline_mode":baseline,"driver_readback":driver_readback,"final_mode":final_mode,

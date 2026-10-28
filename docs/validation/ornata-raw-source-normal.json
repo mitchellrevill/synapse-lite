@@ -1,0 +1,40 @@
+{
+  "foreign_key_payloads_read": false,
+  "hid_sets": 0,
+  "input_submissions": 0,
+  "key_identities_or_text_emitted": false,
+  "other_keyboard_headers": 0,
+  "paths_or_serials_emitted": false,
+  "raw_endpoints": [
+    {
+      "break_records": 2,
+      "make_records": 2,
+      "mi": "00"
+    },
+    {
+      "break_records": 0,
+      "make_records": 0,
+      "mi": "01"
+    }
+  ],
+  "raw_observation_valid": true,
+  "raw_registration_removed": true,
+  "redirection_changes": 0,
+  "sample_gated": true,
+  "scope": "explicit passive selected-Ornata per-interface raw counts plus vendor notifications",
+  "selected_raw_records": 4,
+  "selector_mutations": 0,
+  "snapshot": {
+    "association_verified": true,
+    "cancel_requested": true,
+    "error": null,
+    "finished": true,
+    "keyboard_records": 0,
+    "other_records": 0,
+    "pending_drained": true,
+    "received_records": 0,
+    "subscription_disabled": true,
+    "subscription_enabled": true
+  },
+  "stop_completed": true
+}

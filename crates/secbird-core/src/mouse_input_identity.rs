@@ -29,9 +29,9 @@ const LIST_ATTEMPTS: usize = 3;
 
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
-struct DeviceListEntry {
-    handle: usize,
-    kind: u32,
+pub(crate) struct DeviceListEntry {
+    pub(crate) handle: usize,
+    pub(crate) kind: u32,
 }
 
 // RID_DEVICE_INFO has a 24-byte union (keyboard is the largest member).
@@ -78,7 +78,7 @@ fn validate_entries(entries: &[DeviceListEntry]) -> io::Result<()> {
     Ok(())
 }
 
-fn enumerate() -> io::Result<Vec<DeviceListEntry>> {
+pub(crate) fn enumerate() -> io::Result<Vec<DeviceListEntry>> {
     for _ in 0..LIST_ATTEMPTS {
         let mut required = 0;
         let sized = unsafe {
@@ -138,7 +138,7 @@ fn decode_name(units: &[u16]) -> io::Result<String> {
     String::from_utf16(&units[..end]).map_err(|_| invalid("Raw Input mouse name is invalid UTF-16"))
 }
 
-fn raw_name(handle: usize) -> io::Result<String> {
+pub(crate) fn raw_name(handle: usize) -> io::Result<String> {
     if handle == 0 {
         return Err(invalid("Null Raw Input device handle"));
     }
@@ -177,6 +177,11 @@ fn raw_name(handle: usize) -> io::Result<String> {
 }
 
 fn verify_mouse_type(handle: usize) -> io::Result<()> {
+    verify_raw_type(handle, RIM_TYPEMOUSE)
+}
+
+/// Metadata only; callers must independently reject null handles and bind names.
+pub(crate) fn verify_raw_type(handle: usize, expected: u32) -> io::Result<()> {
     let mut info = DeviceInfo {
         size: size_of::<DeviceInfo>() as u32,
         kind: UINT_ERROR,
@@ -197,10 +202,10 @@ fn verify_mouse_type(handle: usize) -> io::Result<()> {
     if copied != size_of::<DeviceInfo>() as u32
         || bytes != size_of::<DeviceInfo>() as u32
         || info.size != size_of::<DeviceInfo>() as u32
-        || info.kind != RIM_TYPEMOUSE
+        || info.kind != expected
     {
         return Err(invalid(
-            "Raw Input handle no longer identifies an exact mouse record",
+            "Raw Input handle no longer identifies the expected device type",
         ));
     }
     Ok(())
