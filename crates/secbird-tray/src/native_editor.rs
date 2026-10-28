@@ -3788,7 +3788,7 @@ unsafe extern "system" fn window_proc(
                 return 0;
             }
             if wparam == 3 {
-                *(lparam as *mut Value) = json!({"width":state.width,"height":state.height});
+                *(lparam as *mut Value) = json!({"width":state.width,"height":state.height,"scale":state.scale,"hit_count":state.hits.len()});
                 return 0;
             }
             if wparam == 1 {
@@ -4157,6 +4157,7 @@ unsafe extern "system" fn window_proc(
                 ScreenToClient(hwnd, &mut point);
                 state.performance_pointer(point);
             }
+            drop(state);
             DefWindowProcW(hwnd, message, wparam, lparam)
         }
         WM_TIMER if wparam == ASSIGNMENT_REPEAT => {
@@ -4655,7 +4656,10 @@ unsafe extern "system" fn window_proc(
         WM_DPICHANGED => {
             state.scale = (wparam as u32 & 0xffff) as f32 / 96.0;
             state.fonts = Fonts::new(&state.assets, state.scale);
-            let rect = &*(lparam as *const RECT);
+            let rect = *(lparam as *const RECT);
+            // Applying the new monitor's bounds synchronously sends resize
+            // and paint callbacks. Let those callbacks update the editor.
+            drop(state);
             SetWindowPos(
                 hwnd,
                 null_mut(),
@@ -4667,13 +4671,22 @@ unsafe extern "system" fn window_proc(
             );
             let mut client: RECT = std::mem::zeroed();
             GetClientRect(hwnd, &mut client);
-            state.width = client.right;
-            state.height = client.bottom;
-            state.rebuild_fields();
+            if let Ok(mut state) = (*pointer).try_borrow_mut() {
+                state.width = client.right;
+                state.height = client.bottom;
+                state.hits.clear();
+                state.rebuild_fields();
+            }
             InvalidateRect(hwnd, null(), 0);
             0
         }
-        _ => DefWindowProcW(hwnd, message, wparam, lparam),
+        _ => {
+            // Caption dragging and border resizing enter a nested Windows
+            // message loop here. Keeping State borrowed would reject every
+            // nested paint, DPI, timer and resize callback until it exits.
+            drop(state);
+            DefWindowProcW(hwnd, message, wparam, lparam)
+        }
     }
 }
 

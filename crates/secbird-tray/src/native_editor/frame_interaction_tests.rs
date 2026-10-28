@@ -1,4 +1,5 @@
 use super::*;
+use windows_sys::Win32::UI::Input::KeyboardAndMouse::VK_RETURN;
 
 unsafe fn snapshot(hwnd: HWND) -> Value {
     let mut outer: RECT = std::mem::zeroed();
@@ -32,6 +33,70 @@ unsafe fn hit(hwnd: HWND, x: i32, y: i32) -> LRESULT {
 }
 fn full_client(value: &Value) -> bool {
     value["outer"] == value["client"] && value["inset"] == json!([0, 0])
+}
+
+unsafe fn in_move_size(hwnd: HWND) -> bool {
+    let mut info: GUITHREADINFO = std::mem::zeroed();
+    info.cbSize = std::mem::size_of::<GUITHREADINFO>() as u32;
+    GetGUIThreadInfo(GetWindowThreadProcessId(hwnd, null_mut()), &mut info) != 0
+        && info.flags & GUI_INMOVESIZE != 0
+}
+
+unsafe fn exercise_modal_frame(hwnd: HWND, command: u32, scale: f64) -> Result<(), String> {
+    // Enter the real nested message loop. Direct SetWindowPos tests do not
+    // exercise the lifetime of the outer window procedure's state borrow.
+    PostMessageW(hwnd, WM_SYSCOMMAND, command as usize, 0);
+    let result = (|| {
+        wait_for(|| in_move_size(hwnd), "Windows move/resize modal loop")?;
+        let mut bounds: RECT = std::mem::zeroed();
+        GetWindowRect(hwnd, &mut bounds);
+        for step in 1..=3 {
+            SetWindowPos(
+                hwnd, null_mut(), bounds.left + step * 15, bounds.top + step * 10,
+                (1100.0 * scale).round() as i32 + step * 10,
+                (680.0 * scale).round() as i32 + step * 10,
+                SWP_NOZORDER | SWP_NOACTIVATE,
+            );
+            if !layout_ready(hwnd) {
+                return Err(format!("Editor state unavailable during modal command {command:#x}"));
+            }
+            redraw(hwnd);
+            let mut state = Value::Null;
+            SendMessageW(hwnd, ASSIGNMENT_TEST_QUERY, 3, &mut state as *mut Value as isize);
+            if state["hit_count"].as_u64().unwrap_or(0) == 0 {
+                return Err("Editor did not repaint interactive controls during move/resize".into());
+            }
+            if !in_move_size(hwnd) {
+                return Err("Move/resize loop exited before responsiveness check".into());
+            }
+        }
+        // Exercise the same suggested-bounds notification sent during a
+        // mixed-DPI monitor move, without changing the desktop's DPI settings.
+        for dpi in [144u32, 192, GetDpiForWindow(hwnd).max(96)] {
+            let suggested = RECT {
+                left: bounds.left + 30, top: bounds.top + 20,
+                right: bounds.left + 30 + (1100.0 * scale).round() as i32,
+                bottom: bounds.top + 20 + (680.0 * scale).round() as i32,
+            };
+            SendMessageW(hwnd, WM_DPICHANGED, (dpi | dpi << 16) as usize,
+                &suggested as *const RECT as isize);
+            if !layout_ready(hwnd) {
+                return Err("DPI bounds did not update the layout during move/resize".into());
+            }
+            let mut state = Value::Null;
+            SendMessageW(hwnd, ASSIGNMENT_TEST_QUERY, 3, &mut state as *mut Value as isize);
+            if state["scale"].as_f64() != Some(dpi as f64 / 96.0) {
+                return Err("DPI notification was dropped during move/resize".into());
+            }
+            redraw(hwnd);
+        }
+        Ok(())
+    })();
+    // Release the modal loop even when reproducing the pre-fix failure.
+    PostMessageW(hwnd, WM_KEYDOWN, VK_RETURN as usize, 0);
+    PostMessageW(hwnd, WM_CANCELMODE, 0, 0);
+    wait_for(|| !in_move_size(hwnd), "Windows move/resize loop exit")?;
+    result
 }
 
 #[test]
@@ -99,6 +164,10 @@ fn native_full_client_bounds_resize_hit_zones_and_maximize_preserve_state() {
                 {
                     return Err("DPI minimum track bounds changed".into());
                 }
+                for command in [SC_MOVE, SC_SIZE | WMSZ_BOTTOMRIGHT] {
+                    exercise_modal_frame(hwnd, command, scale)?;
+                }
+                observations.push(json!({"mode":"modal-move-and-resize","responsive_inside_loop":true}));
                 for (mode, width, height) in [
                     ("minimum", 1000.0, 650.0),
                     ("narrow", 1060.0, 700.0),
