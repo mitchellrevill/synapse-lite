@@ -1,0 +1,185 @@
+{
+  "date": "2026-10-28",
+  "scope": "device-view close/reopen, session order, section retention and shortcut routing; unfinished inventory stage1",
+  "model_renderer_tests_passed": 6,
+  "native_mouse": {
+    "dashboard_card_reopens_closed_tab": true,
+    "drawer_filter_choices": true,
+    "escape_cancels": true,
+    "host_section_retained": true,
+    "middle_close_persists_without_removing_device": true,
+    "physical_discovery_disabled": true,
+    "primary_left_disabled": true,
+    "profile_bytes_unchanged": true,
+    "shared_host_home_device_navigation": true,
+    "shared_host_hover_press_leave": true,
+    "shortcut_mapper_close_reopen": true,
+    "sim_commands_added": 0,
+    "source_close_button_hit": true,
+    "source_drawer_anchor_230": true,
+    "source_mouse_label_click": true
+  },
+  "native_keyboard": {
+    "dirty_close_prompt": true,
+    "dirty_host_close_deferred": true,
+    "discard_and_cancel_no_writes": true,
+    "dismiss_keeps_draft": true,
+    "host_discard_closes_only_view": true,
+    "host_dismiss_keeps_view": true,
+    "mouse_category_and_dropdown": true,
+    "opaque_mapping_preserved": true,
+    "physical_discovery_disabled": true,
+    "profile_bytes_unchanged": true,
+    "sim_commands_added": 0,
+    "source_drawer_wheel_and_thumb_drag": true,
+    "source_icons_loaded": 58,
+    "source_key_path_hit": true,
+    "turbo_controlled_numeric_repeat_and_drag": true,
+    "unsupported_save_disabled": true
+  },
+  "native_frame": {
+    "all_eight_resize_targets": true,
+    "cached_layout_tracks_client": true,
+    "header_drag_and_close_control": true,
+    "host_offset_css": 42,
+    "maximize_restore_buttons_work": true,
+    "minimum_track_size_css": [
+      1000,
+      650
+    ],
+    "observations": [
+      {
+        "bounds": {
+          "client": [
+            1600,
+            900
+          ],
+          "inset": [
+            0,
+            0
+          ],
+          "maximized": false,
+          "outer": [
+            1600,
+            900
+          ]
+        },
+        "mode": "normal"
+      },
+      {
+        "bounds": {
+          "client": [
+            1250,
+            813
+          ],
+          "inset": [
+            0,
+            0
+          ],
+          "maximized": false,
+          "outer": [
+            1250,
+            813
+          ]
+        },
+        "mode": "minimum"
+      },
+      {
+        "bounds": {
+          "client": [
+            1325,
+            875
+          ],
+          "inset": [
+            0,
+            0
+          ],
+          "maximized": false,
+          "outer": [
+            1325,
+            875
+          ]
+        },
+        "mode": "narrow"
+      },
+      {
+        "bounds": {
+          "client": [
+            1600,
+            900
+          ],
+          "inset": [
+            0,
+            0
+          ],
+          "maximized": false,
+          "outer": [
+            1600,
+            900
+          ]
+        },
+        "mode": "normal-restored"
+      },
+      {
+        "bounds": {
+          "client": [
+            2560,
+            1380
+          ],
+          "inset": [
+            0,
+            0
+          ],
+          "maximized": true,
+          "outer": [
+            2560,
+            1380
+          ]
+        },
+        "mode": "maximized"
+      },
+      {
+        "bounds": {
+          "client": [
+            1600,
+            900
+          ],
+          "inset": [
+            0,
+            0
+          ],
+          "maximized": false,
+          "outer": [
+            1600,
+            900
+          ]
+        },
+        "mode": "restore"
+      }
+    ],
+    "observed_host_boundary_px": 53,
+    "physical_discovery_disabled": true,
+    "profile_bytes_unchanged": true,
+    "restore_position_unchanged": true,
+    "scale": 1.25,
+    "sim_commands_added": 0
+  },
+  "ui_preferences_file": "tabs.json; no profile schema changes",
+  "file_bounds": {
+    "read_bytes": 131072,
+    "entries_per_list": 128,
+    "id_utf8_bytes": 512
+  },
+  "source_evidence_parent": "ev_f5d0ae84cd9569f21e46bed18474e9ab4cae411fb4a69b84889765bc0e344ec7",
+  "source_authority": "shipped artifact static inspection; cached dashboard source inspected directly",
+  "source_semantic_graph": "partial",
+  "keyboard_test": "simulated modifier facts, no OS injection",
+  "not_validated": [
+    "multi-view native reorder and dragging",
+    "physical hardware or OS chords",
+    "full raster parity",
+    "all module close policies",
+    "wired/wireless identity merge",
+    "complete build RAM/network acceptance"
+  ]
+}

@@ -1549,11 +1549,27 @@ fn native_assignment_source_draft_has_no_device_or_store_writes() {
                 if query()["prompt"] == true || query()["dirty"] != true {
                     return Err("Alert X discarded draft".into());
                 }
-                lighting_click(hwnd, x + 265.0, y - 16.0, scale);
-                lighting_click(hwnd, alert.discard.x + 50.0, alert.discard.y + 13.0, scale);
-                if query()["open"] == true {
-                    return Err("Don't Save did not close popup".into());
+                let mut request = json!({"key":87,"shift":false});
+                SendMessageW(hwnd,RUNTIME_TEST_QUERY,7,&mut request as *mut Value as isize);
+                redraw(hwnd);
+                if query()["prompt"]!=true || request["host_tabs"]["selected"].is_null() {
+                    return Err("Dirty host close bypassed draft gate".into());
                 }
+                lighting_click(hwnd,alert.close.x+10.0,alert.close.y+10.0,scale);
+                if query()["dirty"]!=true { return Err("Host-close dismissal lost draft".into()); }
+                let mut request=json!({"key":87,"shift":false});
+                SendMessageW(hwnd,RUNTIME_TEST_QUERY,7,&mut request as *mut Value as isize);
+                lighting_click(hwnd,alert.discard.x+50.0,alert.discard.y+13.0,scale);
+                redraw(hwnd);
+                if query()["open"]==true { return Err("Host discard left assignment open".into()); }
+                let mut host_state=Value::Null;
+                SendMessageW(hwnd,RUNTIME_TEST_QUERY,0,&mut host_state as *mut Value as isize);
+                if !host_state["host_tabs"]["selected"].is_null() || host_state["host_tabs"]["device_count"]!=1 {
+                    return Err("Host discard did not close only the view".into());
+                }
+                let mut reopen=json!({"key":84,"shift":true});
+                SendMessageW(hwnd,RUNTIME_TEST_QUERY,7,&mut reopen as *mut Value as isize);
+                redraw(hwnd);
                 lighting_click(
                     hwnd,
                     (key.left + key.right) / 2.0,
@@ -1627,7 +1643,7 @@ fn native_assignment_source_draft_has_no_device_or_store_writes() {
                 }
                 PostMessageW(hwnd, WM_CLOSE, 0, 0);
                 Ok(
-                    json!({"source_key_path_hit":true,"opaque_mapping_preserved":true,"mouse_category_and_dropdown":true,"turbo_controlled_numeric_repeat_and_drag":true,"unsupported_save_disabled":true,"source_drawer_wheel_and_thumb_drag":true,"source_icons_loaded":58,"dirty_close_prompt":true,"dismiss_keeps_draft":true,"discard_and_cancel_no_writes":true,"sim_commands_added":0,"profile_bytes_unchanged":true,"physical_discovery_disabled":true}),
+                    json!({"dirty_host_close_deferred":true,"host_dismiss_keeps_view":true,"host_discard_closes_only_view":true,"source_key_path_hit":true,"opaque_mapping_preserved":true,"mouse_category_and_dropdown":true,"turbo_controlled_numeric_repeat_and_drag":true,"unsupported_save_disabled":true,"source_drawer_wheel_and_thumb_drag":true,"source_icons_loaded":58,"dirty_close_prompt":true,"dismiss_keeps_draft":true,"discard_and_cancel_no_writes":true,"sim_commands_added":0,"profile_bytes_unchanged":true,"physical_discovery_disabled":true}),
                 )
             }
         })();
@@ -1844,6 +1860,46 @@ fn native_assignment_mouse_labels_and_drawer_have_source_hit_targets() {
                 if query()["open"] == true {
                     return Err("Escape did not cancel drawer popup".into());
                 }
+                let shortcut = |key: u32, shift: bool| {
+                    let mut value = json!({"key":key,"shift":shift});
+                    SendMessageW(hwnd, RUNTIME_TEST_QUERY, 7, &mut value as *mut Value as isize);
+                    redraw(hwnd);
+                    host()
+                };
+                let performance_x = tabs_x + Tab::Customize.width() + 20 + Tab::Performance.width()/2;
+                lighting_click(hwnd, performance_x as f64, 102.0, scale);
+                if host()["page"] != "PERFORMANCE" { return Err("Performance tab did not open".into()); }
+                shortcut(49,false); // Ctrl1 -> pinned Home
+                let restored = shortcut(50,false); // Ctrl2 -> existing device view
+                if restored["page"] != "PERFORMANCE" {
+                    return Err(format!("Host selection forgot the device section: {restored}"));
+                }
+                let tab = restored["tabs"].as_array().unwrap().iter().find(|t|t["id"]==selected).unwrap();
+                let (tx,ty) = point(tab);
+                SendMessageW(hwnd, WM_MBUTTONDOWN, 0, (tx as u32 | (ty as u32)<<16) as isize);
+                redraw(hwnd);redraw(hwnd);
+                let closed = host();
+                if !closed["selected"].is_null() || closed["order"].as_array().unwrap().len()!=0
+                    || closed["device_count"]!=1 || closed["cards"].as_array().unwrap().len()!=1 {
+                    return Err(format!("Closing view removed device or auto-reopened tab: {closed}"));
+                }
+                let saved_tabs:Value=serde_json::from_slice(&std::fs::read(controller_directory.join("tabs.json")).unwrap()).unwrap();
+                if saved_tabs["closed"][0] != selected { return Err("User-closed tab was not persisted".into()); }
+                let reopened = shortcut(84,true); // CtrlShiftT
+                if reopened["selected"]!=selected || reopened["order"].as_array().unwrap().len()!=1 {
+                    return Err(format!("Reopen shortcut failed: {reopened}"));
+                }
+                shortcut(87,false); // CtrlW
+                let dashboard=host();let card=&dashboard["cards"][0];let (cx,cy)=point(card);
+                lighting_click(hwnd,cx as f64/scale,cy as f64/scale,scale);redraw(hwnd);
+                if host()["selected"]!=selected { return Err("Dashboard card did not reopen closed view".into()); }
+                let mut close_button=Value::Null;
+                SendMessageW(hwnd,RUNTIME_TEST_QUERY,8,&mut close_button as *mut Value as isize);
+                redraw(hwnd);
+                if !host()["selected"].is_null() || host()["order"].as_array().unwrap().len()!=0 {
+                    return Err("Visible source close button did not close view".into());
+                }
+                shortcut(84,true);
                 if controller_sim.state().log.len() != before
                     || std::fs::read(controller_directory.join("profiles.json")).unwrap()
                         != before_store
@@ -1852,7 +1908,7 @@ fn native_assignment_mouse_labels_and_drawer_have_source_hit_targets() {
                 }
                 PostMessageW(hwnd, WM_CLOSE, 0, 0);
                 Ok(
-                    json!({"shared_host_home_device_navigation":true,"shared_host_hover_press_leave":true,"primary_left_disabled":true,"source_mouse_label_click":true,"drawer_filter_choices":true,"source_drawer_anchor_230":true,"escape_cancels":true,"sim_commands_added":0,"profile_bytes_unchanged":true,"physical_discovery_disabled":true}),
+                    json!({"source_close_button_hit":true,"host_section_retained":true,"middle_close_persists_without_removing_device":true,"shortcut_mapper_close_reopen":true,"dashboard_card_reopens_closed_tab":true,"shared_host_home_device_navigation":true,"shared_host_hover_press_leave":true,"primary_left_disabled":true,"source_mouse_label_click":true,"drawer_filter_choices":true,"source_drawer_anchor_230":true,"escape_cancels":true,"sim_commands_added":0,"profile_bytes_unchanged":true,"physical_discovery_disabled":true}),
                 )
             }
         })();

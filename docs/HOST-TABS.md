@@ -1,7 +1,8 @@
 # Shared host tab surface
 
-28 October 2026. This implements the visual surface and overflow navigation
-portion of inventory stage1. It does not complete the tab workflow or stage1.
+28 October 2026. This implements the visual surface, overflow navigation and
+device-view close/reopen/session portion of inventory stage1. Drag reordering,
+module pages and final visual acceptance remain incomplete.
 
 The native header now uses one `host_tabs` component for Home and every device,
 replacing the fixed178/214px blocks. It uses title/icon-based92..242px widths,
@@ -11,7 +12,7 @@ clipped labels and the source45px title fade. Transport suffixes stay in the
 device view instead of the host tab. The Synapse, mouse and keyboard icons are
 the recovered favicons, rasterized with alpha at3x density, not screenshots.
 
-The main tab is pinned. A clipped device viewport retains the source reserve
+The main tab is pinned and cannot close. A clipped device viewport retains the source reserve
 for dragging and144px window controls. Overflow arrows move to the preceding
 tab edge or next obscured tab's right edge plus6px; wheel movement scrolls
 horizontally. Selection and resize reveal the active tab. Hit areas are clipped
@@ -40,7 +41,7 @@ Useful TabUI byte locations: title overflow7698, active reveal20823,
 drag switch~22200/move22887/down23644, viewport24530. Common.js3390..4570
 contains the stock keyboard shortcuts. CSS defines the geometry and gradients.
 
-`tools/provision-host-assets.cjs` verifies five exact local SVG source hashes
+`tools/provision-host-assets.cjs` verifies eleven exact local SVG source hashes
 before producing private icons through `provision-window-assets.cjs`.
 Its arguments are the recovered `apps.razer.com` cache, asset output directory
 and installed Sharp module path. It also expects sibling `icons/raw` arrow
@@ -74,15 +75,71 @@ overflow geometry and real GDI+ selected/hover pixels at125% scaling.
   The gradient
   start is extended by one physical pixel to avoid GDI+ wrapping its first
   antialiased row; normalized browser comparisons must quantify the residual.
-- Source arrow hover/pressed/disabled art, smooth scroll/200ms tab animation,
-  tooltip, close eligibility/closed stack, drag reordering, session order and
-  global keyboard shortcuts remain open. The current arrows use original
-  default SVG artwork for every visual state; disabled actions are gated.
-- Device tabs still represent connected devices, as in the previous Lite
-  header. No new close/unpair/remove behavior is invented. Product196/605
-  manual-close activation remains unresolved; the source supports both states.
+- Smooth scroll/200ms tab animation, tooltip and drag reordering remain open.
+  Source arrow default/hover/pressed/disabled art is now provisioned and routed.
+- Device tabs now represent open views. Ordinary close/reopen is implemented
+  for the installed device families, gated by the current assignment draft.
+  Module-specific close/force-focus policy must be integrated when those
+  modules exist; no general close-policy parity for every stock workflow is claimed.
 - Multi-device overflow is covered by layout tests, not a multi-device native
   runtime fixture. Native navigation uses one simulated mouse.
 - This adds no profile migration, Calibration/Advanced, macro or Studio feature.
   Inactive frame appearance, other controls/text and complete-build memory,
   privacy, compatibility and hardware acceptance remain inventory work.
+
+## Device view lifecycle and persistence
+
+Closing a device tab now closes only the view. Its dashboard card, physical
+device and profiles remain available. A discovery refresh does not reopen a
+user-closed tab; clicking its dashboard card explicitly reopens it. A temporary
+disconnect does not count as user closure. Closing the active view selects its
+right neighbor, then its left neighbor if last, otherwise Home. Closing an
+inactive view preserves selection and the current draft. Switching between
+open views retains each view's selected device section; closing a view resets
+that in-memory section cache. Clicking the already-active tab is a no-op.
+
+The active hovered tab reveals the recovered24px close control, including its
+hover/pressed artwork. Middle click also closes a device view. Ctrl1..9 select
+position (Home=1); CtrlTab/CtrlShiftTab cycle; CtrlW requests active close;
+CtrlShiftT reopens the latest eligible closed view; CtrlShiftPageUp/PageDown
+move an active device tab within its current visible order. Home remains pinned.
+The message-loop shortcut handler also works while a native text field owns
+focus, but leaves the custom profile import/export modal alone.
+
+The `Session` module persists order and user-closed IDs in the fork's
+`tabs.json`, alongside but separate from profile data. Writes use the existing
+flushed temporary-file replacement helper; file reads are bounded to128KiB,
+lists to128 entries and each ID to512 bytes. Unknown JSON fields survive writes.
+Unsupported-version, malformed or oversized existing files are retained and
+are not overwritten; save failures use the existing visible error path.
+Read-only measurement modes skip persistence. The close history is session
+memory, not a copied stock localStorage file. Identity currently follows Lite
+device keys; wired/wireless identity unification remains a compatibility task.
+
+Source recovery corrected the initial assumption that connected views must
+stay permanently open. Host `TabStore.js` defaults `manualCloseViews=[]`; its
+SHA is `6fdba648e551a66cd906428de87bac7d9dc7b3fee0c868f22c8af7c1a03b4ab2`.
+`TabManager.js` SHA `52e68cd707de5504d0ee1ef053a2a796b2b0b846e2a004870f73100c0f5dd36f`
+handles close requests around byte3301 and intercepts manual-close/force-focus
+views. Bounded196/605 scans found wrapper definitions, not direct activation;
+that negative scan is not proof against computed or runtime activation.
+
+Dashboard `App.70b4a4e6.chunk.js` module28648 around bytes3830..8400 implements
+`synapse-tab-orders` and `synapse-closed-tab`, normalizing device window names,
+separating automatic removal from user close, and allowing explicit userOpen
+to bypass closed state. SHA
+`b6cd72ceea9ad59cadd024c4d8cee836b6816389008e4cee9d0ea3c4f2a267cc`.
+Device module39709 around byte68700 uses autoOpen for discovery and userOpen
+for card activation. These are inert shipped-source observations, not live
+vendor import, account or hardware operations.
+
+Six model/renderer tests pass. Native mouse tests cover actual close hit targets,
+middle close, retained Performance section, closed-state persistence, card reopen
+and shortcut mapper close/reopen. Native keyboard tests prove dirty close is
+deferred, dismiss preserves the draft, and explicit discard closes only the
+view. They retain exact profile bytes and add zero simulated transport commands.
+The keyboard regression uses process-private fonts outside the restricted runner.
+Shortcuts are exercised with simulated modifier facts through the real mapper
+and action path, not OS keyboard injection. Reordering/reload are model/file
+tests; multi-view native dragging and OS chord acceptance remain unverified.
+See `validation/host-tab-lifecycle.json` for the recorded results.

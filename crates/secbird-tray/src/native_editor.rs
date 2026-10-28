@@ -23,7 +23,7 @@ use windows_sys::Win32::UI::Controls::{
     EM_GETSEL, EM_SETLIMITTEXT, EM_SETMARGINS, EM_SETSEL, WM_MOUSELEAVE,
 };
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
-    GetFocus, ReleaseCapture, SetCapture, SetFocus, TrackMouseEvent, TME_LEAVE, TRACKMOUSEEVENT,
+    GetFocus, GetKeyState, ReleaseCapture, SetCapture, SetFocus, TrackMouseEvent, TME_LEAVE, TRACKMOUSEEVENT,
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
@@ -42,6 +42,7 @@ mod lighting_layout;
 mod lighting_view;
 mod image_render;
 mod host_tabs;
+mod host_tab_model;
 mod performance_layout;
 mod performance_view;
 mod power_layout;
@@ -361,6 +362,8 @@ enum Action {
     Home,
     Device(String),
     HostScroll(i32),
+    HostClose(String),
+    HostMove(String, usize),
     Tab(Tab),
     Refresh,
     ProfileMenu,
@@ -2051,12 +2054,17 @@ impl State {
     }
 
     unsafe fn action(&mut self, action: Action) {
+        if matches!(&action, Action::Device(id) if self.selected.as_ref() == Some(id)) {
+            return;
+        }
         if self.restricted_actions
             && !matches!(&action, Action::Close | Action::Minimize | Action::Maximize)
         {
             return;
         }
-        if !matches!(
+        let stays_on_page = matches!(&action, Action::HostMove(..))
+            || matches!(&action, Action::HostClose(id) if self.selected.as_ref() != Some(id));
+        if !stays_on_page && !matches!(
             &action,
             Action::Assignment(_) | Action::Minimize | Action::Maximize | Action::HostScroll(_)
         ) && self.assignment.draft.is_some()
@@ -2082,6 +2090,8 @@ impl State {
             return;
         }
         match action {
+            Action::HostClose(id) => host_tabs::close(self, &id),
+            Action::HostMove(id, target) => host_tabs::move_to(self, &id, target),
             Action::HostScroll(direction) => host_tabs::scroll(self, direction),
             Action::Assignment(control) => assignment_view::action(self, control),
             Action::Close => {
@@ -2103,6 +2113,7 @@ impl State {
                 );
             }
             Action::Home => {
+                host_tabs::remember(self);
                 self.renaming = None;
                 self.profile_actions = false;
                 self.selected = None;
@@ -2112,10 +2123,13 @@ impl State {
                 self.rebuild_fields();
             }
             Action::Device(id) => {
+                if !host_tabs::open(self, &id) { return; }
+                host_tabs::remember(self);
+                let page = self.host_tabs.borrow().pages.get(&id).copied().unwrap_or(Tab::Customize);
                 self.renaming = None;
                 self.profile_actions = false;
                 self.selected = Some(id);
-                self.tab = Tab::Customize;
+                self.tab = page;
                 self.profile_open = false;
                 self.buttons.clear();
                 self.sync_performance(true);
@@ -3693,6 +3707,39 @@ unsafe extern "system" fn window_proc(
     }
     #[cfg(test)]
     if message == RUNTIME_TEST_QUERY {
+        if wparam == 8 {
+            // Atomically hover and click the actual close hit target. Keep the
+            // user's cursor outside this simulated test window untouched.
+            let tab = (*pointer).borrow().hits.iter().find(|hit|
+                hit.rect.top > 0 && hit.rect.top < 60 &&
+                matches!(&hit.action,Action::Device(id) if Some(id)==(*pointer).borrow().selected.as_ref()))
+                .map(|hit|hit.rect);
+            if let Some(tab) = tab {
+                let point = (((tab.left+tab.right)/2) as u32 | (((tab.top+tab.bottom)/2) as u32)<<16) as isize;
+                SendMessageW(hwnd,WM_MOUSEMOVE,0,point);
+                RedrawWindow(hwnd,null(),null_mut(),RDW_INVALIDATE|RDW_UPDATENOW);
+                let close = (*pointer).borrow().hits.iter().find(|hit|matches!(hit.action,Action::HostClose(_))).map(|hit|hit.rect);
+                if let Some(close) = close {
+                    let point = (((close.left+close.right)/2) as u32 | (((close.top+close.bottom)/2) as u32)<<16) as isize;
+                    SendMessageW(hwnd,WM_MOUSEMOVE,0,point);
+                    SendMessageW(hwnd,WM_LBUTTONDOWN,1,point);
+                    SendMessageW(hwnd,WM_LBUTTONUP,0,point);
+                }
+            }
+            SendMessageW(hwnd,RUNTIME_TEST_QUERY,0,lparam);
+            return 0;
+        }
+        if wparam == 7 {
+            // Simulated modifier facts exercise the production shortcut mapper
+            // without injecting Ctrl/Shift into the user's keyboard state.
+            let request = (*(lparam as *const Value)).clone();
+            let action = host_tabs::shortcut_action(&(*pointer).borrow(),
+                request["key"].as_u64().unwrap() as usize, true,
+                request["shift"].as_bool().unwrap_or(false));
+            if let Some(Some(action)) = action { (*pointer).borrow_mut().action(action); }
+            SendMessageW(hwnd, RUNTIME_TEST_QUERY, 0, lparam);
+            return 0;
+        }
         if wparam == 6 {
             // One UI-thread batch tests transient hover/press state without
             // moving the user's cursor. Otherwise TrackMouseEvent legitimately
@@ -4116,6 +4163,14 @@ unsafe extern "system" fn window_proc(
             InvalidateRect(hwnd, null(), 0);
             0
         }
+        WM_MBUTTONDOWN if state.profile_modal.is_none() => {
+            let point = POINT { x: (lparam as u32 & 0xffff) as i16 as i32,
+                y: ((lparam as u32 >> 16) & 0xffff) as i16 as i32 };
+            let id = state.hits.iter().rev().find(|hit| point.y < state.px(42) && PtInRect(&hit.rect, point) != 0)
+                .and_then(|hit|match &hit.action { Action::Device(id) | Action::HostClose(id) => Some(id.clone()), _ => None });
+            if let Some(id) = id { state.action(Action::HostClose(id)); }
+            0
+        }
         WM_LBUTTONDOWN => {
             let point = POINT {
                 x: (lparam as u32 & 0xffff) as i16 as i32,
@@ -4517,7 +4572,7 @@ fn run_window(
             .spawn(move || worker(engine, jobs_rx, replies_tx))
             .map_err(|e| e.to_string())?;
         let mut state = Box::new(RefCell::new(State {
-            host_tabs: RefCell::new(host_tabs::View::default()),
+            host_tabs: RefCell::new(host_tabs::View::load()),
             customize_background: RefCell::new(dot_background::Cache::default()),
             hwnd: null_mut(),
             scale: initial_scale,
@@ -4593,6 +4648,15 @@ fn run_window(
                 "host-keyboard",
                 "host-scroll-left",
                 "host-scroll-right",
+                "host-scroll-left-hover",
+                "host-scroll-left-active",
+                "host-scroll-left-disabled",
+                "host-scroll-right-hover",
+                "host-scroll-right-active",
+                "host-scroll-right-disabled",
+                "close-tab",
+                "close-tab-hover",
+                "close-tab-pressed",
                 "minimize",
                 "maximize",
                 "restore",
@@ -4783,6 +4847,15 @@ fn run_window(
             let result = GetMessageW(&mut message, null_mut(), 0, 0);
             if result <= 0 {
                 break;
+            }
+            if message.message == WM_KEYDOWN && GetKeyState(18) >= 0 {
+                let action = host_tabs::shortcut_action(&state.borrow(), message.wParam,
+                    GetKeyState(17) < 0, GetKeyState(16) < 0);
+                if let Some(action) = action {
+                    if let Some(action) = action { state.borrow_mut().action(action); }
+                    InvalidateRect(hwnd, null(), 0);
+                    continue;
+                }
             }
             if message.message == WM_KEYDOWN && matches!(message.wParam, 13 | 27) {
                 let rename_edit = state.borrow().fields.get(&PROFILE_NAME).copied();

@@ -12,6 +12,12 @@ const sources = [
   ['keyboard', 'synapse/assets/imgs/favicon/KEYBOARD.svg___WB_REVISION___6b5905b6b4286d086ce57874b5127ef3', 'a5c665f592beae2b7cab277af9c1ffc01784f2240497425d2d33841541e51811'],
   ['scroll-left', '../../icons/raw/left-arrow.svg', 'c67e22c86bbbf9644013fd78f21cccd1046b88d218fe3eea221f3b790ef42531'],
   ['scroll-right', '../../icons/raw/right-arrow.svg', '15d6cc42d1243c8dd8564ff55b8ad3435adaf188af0282a80b932e0ef4547653'],
+  ['scroll-left-hover', '../../icons/raw/left-arrow-hover.svg', '97766c9c7761a1bea8cff5096cd5454b711e99b63b0b046f35d818e7a55470e5'],
+  ['scroll-left-active', '../../icons/raw/left-arrow-active.svg', '6200a6c42b44e7a7d886fe19df8ff0a1aebdd2629686ad05f33df080eb349b1c'],
+  ['scroll-left-disabled', '../../icons/raw/left-arrow-disabled.svg', '4e7995fe9aafc7a65705d13938b3e06d0077c24a223ea3ac7c22443c0310c44d'],
+  ['scroll-right-hover', '../../icons/raw/right-arrow-hover.svg', 'd1036fee99ef0a92bf3c848ffaa9bdcefcb15f2cbbb007e637269b5213eedf24'],
+  ['scroll-right-active', '../../icons/raw/right-arrow-active.svg', '5f3a805447c11a7aaf24bddcf6942ccb8cba445901d3a2cbdc294533b6b19d49'],
+  ['scroll-right-disabled', '../../icons/raw/right-arrow-disabled.svg', '309d3e2e8518b4c62f0b6595520ea58673267926ac0fa06d51486cb220ac50ac'],
 ];
 // Verify every input before writing any output. Assets remain private build data.
 const verified = sources.map(([role, source, sha256]) => {

@@ -1,18 +1,95 @@
-//! Shared AppEngine-style tab surface. Close/reorder eligibility remains a
-//! separate recovery item; this component does not remove connected devices.
+//! Shared AppEngine-style tab surface and local page lifecycle. Closing a tab
+//! removes only its view, and follows the current assignment dirty-state gate.
 use super::*;
 use windows_sys::Win32::Graphics::GdiPlus as gp;
 
 #[derive(Default)]
 pub(super) struct View {
+    pub session: host_tab_model::Session,
+    pub pages: HashMap<String, Tab>,
     pub hover: Option<String>,
     pub pressed: Option<String>,
+    close_hover: bool,
+    close_pressed: bool,
     scroll: i32,
     max_scroll: i32,
     viewport: i32,
     viewport_left: i32,
     active: Option<String>,
     slots: Vec<(i32, i32)>,
+}
+
+impl View {
+    pub fn load() -> Self {
+        Self {
+            session: host_tab_model::Session::load(secbird_core::config_dir().join("tabs.json")),
+            ..Self::default()
+        }
+    }
+}
+
+pub(super) fn remember(state: &State) {
+    if let Some(id) = &state.selected {
+        state
+            .host_tabs
+            .borrow_mut()
+            .pages
+            .insert(id.clone(), state.tab);
+    }
+}
+
+fn persist(state: &mut State) {
+    if state.read_only_smoke || state.restricted_actions {
+        return;
+    }
+    let result = state.host_tabs.borrow_mut().session.save();
+    if let Err(error) = result {
+        state.error(&format!("Tab layout was not saved: {error}"));
+    }
+}
+
+pub(super) fn open(state: &mut State, id: &str) -> bool {
+    let connected: Vec<_> = state
+        .devices()
+        .iter()
+        .filter_map(|d| d["id"].as_str().map(str::to_owned))
+        .collect();
+    let opened = {
+        let mut view = state.host_tabs.borrow_mut();
+        view.session.reconcile(&connected);
+        view.session.open(id)
+    };
+    if opened {
+        persist(state);
+    }
+    opened
+}
+
+pub(super) unsafe fn close(state: &mut State, id: &str) {
+    let previous = state.selected.clone();
+    let next = state
+        .host_tabs
+        .borrow_mut()
+        .session
+        .close(id, previous.as_deref());
+    state.host_tabs.borrow_mut().pages.remove(id);
+    persist(state);
+    if previous != next {
+        state.selected = None;
+        match next {
+            Some(id) => state.action(Action::Device(id)),
+            None => state.action(Action::Home),
+        }
+    }
+    InvalidateRect(state.hwnd, null(), 0);
+}
+
+pub(super) unsafe fn move_to(state: &mut State, id: &str, target: usize) {
+    if state.host_tabs.borrow_mut().session.move_to(id, target) {
+        state.host_tabs.borrow_mut().active = None;
+        persist(state);
+        InvalidateRect(state.hwnd, null(), 0);
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -257,11 +334,22 @@ unsafe fn label(
 }
 
 pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, window: i32) {
+    let ids: Vec<_> = state
+        .devices()
+        .iter()
+        .filter_map(|d| d["id"].as_str().map(str::to_owned))
+        .collect();
+    state.host_tabs.borrow_mut().session.reconcile(&ids);
+    let order = state.host_tabs.borrow().session.visible();
+    let devices: Vec<_> = order
+        .iter()
+        .filter_map(|id| state.devices().iter().find(|d| d["id"] == *id))
+        .collect();
     let home_outer = (text_advance(p, "SYNAPSE") + 56.0).clamp(92.0, 242.0);
     // Browser clientWidth rounds the fractional CSS box for host positioning;
     // retain the fractional box itself for painting and clipping.
     let home = home_outer.round() as i32;
-    let labels: Vec<_> = state.devices().iter().map(title).collect();
+    let labels: Vec<_> = devices.iter().map(|d| title(d)).collect();
     let outer_widths: Vec<_> = labels
         .iter()
         .map(|s| (text_advance(p, s) + 56.0).clamp(92.0, 242.0))
@@ -285,10 +373,9 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, window: i32) {
             left += width + 4;
         }
         if resized || view.active != state.selected {
-            if let Some(index) = state
-                .devices()
+            if let Some(index) = order
                 .iter()
-                .position(|d| d["id"].as_str() == state.selected.as_deref())
+                .position(|id| Some(id) == state.selected.as_ref())
             {
                 let left: i32 = widths[..index].iter().sum::<i32>() + index as i32 * 4;
                 let right = left + widths[index];
@@ -320,7 +407,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, window: i32) {
     let old_clip = SaveDC(p.dc);
     IntersectClipRect(p.dc, clip.left, clip.top, clip.right, clip.bottom);
     let mut x = g.start - state.host_tabs.borrow().scroll;
-    for (index, device) in state.devices().iter().enumerate() {
+    for (index, device) in devices.iter().enumerate() {
         let width = widths[index];
         let id = device["id"].as_str().unwrap_or("");
         if x + width > g.start && x < g.start + g.viewport {
@@ -346,6 +433,32 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, window: i32) {
                 rect,
                 action: Action::Device(id.into()),
             });
+            let view = state.host_tabs.borrow();
+            if state.selected.as_deref() == Some(id) && view.hover.as_deref() == Some(id) {
+                let close = css_rect(p, x as f32 + outer_widths[index] - 30.0, 13.0, 24.0, 24.0);
+                let icon = if view.close_pressed && view.close_hover {
+                    "close-tab-pressed"
+                } else if view.close_hover {
+                    "close-tab-hover"
+                } else {
+                    "close-tab"
+                };
+                if let Some(image) = state.icons.get(icon) {
+                    image_render::draw(p.dc, image.smooth, close, image.width, image.height);
+                }
+                let rect = RECT {
+                    left: close.left.max(clip.left),
+                    right: close.right.min(clip.right),
+                    top: close.top,
+                    bottom: close.bottom,
+                };
+                if rect.right > rect.left {
+                    p.hits.push(Hit {
+                        rect,
+                        action: Action::HostClose(id.into()),
+                    });
+                }
+            }
         }
         x += width + 4;
     }
@@ -360,6 +473,22 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, window: i32) {
                 v.scroll > 0
             } else {
                 v.scroll < v.max_scroll
+            };
+            let name = if direction < 0 {
+                "@scroll-left"
+            } else {
+                "@scroll-right"
+            };
+            let hover = v.hover.as_deref() == Some(name);
+            let pressed = v.pressed.as_deref() == Some(name) && hover;
+            let icon = match (direction < 0, enabled, hover, pressed) {
+                (true, false, _, _) => "host-scroll-left-disabled",
+                (false, false, _, _) => "host-scroll-right-disabled",
+                (true, true, _, true) => "host-scroll-left-active",
+                (false, true, _, true) => "host-scroll-right-active",
+                (true, true, true, _) => "host-scroll-left-hover",
+                (false, true, true, _) => "host-scroll-right-hover",
+                _ => icon,
             };
             p.image(state.icons.get(icon), x, 15, 20, 20);
             if enabled {
@@ -404,6 +533,53 @@ pub(super) fn contains(state: &State, point: POINT) -> bool {
         && point.x < state.px(view.viewport_left + view.viewport)
 }
 
+/// Some(None) consumes a recognized shortcut with no eligible destination.
+pub(super) fn shortcut_action(
+    state: &State,
+    key: usize,
+    control: bool,
+    shift: bool,
+) -> Option<Option<Action>> {
+    if !control || state.profile_modal.is_some() {
+        return None;
+    }
+    let view = state.host_tabs.borrow();
+    let order = view.session.visible();
+    let index = state
+        .selected
+        .as_ref()
+        .and_then(|id| order.iter().position(|key| key == id))
+        .map(|i| i + 1)
+        .unwrap_or(0);
+    let select = |position: usize| {
+        if position == 0 {
+            Some(Action::Home)
+        } else {
+            order.get(position - 1).cloned().map(Action::Device)
+        }
+    };
+    Some(match key {
+        9 => select(if shift {
+            (index + order.len()) % (order.len() + 1)
+        } else {
+            (index + 1) % (order.len() + 1)
+        }),
+        49..=57 if !shift => select(key - 49),
+        87 if !shift => state.selected.clone().map(Action::HostClose),
+        84 if shift => view.session.last_closed().map(Action::Device),
+        33 | 34 if shift => state.selected.as_ref().and_then(|id| {
+            let current = order.iter().position(|key| key == id)?;
+            let target = if key == 33 {
+                current.checked_sub(1)?
+            } else {
+                (current + 1 < order.len()).then_some(current + 1)?
+            };
+            Some(Action::HostMove(id.clone(), target))
+        }),
+        _ => return None,
+    })
+}
+
 #[cfg(test)]
 pub(super) fn diagnostics(state: &State) -> Value {
     let v = state.host_tabs.borrow();
@@ -417,6 +593,12 @@ pub(super) fn diagnostics(state: &State) -> Value {
     json!({"hover":v.hover,"pressed":v.pressed,"scroll":v.scroll,"maximum":v.max_scroll,
         "icons_loaded":icons.iter().filter(|icon| state.icons.contains_key(**icon)).count(),
         "natural_text_available":state.fonts.source_text.diagnostic().is_none(),
+        "order":v.session.visible(),"recent_closed":v.session.last_closed(),
+        "device_count":state.devices().len(),"page":state.tab.title(),
+        "cards":state.hits.iter().filter_map(|h| match &h.action {
+            Action::Device(id) if h.rect.top >= state.px(42) => Some(json!({"id":id,"x":h.rect.left,"y":h.rect.top,"width":h.rect.right-h.rect.left,"height":h.rect.bottom-h.rect.top})),
+            _ => None,
+        }).collect::<Vec<_>>(),
         "selected":state.selected,"tabs":state.hits.iter().filter_map(|h| {
             let id = match &h.action { Action::Home if h.rect.top < state.px(42) => "", Action::Device(id) if h.rect.top < state.px(42) => id, _ => return None };
             Some(json!({"id":id,"x":h.rect.left,"y":h.rect.top,"width":h.rect.right-h.rect.left,"height":h.rect.bottom-h.rect.top}))
@@ -429,27 +611,41 @@ pub(super) unsafe fn pointer(state: &State, message: u32, lparam: isize) {
         x: (lparam as u32 & 0xffff) as i16 as i32,
         y: ((lparam as u32 >> 16) & 0xffff) as i16 as i32,
     };
-    let hover = if message == WM_MOUSELEAVE {
+    let action = if message == WM_MOUSELEAVE {
         None
     } else {
         state
             .hits
             .iter()
+            .rev()
             .find(|hit| point.y < state.px(42) && PtInRect(&hit.rect, point) != 0)
-            .and_then(|hit| match &hit.action {
-                Action::Home => Some(String::new()),
-                Action::Device(id) => Some(id.clone()),
-                _ => None,
-            })
+            .map(|hit| hit.action.clone())
     };
+    let hover = action.as_ref().and_then(|action| match action {
+        Action::Home => Some(String::new()),
+        Action::Device(id) | Action::HostClose(id) => Some(id.clone()),
+        Action::HostScroll(direction) => Some(
+            if *direction < 0 {
+                "@scroll-left"
+            } else {
+                "@scroll-right"
+            }
+            .into(),
+        ),
+        _ => None,
+    });
     let mut view = state.host_tabs.borrow_mut();
-    let changed = view.hover != hover || message != WM_MOUSEMOVE;
+    let close_hover = matches!(action, Some(Action::HostClose(_)));
+    let changed = view.hover != hover || view.close_hover != close_hover || message != WM_MOUSEMOVE;
     view.hover = hover;
+    view.close_hover = close_hover;
     if message == WM_LBUTTONDOWN {
         view.pressed = view.hover.clone();
+        view.close_pressed = close_hover;
     }
     if matches!(message, WM_LBUTTONUP | WM_CANCELMODE | WM_MOUSELEAVE) {
         view.pressed = None;
+        view.close_pressed = false;
     }
     if changed {
         InvalidateRect(
