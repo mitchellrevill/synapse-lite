@@ -1,6 +1,6 @@
 {
   "fixture": "source-shaped synthetic grouped Static; not a captured stock export",
-  "release_cli_sha256": "322cba6a0763e22093a571bdd4c42e55eb06745049a63830c030ddcee23fcd63",
+  "release_cli_sha256": "9ea6fba671511837473ff2723354c01c398b7386845b6fc53056c801c84645da",
   "selected_profile_raw_bytes_preserved": true,
   "numeric_literals_preserved": true,
   "existing_output_refused": true,

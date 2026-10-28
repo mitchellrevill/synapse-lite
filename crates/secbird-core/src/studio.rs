@@ -15,6 +15,8 @@ use std::{
     io::{Read, Write},
 };
 
+pub mod document;
+
 pub const MAX_DOCUMENT_BYTES: usize = 8 * 1024 * 1024;
 pub const MAX_PROFILES: usize = 128;
 const MAX_FIELDS: usize = 64;
@@ -105,6 +107,29 @@ impl Archive {
         self.encode(None)
     }
 
+    /// Prepare a replacement without mutating this archive or saving a file.
+    pub fn replace_profile_bytes(&self, index: usize, profile_json: &str) -> Result<Vec<u8>> {
+        if index >= self.profiles.len() || profile_json.len() > MAX_DOCUMENT_BYTES {
+            return Err(invalid("replacement index or composition size is invalid"));
+        }
+        check_complexity(profile_json.as_bytes())?;
+        let raw = RawValue::from_string(profile_json.into()).map_err(invalid)?;
+        if !raw.get().trim_start().starts_with('{') {
+            return Err(invalid("replacement composition must be an object"));
+        }
+        let mut output = BoundedOutput(Vec::new());
+        serde_json::to_writer(
+            &mut output,
+            &Export {
+                archive: self,
+                selected: None,
+                replacement: Some((index, &raw)),
+            },
+        )
+        .map_err(invalid)?;
+        Ok(output.0)
+    }
+
     /// Zero-based selection, emitted in source order as in the stock exporter.
     /// Duplicate/out-of-range indices or empty selection are rejected.
     pub fn export_selected(&self, indices: &[usize]) -> Result<Vec<u8>> {
@@ -127,6 +152,7 @@ impl Archive {
             &Export {
                 archive: self,
                 selected,
+                replacement: None,
             },
         )
         .map_err(invalid)?;
@@ -265,6 +291,7 @@ impl<'de> Deserialize<'de> for WireArchive {
 struct Export<'a> {
     archive: &'a Archive,
     selected: Option<&'a BTreeSet<usize>>,
+    replacement: Option<(usize, &'a RawValue)>,
 }
 impl Serialize for Export<'_> {
     fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
@@ -292,7 +319,12 @@ impl Serialize for SelectedProfiles<'_, '_> {
                 .selected
                 .is_none_or(|selected| selected.contains(&index))
             {
-                sequence.serialize_element(profile)?;
+                match self.0.replacement {
+                    Some((target, replacement)) if target == index => {
+                        sequence.serialize_element(replacement)?
+                    }
+                    _ => sequence.serialize_element(profile)?,
+                }
             }
         }
         sequence.end()

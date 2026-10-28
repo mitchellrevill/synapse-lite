@@ -4,6 +4,10 @@ The core library and CLI now read and export selections from the recovered
 JSON-v1 `.ChromaEffects` container. This is the file-handling foundation for
 Studio, not a canvas editor, installed composition store or lighting runtime.
 
+The later [layer draft model](STUDIO-DRAFT.md) adds local rename/visibility and
+saved/working/undo/discard semantics plus archive-replacement preparation. It is
+not yet connected to native Studio controls or actual composition persistence.
+
 ```text
 secbird studio inspect Desk.ChromaEffects
 secbird studio export Desk.ChromaEffects Selected.ChromaEffects 1 3
