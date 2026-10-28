@@ -35,6 +35,17 @@ mod win;
 #[cfg(windows)]
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    if args.iter().any(|arg| arg == "--quit") {
+        if args.len() != 1 {
+            eprintln!("Use --quit alone to exit the running Synapse Lite tray instance");
+            std::process::exit(2);
+        }
+        if let Err(error) = win::request_exit() {
+            eprintln!("{error}");
+            std::process::exit(1);
+        }
+        return;
+    }
     if let Err(error) = runtime_probe::duration(&args) {
         eprintln!("{error}");
         std::process::exit(2);

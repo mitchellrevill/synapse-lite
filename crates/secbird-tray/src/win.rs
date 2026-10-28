@@ -151,6 +151,22 @@ enum Click {
 /// The release the editor asked to update to, for the tray's window to pick up.
 static REQUESTED_UPDATE: Mutex<Option<Release>> = Mutex::new(None);
 
+/// Explicit local CLI equivalent of Exit for replacing an older tray build.
+/// Use the existing window lifecycle so lighting ownership is stopped normally;
+/// do not terminate the process or initialize another HID engine to quit it.
+pub(crate) fn request_exit() -> std::result::Result<(), String> {
+    unsafe {
+        let tray = FindWindowW(wide(CLASS_NAME).as_ptr(), null());
+        if tray.is_null() {
+            return Ok(());
+        }
+        if PostMessageW(tray, WM_CLOSE, 0, 0) == 0 {
+            return Err(format!("Could not request tray exit: {}", GetLastError()));
+        }
+        Ok(())
+    }
+}
+
 /// The editor's "Update now": hand the release to the tray, which downloads and installs it
 /// and shows its progress. `false` when no tray is running (the editor alone, `--serve`).
 pub fn request_update(r: Release) -> bool {
