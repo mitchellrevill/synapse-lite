@@ -31,6 +31,13 @@ if not vcvars.is_file() or vcvars.name.lower() != "vcvars64.bat":
 
 state = ROOT / ".build-state"
 state.mkdir(exist_ok=True)
+temporary = state / "tmp"
+temporary.mkdir(exist_ok=True)
+cache = state / "cargo"
+if os.environ.get("KERNEL_CARGO_HOME"):
+    cache = required_path("KERNEL_CARGO_HOME")
+    if not cache.is_dir():
+        raise SystemExit("KERNEL_CARGO_HOME must identify a prepared Cargo cache directory")
 capture = state / "capture-msvc-env.cmd"
 capture.write_text(f'@call "{vcvars}" >nul\n@if errorlevel 1 exit /b 1\n@set\n', encoding="utf-8")
 # /u makes SET output unambiguous UTF16. Keep the complete environment only in
@@ -50,12 +57,14 @@ env.update(
     LIBCLANG_PATH=str(clang_bin),
     RUSTC=str(rust_bin / "rustc.exe"),
     RUSTDOC=str(rust_bin / "rustdoc.exe"),
-    CARGO_HOME=str(state / "cargo"),
+    CARGO_HOME=str(cache),
     RUSTUP_HOME=str(state / "rustup"),
     # Upstream wdk-build finds Cargo.lock by walking OUT_DIR ancestors.
     CARGO_TARGET_DIR=str(ROOT / "target"),
     CARGO_BUILD_JOBS="2",
     CARGO_TERM_COLOR="never",
+    TEMP=str(temporary),
+    TMP=str(temporary),
 )
 env["PATH"] = str(rust_bin) + os.pathsep + env["PATH"]
 command = [str(rust_bin / "cargo.exe"), "build", "--locked", "--release",

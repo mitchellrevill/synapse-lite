@@ -1,0 +1,17 @@
+{
+  "outcome": "not_launched_memory_gate",
+  "guest_disk_created": false,
+  "installer_navigation_requested": false,
+  "license_acceptance_requested": false,
+  "available_host_ram_bytes_at_launch_gate": 6825955328,
+  "shutdown_method": "child_not_running",
+  "vm_elapsed_seconds": null,
+  "minimum_host_ram_bytes": 10737418240,
+  "guest_ram_mib": 4096,
+  "vcpus": 2,
+  "network": "none",
+  "host_passthrough": false,
+  "guest_started": false,
+  "driver_loaded": false,
+  "preflight_tests_passed": 6
+}

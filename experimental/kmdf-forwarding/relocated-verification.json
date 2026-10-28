@@ -1,0 +1,58 @@
+{
+  "scope": "offline compile/link of published relocated source; no signing, loading or installation",
+  "source_base_commit": "60fd3c0473af0aee3b51228df0806b901b494043",
+  "artifact": "rz_passthrough_candidate.unsigned.sys",
+  "sha256": "48b7d3cf2bf0eafbf4fafdc3c28e3e13b5d7b89c42de4f15fd0da818e62ea38c",
+  "file_bytes": 13824,
+  "machine": "0x8664",
+  "subsystem": "Native",
+  "entry_point_rva": "0x22f0",
+  "certificate_directory": [
+    0,
+    0
+  ],
+  "imports": {
+    "ntoskrnl.exe": [
+      "RtlCopyUnicodeString",
+      "KeBugCheckEx",
+      "DbgPrintEx"
+    ],
+    "WDFLDR.SYS": [
+      "WdfVersionUnbindClass",
+      "WdfVersionBindClass",
+      "WdfVersionUnbind",
+      "WdfVersionBind",
+      "WdfLdrQueryInterface"
+    ]
+  },
+  "exports": {
+    "DriverEntry": "0x1cb0",
+    "__CxxFrameHandler3": "0x2230",
+    "__CxxFrameHandler4": "0x2240",
+    "__GSHandlerCheck_EH4": "0x2250",
+    "_fltused": "0x34b8"
+  },
+  "compile_exit_code": 0,
+  "offline": true,
+  "locked": true,
+  "jobs": 2,
+  "upstream_files_hash_verified": 140,
+  "upstream_commit": "04523040779d80125f280c4f9421f54a6059f470",
+  "source_hashes": {
+    "src/lib.rs": "83ddb5980b3633a059d42483c4471673734ccc778cbe775924276520d3caa038",
+    "Cargo.toml": "0a49cc4a87ef27d38fe3d88f5093e7aea4497282c73ed75ac54be3a0d83fce40",
+    "Cargo.lock": "ee0afe7617f3ea25849632f26900188ce94d7e5ca90f4955f9a414ac2de32995",
+    "build.rs": "4ba502d204dc53c6528578768db3696bb6883687d265f21d5af9c4bbd39b1029",
+    ".cargo/config.toml": "214508892a9b2e0fa45e88dbe5d069dd814a285210388ae68e05f152b7218ffc",
+    "build.py": "e8f578b310881ee0a3d03ad6202b213c3be2cb6cdc77f71f114c92ff5531ed7c"
+  },
+  "not_validated": [
+    "driver loading",
+    "input preservation",
+    "selectors or key output",
+    "PnP/power/removal",
+    "runtime RAM",
+    "full Razer parity"
+  ],
+  "authenticode_status": "NotSigned"
+}

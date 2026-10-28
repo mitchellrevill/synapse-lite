@@ -1,6 +1,6 @@
 # Experimental unsigned KMDF forwarding candidate
 
-This independent Cargo workspace compiled and linked as an x64 native KMDF1.33 PE using Rust1.91.0, LLVM20.1.8 and the Microsoft WDK/SDK26100.6584 NuGet contents. The staged source/lock/config match that experiment; dependency paths were relocated into the included Microsoft source subset, and that nested upstream workspace is excluded from the candidate's workspace membership. This relocated bundle was checked with Cargo metadata and has not been rebuilt merely to change paths.
+This independent Cargo workspace compiled and linked as an x64 native KMDF1.33 PE using Rust1.91.0, LLVM20.1.8 and the Microsoft WDK/SDK26100.6584 NuGet contents. The published relocated source now also builds offline with the locked dependencies and included Microsoft source subset. That nested upstream workspace is excluded from the candidate's workspace membership. See the separate historical and relocated build evidence below.
 
 The driver marks itself as a filter, allocates typed per-device context, records atomic cleanup/forwarding state, forwards current request types to the lower target with SEND_AND_FORGET, and completes failed sends with their reported status. Keyboard/mouse CONNECT_DATA is unchanged. It implements no RZCONTROL remapping, selectors, injection, virtual consumer device or lighting operation.
 
@@ -30,10 +30,31 @@ python build.py
 
 The script captures the MSVC environment in memory and sets Rust/WDK/Clang paths only for its build child. Cargo/Rustup homes and logs are private `.build-state` folders; target output remains under this workspace because upstream wdk-build requires Cargo.lock to be an ancestor of OUT_DIR. It does not change the default Rust toolchain, registry or persistent PATH. Cargo may acquire the locked registry dependencies into that private cache. After they exist, use `python build.py --offline` for an offline build.
 
+For an already prepared external Cargo cache, set `KERNEL_CARGO_HOME` to that
+existing directory. It is used only by the build child, avoiding a second download
+or copying cache credentials. With `--offline`, missing dependencies cause a
+build failure rather than network acquisition. The default remains the private
+`.build-state/cargo` directory. Target output stays inside this candidate.
+Compiler temporary files also stay in `.build-state/tmp` through child-local
+TEMP/TMP settings, avoiding archive moves through a restricted system temp folder.
+
 Output: `target/x86_64-pc-windows-msvc/release/rz_passthrough_candidate.dll`. Despite the Cargo extension, inspect the PE Native subsystem and WDF entrypoint; do not execute it as a user-mode DLL. A byte-identical `.sys` copy was made only for the saved experiment artifact. No installable package is generated.
 
 Do not invoke the upstream default `cargo make` packaging task for this compile-only experiment: that task creates a test certificate/store and signs artifacts. No such command is present in build.py.
 
 ## Evidence boundary
 
-The saved binary/logs were produced from the earlier private working path, before this source relocation. The original build took59.39seconds; the final candidate-only rebuild took0.50seconds. New portable instructions do not rewrite that evidence or imply a second execution. See [the published build evidence](../../../docs/KERNEL-BUILD.md) and [sanitized static verification](../static-verification.json). The binary, SDK/tool payloads and historical private logs are not committed.
+The original private-path build took59.39seconds; its final candidate-only rebuild
+took0.50seconds. [Historical static verification](../static-verification.json)
+and `staging-verification.json` retain that earlier scope and source snapshot.
+
+The later published-path rebuild actually ran `build.py --offline`, using an
+existing prepared cache. Its first compile reached linking but failed moving a
+compiler archive through the restricted system temp folder. The child-local
+TEMP/TMP fix above allowed the candidate-only retry to finish in1.19seconds.
+[Relocated verification](../relocated-verification.json) records the new13824-byte
+unsigned binary, exact current build inputs and140 verified upstream source
+files. Its digest differs from the historical binary; byte reproducibility
+between those workspaces is not claimed. Both binaries remain private artifacts.
+See [the build and VM evidence](../../../docs/KERNEL-BUILD.md). SDK/tool payloads,
+caches and private logs are not committed. Neither build loads the driver.
