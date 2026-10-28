@@ -46,6 +46,7 @@ pub mod net;
 pub mod ornata_frame;
 pub mod ornata_driver_mode;
 pub mod ornata_identity;
+pub mod ornata_gaming_indicator;
 #[cfg(windows)]
 pub mod ornata_manifest;
 pub mod ornata_spatial;

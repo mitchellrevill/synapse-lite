@@ -97,8 +97,9 @@ impl std::str::FromStr for Dimming {
     }
 }
 
-/// A keyboard's gaming mode: the keys it blocks so a game isn't left by accident. Nothing
-/// blocked is gaming mode off. As text: `off`, or the blocked keys, like `win,alt-tab`.
+/// Legacy Gaming Mode text projection: `off`, or e.g. `win,alt-tab`.
+/// This retains profile compatibility, not proof of a firmware shortcut mask.
+/// Ornata025D refuses the firmware API and requires a host mapping runtime.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct GameMode {
     pub win: bool,
@@ -309,6 +310,11 @@ impl Device {
     /// The keys a keyboard or keypad blocks in gaming mode. `None` for other devices; an
     /// error when the keyboard has no gaming mode.
     pub fn game_mode(&self) -> Result<Option<GameMode>> {
+        if self.pid == 0x025d {
+            return Err(Error::Unsupported(
+                "Ornata Gaming Mode uses host input mappings; the firmware state byte is not a shortcut-blocking mask".into(),
+            ));
+        }
         if !self.spec.as_ref().is_some_and(|s| matches!(s.kind, crate::Kind::Keyboard | crate::Kind::Keypad)) {
             return Ok(None);
         }
@@ -318,6 +324,11 @@ impl Device {
 
     /// Set it, then read it back: a keyboard that doesn't block some of these keys says so.
     pub fn set_game_mode(&self, want: GameMode) -> Result<()> {
+        if self.pid == 0x025d {
+            return Err(Error::Unsupported(
+                "Ornata Gaming Mode requires selected-device host input routing and recovery; no firmware shortcut mask was sent".into(),
+            ));
+        }
         self.transact(cmd::GAME_MODE, cmd::GAME_MODE_SIZE, &[want.bits(), 0, 0, 0])?;
         let got = self.game_mode()?;
         if got != Some(want) {

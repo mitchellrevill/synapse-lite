@@ -26,6 +26,12 @@ pub fn source_snap_tap(profile: &Profile) -> Option<&Value> {
     profile.extra.get(SOURCE)?.get("decoded")?.get("snapTap")
 }
 
+/// Retained host Gaming Mode settings, including conditional settings that have
+/// no legacy game_mode projection. This reads without migrating saved bytes.
+pub fn source_gaming_mode(profile: &Profile) -> Option<&Value> {
+    profile.extra.get(SOURCE)?.get("decoded")?.get("gamingMode")
+}
+
 #[cfg(test)]
 mod expanded_tests;
 

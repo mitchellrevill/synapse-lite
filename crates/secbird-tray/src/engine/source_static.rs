@@ -318,12 +318,17 @@ mod host_static_tests {
             std::fs::remove_dir_all(self.path.parent().unwrap()).unwrap();
         }
     }
+    fn only_missing_gaming_runtime(failures: &[String]) {
+        assert_eq!(failures.len(), 1, "{failures:?}");
+        assert!(failures[0].starts_with("Gaming Mode:"), "{failures:?}");
+        assert!(failures[0].contains("host shortcut blocking"), "{failures:?}");
+    }
     #[test]
     fn activation_uses_latest_native_color_before_live_brightness_and_never_saved_effect() {
         let mut f = Fixture::new();
         f.color(Rgb(9, 8, 7));
         let reports = f.engine.apply(std::slice::from_ref(&f.key));
-        assert!(reports[0].failures.is_empty(), "{:?}", reports[0].failures);
+        only_missing_gaming_runtime(&reports[0].failures);
         assert!(f.uniform([9, 8, 7]));
         assert_eq!(f.spy.sim.state().brightness[&5], 186);
         assert_eq!(
@@ -409,7 +414,7 @@ mod host_static_tests {
         assert_eq!(f.spy.state.lock().unwrap().attempts, 3);
         f.spy.state.lock().unwrap().fail_at = None;
         let reports = f.engine.apply(std::slice::from_ref(&f.key));
-        assert!(reports[0].failures.is_empty(), "{:?}", reports[0].failures);
+        only_missing_gaming_runtime(&reports[0].failures);
         assert_eq!(f.spy.state.lock().unwrap().attempts, 10);
     }
     #[test]
@@ -554,7 +559,7 @@ mod host_static_tests {
         let mut f = Fixture::new();
         f.spy.state.lock().unwrap().mode = 0;
         let reports = f.engine.apply(std::slice::from_ref(&f.key));
-        assert!(reports[0].failures.is_empty(), "{:?}", reports[0].failures);
+        only_missing_gaming_runtime(&reports[0].failures);
         assert_eq!(f.spy.sim.state().brightness[&5], 104);
         assert_eq!(f.spy.sim.state().live_brightness[&5], 104);
         assert!(f.spy.sim.state().effects.contains_key(&5));

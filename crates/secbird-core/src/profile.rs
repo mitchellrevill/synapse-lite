@@ -61,7 +61,8 @@ pub struct Profile {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dimming: Option<String>,
     /// Keyboards: the keys gaming mode blocks (`off`, or like `win,alt-tab`), see
-    /// [`crate::GameMode`]. Per profile, so a profile tied to a game can turn it on.
+    /// [`crate::GameMode`]. Ornata retains this legacy projection but reports the
+    /// missing host mapping runtime instead of sending firmware shortcut bits.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub game_mode: Option<String>,
     /// Lighting zone name (or numeric id) -> state.
@@ -559,7 +560,13 @@ impl Profile {
         if let Some(d) = &self.dimming {
             push(format!("keyboard when idle: {d}"), d.parse().and_then(|d| dev.set_dimming(d)));
         }
-        if let Some(g) = &self.game_mode {
+        if dev.pid == 0x025d
+            && (self.game_mode.is_some() || crate::profile_compat::source_gaming_mode(self).is_some())
+        {
+            push("Gaming Mode".into(), Err(Error::Unsupported(
+                "Ornata Gaming Mode intent is retained; host shortcut blocking and recovery are not yet implemented".into(),
+            )));
+        } else if let Some(g) = &self.game_mode {
             push(format!("gaming mode: {g}"), g.parse().and_then(|g| dev.set_game_mode(g)));
         }
         if self.snap_tap.is_some() || crate::profile_compat::source_snap_tap(self).is_some() {

@@ -30,8 +30,13 @@ The later [selected keyboard notification transport](KEYBOARD-NOTIFICATIONS.md)
 adds an explicit passive subscription API independently of this GET-only reader.
 Normal025D role2 notifications use type1, not solely the type0xB alternate helper
 in the original ABI notes. Physical subscription/cancellation cleanup passed;
-confirmed physical typing still produced zero events, so delivery remains
-unverified. No interception or key-submission API is enabled by that checkpoint.
+earlier confirmed physical typing samples produced zero events. A later combined
+driver-mode/Raw Input check captured52 vendor records and52 MI01 raw records,
+with observation cleanup and mode0 restoration; see
+[input-source evidence](ORNATA-INPUT-SOURCE.md). This proves delivery in that
+combined setup, not isolated mode3 behavior. No live interception or generated
+input is enabled. Ornata [Gaming Mode](ORNATA-GAMING-MODE.md) also requires host
+mapping; its separately verified indicator is not shortcut blocking.
 
 The Rust reader successfully enumerated the installed keyboard 025D and wired mouse 00C4 endpoints. With stock Synapse running, it received four keyboard-endpoint selectors and one mouse-endpoint selector, all 292 bytes. The next mouse index produced generic Windows error 31. See [the redacted runtime summary](validation/driver-control.json).
 

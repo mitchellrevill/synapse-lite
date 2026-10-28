@@ -3,6 +3,57 @@ use crate::buttons::{Action, Layer};
 use crate::features::DpiStages;
 
 #[test]
+fn ornata_gaming_intent_roundtrips_without_claiming_firmware_replay() {
+    let sim = crate::sim::Sim::keyboard();
+    let dev = crate::Device::open(Box::new(sim.clone()), 605, 2,
+        std::ffi::CString::new("sim-gaming-intent").unwrap(), &[0xff],
+        crate::sim::Sim::spec_for(crate::sim::KEYBOARD_PID)).unwrap();
+    for (state, in_game) in [(0, false), (1, false), (2, false), (1, true)] {
+        let source = json!({"guid":"gaming-replay","name":"Fixture","mappings":[],"gamingMode":{
+            "state":state,"enableInGame":in_game,"isWindowsKeyDisabled":true,
+            "isAltTabDisabled":true,"isAltF4Disabled":false,"future":{"keep":7}}});
+        let report = import_document(&document(source.clone(), 605)).unwrap();
+        assert!(report.warnings.iter().any(|warning| warning.contains("without firmware replay")));
+        assert_eq!(payload(&report.store, "025D", "Fixture"), source);
+        let native = import_document(&report.store.native_bytes().unwrap()).unwrap();
+        assert_eq!(payload(&native.store, "025D", "Fixture"), source);
+        let original = &native.store.devices["025D"].profiles["Fixture"];
+        // Test retained source-only backups as well as the historical text projection.
+        for source_only in [false, true] {
+            let mut profile = original.clone();
+            if source_only { profile.game_mode = None; }
+            let before = serde_json::to_value(&profile).unwrap();
+            sim.state().log.clear();
+            let applied = profile.apply(&dev);
+            assert!(applied.iter().any(|entry| entry.setting == "Gaming Mode" && entry.result.is_err()));
+            assert!(sim.state().log.is_empty(), "Gaming intent must not send an unrelated firmware command");
+            assert_eq!(serde_json::to_value(&profile).unwrap(), before);
+        }
+    }
+}
+
+#[test]
+fn legacy_ornata_gaming_text_reports_missing_host_without_hardware_or_profile_changes() {
+    let sim = crate::sim::Sim::keyboard();
+    let dev = crate::Device::open(Box::new(sim.clone()), 605, 2,
+        std::ffi::CString::new("sim-legacy-gaming").unwrap(), &[0xff],
+        crate::sim::Sim::spec_for(crate::sim::KEYBOARD_PID)).unwrap();
+    for mode in [0, 3] {
+        sim.state().device_mode = Some(mode);
+        for text in ["off", "win", "win,alt-tab,alt-f4"] {
+            let profile = Profile { game_mode: Some(text.into()), ..Default::default() };
+            let before = serde_json::to_value(&profile).unwrap();
+            sim.state().log.clear();
+            let applied = profile.apply(&dev);
+            assert_eq!(applied.len(), 1);
+            assert!(applied[0].result.as_ref().unwrap_err().to_string().contains("host shortcut blocking"));
+            assert!(sim.state().log.is_empty());
+            assert_eq!(serde_json::to_value(&profile).unwrap(), before);
+        }
+    }
+}
+
+#[test]
 fn ornata_snap_tap_preserves_source_shape_and_pair_edits_without_claiming_replay() {
     let source=json!({"guid":"snap-fixture","name":"Fixture","mappings":[],
         "snapTap":{"isEnabled":true,"future":{"keep":true},"keyList":[

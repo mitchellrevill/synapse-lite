@@ -1,0 +1,14 @@
+{
+  "baseline_indicator": false,
+  "change_error": null,
+  "change_verified": true,
+  "generated_input": false,
+  "indicator_write_requested": true,
+  "input_mode_final": 3,
+  "input_mode_initial": 3,
+  "input_mode_write_requested": false,
+  "profile_write_requested": false,
+  "requested_indicator": true,
+  "restoration_verified": true,
+  "selector_write_requested": false
+}

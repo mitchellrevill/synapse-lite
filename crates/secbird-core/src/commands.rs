@@ -97,9 +97,10 @@ pub const AUTO_SLEEP_SIZE: u8 = 0x02;
 /// `[profile 1, enabled, level]`).
 pub const SMART_DIMMING: Command = Command::new(0x07, 0x13);
 pub const SMART_DIMMING_SIZE: u8 = 0x03;
-/// Keyboards: gaming mode, `[bits, ...]` (Synapse's "Game Mode State"; reply `[bits, key
-/// cover, lifted, 0]`). Bits from Synapse's `getGameModeBit`: 1 on, 4 Windows key, 8 Alt+Tab,
-/// 16 Alt+F4 blocked.
+/// Generic SDK Game Mode State command; reply includes gameMode/keyCover/lifted.
+/// `getGameModeBit` is a host profile fingerprint, not an established firmware
+/// shortcut mask. Ornata025D uses host mappings and a separate gaming LED command;
+/// its public GameMode API refuses this legacy shortcut projection before I/O.
 pub const GAME_MODE: Command = Command::new(0x00, 0x08);
 pub const GAME_MODE_SIZE: u8 = 0x04;
 

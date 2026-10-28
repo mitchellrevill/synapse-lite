@@ -168,6 +168,7 @@ pub(super) fn import_game_mode(
     let Some(gaming) = source.get("gamingMode") else {
         return Ok(());
     };
+    warnings.push(format!("{name}: Ornata Gaming Mode requires host shortcut blocking and recovery; settings are retained without firmware replay"));
     let state = integer(gaming.get("state"), 0, 2, "gamingMode.state")?;
     let flag = |key| {
         gaming
@@ -184,7 +185,7 @@ pub(super) fn import_game_mode(
         .iter()
         .any(|key| gaming.get(*key).and_then(Value::as_bool) == Some(true));
     if conditional || extra_shortcuts || (state == 1 && !win && !alt_tab && !alt_f4) {
-        warnings.push(format!("{name}: conditional gaming mode or additional shortcut blocking is preserved but cannot be applied by the native gaming-mode contract"));
+        warnings.push(format!("{name}: conditional gaming mode or additional shortcut blocking is preserved without a legacy text projection"));
     } else {
         let mode = if state == 0 {
             GameMode::default()

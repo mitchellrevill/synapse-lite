@@ -291,7 +291,9 @@ impl SimState {
         let ok = |v: Vec<u8>| (Success, v);
         // Each device speaks one lighting generation and ignores the other.
         let old_lighting = c.class == 0x03 && c.id & 0x80 == 0;
-        if (self.standard && c.class == 0x0F) || (!self.standard && old_lighting) {
+        let gaming_indicator = (c == cmd::LED_STATE || c == cmd::LED_STATE.get())
+            && a[0] == 0 && a[1] == 8 && self.leds.contains(&8);
+        if (self.standard && c.class == 0x0F) || (!self.standard && old_lighting && !gaming_indicator) {
             return (NotSupported, vec![]);
         }
         let known = |s: &Self, led: u8| s.leds.contains(&led);
@@ -596,6 +598,12 @@ impl SimState {
             }
             cmd::LED_STATE | cmd::LED_RGB | cmd::LED_EFFECT | cmd::LED_BRIGHTNESS if !known(self, a[1]) => {
                 (Failed, vec![])
+            }
+            c if c == cmd::LED_STATE.get() => {
+                if size != 3 || a[0] != 0 || !known(self, a[1]) {
+                    return (Failed, vec![]);
+                }
+                ok(vec![0, a[1], u8::from(self.led_on.get(&a[1]).copied().unwrap_or(false))])
             }
             cmd::LED_STATE => {
                 self.led_on.insert(a[1], a[2] != 0);
@@ -1627,22 +1635,28 @@ mod tests {
     }
 
     #[test]
-    fn gaming_mode_blocks_keys_and_is_kept_in_the_profile() {
+    fn ornata_gaming_mode_refuses_unproven_firmware_mask_without_saving_or_io() {
         use crate::GameMode;
         let sim = Sim::keyboard();
-        let dev = open(&sim, KEYBOARD_PID);
-        assert_eq!(dev.game_mode().unwrap(), Some(GameMode::default()));
-        let path = std::env::temp_dir().join(format!("secbird-gaming-{}.json", std::process::id()));
+        let dev = crate::Device::open(Box::new(sim.clone()), 605, 2,
+            std::ffi::CString::new("sim-ornata-gaming").unwrap(), &[0xff],
+            Sim::spec_for(KEYBOARD_PID)).unwrap();
+        sim.state().log.clear();
+        assert!(dev.game_mode().is_err());
+        let path = std::env::temp_dir().join(format!("secbird-gaming-{}-{}.json", std::process::id(),
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
         let mut store = crate::Store::load(&path).unwrap();
-        let want: GameMode = "win,alt-tab".parse().unwrap();
-        crate::actions::set_game_mode(&dev, &mut store, want).unwrap();
-        let _ = std::fs::remove_file(&path);
-        assert_eq!(sim.state().game_mode, Some(1 | 4 | 8), "Synapse's bits");
-        assert_eq!(dev.game_mode().unwrap(), Some(want));
-        assert_eq!(store.for_device(&dev).active_mut().game_mode.as_deref(), Some("win,alt-tab"));
-
-        dev.set_game_mode(GameMode::default()).unwrap();
-        assert_eq!(sim.state().game_mode, Some(0), "off is all bits clear");
+        store.for_device(&dev);
+        let before = serde_json::to_value(&store).unwrap();
+        for want in ["off", "win", "alt-tab", "alt-f4", "win,alt-tab,alt-f4"] {
+            let mode: GameMode = want.parse().unwrap();
+            assert!(dev.set_game_mode(mode).is_err());
+            assert!(crate::actions::set_game_mode(&dev, &mut store, mode).is_err());
+        }
+        assert_eq!(serde_json::to_value(&store).unwrap(), before);
+        assert!(sim.state().log.is_empty(), "No GET or SET before unsupported result");
+        assert_eq!(sim.state().game_mode, Some(0));
+        assert!(!path.exists(), "A refused action must not create a profile store");
         assert_eq!(GameMode::default().to_string(), "off");
         assert_eq!("off".parse::<GameMode>().unwrap(), GameMode::default());
         assert!("ctrl".parse::<GameMode>().is_err());
