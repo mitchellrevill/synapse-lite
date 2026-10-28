@@ -200,6 +200,7 @@ dependencies = [
 name = "secbird-tray"
 version = "0.5.0"
 dependencies = [
+ "cc",
  "embed-resource",
  "secbird-core",
  "serde",

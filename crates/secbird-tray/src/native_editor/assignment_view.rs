@@ -144,6 +144,21 @@ unsafe fn baseline_text(
     flags: u32,
     role: Role,
 ) -> bool {
+    if matches!(role, Role::Heading)
+        && p.source_text(
+            t,
+            source_text::Role::AssignmentHeading,
+            source_text::SourceBox {
+                left: r.x as f32,
+                top: r.y as f32,
+                width: r.width as f32,
+            },
+            box_px(p, r),
+            color,
+        )
+    {
+        return true;
+    }
     let Some(y) = role.pixel(r.y, p.scale as f64) else {
         return false;
     };
@@ -1539,6 +1554,27 @@ pub(super) unsafe fn font_diagnostics(s: &State) -> Value {
         (points.iter().map(|p| p.y).min(), count, read)
     };
     for (role, font, height, source_baseline) in cases {
+        if matches!(role, Role::Heading) {
+            // DirectWrite renders glyph pixels, not a GDI BeginPath outline.
+            // The linked bridge's pixel/metric test validates that renderer;
+            // here exercise the real assignment call site and its font state.
+            let emitted = baseline_text(
+                &painter, "A", r(0.0, 0.0, 200.0, height), font,
+                0xcccccc, DT_SINGLELINE, role,
+            );
+            let metrics = s.fonts.source_text.metrics();
+            let expected = (source_baseline * s.scale as f64).round() as i32;
+            let actual = metrics.source_baseline_physical.round() as i32;
+            rows.push(json!({
+                "role":"Heading", "verification":"natural-layout/source-baseline",
+                "actual_baseline_px":actual, "expected_baseline_px":expected,
+                "source_baseline_css":source_baseline, "face":"authenticated RazerF5",
+                "emitted":emitted, "fallback":s.fonts.source_text.diagnostic(),
+                "matches":emitted && s.fonts.source_text.diagnostic().is_none()
+                    && metrics.advance_css > 0.0 && actual == expected,
+            }));
+            continue;
+        }
         let old_font = SelectObject(dc, font);
         let mut face = [0u16; 80];
         let face_len = GetTextFaceW(dc, face.len() as i32, face.as_mut_ptr());

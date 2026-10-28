@@ -38,3 +38,4 @@ windows-sys = { version = "0.59", features = [
 
 [build-dependencies]
 embed-resource = "2.5"
+cc = "=1.7.0"

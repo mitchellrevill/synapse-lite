@@ -52,6 +52,7 @@ mod profile_modal_model;
 mod profile_modal_view;
 mod runtime_status;
 mod source_layout;
+mod source_text;
 mod viewport;
 mod window_frame;
 
@@ -654,6 +655,7 @@ fn worker(
 }
 
 struct Fonts {
+    source_text: source_text::Renderer,
     tiny: HFONT,
     small: HFONT,
     normal: HFONT,
@@ -696,6 +698,7 @@ impl Fonts {
             )
         };
         Self {
+            source_text: source_text::Renderer::new(assets),
             tiny: make("Roboto", 10, 400),
             small: make("Roboto", 12, 400),
             normal: make("Roboto", 14, 400),
@@ -1517,6 +1520,8 @@ impl State {
             "reserved_footer_css":if self.source_viewport(){0}else{35},
             "fidelity": "partial source-derived native port; pixel identity unproven"
         });
+        report["source_text_fallback"] = json!(self.fonts.source_text.diagnostic());
+        report["source_text_cached_layouts"] = json!(self.fonts.source_text.metrics().cached_layouts);
         report["active_native_runtime"] = active_runtime.unwrap_or(Value::Null);
         report["uniform_worker_disabled"] = json!(!self.lighting_probe);
         report["intrinsic_read_only_measurement"] = json!(
@@ -2464,6 +2469,32 @@ struct Painter<'a> {
 }
 
 impl Painter<'_> {
+    unsafe fn source_text(
+        &self,
+        text: &str,
+        role: source_text::Role,
+        source: source_text::SourceBox,
+        bounds: RECT,
+        color: u32,
+    ) -> bool {
+        if text.is_empty() || bounds.right <= bounds.left || bounds.bottom <= bounds.top {
+            return false;
+        }
+        self.fonts.source_text.draw(
+            self.dc,
+            text,
+            role,
+            source_text::Clip {
+                x: bounds.left,
+                y: bounds.top,
+                width: (bounds.right - bounds.left) as u32,
+                height: (bounds.bottom - bounds.top) as u32,
+            },
+            source,
+            self.scale,
+            rgb(color),
+        )
+    }
     fn px(&self, value: i32) -> i32 {
         (value as f32 * self.scale).round() as i32
     }
@@ -2734,16 +2765,29 @@ unsafe fn paint(state: &mut State, dc: HDC) {
         .as_ref()
         .and_then(|d| d["name"].as_str())
         .unwrap_or("RAZER SYNAPSE");
-    p.text(
-        &title.to_uppercase(),
-        width / 4,
-        42,
-        width / 2,
-        38,
-        p.fonts.normal,
+    let title = title.to_uppercase();
+    if !p.source_text(
+        &title,
+        source_text::Role::ToolbarTitle,
+        source_text::SourceBox {
+            left: (width / 4) as f32,
+            top: 42.0,
+            width: (width / 2) as f32,
+        },
+        p.rect(width / 4, 42, width / 2, 38),
         MUTED,
-        DT_CENTER,
-    );
+    ) {
+        p.text(
+            &title,
+            width / 4,
+            42,
+            width / 2,
+            38,
+            p.fonts.normal,
+            MUTED,
+            DT_CENTER,
+        );
+    }
     p.line(0, 79, width, 0);
     if let Some(device) = device {
         let center = (width / 2).max(420);
@@ -3351,6 +3395,19 @@ unsafe fn paint(state: &mut State, dc: HDC) {
     }
     assignment_view::paint_popup(state, &mut p);
     profile_modal_view::paint(state, &mut p);
+    if p.fonts.source_text.diagnostic().is_some() {
+        p.fill(0, height - 24, width, 24, BG);
+        p.text(
+            "Source typography unavailable; using fallback text",
+            20,
+            height - 24,
+            width - 40,
+            24,
+            p.fonts.tiny,
+            MUTED,
+            DT_LEFT,
+        );
+    }
     if state.focus > 0 {
         if let Some(hit) = p.hits.get(state.focus - 1) {
             DrawFocusRect(dc, &hit.rect);
