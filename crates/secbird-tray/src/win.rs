@@ -677,7 +677,7 @@ impl App {
             let names: Vec<String> =
                 engine.devices().iter().filter(|d| new.contains(&d.key())).map(|d| engine.label(d)).collect();
             let targets = if apply_all { engine.all_keys() } else { new };
-            (engine.apply(&targets), names, engine.synapse().to_vec())
+            (engine.apply_connected(&targets), names, engine.synapse().to_vec())
         };
         if !new_names.is_empty() {
             log::append(&format!("found: {}", new_names.join(", ")));

@@ -1,0 +1,18 @@
+{
+  "date": "2026-10-28",
+  "tests_passed": 4,
+  "scope": [
+    "connection Calibration replay versus named profile switches",
+    "same-serial00C4/00C5 Rotation aliases",
+    "exact failed Calibration replay recovery",
+    "stock ownership and read-only refusal",
+    "two same-named models remain physically distinct"
+  ],
+  "core_suite_passed": 324,
+  "tray_suite_passed": 212,
+  "doc_tests_passed": 1,
+  "physical_reconnect_verified": false,
+  "physical_report": "mouse-sensor-physical.json",
+  "connection_replay_entrypoint_tested": true,
+  "transport_disconnect_simulated": false
+}

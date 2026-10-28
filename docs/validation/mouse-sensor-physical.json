@@ -1,0 +1,83 @@
+{
+  "calibration": {
+    "before": {
+      "lift_height": 0,
+      "lift_mode": 0,
+      "proximity_state": 0
+    },
+    "checks": [
+      {
+        "after": {
+          "lift_height": 0,
+          "lift_mode": 1,
+          "proximity_state": 1
+        },
+        "error": null,
+        "requested_mm": 1,
+        "write_verified": true
+      },
+      {
+        "after": {
+          "lift_height": 1,
+          "lift_mode": 1,
+          "proximity_state": 1
+        },
+        "error": null,
+        "requested_mm": 2,
+        "write_verified": true
+      }
+    ],
+    "restored": true
+  },
+  "driver_installation": false,
+  "firmware": "1.10.1.0",
+  "personal_profiles_modified": false,
+  "pid": "00C4",
+  "rotation": {
+    "before": {
+      "enabled": true,
+      "path": "hardware",
+      "raw_angle": 0,
+      "value": 0
+    },
+    "checks": [
+      {
+        "after": {
+          "enabled": true,
+          "path": "hardware",
+          "raw_angle": 5,
+          "value": 5
+        },
+        "error": null,
+        "requested_degrees": 5,
+        "restored": true,
+        "write_verified": true
+      },
+      {
+        "after": {
+          "enabled": true,
+          "path": "hardware",
+          "raw_angle": 251,
+          "value": -5
+        },
+        "error": null,
+        "requested_degrees": -5,
+        "restored": true,
+        "write_verified": true
+      }
+    ]
+  },
+  "sensitivity": {
+    "after": {
+      "mode": 3,
+      "state": 1
+    },
+    "before": {
+      "mode": 0,
+      "state": 0
+    },
+    "custom_curve_write_and_250_sample_readback": true,
+    "error": null,
+    "restored": true
+  }
+}

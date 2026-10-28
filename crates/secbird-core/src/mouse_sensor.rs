@@ -46,6 +46,31 @@ fn model(dev: &Device) -> Result<()> {
     Ok(())
 }
 impl Device {
+    /// Reapply explicit device-wide intent on connection/resume, without saving
+    /// profiles or coercing a non-UI checkpoint. Named profile switches do not
+    /// call this path. An already matching register requires no SET.
+    pub fn apply_tracking_distance(&self, mm: u8) -> Result<CalibrationRaw> {
+        if self.is_query_only() {
+            return Err(Error::Unsupported(
+                "Read-only handle refuses Calibration replay".into(),
+            ));
+        }
+        model(self)?;
+        let desired = CalibrationRaw::for_distance(mm)?;
+        let original = self.calibration_raw()?;
+        if original == desired {
+            return Ok(desired);
+        }
+        if let Err(error) = self.apply_calibration_raw(desired) {
+            return match self.restore_calibration_raw(original) {
+                Ok(()) => Err(Error::Unsupported(format!(
+                    "{error}; original calibration restored"
+                ))),
+                Err(recovery) => Err(Error::Unsupported(format!("{error}; {recovery}"))),
+            };
+        }
+        Ok(desired)
+    }
     pub fn calibration_raw(&self) -> Result<CalibrationRaw> {
         model(self)?;
         let state = self.get(cmd::PROXIMITY_STATE, 3, &[0, 4, 0])?;

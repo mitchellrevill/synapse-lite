@@ -1,0 +1,20 @@
+{
+  "connections": [
+    {
+      "eligible_collections": 1,
+      "nonempty_serial": true,
+      "pid": "00C4",
+      "query_only": true,
+      "serial_get_answered": true
+    },
+    {
+      "eligible_collections": 0,
+      "pid": "00C5",
+      "serial_get_answered": false
+    }
+  ],
+  "profile_changes": false,
+  "serials_or_paths_emitted": false,
+  "set_count": 0,
+  "two_nonempty_protocol_serials_match": null
+}

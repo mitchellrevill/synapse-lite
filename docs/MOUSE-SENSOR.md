@@ -1,4 +1,4 @@
-# Calibration and Advanced checkpoint
+# Calibration and Advanced implementation and validation
 
 28 October2026. Implements the user's priority change from tab refinement to
 mouse features. Application tabs were not refined in this unit.
@@ -23,6 +23,13 @@ mouse features. Application tabs were not refined in this unit.
   the prewrite value. Normal shutdown restores the device-lifetime baseline.
   Rescan restores before closing handles and reacquires prior saved intent.
   Changes from another owner are preserved. Stock Synapse blocks Rotation SET.
+- Startup/device arrival/resume replays explicitly saved device-wide Calibration
+  through a separate connection path. A named/foreground profile switch does
+  not replay it. Matching registers need no SET; failed replay restores the
+  original raw checkpoint. Stock-owner and measurement restrictions are honored.
+- Rotation replay resolves the same nonempty protocol serial across00C4/00C5
+  store aliases, without silently saving a read-only store migration. Tests also
+  keep two identical model names bound to their distinct physical device keys.
 - Dynamic Sensitivity and Rotation are per-profile; both round-trip through
   Synapse4 exports with opaque members preserved. Float-roundtrip parsing fixes
   checksum instability for custom sample arrays. Calibration exports warn that
@@ -60,9 +67,17 @@ Calibration GETs; exact Windows container association found its vendor-filter
 endpoint and two GETs returned0degrees. A later PID00C4/interface0 connection
 reported1.10.1.0 and answered Calibration plus Dynamic state/mode GETs. These
 are different connection observations, not evidence of a firmware upgrade.
-The reversible write harness refused before SET because stock Synapse was
-running. Physical writes, optical/tracking behavior and reconnect/sleep recovery
-are not accepted yet. Personal Synapse databases were not modified.
+The first reversible write attempt refused before SET while stock Synapse was
+running. After it exited, the isolated physical harness on wired00C4 with
+firmware1.10.1.0 verified Low1mm, High2mm, a complete250-sample custom curve and
+Rotation+5/-5degrees by independent GETs. Each stage restored and verified its
+exact original checkpoint, including all original curve bytes. No personal
+profile file or Synapse database was modified, and no driver was installed.
+The physical report is [mouse-sensor-physical.json](validation/mouse-sensor-physical.json).
+This proves register transactions and restoration, not measured optical lift
+height, movement quality, or real unplug/sleep recovery. Receiver00C5 was absent
+at the later identity probe, so real cross-connection serial matching and old
+firmware filter SET/restore remain unverified.
 
 ## Remaining acceptance
 
@@ -70,8 +85,10 @@ This is functional native coverage, not pixel-for-pixel acceptance. Template
 selection is currently a compact button group rather than the stock dropdown;
 chart labels, switches, tooltips, disabled fading and exact font baselines need
 comparison. Live mouse-speed fill, Ctrl+wheel zoom and the linked Rotation tool
-are not implemented in this checkpoint. Physical write/read/restore, stock
-re-import acceptance, unplug/replug and sleep/wake remain to verify.
+are not implemented in this checkpoint. Receiver/filter SET/restore, stock
+re-import acceptance, optical tracking, unplug/replug and sleep/wake remain to
+verify. Connection/profile replay is covered by four isolated engine tests;
+physical reconnect behavior is a separate acceptance item.
 
 The complete inventory, Studio, profile migration and three full-build resource
 runs remain part of the active goal. A small executable, unit tests or one idle
