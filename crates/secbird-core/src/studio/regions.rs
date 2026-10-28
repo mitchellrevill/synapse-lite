@@ -103,16 +103,20 @@ fn inventory(
         if !selection.iter().any(|key| key.device == id) {
             continue;
         }
-        for raw in entries(&device, "ledRef")? {
-            let key = led(&raw, &id)?;
-            if selection.contains(&key) && result.insert(key, raw).is_some() {
+        for record in crate::studio::inventory::led_inventory(raw.get())? {
+            let key = LedSelection {
+                device: id.clone(),
+                row: record.row,
+                col: record.col,
+            };
+            if selection.contains(&key) && result.insert(key, record.raw.to_owned()).is_some() {
                 return Err(invalid("ambiguous placement LED identity"));
             }
         }
     }
     if result.len() != selection.len() {
         return Err(invalid(
-            "selected LEDs are not in the composition's explicit ledRef inventory",
+            "selected LEDs are not in the composition's explicit LED inventory",
         ));
     }
     Ok(result)
@@ -422,6 +426,18 @@ mod tests {
         assert!(draft.json().contains(r#""type":{"future":17}"#));
         draft.undo().unwrap();
         assert!(!draft.is_dirty());
+    }
+
+    #[test]
+    fn exported_leds_form_assigns_without_rewriting_inventory_and_conflicts_are_atomic() {
+        let raw=PROFILE.replace("\"ledRef\":","\"leds\":");
+        let mut draft=Draft::open(&raw).unwrap();
+        draft.set_static_color("a",&keys(&[1,4]),0xabcdef).unwrap();
+        assert!(!draft.json().contains("ledRef"));assert!(draft.json().contains("9007199254740993123456789"));
+        assert_eq!(draft.static_selection_color("a",&keys(&[1,4])).unwrap(),SelectedColor::Uniform(Some(0xabcdef)));
+        let raw=PROFILE.replacen("\"ledRef\":[","\"leds\":[{\"row\":9,\"col\":9}],\"ledRef\":[",1);
+        let mut draft=Draft::open(&raw).unwrap();
+        assert!(draft.set_static_color("a",&keys(&[1]),0).is_err());assert_eq!(draft.json(),raw);assert!(!draft.is_dirty());
     }
 
     #[test]

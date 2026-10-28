@@ -6,7 +6,9 @@ Studio, not a canvas editor, installed composition store or lighting runtime.
 
 The later [layer draft model](STUDIO-DRAFT.md) adds local rename/visibility and
 saved/working/undo/discard semantics plus archive-replacement preparation. It is
-not yet connected to native Studio controls or actual composition persistence.
+connected to [native controls](STUDIO-NATIVE.md); an
+[actual stock export roundtrip](STUDIO-ACTUAL.md) now verifies file preservation.
+Lighting runtime and committed stock re-import remain unfinished.
 
 ```text
 secbird studio inspect Desk.ChromaEffects

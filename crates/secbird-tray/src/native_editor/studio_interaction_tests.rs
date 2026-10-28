@@ -2,6 +2,155 @@
 use super::*;
 
 #[test]
+#[ignore = "requires an explicitly selected private stock Ornata export; opens isolated simulated window"]
+fn native_studio_actual_stock_export_loads_geometry_and_preserves_profiles() {
+    let input = PathBuf::from(
+        std::env::var_os("SYNAPSE_LITE_STOCK_STUDIO_FILE").expect("select private stock export"),
+    );
+    let original = std::fs::read(&input).unwrap();
+    let source = secbird_core::studio::Archive::parse(&original).unwrap();
+    assert_eq!(source.profile_count(), 1);
+    let directory = std::env::temp_dir().join(format!(
+        "native-stock-studio-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(&directory).unwrap();
+    let frame = directory.join("frame.json");
+    let _environment = Environment::set(&[
+        ("SYNAPSE_LITE_CONFIG_DIR", &directory),
+        ("SYNAPSE_LITE_SMOKE_REPORT", &frame),
+        ("SYNAPSE_LITE_SMOKE_VIEW", Path::new("studio")),
+    ]);
+    let sim = Sim::wireless_mouse();
+    let engine = Engine::with_simulated_mouse(&sim).unwrap();
+    let mut store = Store::load(&directory.join("profiles.json")).unwrap();
+    store.for_device(&engine.devices()[0]);
+    store.save().unwrap();
+    let store_before = std::fs::read(directory.join("profiles.json")).unwrap();
+    let folder = directory.clone();
+    let controller_sim = sim.clone();
+    let controller = std::thread::spawn(move || {
+        let result = (|| -> Result<Value, String> {
+            unsafe {
+                wait_for(
+                    || {
+                        std::fs::read(&frame)
+                            .ok()
+                            .and_then(|b| serde_json::from_slice::<Value>(&b).ok())
+                            .is_some_and(|v| v["presented"] == true)
+                    },
+                    "actual export window presented",
+                )?;
+                let hwnd = WINDOW.load(Ordering::Acquire) as HWND;
+                let query = || {
+                    let mut value = Value::Null;
+                    SendMessageW(hwnd, STUDIO_TEST, 2, &mut value as *mut Value as isize);
+                    value
+                };
+                wait_for(|| query()["pending"] == 0, "initial simulated reads")?;
+                controller_sim.state().log.clear();
+                let path = json!(input.to_string_lossy());
+                SendMessageW(hwnd, STUDIO_TEST, 1, &path as *const Value as isize);
+                wait_for(
+                    || query()["profiles"] == 1 && query()["busy"] == false,
+                    "actual export load",
+                )?;
+                let state = query();
+                if state["dirty"] != false
+                    || state["canvas_devices"] != 1
+                    || state["canvas_selectable_leds"] != 109
+                    || state["rows"].as_array().map(Vec::len) != Some(2)
+                    || state["canvas_notes"]
+                        .as_array()
+                        .is_none_or(|n| !n.is_empty())
+                {
+                    return Err(format!("Actual export not fully admitted: {state}"));
+                }
+                redraw(hwnd);
+                let scale = f64::from(GetDpiForWindow(hwnd).max(96)) / 96.0;
+                let mut client: RECT = std::mem::zeroed();
+                GetClientRect(hwnd, &mut client);
+                let width = f64::from(client.right) / scale;
+                let height = f64::from(client.bottom) / scale;
+                let fit = ((width - 540.0) / 960.0)
+                    .min((height - 250.0) / 360.0)
+                    .clamp(0.05, 4.0);
+                lighting_click(
+                    hwnd,
+                    width / 2.0 + (67.0 - 480.0) * fit,
+                    (168.0 + height) / 2.0 + (76.0 - 180.0) * fit,
+                    scale,
+                );
+                if query()["selected_leds"] != 1 || query()["dirty"] != false {
+                    return Err("Actual export Esc hit failed or changed the document".into());
+                }
+                let output = folder.join("actual-roundtrip.ChromaEffects");
+                let path = json!(output.to_string_lossy());
+                SendMessageW(hwnd, STUDIO_TEST, 3, &path as *const Value as isize);
+                wait_for(|| query()["busy"] == false, "actual export save")?;
+                if query()["failed"] != false {
+                    return Err(format!("Actual export save failed: {}", query()));
+                }
+                let bytes = std::fs::read(&output).map_err(|e| e.to_string())?;
+                let saved =
+                    secbird_core::studio::Archive::parse(&bytes).map_err(|e| e.to_string())?;
+                if saved.profile_json(0) != source.profile_json(0) {
+                    return Err("Actual raw profile changed during roundtrip".into());
+                }
+                if std::fs::read(&input).unwrap() != original
+                    || std::fs::read(folder.join("profiles.json")).unwrap() != store_before
+                {
+                    return Err("Source export or device-profile store changed".into());
+                }
+                if controller_sim
+                    .state()
+                    .log
+                    .iter()
+                    .any(|command| command.id & 0x80 == 0)
+                {
+                    return Err("Actual file operation submitted device SETs".into());
+                }
+                let capture = json!(folder.join("actual-studio-frame.png").to_string_lossy());
+                if SendMessageW(hwnd, STUDIO_TEST, 6, &capture as *const Value as isize) != 1 {
+                    return Err("Actual export paint capture failed".into());
+                }
+                Ok(
+                    json!({"actual_export":true,"simulated_transport_only":true,"profiles":1,"layers":2,"canvas_devices":1,"selectable_leds":109,"source_esc_hit":true,"raw_profile_roundtrip_exact":true,"whole_file_byte_identity_observed":bytes==original,"source_file_unchanged":true,"device_profiles_unchanged":true,"no_device_sets":true}),
+                )
+            }
+        })();
+        unsafe {
+            let hwnd = WINDOW.load(Ordering::Acquire) as HWND;
+            if !hwnd.is_null() {
+                SendMessageW(hwnd, STUDIO_TEST, 5, 0);
+                PostMessageW(hwnd, WM_CLOSE, 0, 0);
+            }
+        }
+        result
+    });
+    run_window(
+        Arc::new(Mutex::new(engine)),
+        Some(Duration::from_secs(20)),
+        None,
+    )
+    .unwrap();
+    let evidence = controller.join().unwrap().unwrap();
+    std::fs::write(
+        directory.join("actual-interaction.json"),
+        serde_json::to_vec_pretty(&evidence).unwrap(),
+    )
+    .unwrap();
+    eprintln!(
+        "Actual stock Studio interaction evidence: {}",
+        directory.display()
+    );
+}
+
+#[test]
 #[ignore = "opens a bounded native Studio window; run alone"]
 fn native_studio_edits_save_failure_and_exit_recovery() {
     let directory = std::env::temp_dir().join(format!(
@@ -25,7 +174,7 @@ fn native_studio_edits_save_failure_and_exit_recovery() {
     store.for_device(&engine.devices()[0]);
     store.save().unwrap();
     let original_store = std::fs::read(directory.join("profiles.json")).unwrap();
-    let profile = r#"{"id":"p0","title":"Desk","devices":[{"id":"keyboard","productId":605,"editionId":0,"layout":6,"x":4950,"y":4980,"width":960,"height":360,"orientation":0,"ledRef":[{"row":0,"col":1},{"row":0,"col":4}]}],"unknown":9007199254740993123456789,"layers":[{"id":"g","type":"group","title":"Group","visible":true,"opened":true,"layers":[{"id":"a","groupId":"g","type":"layer","title":"STATIC","name":"static","visible":false,"regions":[],"future":1.2300e-7}]}]}"#;
+    let profile = r#"{"id":"p0","title":"Desk","devices":[{"id":"keyboard","productId":605,"editionId":0,"layout":6,"x":4950,"y":4980,"width":960,"height":360,"orientation":0,"leds":[{"row":0,"col":1},{"row":0,"col":4}]}],"unknown":9007199254740993123456789,"layers":[{"id":"g","type":"group","title":"Group","visible":true,"opened":true,"layers":[{"id":"a","groupId":"g","type":"layer","title":"STATIC","name":"static","visible":false,"regions":[],"future":1.2300e-7}]}]}"#;
     let other = r#"{"id":"p1","title":"Other","devices":[],"layers":[{"id":"b","type":"layer","title":"SECOND","name":"static","visible":true,"regions":[]}]}"#;
     let source = directory.join("input.ChromaEffects");
     let output = directory.join("saved.ChromaEffects");
@@ -88,7 +237,7 @@ fn native_studio_edits_save_failure_and_exit_recovery() {
                     .min((height - 250.0) / 360.0)
                     .clamp(0.05, 4.0);
                 // Independent coordinates from the pinned UK SVG: Esc center67,76;
-                // F1 center145,76. The imported ledRef admits exactly those two.
+                // F1 center145,76. The imported leds inventory admits exactly those two.
                 let screen = |x: f64, y: f64| {
                     position(
                         width / 2.0 + (x - 480.0) * fit,

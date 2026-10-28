@@ -1,0 +1,18 @@
+{
+  "observed_utc": "2026-10-28T21:53:04.209034+00:00",
+  "appengine_version": "4.0.896",
+  "source_export_bytes": 27897,
+  "source_sha256": "7e87b7ed6836e8d9f81686ff426624c4a7be0953d7af17e1f61dcbdb245f9649",
+  "roundtrip_sha256": "7e87b7ed6836e8d9f81686ff426624c4a7be0953d7af17e1f61dcbdb245f9649",
+  "whole_file_byte_equal": true,
+  "stock_import_preview": {
+    "composition_listed": true,
+    "composition_title": "Chroma Effect 1",
+    "import_button_disabled_marker": false,
+    "unsupported_device_warning_displayed": false,
+    "final_import_clicked": false,
+    "preview_canceled": true
+  },
+  "private_export_not_for_repository": true,
+  "remaining": "Committed stock re-import, actual effect replay/optical output and full build resource acceptance are unverified."
+}

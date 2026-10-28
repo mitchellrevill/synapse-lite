@@ -1,0 +1,14 @@
+{
+  "actual_export": true,
+  "canvas_devices": 1,
+  "device_profiles_unchanged": true,
+  "layers": 2,
+  "no_device_sets": true,
+  "profiles": 1,
+  "raw_profile_roundtrip_exact": true,
+  "selectable_leds": 109,
+  "simulated_transport_only": true,
+  "source_esc_hit": true,
+  "source_file_unchanged": true,
+  "whole_file_byte_identity_observed": true
+}

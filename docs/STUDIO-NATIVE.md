@@ -25,9 +25,11 @@ source icons. A partial [source-path canvas and LED selection](STUDIO-CANVAS.md)
 is implemented for explicit Ornata placements, with
 [Static region colour/erase](STUDIO-REGIONS.md). Other effect properties and algorithms,
 gradients, add/delete/reorder/group operations, preview, device output and full
-composition-management controls remain to implement. Actual stock file acceptance
-and the user's saved composition have not been tested; current fixtures are
-source-shaped synthetic JSON. Legacy ZIP/XML files remain unsupported.
+composition-management controls remain to implement. Stock's import preview
+recognizes the round-tripped file, and the
+[user's saved composition roundtrip](STUDIO-ACTUAL.md) now preserves exact data.
+Committed stock import and equivalent output remain unverified. Regional edit
+fixtures remain synthetic. Legacy ZIP/XML files are unsupported.
 
 ## Verification
 

@@ -22,13 +22,6 @@ struct Placement {
     height: f64,
     #[serde(default)]
     orientation: u16,
-    #[serde(rename = "ledRef")]
-    leds: Vec<Led>,
-}
-#[derive(Deserialize)]
-struct Led {
-    row: u16,
-    col: u16,
 }
 struct Device {
     placement: Placement,
@@ -119,7 +112,12 @@ impl Canvas {
             let mut cache: HashMap<(u16, u16, u16), Arc<SourceLayout>> = HashMap::new();
             for raw in document.devices {
                 let item = (|| -> Result<Device, String> {
-                    let p:Placement=serde_json::from_str(raw.get()).map_err(|_|"Placement needs explicit product, editionId, layout, geometry and ledRef".to_string())?;
+                    let p: Placement = serde_json::from_str(raw.get()).map_err(|_| {
+                        "Placement needs explicit product, editionId, layout and geometry"
+                            .to_string()
+                    })?;
+                    let leds = secbird_core::studio::inventory::led_inventory(raw.get())
+                        .map_err(|error| error.to_string())?;
                     if p.id.is_empty() || p.id.len() > 512 || !ids.insert(p.id.clone()) {
                         return Err("Invalid or duplicate canvas device identity".into());
                     }
@@ -134,7 +132,6 @@ impl Canvas {
                         || p.height > 10000.0
                         || p.x.abs() > 10000.0
                         || p.y.abs() > 10000.0
-                        || p.leds.len() > 512
                     {
                         return Err("Placement is outside the supported canvas bounds".into());
                     }
@@ -152,8 +149,7 @@ impl Canvas {
                         cache.insert(key, g.clone());
                         g
                     };
-                    let admitted = p
-                        .leds
+                    let admitted = leds
                         .iter()
                         .map(|led| format!("{}:{}", led.row, led.col))
                         .collect();
@@ -375,6 +371,24 @@ impl Canvas {
     pub fn count(&self) -> usize {
         self.selected.len()
     }
+    #[cfg(test)]
+    pub fn device_count(&self) -> usize {
+        self.devices.len()
+    }
+    #[cfg(test)]
+    pub fn selectable_count(&self) -> usize {
+        self.devices
+            .iter()
+            .map(|device| {
+                device
+                    .geometry
+                    .keys
+                    .iter()
+                    .filter(|key| device.allowed(&key.input_id))
+                    .count()
+            })
+            .sum()
+    }
     pub fn selection(&self) -> Vec<secbird_core::studio::document::LedSelection> {
         self.selected
             .iter()
@@ -558,7 +572,6 @@ mod tests {
                     width,
                     height,
                     orientation,
-                    leds: vec![Led { row: 0, col: 1 }],
                 },
                 geometry: geometry.clone(),
                 admitted: BTreeSet::from(["0:1".into()]),

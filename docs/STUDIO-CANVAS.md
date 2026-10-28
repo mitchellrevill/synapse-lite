@@ -21,11 +21,14 @@ layouts; layout12 has six. No shapes are fabricated for them.
 
 Placement admission currently requires explicit `id`, `productId:605`,
 `editionId:0`, `layout`, finite x/y/width/height, quarter-turn `orientation`
-(optional zero), and `ledRef` row/column membership. At most32 placements and512
+(optional zero), and `leds` or `ledRef` row/column membership. Both forms must agree
+if supplied together. At most32 placements and512
 LED references per placement are accepted. Unknown or incomplete placements
 are retained in the file and reported unavailable for the canvas. This narrow
 admission is not proof that every actual stock export uses these identity fields;
-live device reconciliation and actual user composition acceptance remain open.
+live device reconciliation remains open. The
+[actual exported composition](STUDIO-ACTUAL.md) now loads all109 Ornata paths;
+committed stock import and equivalent lighting acceptance remain open.
 No historical UK identity or operating-system locale supplies missing fields.
 
 Identical layouts share parsed geometry. Native paths use the same coordinate

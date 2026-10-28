@@ -16,6 +16,7 @@ use std::{
 };
 
 pub mod document;
+pub mod inventory;
 
 pub const MAX_DOCUMENT_BYTES: usize = 8 * 1024 * 1024;
 pub const MAX_PROFILES: usize = 128;
