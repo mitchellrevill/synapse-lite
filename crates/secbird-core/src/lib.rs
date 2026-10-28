@@ -41,6 +41,7 @@ pub mod sensor_rotation_control;
 pub mod mouse_input_identity;
 pub mod net;
 pub mod ornata_frame;
+pub mod ornata_driver_mode;
 pub mod ornata_identity;
 #[cfg(windows)]
 pub mod ornata_manifest;

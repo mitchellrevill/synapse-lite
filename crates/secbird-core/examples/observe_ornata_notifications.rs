@@ -2,7 +2,7 @@
 //! Usage: observe_ornata_notifications <fresh-report.json> --observe-passive <1..10>
 //! Aggregate counts only. No selectors, key output, redirection or HID SETs.
 #[cfg(windows)]
-fn sample(seconds: u64) -> serde_json::Value {
+fn sample(seconds: u64, gate: Option<(&std::path::Path, &std::path::Path)>) -> serde_json::Value {
     use secbird_core::{
         discover,
         hidapi::HidApi,
@@ -35,6 +35,30 @@ fn sample(seconds: u64) -> serde_json::Value {
         {
             thread::sleep(Duration::from_millis(5));
         }
+        if let Some((ready, signal)) = gate {
+            if !session.snapshot().subscription_enabled || session.snapshot().finished {
+                return Err("subscription_not_ready");
+            }
+            use std::io::Write;
+            let mut marker = std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(ready)
+                .map_err(|_| "ready_marker_failed")?;
+            marker
+                .write_all(b"{\"notification_stream_ready\":true}\n")
+                .map_err(|_| "ready_marker_failed")?;
+            marker.sync_all().map_err(|_| "ready_marker_failed")?;
+            let wait = Instant::now();
+            while !signal.exists() {
+                while session.try_next().is_some() {}
+                if wait.elapsed() > Duration::from_secs(30) || session.snapshot().finished {
+                    return Err("sample_gate_timed_out");
+                }
+                thread::sleep(Duration::from_millis(5));
+            }
+            while session.try_next().is_some() {}
+        }
         let start = Instant::now();
         let (mut makes, mut breaks) = (0u64, 0u64);
         while start.elapsed() < Duration::from_secs(seconds) && !session.snapshot().finished {
@@ -58,7 +82,7 @@ fn sample(seconds: u64) -> serde_json::Value {
         let state = session.snapshot();
         Ok(
             json!({"scope":"explicit passive selected-Ornata filter notifications; no interception or generated input",
-            "snapshot":state,"stop_completed":stopped,"observed_make_records":makes,"observed_break_records":breaks,
+            "snapshot":state,"stop_completed":stopped,"observed_make_records":makes,"observed_break_records":breaks,"sample_gated":gate.is_some(),
             "physical_input_delivery_verified":makes+breaks>0,
             "selector_mutations":0,"input_submissions":0,"redirection_changes":0,"hid_sets":0,
             "key_identities_or_text_emitted":false,"paths_or_serials_emitted":false}),
@@ -76,15 +100,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         time::{Duration, Instant},
     };
     let args: Vec<_> = std::env::args().skip(1).collect();
-    if args.first().is_some_and(|a| a == "--passive-child") {
-        if args.len() != 2 {
+    if args
+        .first()
+        .is_some_and(|a| a == "--passive-child" || a == "--gated-child")
+    {
+        let gated = args[0] == "--gated-child";
+        if args.len() != if gated { 4 } else { 2 } {
             return Err("Invalid child arguments".into());
         }
         let seconds = args[1].parse::<u64>()?;
         if !(1..=10).contains(&seconds) {
             return Err("Invalid observation duration".into());
         }
-        println!("{}", sample(seconds));
+        let gate = gated.then(|| {
+            (
+                std::path::Path::new(&args[2]),
+                std::path::Path::new(&args[3]),
+            )
+        });
+        println!("{}", sample(seconds, gate));
         return Ok(());
     }
     if args.len() != 3 || args[1] != "--observe-passive" {

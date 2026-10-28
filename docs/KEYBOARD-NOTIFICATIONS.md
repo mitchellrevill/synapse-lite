@@ -83,7 +83,18 @@ middleware42057 requests driver3,param0 before registerDevice/inputevent setup,
 and normal0,param0 on unload. Middleware SHA256
 `9c4a687e1a4868cd9da4dec40024e5ce3403fe866907887b47995f493e23a3a8`.
 These establish different paths and an initialization difference; they do not
-prove mode3 redirects typing between those interfaces. No mode SET was attempted.
+prove mode3 redirects typing between those interfaces. No mode SET was attempted
+in that initial checkpoint. The later separate [mode experiment](ORNATA-DRIVER-MODE.md)
+verified0→3→0 and cleanup but still received zero notifications.
+
+Further native analysis shows the MI00-named control child associates sibling
+roles by ContainerID; its label is not evidence it targets the wrong MI01 role.
+Common initialization also runs during hardware preparation. Its initialization
+attempt latch is not callback-success readback; no guessed reset/initialize
+operation is justified. The first common request can invoke the existing driver's
+callback-registration machinery, so passive subscription is not a promise of
+zero kernel initialization effects. The diagnostic sends no selector/interception
+or input-generation operations.
 
 Next establish the physical report path and source initialization dependency
 through an owned, reversible mode/readback experiment or exact interface input

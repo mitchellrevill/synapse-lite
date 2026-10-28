@@ -1,0 +1,54 @@
+{
+  "baseline_mode": {
+    "mode": 0,
+    "parameter": null
+  },
+  "brightness_sets": 0,
+  "child": {
+    "hid_sets": 0,
+    "input_submissions": 0,
+    "key_identities_or_text_emitted": false,
+    "observed_break_records": 0,
+    "observed_make_records": 0,
+    "paths_or_serials_emitted": false,
+    "physical_input_delivery_verified": false,
+    "redirection_changes": 0,
+    "sample_gated": true,
+    "scope": "explicit passive selected-Ornata filter notifications; no interception or generated input",
+    "selector_mutations": 0,
+    "snapshot": {
+      "association_verified": true,
+      "cancel_requested": true,
+      "error": null,
+      "finished": true,
+      "keyboard_records": 0,
+      "other_records": 0,
+      "pending_drained": true,
+      "received_records": 0,
+      "subscription_disabled": true,
+      "subscription_enabled": true
+    },
+    "stop_completed": true
+  },
+  "child_error": null,
+  "child_lifecycle_ok": true,
+  "command_parameter_policy": "stock source canonical zero; unreported readback remains null",
+  "driver_readback": {
+    "mode": 3,
+    "parameter": null
+  },
+  "final_mode": {
+    "mode": 0,
+    "parameter": null
+  },
+  "input_submissions": 0,
+  "lighting_frames": 0,
+  "mode_restored": true,
+  "mode_set_attempts": 2,
+  "original_parameter_readback_available": false,
+  "paths_or_serials_emitted": false,
+  "quiet_before_restore": true,
+  "redirection_changes": 0,
+  "scope": "explicit source startup mode3 experiment with parent-owned exact mode rollback; passive notifications only",
+  "selector_mutations": 0
+}

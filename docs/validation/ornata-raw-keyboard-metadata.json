@@ -1,0 +1,48 @@
+{
+  "metadata_only": true,
+  "selected_configuration_pid": "025D",
+  "selected_configuration_mi": "02",
+  "selected_configuration_count": 1,
+  "keyboard_endpoints": [
+    {
+      "pid": "025D",
+      "mi": "00",
+      "type": 1,
+      "same_selected_configuration_container": true
+    },
+    {
+      "pid": "025D",
+      "mi": "01",
+      "type": 1,
+      "same_selected_configuration_container": true
+    }
+  ],
+  "event_delivery_observed": false,
+  "observed_at_utc": "2026-10-28T18:29:23.061015+00:00",
+  "probe_source_sha256": "ccb2462678459e3130ad85e34a72c39a6c13eb125a1eeec01fab3baed4546e53",
+  "probe_executable_sha256": "37fb59ad9cb1623054efa8146c373a9e6a2284da53c8e67f5071612b00ea41a1",
+  "caps": {
+    "raw_devices": 512,
+    "raw_list_attempts": 3,
+    "raw_name_utf16_units": 32768,
+    "hid_interface_enumeration": 512,
+    "interface_detail_bytes": 65536,
+    "interface_path_utf16_units": 32768,
+    "selected_configuration_requires_unique": true,
+    "association_requires_active_interface_and_nonzero_container_guid": true,
+    "raw_info_type_must_match_list_type": true
+  },
+  "boundary": {
+    "registration": false,
+    "input_record_capture": false,
+    "hooks": false,
+    "injection": false,
+    "device_handle_open": false,
+    "ioctl": false,
+    "mode_or_settings_write": false,
+    "driver_or_service_change": false,
+    "elevation": false,
+    "raw_paths_handles_container_values_serials_saved": false
+  },
+  "finding": "Both MI00 and MI01 are currently listed as keyboard-type Ornata Raw Input endpoints and share the selected MI02 configuration container. Metadata alone cannot determine which receives physical keys, filtered notifications, or redirected events."
+}
