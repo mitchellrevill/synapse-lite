@@ -1,0 +1,39 @@
+{
+  "appengine_version": "4.0.896",
+  "capture_scope": "All installed Razer executables under Program Files; Chroma-only UI, not full Synapse UI workload",
+  "traces": [
+    {
+      "workload": "startup/update screen",
+      "samples": 12,
+      "first_utc": "2026-10-28T21:39:55.6977905Z",
+      "last_utc": "2026-10-28T21:40:19.9214789Z",
+      "executable_sha256": "A66A5E3755F4D2520F03E1A63753796CC57F07BACD129E5BEC3BEC261AE2E447",
+      "logical_processors": 16,
+      "peak_working_set": 2458288128,
+      "peak_private_bytes": 1337597952,
+      "mean_cpu_percent_machine": null,
+      "roster_at_working_set_peak": {
+        "RazerAppEngine": 15,
+        "RzEngineMon": 1
+      },
+      "raw_trace_sha256": "b925f5702b2c6476b31c68b93134abc18325ed884db56c438b08747a1ad99346"
+    },
+    {
+      "workload": "Studio, existing Fire/Spectrum composition, no editing",
+      "samples": 12,
+      "first_utc": "2026-10-28T21:54:21.1322746Z",
+      "last_utc": "2026-10-28T21:54:46.0947375Z",
+      "executable_sha256": "A66A5E3755F4D2520F03E1A63753796CC57F07BACD129E5BEC3BEC261AE2E447",
+      "logical_processors": 16,
+      "peak_working_set": 2139512832,
+      "peak_private_bytes": 1238245376,
+      "mean_cpu_percent_machine": 5.1068528692326245,
+      "roster_at_working_set_peak": {
+        "RazerAppEngine": 12,
+        "RzEngineMon": 1
+      },
+      "raw_trace_sha256": "840d95baad2db34f9a58c20366c7b548558a9ba89f2b33b73ba9cece46b67a1f"
+    }
+  ],
+  "limitations": "Sampled peaks; shared WS pages may be counted multiple times, exited-process tail CPU/kernel allocations unmeasured; other desktop apps open. No complete-build replacement or three-run acceptance."
+}
