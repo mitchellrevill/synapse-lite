@@ -423,6 +423,9 @@ fn translate_profile(
         .contains(&key.as_str())
             || (matches!(pid, 196 | 197)
                 && ["dpiStages", "powerSavingValue"].contains(&key.as_str()))
+            || (matches!(pid, 196 | 197)
+                && ((key == "rotation" && profile.rotation.is_some())
+                    || (key == "dynamicSensitivity" && profile.dynamic_sensitivity.is_some())))
             || (pid == 605
                 && [
                     "brightness",

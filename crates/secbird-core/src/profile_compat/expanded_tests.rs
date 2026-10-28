@@ -3,6 +3,47 @@ use crate::buttons::{Action, Layer};
 use crate::features::DpiStages;
 
 #[test]
+fn advanced_import_notices_follow_the_settings_actually_translated() {
+    let source = json!({"guid":"advanced-notices","name":"Fixture","mappings":[],
+        "rotation":{"isEnabled":true,"value":5},
+        "dynamicSensitivity":{"state":0,"mode":0,"customSensorAccelerations":[],"templateId":0},
+        "inGamePollingRate":{"state":0,"wired":1000,"wireless":1000}});
+    for product in [196, 197] {
+        let imported = import_document(&document(source.clone(), product)).unwrap();
+        let key = if product == 196 { "00C4" } else { "00C5" };
+        let profile = &imported.store.devices[key].profiles["Fixture"];
+        assert_eq!(profile.rotation.as_ref().unwrap().value, 5);
+        assert!(profile.dynamic_sensitivity.is_some());
+        assert!(!imported.warnings.iter().any(|w| w.contains("rotation") || w.contains("dynamicSensitivity")));
+        assert!(imported.warnings.iter().any(|w| w.contains("inGamePollingRate")));
+        assert_eq!(payload(&imported.store, key, "Fixture"), source);
+    }
+    let mut sparse = source.clone();
+    sparse["rotation"] = json!({"value":5,"futureRotation":{"keep":true}});
+    sparse["dynamicSensitivity"] = json!({"state":0,"mode":0,"futureCurve":[1,2]});
+    let mut imported = import_document(&document(sparse.clone(), 196)).unwrap();
+    assert_eq!(payload(&imported.store, "00C4", "Fixture"), sparse);
+    let profile = imported.store.devices.get_mut("00C4").unwrap().profiles.get_mut("Fixture").unwrap();
+    profile.rotation.as_mut().unwrap().value = -5;
+    profile.dynamic_sensitivity.as_mut().unwrap().mode = 1;
+    let edited = payload(&imported.store, "00C4", "Fixture");
+    assert_eq!(edited["rotation"]["value"], -5);
+    assert_eq!(edited["rotation"]["futureRotation"], sparse["rotation"]["futureRotation"]);
+    assert_eq!(edited["dynamicSensitivity"]["mode"], 1);
+    assert_eq!(edited["dynamicSensitivity"]["futureCurve"], sparse["dynamicSensitivity"]["futureCurve"]);
+    let mut unsupported = source;
+    unsupported["rotation"]["value"] = json!(90);
+    unsupported["dynamicSensitivity"]["mode"] = json!(255);
+    let imported = import_document(&document(unsupported.clone(), 196)).unwrap();
+    let profile = &imported.store.devices["00C4"].profiles["Fixture"];
+    assert!(profile.rotation.is_none());
+    assert!(profile.dynamic_sensitivity.is_none());
+    assert!(imported.warnings.iter().any(|w| w.contains("unsupported Rotation")));
+    assert!(imported.warnings.iter().any(|w| w.contains("unsupported Dynamic Sensitivity")));
+    assert_eq!(payload(&imported.store, "00C4", "Fixture"), unsupported);
+}
+
+#[test]
 fn source_effect_edits_preserve_opaque_members_of_the_same_preset() {
     let mut profile = new_native_profile(605,"Effect").unwrap();
     set_source_quick_effect(&mut profile,605,"Effect",1,

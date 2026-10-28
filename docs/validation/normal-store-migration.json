@@ -1,0 +1,23 @@
+{
+  "scope": "Captured installed profiles through current CLI; not live stock import acceptance or macro/Snap Tap execution",
+  "records": [
+    {
+      "product_id": 196,
+      "decoded_payload_equal": true,
+      "source_guid_preserved": true,
+      "independent_hash_valid": true,
+      "macro_envelope_equal": true
+    },
+    {
+      "product_id": 605,
+      "decoded_payload_equal": true,
+      "source_guid_preserved": true,
+      "independent_hash_valid": true,
+      "macro_envelope_equal": true
+    }
+  ],
+  "existing_profiles_and_selection_preserved": true,
+  "imported_profiles_inactive": true,
+  "source_capture_date": "2026-10-27",
+  "missing_referenced_macro": true
+}

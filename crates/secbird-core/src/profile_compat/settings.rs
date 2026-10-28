@@ -176,10 +176,25 @@ pub(super) fn export_mouse(
     decoded: &mut Map<String, Value>,
     preserve_defaults: bool,
 ) -> Result<()> {
-    if let Some(intent)=&profile.rotation {intent.validate()?;merge_object(decoded.entry("rotation").or_insert(json!({})),serde_json::to_value(intent).map_err(|e|invalid(e.to_string()))?)?;}
-    if let Some(intent)=&profile.dynamic_sensitivity {
+    if let Some(intent) = &profile.rotation {
         intent.validate()?;
-        merge_object(decoded.entry("dynamicSensitivity").or_insert(json!({})),serde_json::to_value(intent).map_err(|e|invalid(e.to_string()))?)?;
+        let original = decoded.get("rotation").cloned()
+            .and_then(|value| serde_json::from_value::<crate::dynamic_sensitivity::Rotation>(value).ok());
+        if original.as_ref() != Some(intent) {
+            merge_object(decoded.entry("rotation").or_insert(json!({})),
+                serde_json::to_value(intent).map_err(|e| invalid(e.to_string()))?)?;
+        }
+    }
+    if let Some(intent) = &profile.dynamic_sensitivity {
+        intent.validate()?;
+        // Missing optional members and explicit empty members are distinct source
+        // data. Only overlay the native representation after an actual edit.
+        let original = decoded.get("dynamicSensitivity").cloned()
+            .and_then(|value| serde_json::from_value::<crate::dynamic_sensitivity::DynamicSensitivity>(value).ok());
+        if original.as_ref() != Some(intent) {
+            merge_object(decoded.entry("dynamicSensitivity").or_insert(json!({})),
+                serde_json::to_value(intent).map_err(|e| invalid(e.to_string()))?)?;
+        }
     }
     if let Some(minutes) = profile.sleep_minutes {
         if !(1..=15).contains(&minutes) {

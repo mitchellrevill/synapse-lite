@@ -1,5 +1,36 @@
 # Actual installed profile payloads
 
+## Normal-store migration, 28 October 2026
+
+The two captured `MITCH-Default` profiles are now transferred into Lite's normal
+profile store, bound to the connected receiver and keyboard identities. The old
+store was backed up, Lite exited normally, the current-store hash was compared
+with the prepared baseline, and the complete candidate was installed atomically.
+Existing profile data and active selection remain unchanged. Both imported
+profiles remain inactive; the keyboard receives an empty Default profile so
+startup cannot apply imported settings implicitly. No stock database was edited.
+
+Independent JavaScript validation decoded current CLI exports and verified their
+stable hashes. Both imported payloads equal the captured originals at every
+field, including GUIDs and macro references. This caught and fixed an Advanced
+export regression: unchanged optional fields were being filled with native
+defaults. Unchanged Rotation and Dynamic Sensitivity objects now retain their
+exact source shape; edited settings still overlay the retained opaque data.
+Import notices no longer incorrectly label valid translated Advanced fields as
+untranslated. Invalid/unsupported data still produces notices and is preserved.
+All331 core tests and the doc test passed; the optimized CLI/tray build passed.
+See [migration validation](validation/normal-store-migration.json).
+
+This migrates the captured27October device profiles, not a newly captured live
+account. A mouse Hypershift mapping references a macro absent from the captured
+export. Its reference is retained, but recovery/execution remains unfinished.
+Ornata Snap Tap and function-key preference also remain preserved without
+functional replay. Real stock import acceptance, macro bodies, linked programs,
+Studio compositions and complete profile activation/hardware acceptance remain
+open. Availability in the normal store does not establish full compatibility.
+
+## Earlier capture and codec evidence
+
 The two installed device configurations were read from a private offline copy of AppEngine local storage for https://apps.razer.com. Original Synapse storage was not modified. Only the synapse_196 and synapse_605 device records were read as values; account/authentication records were not queried. The isolated browser received one locally fulfilled inert document and executed no vendor JavaScript.
 
 Each configuration contained one profile and no selected profile macros. A Synapse4 envelope was constructed according to the recovered stock export function wn: copy the selected profile, remove its top-level appEngine runtime member, Base64-encode UTF-8 JSON and calculate the observed stable-JSON MD5. This is an export reconstructed from actual stored profile data, not a file saved through the stock UI.
