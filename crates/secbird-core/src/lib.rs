@@ -21,6 +21,7 @@ pub mod driver_control;
 pub mod effects;
 pub mod error;
 pub mod firmware;
+pub mod fire_lighting;
 pub mod features;
 pub mod keyboard_symbolic_bridge;
 pub mod keyboard_output_ledger;
@@ -29,6 +30,7 @@ pub mod keyboard_notifications;
 #[cfg(windows)]
 pub mod keyboard_input_identity;
 pub mod lighting;
+pub mod lighting_pixels;
 pub mod lighting_readback;
 pub mod log;
 pub mod macros;

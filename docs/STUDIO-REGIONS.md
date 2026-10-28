@@ -93,6 +93,11 @@ unverified. Static inspection establishes authoring semantics, not execution.
 Spectrum now supports [duration, presets and stop authoring](STUDIO-SPECTRUM.md),
 with separate source projection/mixed-field preservation and raw import limits.
 
+A pure [source-derived Fire renderer](FIRE-LIGHTING.md) and
+[native four-channel palette/blend math](LIGHTING-PIXELS.md) are implemented.
+They are not yet wired to the Studio canvas or device-output worker; these
+regional controls continue to edit files only.
+
 Remaining scope includes the stock colour picker, layer creation/management,
 other effect parameters, retained algorithms/compositing, complete
 tools, preview/output/ownership/recovery, actual file reconciliation, pixel and

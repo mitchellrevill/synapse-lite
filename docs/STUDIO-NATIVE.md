@@ -34,6 +34,11 @@ recognizes the round-tripped file, and the
 Committed stock import and equivalent output remain unverified. Regional edit
 fixtures remain synthetic. Legacy ZIP/XML files are unsupported.
 
+The pure [Fire generator](FIRE-LIGHTING.md) and
+[palette/container blend primitives](LIGHTING-PIXELS.md) now have independent
+static-reference verification. They are not connected to this view or hardware;
+device/world-space mapping and ownership remain necessary before preview/output.
+
 ## Verification
 
 `native_studio_edits_save_failure_and_exit_recovery` is an opt-in real-window test

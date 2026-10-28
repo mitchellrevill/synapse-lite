@@ -1,0 +1,74 @@
+[
+  {
+    "transparency": 0,
+    "opacity": 1.0,
+    "mask": null,
+    "nonblack": false,
+    "channel_pairs": 65536,
+    "md5": "8f1445bafe2c2095044af7789462f475"
+  },
+  {
+    "transparency": 33,
+    "opacity": 1.0,
+    "mask": 33,
+    "nonblack": false,
+    "channel_pairs": 65536,
+    "md5": "b6a7c052df8f72e19ad88233a77be6f5"
+  },
+  {
+    "transparency": 50,
+    "opacity": 0.3700000047683716,
+    "mask": 50,
+    "nonblack": false,
+    "channel_pairs": 65536,
+    "md5": "15c4ab354899f671c8c3ce9059902b50"
+  },
+  {
+    "transparency": 99,
+    "opacity": 0.75,
+    "mask": 100,
+    "nonblack": false,
+    "channel_pairs": 65536,
+    "md5": "6488dbad56e2f11a2b69ae11cc738929"
+  },
+  {
+    "transparency": 100,
+    "opacity": 1.0,
+    "mask": null,
+    "nonblack": false,
+    "channel_pairs": 65536,
+    "md5": "c20f753ab4187805ac9346997f21fa85"
+  },
+  {
+    "transparency": 100,
+    "opacity": 0.5,
+    "mask": null,
+    "nonblack": true,
+    "channel_pairs": 65536,
+    "md5": "6b0263c863899629013687c5af02f310"
+  },
+  {
+    "transparency": 0,
+    "opacity": 0.3700000047683716,
+    "mask": 33,
+    "nonblack": true,
+    "channel_pairs": 65536,
+    "md5": "ef5b0f2ec39f64f3294ee428f778ea36"
+  },
+  {
+    "transparency": 1,
+    "opacity": 0.0,
+    "mask": 99,
+    "nonblack": false,
+    "channel_pairs": 65536,
+    "md5": "c20f753ab4187805ac9346997f21fa85"
+  },
+  {
+    "transparency": 1,
+    "opacity": 0.10000000149011612,
+    "mask": 1,
+    "nonblack": false,
+    "channel_pairs": 65536,
+    "md5": "c20f753ab4187805ac9346997f21fa85"
+  }
+]

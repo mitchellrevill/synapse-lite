@@ -1,0 +1,34 @@
+{
+  "scope": "pure source-derived rendering math; static-reference comparison only",
+  "native_sha256": "cd9fc2a61ff920b9b73e1f5e27632020e2f8586f443e426a875ad3b042b714fa",
+  "core_tests_passed": 412,
+  "core_tests_ignored": 6,
+  "optimized_fire_tests_passed": 3,
+  "optimized_pixel_tests_passed": 5,
+  "tray_compile_check_passed": true,
+  "fire_complete_cycles": 9,
+  "fire_frames_per_cycle": 500,
+  "fire_rgba_pixels_compared": 994500,
+  "blend_channel_pairs_compared": 589824,
+  "fire_retained_dynamic_bytes": 81524,
+  "vendor_dll_executed": false,
+  "studio_preview_connected": false,
+  "hardware_output_verified": false,
+  "optical_parity_verified": false,
+  "current_stock_random_phase_known": false,
+  "complete_build_memory_acceptance": false,
+  "fixtures": [
+    {
+      "file": "native_fire_vectors.json",
+      "sha256": "9bdf7293e1f9197584de757a321fe0b81513ae8e390c76079de6ecec71e2fdcd"
+    },
+    {
+      "file": "native_pixel_palette.json",
+      "sha256": "558dccbb1ebffe29e3ff5e561435af8078355b9be1e3703f6dd4c0535579ef07"
+    },
+    {
+      "file": "native_pixel_blend.json",
+      "sha256": "0b4be1ea8c6f9cf8ed4443e5743fee6fc2dda166df6c16940dfd359a8cab777f"
+    }
+  ]
+}
