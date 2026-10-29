@@ -276,7 +276,7 @@ pub fn run() {
                 );
                 MessageBoxW(null_mut(), text.as_ptr(), wide(APP_NAME).as_ptr(), MB_ICONINFORMATION);
             }
-            if !running.is_null() {
+            if !running.is_null() && crate::settings::opens_editor(&arguments, &TraySettings::load()) {
                 // Let the running instance bring the browser to the front.
                 AllowSetForegroundWindow(ASFW_ANY);
                 PostMessageW(running, WM_OPEN_EDITOR, 0, 0);
@@ -449,7 +449,7 @@ pub fn run() {
             SetTimer(hwnd, TIMER_BUTTONS, BUTTONS_MS, None);
             SetTimer(hwnd, TIMER_LIGHTS, LIGHTS_MS, None);
         }
-        if !std::env::args().any(|a| a == "--tray") {
+        if crate::settings::opens_editor(&arguments, &TraySettings::load()) {
             with_app(|app| app.open_editor());
         }
         let smoke_args: Vec<String> = std::env::args().collect();
@@ -1066,7 +1066,7 @@ impl App {
             return;
         }
         settings.firmware_checked = now_secs();
-        settings.save();
+        let _ = settings.save();
         let connected: Vec<u16> = devices.iter().map(|d| d.2).collect();
         let tx = self.firmware_tx.clone();
         let hwnd = self.hwnd as usize;
@@ -1097,7 +1097,7 @@ impl App {
             return;
         }
         settings.update_checked = now_secs();
-        settings.save();
+        let _ = settings.save();
         let tx = self.updates_tx.clone();
         let hwnd = self.hwnd as usize;
         std::thread::spawn(move || {
@@ -1125,7 +1125,7 @@ impl App {
                     let mut settings = TraySettings::load();
                     if manual || settings.update_notified != r.version {
                         settings.update_notified = r.version.clone();
-                        settings.save();
+                        let _ = settings.save();
                         let title = format!("Secretarybird {} is out", r.version);
                         if secbird_core::update::installed() {
                             let body = format!("You have {current}. Click to update now; your settings and profiles are kept.");
@@ -1234,7 +1234,7 @@ impl App {
             }
         }
         if !lines.is_empty() {
-            settings.save();
+            let _ = settings.save();
             self.balloon("Firmware update available", &format!("{}\nOpen the editor for Razer's download link.", lines.join("\n")));
         }
     }
@@ -1278,8 +1278,9 @@ impl App {
         append(menu, MF_STRING, ID_FOLDER as usize, "Open settings folder");
         append(menu, MF_STRING, ID_RESTORE_BUTTONS as usize, "Restore all mouse buttons");
         append(menu, MF_STRING, ID_REPORT as usize, "Make a device report…");
-        let auto = if autostart_enabled() { MF_CHECKED } else { MF_UNCHECKED };
-        append(menu, MF_STRING | auto, ID_AUTOSTART as usize, "Start with Windows");
+        let registration = autostart_enabled();
+        let auto = match &registration { Ok(true)=>MF_CHECKED, Ok(false)=>MF_UNCHECKED, Err(_)=>MF_UNCHECKED|MF_GRAYED };
+        append(menu, MF_STRING | auto, ID_AUTOSTART as usize, if registration.is_err(){"Start with Windows (unavailable; see Settings)"}else{"Start with Windows"});
         AppendMenuW(menu, MF_SEPARATOR, 0, null());
         append(menu, MF_STRING, ID_EXIT as usize, "Exit");
         menu
@@ -1308,7 +1309,10 @@ impl App {
                 let body = if lines.is_empty() { "No mouse with remappable buttons is connected.".to_string() } else { lines.join("\n") };
                 self.balloon("Mouse buttons restored", &body);
             }
-            ID_AUTOSTART => set_autostart(!autostart_enabled()),
+            ID_AUTOSTART => {
+                let result=autostart_enabled().and_then(|enabled|set_autostart(!enabled));
+                if let Err(error)=result { log::append(&error); self.balloon("Auto Launch was not changed",&error); }
+            },
             ID_CHECK_UPDATE => self.check_update(true),
             ID_GET_UPDATE => {
                 if let Some(r) = self.update.clone() {
@@ -1318,7 +1322,7 @@ impl App {
             ID_UPDATE_NOTIFY => {
                 let mut s = TraySettings::load();
                 s.updates_off = !s.updates_off;
-                s.save();
+                let _ = s.save();
                 if s.updates_off {
                     self.update = None;
                 } else {
@@ -1328,7 +1332,7 @@ impl App {
             ID_FIRMWARE => {
                 let mut s = TraySettings::load();
                 s.firmware_weekly = !s.firmware_weekly;
-                s.save();
+                let _ = s.save();
                 if s.firmware_weekly {
                     self.balloon(
                         "Weekly firmware check on",

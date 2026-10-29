@@ -19,6 +19,8 @@ mod shortcuts;
 mod studio;
 #[path="chroma_interaction_tests.rs"]
 mod chroma;
+#[path="settings_interaction_tests.rs"]
+mod settings;
 use super::*;
 use secbird_core::{commands as cmd, sim::Sim, Store};
 use std::time::Instant;

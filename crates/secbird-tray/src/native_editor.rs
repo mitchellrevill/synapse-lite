@@ -44,6 +44,7 @@ mod image_render;
 mod host_tabs;
 mod linked_games;
 mod shortcuts;
+mod settings_view;
 mod macro_view;
 mod chroma_view;
 mod host_tab_model;
@@ -58,7 +59,7 @@ mod performance_layout;
 mod performance_view;
 mod power_layout;
 mod power_view;
-mod profile_files;
+pub(crate) mod profile_files;
 mod profile_modal_backend;
 mod profile_modal_files;
 mod profile_modal_layout;
@@ -134,6 +135,7 @@ fn editor_private_messages_have_distinct_ids() {
         ("macro input menu", macro_view::INPUT_MENU),
         ("test macro", macro_view::TEST),
         ("test chroma", chroma_view::TEST),
+        ("test settings", settings_view::TEST),
         ("shortcut menu", shortcuts::MENU),
         ("shortcut file", shortcuts::FILE),
         ("test shortcuts", shortcuts::TEST),
@@ -433,6 +435,7 @@ impl Tab {
 enum Action {
     Onboard(onboard_view::Control),
     Chroma(chroma_view::Control),
+    Settings(settings_view::Control),
     Studio(studio_view::Control),
     LinkedGames(linked_games::Control),
     Shortcuts(shortcuts::Control),
@@ -513,6 +516,7 @@ struct Hit {
 enum Job {
     Onboard(onboard_view::Request),
     Chroma(chroma_view::Request),
+    Settings(Option<Value>),
     Studio(studio_view::Request),
     LinkedGames(linked_games::Request),
     Shortcuts(shortcuts::Request),
@@ -581,6 +585,7 @@ struct Reply {
 enum WorkerReply {
     Onboard(onboard_view::Request, Result<Value,String>),
     Chroma(Result<chroma_view::Response, String>),
+    Settings(Result<Value,String>),
     StudioControl(crate::host_studio::session::Control, crate::lighting_status::Reader, Value),
     StudioOutput(Result<Value, String>),
     Studio(studio_view::Response),
@@ -645,6 +650,20 @@ fn worker(
                     .and_then(|mut engine| studio_view::output_work(&mut engine, request));
                 if replies.send(WorkerReply::StudioOutput(result)).is_err() { break; }
                 continue;
+            }
+            Job::Settings(body) => {
+                let result=engine.lock().map_err(|_|"Device worker is unavailable".to_string()).and_then(|mut engine| {
+                    if let Some(value)=body.as_ref().filter(|value|value["key"]=="lighting_control") {
+                        if engine.is_measurement_read_only(){return Err("Read-only mode refuses lighting ownership changes".into());}
+                        let snapshot=server::dispatch(&mut engine,"GET","/api/state",&[]).map_err(|e|e.to_string())?;
+                        if !snapshot["devices"].as_array().is_some_and(|devices|devices.iter().any(|device|device["id"]==value["id"] && device["active"]==value["expected_profile"])) {return Err("Device or profile changed; refresh before changing lighting control".into());}
+                        server::dispatch(&mut engine,"POST","/api/lighting-control",&serde_json::to_vec(value).map_err(|e|e.to_string())?).map_err(|e|e.to_string())?;
+                        return Ok(server::settings_json(&engine));
+                    }
+                    let (method,bytes)=match body {Some(value)=>("POST",serde_json::to_vec(&value).map_err(|e|e.to_string())?),None=>("GET",vec![])};
+                    server::dispatch(&mut engine,method,"/api/settings",&bytes).map_err(|e|e.to_string())
+                });
+                if replies.send(WorkerReply::Settings(result)).is_err(){break;}continue;
             }
             Job::Studio(request) => {
                 // Drop the device lock before reading/writing composition or bookmark files.
@@ -798,6 +817,7 @@ fn worker(
                 | Job::SensorRead(..)
                 | Job::Profiles(_)
                 | Job::ImportFile { .. }
+                | Job::Settings(_)
                 | Job::ExportFile { .. } => return Err("File operation was not routed".into()),
             }
             .map_err(|e| e.to_string())?;
@@ -1020,6 +1040,7 @@ impl Drop for Bitmap {
 }
 
 struct State {
+    settings: settings_view::View,
     linked_games:linked_games::View,
     shortcuts:shortcuts::View,
     macros:macro_view::View,
@@ -1771,7 +1792,7 @@ impl State {
                 &job,
                 Job::Profiles(profile_modal_model::Request::PreviewExport { .. })
             );
-        if self.restricted_actions && !matches!(&job, Job::Refresh | Job::Onboard(onboard_view::Request { operation: onboard_view::Operation::Read, .. }) | Job::SensorRead(..) | Job::LinkedGames(linked_games::Request::Read) | Job::MacroLibrary(macro_view::Request::Read) | Job::Studio(studio_view::Request::Restore{..})) && !presentation_preview {
+        if self.restricted_actions && !matches!(&job, Job::Refresh | Job::Settings(None) | Job::Onboard(onboard_view::Request { operation: onboard_view::Operation::Read, .. }) | Job::SensorRead(..) | Job::LinkedGames(linked_games::Request::Read) | Job::MacroLibrary(macro_view::Request::Read) | Job::Studio(studio_view::Request::Restore{..})) && !presentation_preview {
             return;
         }
         if self.pending > 0 {
@@ -1905,6 +1926,7 @@ impl State {
                 }
                 WorkerReply::Chroma(result) => {self.pending=self.pending.saturating_sub(1);chroma_view::receive(self,result);continue;}
                 WorkerReply::Shortcuts(result)=>{self.pending=self.pending.saturating_sub(1);shortcuts::receive(self,result);continue;}
+                WorkerReply::Settings(result)=>{self.pending=self.pending.saturating_sub(1);settings_view::receive(self,result);continue;}
                 WorkerReply::LinkedGames(result)=>{self.pending=self.pending.saturating_sub(1);linked_games::receive(self,result);continue;}
                 WorkerReply::MacroLibrary(result)=>{self.pending=self.pending.saturating_sub(1);macro_view::receive(self,result);continue;}
                 WorkerReply::StudioControl(control, reader, status) => {
@@ -2006,7 +2028,7 @@ impl State {
                 );
                 self.notices = reply.notices;
             }
-            if self.selected.is_some() && self.device().is_none() && !linked_games::active(self) && !macro_view::active(self) && !chroma_view::active(self) && !shortcuts::active(self) {
+            if self.selected.is_some() && self.device().is_none() && !linked_games::active(self) && !macro_view::active(self) && !settings_view::active(self) && !chroma_view::active(self) && !shortcuts::active(self) {
                 self.selected = None;
                 self.buttons.clear();
             }
@@ -2165,6 +2187,7 @@ impl State {
             return;
         }
         if chroma_view::active(self) { return; }
+        if settings_view::active(self) {return;}
         if linked_games::active(self) {linked_games::fields(self);return;}
         if shortcuts::active(self) {shortcuts::fields(self);return;}
         if macro_view::active(self) {macro_view::fields(self);return;}
@@ -2302,9 +2325,11 @@ impl State {
         if leaving_macro&&!macro_view::can_leave(self){return;}
         let leaving_shortcuts=matches!(&action,Action::Home|Action::Device(_)|Action::Refresh|Action::Close|Action::Studio(studio_view::Control::Enter))||matches!(&action,Action::HostClose(id) if id==shortcuts::ID);
         if leaving_shortcuts&&!shortcuts::can_leave(self,action.clone()){return;}
-        if self.restricted_actions
-            && !matches!(&action, Action::Close | Action::Minimize | Action::Maximize | Action::MacroLibrary(macro_view::Control::Host(macro_view::FormControl::Cancel)))
-        {
+        let allowed_when_restricted = matches!(&action, Action::Close | Action::Minimize | Action::Maximize | Action::MacroLibrary(macro_view::Control::Host(macro_view::FormControl::Cancel))
+            | Action::Settings(settings_view::Control::Open | settings_view::Control::Page(_) | settings_view::Control::Scroll(_)))
+            || matches!(&action, Action::Device(id) if id == settings_view::ID)
+            || (matches!(&action, Action::Refresh) && settings_view::active(self));
+        if self.restricted_actions && !allowed_when_restricted {
             return;
         }
         let stays_on_page = matches!(&action, Action::HostMove(..))
@@ -2337,6 +2362,7 @@ impl State {
         match action {
             Action::Onboard(control)=>onboard_view::action(self,control),
             Action::Chroma(control) => chroma_view::action(self,control),
+            Action::Settings(control)=>settings_view::action(self,control),
             Action::LinkedGames(control)=>linked_games::action(self,control),
             Action::Shortcuts(control)=>shortcuts::action(self,control),
             Action::MacroLibrary(control)=>macro_view::action(self,control),
@@ -2384,7 +2410,7 @@ impl State {
             }
             Action::Device(id) => {
                 if id==chroma_view::ID && !studio_view::can_leave_to_chroma(self) { return; }
-                if (id==linked_games::ID||id==macro_view::ID||id==shortcuts::ID) && self.studio.open && studio_view::block_close(self){return;}
+                if (id==settings_view::ID||id==linked_games::ID||id==macro_view::ID||id==shortcuts::ID) && self.studio.open && studio_view::block_close(self){return;}
                 self.studio.canvas.cancel();ReleaseCapture();
                 self.studio.open=false;
                 if !host_tabs::open(self, &id) { return; }
@@ -2393,6 +2419,7 @@ impl State {
                 self.renaming = None;
                 self.profile_actions = false;
                 self.selected = Some(id);
+                if settings_view::active(self){settings_view::request(self,None);}
                 if linked_games::active(self){linked_games::request(self,linked_games::Request::Read);}
                 if shortcuts::active(self){shortcuts::request(self,shortcuts::Request::Read);}
                 if macro_view::active(self){macro_view::request(self,macro_view::Request::Read);}
@@ -2415,6 +2442,7 @@ impl State {
                 self.rebuild_fields();
                 calibration_view::request(self,true);
             }
+            Action::Refresh if settings_view::active(self)=>settings_view::request(self,None),
             Action::Refresh if linked_games::active(self)=>linked_games::request(self,linked_games::Request::Read),
             Action::Refresh if shortcuts::active(self)=>shortcuts::request(self,shortcuts::Request::Read),
             Action::Refresh if macro_view::active(self)=>macro_view::request(self,macro_view::Request::Read),
@@ -3010,8 +3038,9 @@ unsafe fn paint(state: &mut State, dc: HDC) {
         rect: p.rect(40, 42, 40, 38),
         action: Action::Refresh,
     });
+    p.button("Settings",width-110,47,95,Action::Settings(settings_view::Control::Open),settings_view::active(state));
     let device = state.device().cloned();
-    let title = if shortcuts::active(state) {"GLOBAL SHORTCUTS"} else if chroma_view::active(state) {"RAZER CHROMA"} else if macro_view::active(state) {"MACRO"} else if linked_games::active(state) {"LINKED GAMES"} else if state.studio.open { "RAZER CHROMA STUDIO" } else { device
+    let title = if settings_view::active(state) {"SETTINGS"} else if shortcuts::active(state) {"GLOBAL SHORTCUTS"} else if chroma_view::active(state) {"RAZER CHROMA"} else if macro_view::active(state) {"MACRO"} else if linked_games::active(state) {"LINKED GAMES"} else if state.studio.open { "RAZER CHROMA STUDIO" } else { device
         .as_ref()
         .and_then(|d| d["name"].as_str())
         .unwrap_or("RAZER SYNAPSE") };
@@ -3039,10 +3068,10 @@ unsafe fn paint(state: &mut State, dc: HDC) {
         );
     }
     p.line(0, 79, width, 0);
-    if chroma_view::active(state) {chroma_view::paint(state,&mut p,width,height);
+    if settings_view::active(state) {settings_view::paint(state,&mut p,width,height);
+    } else if chroma_view::active(state) {chroma_view::paint(state,&mut p,width,height);
     } else if macro_view::active(state) {macro_view::paint(state,&mut p,width,height);
-    } else if shortcuts::active(state) {shortcuts::paint(state,&mut p,width,height);
-    } else if linked_games::active(state) {linked_games::paint(state,&mut p,width,height);
+    } else if shortcuts::active(state) {shortcuts::paint(state,&mut p,width,height);    } else if linked_games::active(state) {linked_games::paint(state,&mut p,width,height);
     } else if state.studio.open {
         studio_view::paint(state,&mut p,width,height);
     } else if let Some(device) = device {
@@ -3662,7 +3691,7 @@ unsafe fn paint(state: &mut State, dc: HDC) {
             }
         }
     }
-    if !state.source_viewport() && !linked_games::active(state) && !macro_view::active(state) && !shortcuts::active(state) {
+    if !state.source_viewport() && !linked_games::active(state) && !macro_view::active(state) && !settings_view::active(state) && !chroma_view::active(state) && !shortcuts::active(state) {
         p.line(0, height - 35, width, 0);
         p.text(
             &state.status,
@@ -3875,6 +3904,16 @@ unsafe extern "system" fn window_proc(
             6=>state.action(Action::Home),
             _=>{}
         }
+        return 0;
+    }
+    #[cfg(test)]
+    if message==settings_view::TEST {
+        if let Ok(mut state)=(*pointer).try_borrow_mut() {match wparam {
+            1=>state.action(Action::Settings(settings_view::Control::Open)),
+            2=>*(lparam as *mut Value)=settings_view::diagnostics(&state),
+            3=>{let body=(*(lparam as *const Value)).clone();settings_view::request(&mut state,Some(body));},
+            _=>{}
+        }}
         return 0;
     }
     #[cfg(test)]
@@ -4713,6 +4752,7 @@ unsafe extern "system" fn window_proc(
             0
         }
         WM_MOUSEWHEEL if chroma_view::active(&state) => {chroma_view::wheel(&mut state,(wparam>>16) as u16 as i16);0}
+        WM_MOUSEWHEEL if settings_view::active(&state) => {settings_view::wheel(&mut state,(wparam>>16) as u16 as i16);0}
         WM_MOUSEWHEEL if linked_games::active(&state) => {linked_games::wheel(&mut state,(wparam>>16) as u16 as i16);0}
         WM_MOUSEWHEEL if shortcuts::active(&state) => {shortcuts::action(&mut state,shortcuts::Control::Next(if ((wparam>>16)as u16 as i16)<0{1}else{-1}));0}
         WM_MOUSEWHEEL if macro_view::active(&state) => {macro_view::wheel(&mut state,(wparam>>16) as u16 as i16);0}
@@ -5079,6 +5119,7 @@ fn run_window(
             .spawn(move || worker(engine, jobs_rx, replies_tx))
             .map_err(|e| e.to_string())?;
         let mut state = Box::new(RefCell::new(State {
+            settings: settings_view::View::default(),
             linked_games:linked_games::View::default(),
             shortcuts:shortcuts::View::default(),
             macros:macro_view::View::default(),
