@@ -84,9 +84,12 @@ The shared approved tabs were not redesigned.
 
 Existing input/pair rebinding and grouped deletion are now implemented; see
 MACRO-PAIR-EDITING.md. Remaining: null-state/direction/kind conversion, paired
-block reordering, recording, remaining events/loops/nested macros, binding and playback settings,
+block reordering, recording, remaining events, binding and playback settings,
 macro-only import/export and cache invalidation. Live playback additionally
 requires proved driver routing/ownership, physical-key arbitration and recovery.
 The two broader native failures recorded in MACRO-LIBRARY.md remain unresolved;
 they were not blindly rerun for this independent feature. Full hardware/API,
 privacy, visual and three complete-build memory acceptance remains open.
+
+Paired loop editing is covered by MACRO-LOOPS.md; nested references and profile
+dependency preservation are covered by MACRO-NESTED.md. Neither enables playback.
