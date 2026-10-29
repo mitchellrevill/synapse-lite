@@ -181,11 +181,17 @@ pub(super) fn apply(
     worker_ready: bool,
     trace: &mut crate::host_uniform::ActionTrace,
 ) -> Result<Value, Error> {
+    // Native integration tests substitute only the external process observer
+    // for an explicitly simulated handle. Production always samples the host.
+    #[cfg(test)]
+    let gate: fn() -> Result<(),Error> = if dev.path.as_bytes().starts_with(b"sim:") || dev.path.as_bytes()==b"sim-host-static" { ||Ok(()) } else { process_owner_gate };
+    #[cfg(not(test))]
+    let gate = process_owner_gate;
     apply_traced(
         dev,
         store,
         body,
-        process_owner_gate,
+        gate,
         host_gate,
         worker_ready,
         trace,

@@ -510,6 +510,17 @@ fn finish_name(state: &mut State) -> bool {
         }
     }
 }
+/// Navigation must not reuse the exit dialog's Next::Close continuation.
+pub(super) unsafe fn can_leave_to_chroma(state: &mut State) -> bool {
+    if !state.studio.open { return true; }
+    if !finish_name(state) { return false; }
+    if state.studio.busy || state.studio.dialog || state.studio.dirty() {
+        error(state,"Save or discard Studio changes before opening Chroma");
+        redraw(state);
+        return false;
+    }
+    true
+}
 pub(super) unsafe fn block_close(state: &mut State) -> bool {
     if !finish_name(state) {
         state.studio.open = true;

@@ -44,6 +44,7 @@ mod image_render;
 mod host_tabs;
 mod linked_games;
 mod macro_view;
+mod chroma_view;
 mod host_tab_model;
 mod calibration_view;
 mod onboard_view;
@@ -426,6 +427,7 @@ impl Tab {
 #[derive(Clone)]
 enum Action {
     Onboard(onboard_view::Control),
+    Chroma(chroma_view::Control),
     Studio(studio_view::Control),
     LinkedGames(linked_games::Control),
     MacroLibrary(macro_view::Control),
@@ -504,6 +506,7 @@ struct Hit {
 
 enum Job {
     Onboard(onboard_view::Request),
+    Chroma(chroma_view::Request),
     Studio(studio_view::Request),
     LinkedGames(linked_games::Request),
     MacroLibrary(macro_view::Request),
@@ -570,6 +573,7 @@ struct Reply {
 
 enum WorkerReply {
     Onboard(onboard_view::Request, Result<Value,String>),
+    Chroma(Result<chroma_view::Response, String>),
     StudioControl(crate::host_studio::session::Control, crate::lighting_status::Reader, Value),
     StudioOutput(Result<Value, String>),
     Studio(studio_view::Response),
@@ -602,6 +606,12 @@ fn worker(
                 let result = engine.lock().map_err(|_|"Device worker is unavailable".to_string())
                     .and_then(|mut engine|onboard_view::work(&mut engine,&request));
                 if replies.send(WorkerReply::Onboard(request,result)).is_err(){break;}
+                continue;
+            }
+            Job::Chroma(request) => {
+                let result = engine.lock().map_err(|_| "Device worker unavailable".to_string())
+                    .and_then(|mut engine|chroma_view::work(&mut engine,request));
+                if replies.send(WorkerReply::Chroma(result)).is_err() { break; }
                 continue;
             }
             Job::MacroLibrary(request)=>{
@@ -765,6 +775,7 @@ fn worker(
                     server::dispatch(&mut engine, "GET", "/api/state", &[])
                 }
                 Job::Onboard(_)
+                | Job::Chroma(_)
                 | Job::CachedLighting(_)
                 | Job::LinkedGames(_)
                 | Job::MacroLibrary(_)
@@ -997,6 +1008,7 @@ impl Drop for Bitmap {
 struct State {
     linked_games:linked_games::View,
     macros:macro_view::View,
+    chroma: chroma_view::View,
     studio: studio_view::View,
     exit_tray: Option<HWND>,
     calibration: calibration_view::View,
@@ -1557,6 +1569,7 @@ impl State {
                     && self.tab == Tab::Performance
                     && performance_view::layout(self).is_some()
             }
+            "chroma" => chroma_view::active(self),
             "keyboard-lighting" => {
                 kind == Some("keyboard")
                     && self.tab == Tab::Lighting
@@ -1683,6 +1696,7 @@ impl State {
             "reserved_footer_css":if self.source_viewport(){0}else{35},
             "fidelity": "partial source-derived native port; pixel identity unproven"
         });
+        report["source_chroma_view"] = json!(chroma_view::active(self));
         report["source_text_fallback"] = json!(self.fonts.source_text.diagnostic());
         report["customize_background_cached"] = json!(self.customize_background.borrow().ready());
         report["source_text_cached_layouts"] = json!(self.fonts.source_text.metrics().cached_layouts);
@@ -1874,9 +1888,11 @@ impl State {
                     onboard_view::receive(self,request,result);
                     continue;
                 }
+                WorkerReply::Chroma(result) => {self.pending=self.pending.saturating_sub(1);chroma_view::receive(self,result);continue;}
                 WorkerReply::LinkedGames(result)=>{self.pending=self.pending.saturating_sub(1);linked_games::receive(self,result);continue;}
                 WorkerReply::MacroLibrary(result)=>{self.pending=self.pending.saturating_sub(1);macro_view::receive(self,result);continue;}
                 WorkerReply::StudioControl(control, reader, status) => {
+                    self.chroma.reader=Some(reader.clone());
                     studio_view::output_control(self, control, reader, status);
                     continue;
                 }
@@ -1917,6 +1933,7 @@ impl State {
             // Smoke-only selection follows the real read-only device snapshot.
             if let Some(view) = self.smoke_view.take() {
                 if view=="studio" {self.studio.open=true;self.selected=None;}
+                if view=="chroma" {self.chroma.used=true;self.selected=Some(chroma_view::ID.into());host_tabs::open(self,chroma_view::ID);}
                 let target = match view.as_str() {
                     "mouse-performance"
                     | "mouse-performance-polling"
@@ -1973,7 +1990,7 @@ impl State {
                 );
                 self.notices = reply.notices;
             }
-            if self.selected.is_some() && self.device().is_none() && !linked_games::active(self) && !macro_view::active(self) {
+            if self.selected.is_some() && self.device().is_none() && !linked_games::active(self) && !macro_view::active(self) && !chroma_view::active(self) {
                 self.selected = None;
                 self.buttons.clear();
             }
@@ -2131,6 +2148,7 @@ impl State {
             self.focus = 0;
             return;
         }
+        if chroma_view::active(self) { return; }
         if linked_games::active(self) {linked_games::fields(self);return;}
         if macro_view::active(self) {macro_view::fields(self);return;}
         if self.studio.open {
@@ -2263,7 +2281,7 @@ impl State {
         if matches!(&action, Action::Device(id) if self.selected.as_ref() == Some(id)) {
             return;
         }
-        let leaving_macro=matches!(&action,Action::Home|Action::Device(_)|Action::Refresh|Action::Close|Action::Studio(studio_view::Control::Enter))||matches!(&action,Action::HostClose(id) if id==macro_view::ID);
+        let leaving_macro=matches!(&action,Action::Home|Action::Device(_)|Action::Refresh|Action::Close|Action::Studio(studio_view::Control::Enter)|Action::Chroma(chroma_view::Control::Open))||matches!(&action,Action::HostClose(id) if id==macro_view::ID);
         if leaving_macro&&!macro_view::can_leave(self){return;}
         if self.restricted_actions
             && !matches!(&action, Action::Close | Action::Minimize | Action::Maximize)
@@ -2299,6 +2317,7 @@ impl State {
         }
         match action {
             Action::Onboard(control)=>onboard_view::action(self,control),
+            Action::Chroma(control) => chroma_view::action(self,control),
             Action::LinkedGames(control)=>linked_games::action(self,control),
             Action::MacroLibrary(control)=>macro_view::action(self,control),
             Action::Studio(control) => studio_view::action(self,control),
@@ -2344,6 +2363,7 @@ impl State {
                 self.rebuild_fields();
             }
             Action::Device(id) => {
+                if id==chroma_view::ID && !studio_view::can_leave_to_chroma(self) { return; }
                 if (id==linked_games::ID||id==macro_view::ID) && self.studio.open && studio_view::block_close(self){return;}
                 self.studio.canvas.cancel();ReleaseCapture();
                 self.studio.open=false;
@@ -2969,7 +2989,7 @@ unsafe fn paint(state: &mut State, dc: HDC) {
         action: Action::Refresh,
     });
     let device = state.device().cloned();
-    let title = if macro_view::active(state) {"MACRO"} else if linked_games::active(state) {"LINKED GAMES"} else if state.studio.open { "RAZER CHROMA STUDIO" } else { device
+    let title = if chroma_view::active(state) {"RAZER CHROMA"} else if macro_view::active(state) {"MACRO"} else if linked_games::active(state) {"LINKED GAMES"} else if state.studio.open { "RAZER CHROMA STUDIO" } else { device
         .as_ref()
         .and_then(|d| d["name"].as_str())
         .unwrap_or("RAZER SYNAPSE") };
@@ -2997,7 +3017,8 @@ unsafe fn paint(state: &mut State, dc: HDC) {
         );
     }
     p.line(0, 79, width, 0);
-    if macro_view::active(state) {macro_view::paint(state,&mut p,width,height);
+    if chroma_view::active(state) {chroma_view::paint(state,&mut p,width,height);
+    } else if macro_view::active(state) {macro_view::paint(state,&mut p,width,height);
     } else if linked_games::active(state) {linked_games::paint(state,&mut p,width,height);
     } else if state.studio.open {
         studio_view::paint(state,&mut p,width,height);
@@ -3548,7 +3569,7 @@ unsafe fn paint(state: &mut State, dc: HDC) {
         p.text("DEVICES", 30, 104, 300, 32, p.fonts.heading, GREEN, DT_LEFT);
         p.button("LINKED GAMES",width-440,104,195,Action::LinkedGames(linked_games::Control::Open),false);
         p.button("MACRO",width-640,104,180,Action::MacroLibrary(macro_view::Control::Open),false);
-        p.button("CHROMA STUDIO",width-225,104,195,Action::Studio(studio_view::Control::Enter),false);
+        p.button("CHROMA",width-225,104,195,Action::Chroma(chroma_view::Control::Open),false);
         for (index, device) in state.devices().iter().enumerate() {
             let x = 30 + (index as i32 % 4) * 285;
             let y = 158 + (index as i32 / 4) * 280;
@@ -3814,6 +3835,21 @@ unsafe extern "system" fn window_proc(
             8=>{*(lparam as *mut Value)=match macro_view::menu_targets(&state){Ok(targets)=>json!(targets.into_iter().map(|target|json!({"guid":target.guid,"name":target.name,"disabled":target.reason.is_some()})).collect::<Vec<_>>()),Err(error)=>json!({"error":error})};},
             _=>{},
         }}return 0;
+    }
+    #[cfg(test)]
+    if message==chroma_view::TEST {
+        let mut state=(*pointer).borrow_mut();
+        match wparam {
+            0=>state.action(Action::Chroma(chroma_view::Control::Open)),
+            1=>*(lparam as *mut Value)=chroma_view::diagnostics(&state),
+            2=>state.action(Action::Chroma(chroma_view::Control::Effect(lparam as u8))),
+            3=>state.action(Action::Chroma(chroma_view::Control::Apply)),
+            4=>{let id=(*(lparam as *const Value)).as_str().unwrap().to_string();state.action(Action::Chroma(chroma_view::Control::Device(id)));},
+            5=>state.action(Action::Chroma(chroma_view::Control::Dismiss)),
+            6=>state.action(Action::Home),
+            _=>{}
+        }
+        return 0;
     }
     #[cfg(test)]
     if message==linked_games::TEST {
@@ -4626,6 +4662,7 @@ unsafe extern "system" fn window_proc(
             }
             0
         }
+        WM_MOUSEWHEEL if chroma_view::active(&state) => {chroma_view::wheel(&mut state,(wparam>>16) as u16 as i16);0}
         WM_MOUSEWHEEL if linked_games::active(&state) => {linked_games::wheel(&mut state,(wparam>>16) as u16 as i16);0}
         WM_MOUSEWHEEL if macro_view::active(&state) => {macro_view::wheel(&mut state,(wparam>>16) as u16 as i16);0}
         WM_MOUSEWHEEL if state.profile_open => {
@@ -4774,6 +4811,7 @@ unsafe extern "system" fn window_proc(
             0
         }
         WM_KEYDOWN => {
+            if wparam == 27 && chroma_view::escape(&mut state) { return 0; }
             if state.tab==Tab::Advanced&&advanced_view::template_key(&mut state,wparam){return 0;}
             if wparam == 27 && state.assignment.draft.is_some() {
                 let control = if state.assignment.pending.is_some() {
@@ -4867,6 +4905,7 @@ unsafe extern "system" fn window_proc(
         WM_TIMER if wparam == CACHED_LIGHTING_TIMER => {
             state.request_cached_lighting();
             studio_view::output_tick(&mut state);
+            if chroma_view::active(&state) { InvalidateRect(hwnd,null(),0); }
             0
         }
         WM_TIMER if wparam == studio_view::PREVIEW_TIMER => {
@@ -4990,6 +5029,7 @@ fn run_window(
         let mut state = Box::new(RefCell::new(State {
             linked_games:linked_games::View::default(),
             macros:macro_view::View::default(),
+            chroma: chroma_view::View::default(),
             studio: studio_view::View::default(),
             exit_tray: None,
             calibration: calibration_view::View::default(),
