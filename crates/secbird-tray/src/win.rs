@@ -885,7 +885,8 @@ impl App {
             return;
         }
         let what: Vec<String> = reports.iter().map(|r| format!("{} -> {}", r.device, r.profile)).collect();
-        log::append(&format!("{} in front: {}", exe.as_deref().unwrap_or("?"), what.join(", ")));
+        let label=exe.as_deref().map(secbird_core::profile::normalize_app);
+        log::append(&format!("{} in front: {}", label.as_deref().unwrap_or("?"), what.join(", ")));
         let mut names: Vec<&str> = reports.iter().map(|r| r.profile.as_str()).collect();
         names.dedup();
         if !settings.popups_off {

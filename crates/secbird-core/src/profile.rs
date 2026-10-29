@@ -11,6 +11,8 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 mod storage;
+mod applications;
+pub use applications::{normalize_app_path, foreground_app_identity};
 
 pub const DEFAULT_PROFILE: &str = "Default";
 
@@ -78,6 +80,9 @@ pub struct Profile {
     /// profile while their window is in front.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub apps: Vec<String>,
+    /// Explicit absolute executable locations for local foreground profile switching.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub app_paths: Vec<String>,
     /// Button remaps: setting key (`side-forward`, `sniper/hypershift`, see
     /// [`crate::buttons::setting_key`]) -> action text (`key:ctrl+c`, `turbo:left@15`).
     /// Buttons not listed keep their saved on-board setting.
@@ -172,7 +177,7 @@ impl DeviceProfiles {
             return Err(Error::InvalidArg(format!("profile '{name}' already exists")));
         }
         // A program belongs to one profile, so the copy starts without any.
-        let mut copy = Profile { apps: Vec::new(), ..self.active().clone() };
+        let mut copy = Profile { apps: Vec::new(), app_paths: Vec::new(), ..self.active().clone() };
         crate::profile_compat::renew_profile_identity(&mut copy)?;
         self.profiles.insert(name.into(), copy);
         Ok(())
@@ -215,9 +220,9 @@ impl DeviceProfiles {
         Ok(())
     }
 
-    /// The profile tied to a program (a normalized exe name), if any.
+    /// The profile tied to an exact executable location or legacy name, if any.
     pub fn for_app(&self, exe: &str) -> Option<&str> {
-        self.profiles.iter().find(|(_, p)| p.apps.iter().any(|a| a == exe)).map(|(n, _)| n.as_str())
+        applications::profile_for(self,exe)
     }
 
     /// The profile to show right now: the one tied to the program in front, else the active one.
@@ -487,7 +492,9 @@ impl Store {
 
     /// Every program tied to a profile of any device.
     pub fn apps(&self) -> std::collections::HashSet<String> {
-        self.devices.values().flat_map(|d| d.profiles.values()).flat_map(|p| p.apps.iter().cloned()).collect()
+        self.devices.values().flat_map(|d| d.profiles.values()).flat_map(|p|
+            p.apps.iter().map(|app|normalize_app(app)).filter(|app|!app.is_empty())
+            .chain(p.app_paths.iter().filter_map(|path|normalize_app_path(path).ok()))).collect()
     }
 }
 

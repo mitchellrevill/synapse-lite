@@ -172,6 +172,7 @@ fn validate_store_for(store: &Store, kind: ProbeKind) -> Result<(String, String)
         || profile.dimming.is_some()
         || profile.game_mode.is_some()
         || !profile.apps.is_empty()
+        || !profile.app_paths.is_empty()
         || !profile.buttons.is_empty()
         || !profile.keys.is_empty()
     {

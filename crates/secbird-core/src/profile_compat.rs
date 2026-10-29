@@ -673,7 +673,7 @@ pub fn export_synapse4(store: &Store, device_key: &str) -> Result<ExportReport> 
             }
         }
         for (label, present) in [
-            ("applications", !profile.apps.is_empty()),
+            ("applications", !profile.apps.is_empty() || !profile.app_paths.is_empty()),
             ("auto-sleep enable switch", profile.auto_sleep.is_some()),
             ("dimming", profile.dimming.is_some()),
         ] {

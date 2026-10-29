@@ -107,6 +107,8 @@ PROFILES:
   profile apps <name> [program ...]
                             Switch to <name> while one of these programs is in front
                             (e.g. cs2.exe); no programs clears the list
+  profile paths <name> [absolute.exe ...]
+                            Link exact executable locations; no paths clears only these links
   apply                     Re-send the active profile to the device
   export <file>             Save all profiles of all devices to a file
   export-synapse4 <file>     Re-export a selected device's imported Synapse 4 profiles
@@ -588,6 +590,7 @@ fn profile_cmd(dev: &Device, store: &mut Store, rest: &[String]) -> Result<(), E
                 let bright = z.brightness.map(|b| format!(", {b}%")).unwrap_or_default();
                 println!("  {zone:<10} {state}{bright}");
             }
+            if !p.app_paths.is_empty() { println!("  paths      {}",p.app_paths.join(", ")); }
             if !p.apps.is_empty() {
                 println!("  apps       {}", p.apps.join(", "));
             }
@@ -622,6 +625,15 @@ fn profile_cmd(dev: &Device, store: &mut Store, rest: &[String]) -> Result<(), E
             store.save()?;
             println!("Active profile: {name}");
             report_apply(results)
+        }
+        "paths" => {
+            let name=name.ok_or_else(||Error::InvalidArg("usage: profile paths <name> [absolute.exe ...]".into()))?;
+            profiles.set_app_paths(name,&rest[2..])?;
+            let count=profiles.profiles[name].app_paths.len();
+            secbird_core::profile_compat::validate_store_budget(store)?;
+            store.save()?;
+            println!("Profile '{name}' has {count} exact executable link(s). Active selection was not changed.");
+            Ok(())
         }
         "apps" => {
             let name = name.ok_or_else(|| Error::InvalidArg("usage: profile apps <name> [program ...]".into()))?;

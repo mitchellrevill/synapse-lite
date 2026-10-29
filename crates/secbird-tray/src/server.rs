@@ -18,6 +18,8 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 mod lighting;
 #[cfg(test)]
+mod application_paths_tests;
+#[cfg(test)]
 mod physical_static_probe;
 #[cfg(test)]
 mod physical_uniform_probe;
@@ -203,6 +205,9 @@ impl Server {
     }
 
     fn route_with_audio(&self, req: &Request, audio: impl FnOnce()->Result<crate::audio_endpoints::Snapshot,String>) -> Response {
+        self.route_with_metadata(req,audio,crate::apps::running_paths)
+    }
+    fn route_with_metadata(&self, req:&Request, audio:impl FnOnce()->Result<crate::audio_endpoints::Snapshot,String>, applications:impl FnOnce()->Vec<String>)->Response {
         if !self.origin_ok(req) {
             return Response::text("403 Forbidden", "Forbidden");
         }
@@ -230,6 +235,12 @@ impl Server {
                 Ok(value)=>Response::json(value),Err(error)=>Response::error("503 Service Unavailable",error),
             };
         }
+        if matches!(req.path.as_str(),"/api/apps"|"/api/application-paths") {
+            if req.method!="GET" {return Response::error("405 Method Not Allowed","Application discovery accepts GET only");}
+            if !req.body.is_empty() {return Response::error("400 Bad Request","Application discovery takes no request body");}
+            let paths=applications();
+            return Response::json(if req.path=="/api/application-paths" {json!({"paths":paths})} else {json!({"apps":paths.iter().map(|path|secbird_core::profile::normalize_app(path)).collect::<std::collections::BTreeSet<_>>()})});
+        }
         let mut engine = match self.engine.lock() {
             Ok(e) => e,
             Err(poisoned) => poisoned.into_inner(),
@@ -251,6 +262,7 @@ pub(crate) fn dispatch(engine: &mut Engine, method: &str, path: &str, body: &[u8
     match (method, path) {
         ("GET", "/api/state") => Ok(state(engine)),
         ("GET", "/api/apps") => Ok(json!({ "apps": crate::apps::running() })),
+        ("GET", "/api/application-paths") => Ok(json!({ "paths": crate::apps::running_paths() })),
         ("GET", "/api/live") => {
             let (seq, dpi) = engine.live_dpi();
             Ok(json!({ "seq": seq, "dpi": dpi.iter().map(|(k, (x, y))| (k.clone(), json!([x, y]))).collect::<serde_json::Map<_, _>>() }))
@@ -310,6 +322,8 @@ struct Body {
     light: Option<(u8, u8)>,
     #[serde(default)]
     apps: Vec<String>,
+    #[serde(default)]
+    paths: Option<Vec<String>>,
     /// A Settings page switch (`key`) and whether it is on; `data` for an imported file.
     #[serde(default)]
     key: String,
@@ -425,6 +439,7 @@ fn buttons_json(dev: &Device, store: &mut Store) -> Value {
 
 fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
     let b: Body = serde_json::from_slice(body).map_err(|e| Error::InvalidArg(e.to_string()))?;
+    if path=="/api/profile" && b.action=="paths" && (b.id.is_empty() || b.expected_device.as_deref()!=Some(&b.id) || !engine.devices().iter().any(|dev|dev.key()==b.id)) {return Err(Error::InvalidArg("Executable links require the selected device identity".into()));}
     if path=="/api/sensor-rotation" {
         if b.id.is_empty() || b.expected_device.as_deref()!=Some(&b.id){return Err(Error::InvalidArg("Rotation requires the selected device identity".into()));}
         let profile=b.expected_profile.as_deref().filter(|p|!p.is_empty()).ok_or_else(||Error::InvalidArg("Rotation requires the selected profile identity".into()))?;
@@ -744,6 +759,7 @@ fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
                     "delete" => profiles.delete(&b.name)?,
                     "use" => profiles.switch(&b.name)?,
                     "apps" => profiles.set_apps(&b.name, &b.apps)?,
+                    "paths" => profiles.set_app_paths(&b.name, b.paths.as_deref().ok_or_else(||Error::InvalidArg("paths must be an explicit list; an empty list clears links".into()))?)?,
                     other => return Err(Error::InvalidArg(format!("unknown action '{other}'"))),
                 }
                 let switched = matches!(b.action.as_str(), "use" | "add" | "duplicate");

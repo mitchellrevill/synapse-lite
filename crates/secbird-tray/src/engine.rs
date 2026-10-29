@@ -11,6 +11,8 @@ mod source_studio;
 mod lighting_probe;
 mod sensor_runtime;
 #[cfg(test)]
+mod application_tests;
+#[cfg(test)]
 mod measurement_read_only;
 
 pub struct Engine {
@@ -25,6 +27,7 @@ pub struct Engine {
     synapse: Vec<String>,
     /// The program in front, when some profile is tied to it.
     foreground: Option<String>,
+    foreground_profiles: HashMap<String,String>,
     /// Programs tied to any profile, and the profiles.json timestamp they were read at.
     apps: HashSet<String>,
     apps_read: Option<SystemTime>,
@@ -105,6 +108,7 @@ impl Engine {
             unsupported: Vec::new(),
             synapse: Vec::new(),
             foreground: None,
+            foreground_profiles: HashMap::new(),
             apps: HashSet::new(),
             apps_read: None,
             live_dpi: HashMap::new(),
@@ -244,40 +248,43 @@ impl Engine {
         (self.live_seq, &self.live_dpi)
     }
 
-    /// Called when another window comes to the front, with its exe name. Devices whose
+    /// Called with the foreground executable location (or a legacy name). Devices whose
     /// profile depends on the program in front get that profile; nothing is sent when
     /// neither the old nor the new program is tied to a profile.
     pub fn set_foreground(&mut self, exe: Option<String>) -> Vec<ApplyReport> {
         if self.measurement_read_only {
             return Vec::new();
         }
-        self.refresh_apps();
-        let exe = exe.map(|e| secbird_core::profile::normalize_app(&e)).filter(|e| self.apps.contains(e));
-        if exe == self.foreground {
-            return Vec::new();
+        let links_changed=self.refresh_apps();
+        let exe = exe.and_then(|e| secbird_core::profile::foreground_app_identity(&e))
+            .filter(|e| self.apps.contains(e) || self.apps.contains(&secbird_core::profile::normalize_app(e)));
+        if exe==self.foreground && !links_changed {return Vec::new();}
+        let Ok(mut store)=self.load_store() else {return Vec::new();};
+        let mut changed=vec![];
+        let mut selections=HashMap::new();
+        for dev in &self.devices {
+            let profiles=store.for_device(dev);let key=dev.key();
+            let old=self.foreground_profiles.get(&key).map(String::as_str)
+                .unwrap_or_else(||profiles.effective(self.foreground.as_deref()));
+            let next=profiles.effective(exe.as_deref());
+            if old!=next {changed.push(key.clone());}
+            selections.insert(key,next.to_string());
         }
-        let before = std::mem::replace(&mut self.foreground, exe);
-        let Ok(mut store) = self.load_store() else { return Vec::new() };
-        let changed: Vec<String> = self
-            .devices
-            .iter()
-            .filter(|d| {
-                let p = store.for_device(d);
-                p.effective(before.as_deref()) != p.effective(self.foreground.as_deref())
-            })
-            .map(|d| d.key())
-            .collect();
+        self.foreground=exe;self.foreground_profiles=selections;
         self.apply(&changed)
     }
 
-    /// Re-read the tied programs only when profiles.json has changed: a foreground switch
-    /// then costs one file-time lookup.
-    fn refresh_apps(&mut self) {
-        let stamp = std::fs::metadata(config_dir().join("profiles.json")).and_then(|m| m.modified()).ok();
-        if stamp != self.apps_read || stamp.is_none() {
-            self.apps = self.load_store().map(|s| s.apps()).unwrap_or_default();
-            self.apps_read = stamp;
-        }
+    /// Refresh bindings only when their store changes. Return whether selection
+    /// must be reconciled even when the foreground executable stayed the same.
+    fn refresh_apps(&mut self)->bool {
+        let stamp=std::fs::metadata(self.profile_store_path()).and_then(|m|m.modified()).ok();
+        if stamp!=self.apps_read || stamp.is_none() {
+            match self.load_store() {
+                Ok(store)=>{self.apps=store.apps();self.apps_read=stamp;}
+                Err(_)=>{self.apps_read=None;}
+            }
+            true
+        } else {false}
     }
 
     pub fn devices(&self) -> &[Device] {
@@ -563,12 +570,13 @@ impl Engine {
         Store::load(&config_dir().join("profiles.json"))
     }
 
-    fn load_store(&self) -> Result<Store> {
+    fn profile_store_path(&self)->std::path::PathBuf {
         #[cfg(test)]
-        if let Some(path) = &self.runtime_store_path {
-            return Store::load(path);
-        }
-        Self::store()
+        if let Some(path)=&self.runtime_store_path {return path.clone();}
+        config_dir().join("profiles.json")
+    }
+    fn load_store(&self) -> Result<Store> {
+        Store::load(&self.profile_store_path())
     }
     fn lighting_config(&self, dev: &Device, store: &mut Store) -> LightingConfig {
         let profiles = store.for_device(dev);
