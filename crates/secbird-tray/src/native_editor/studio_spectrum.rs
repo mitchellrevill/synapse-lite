@@ -49,7 +49,7 @@ impl Properties {
     }
 }
 pub(super) fn refresh(view: &mut View) {
-    if !matches!(view.effect(), Some("spectrum" | "wave" | "starlight" | "breathing")) {
+    if !matches!(view.effect(), Some("spectrum" | "wave" | "starlight" | "breathing" | "audio")) {
         view.spectrum = Properties::default();
         return;
     }
@@ -61,7 +61,8 @@ pub(super) fn refresh(view: &mut View) {
     let wave = view.effect() == Some("wave");
     let star = view.effect() == Some("starlight");
     let breath = view.effect() == Some("breathing");
-    if !wave && !star && !breath {
+    let audio = view.effect() == Some("audio");
+    if !wave && !star && !breath && !audio {
         match draft.spectrum_selection_duration(id, &selection) {
             Ok(value) => view.spectrum.duration = Some(value),
             Err(error) => {
@@ -77,6 +78,8 @@ pub(super) fn refresh(view: &mut View) {
         draft.wave_selection_gradient(id, &selection)
     } else if breath {
         draft.breathing_selection_gradient(id, &selection)
+    } else if audio {
+        draft.audio_selection_gradient(id, &selection)
     } else if star {
         draft.starlight_selection_gradient(id, &selection)
     } else {
@@ -171,12 +174,13 @@ pub(super) fn action(state: &mut State, control: Control) {
     }
     let view = &mut state.studio;
     let result = (|| -> Result<bool, String> {
-        if !matches!(view.effect(), Some("spectrum" | "wave" | "starlight" | "breathing")) {
+        if !matches!(view.effect(), Some("spectrum" | "wave" | "starlight" | "breathing" | "audio")) {
             return Err("Select a gradient effect first".into());
         }
         let wave = view.effect() == Some("wave");
         let star = view.effect() == Some("starlight");
         let breath = view.effect() == Some("breathing");
+        let audio = view.effect() == Some("audio");
         let id = view.selected.as_deref().ok_or("Select a layer")?;
         let selection = view.canvas.selection();
         let properties = &view.spectrum;
@@ -186,6 +190,8 @@ pub(super) fn action(state: &mut State, control: Control) {
                 draft.edit_wave_stop(id, &selection, edit)
             } else if breath {
                 draft.edit_breathing_stop(id, &selection, edit)
+            } else if audio {
+                draft.edit_audio_stop(id, &selection, edit)
             } else if star {
                 draft.edit_starlight_stop(id, &selection, edit)
             } else {
@@ -193,7 +199,7 @@ pub(super) fn action(state: &mut State, control: Control) {
             }
         };
         let result = match control {
-            Control::Duration(_) if wave || star || breath => {
+            Control::Duration(_) if wave || star || breath || audio => {
                 return Err("Use this effect's own duration controls".into())
             }
             Control::Duration(index) => draft.set_spectrum_duration(
@@ -201,6 +207,7 @@ pub(super) fn action(state: &mut State, control: Control) {
                 &selection,
                 *SPECTRUM_DURATIONS.get(index).ok_or("Unknown duration")?,
             ),
+            Control::Preset(index) if audio => draft.set_audio_preset(id, &selection, index),
             Control::Preset(index) if star => draft.set_starlight_preset(id, &selection, index),
             Control::Preset(_) if breath => return Err("Breathing uses its own two-colour stops or an imported gradient".into()),
             Control::Preset(index) if wave => draft.set_wave_preset(id, &selection, index),
@@ -247,6 +254,7 @@ pub(super) fn action(state: &mut State, control: Control) {
 pub(super) unsafe fn fields(state: &mut State) {
     if !(state.studio.effect() == Some("spectrum")
         || (state.studio.effect() == Some("wave") && state.studio.wave.gradient_open)
+        || (state.studio.effect() == Some("audio") && state.studio.audio.gradient_open)
         || (state.studio.effect() == Some("starlight") && state.studio.starlight.gradient_open))
         && !(state.studio.effect() == Some("breathing") && state.studio.breathing_gradient)
         || state.studio.spectrum.stops().is_none_or(|s| s.is_empty())
@@ -306,6 +314,8 @@ pub(super) unsafe fn paint(p: &mut Painter, view: &View, right: i32) {
     let properties = &view.spectrum;
     if view.effect() == Some("breathing") {
         button(p,"BACK TO COLOURS",right+10,278,220,super::Control::BreathingGradient,true);
+    } else if view.effect() == Some("audio") {
+        button(p,"BACK TO LEVELS",right+10,278,220,super::Control::Audio(audio::Control::Gradient),true);
     } else if view.effect() == Some("starlight") {
         button(
             p,
@@ -357,7 +367,7 @@ pub(super) unsafe fn paint(p: &mut Painter, view: &View, right: i32) {
         TEXT,
         DT_LEFT,
     );
-    for index in 0..if view.is_breathing(){0}else{5} {
+    for index in 0..if view.is_breathing(){0}else if view.effect()==Some("audio"){4}else{5} {
         button(
             p,
             &(index + 1).to_string(),

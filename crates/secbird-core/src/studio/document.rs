@@ -25,6 +25,7 @@ pub use regions::{
     WaveProperty, SelectedWaveValue, wave_preset,
     StarlightProperty, SelectedStarlightValue, STARLIGHT_DURATIONS,
     ReactiveProperty, SelectedReactiveValue, REACTIVE_DURATIONS,
+    AudioProperty, SelectedAudioValue, audio_preset,
 };
 
 #[path = "preview.rs"]

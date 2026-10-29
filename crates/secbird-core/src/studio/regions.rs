@@ -9,6 +9,9 @@ mod breathing_gradient;
 #[path = "reactive.rs"]
 mod reactive;
 pub use reactive::{ReactiveProperty, SelectedReactiveValue, REACTIVE_DURATIONS};
+#[path = "audio.rs"]
+mod audio;
+pub use audio::{AudioProperty, SelectedAudioValue, audio_preset};
 #[path = "starlight.rs"]
 mod starlight;
 pub use starlight::{StarlightProperty, SelectedStarlightValue, STARLIGHT_DURATIONS};
@@ -67,6 +70,7 @@ enum RegionEdit<'a> {
     Wave(wave::Edit, &'a Object),
     Reactive(reactive::Edit, &'a Object),
     Starlight(starlight::Edit, &'a Object),
+    Audio(audio::Edit, &'a Object),
 }
 impl RegionEdit<'_> {
     fn assigns(self) -> bool {
@@ -97,6 +101,7 @@ impl RegionEdit<'_> {
         }
         if let Self::Reactive(edit,projection)=self {edit.apply(params,projection,new)?;}
         if let Self::Starlight(edit,projection)=self {edit.apply(params,projection,new)?;}
+        if let Self::Audio(edit,projection)=self {edit.apply(params,projection,new)?;}
         Ok(())
     }
 }
@@ -331,7 +336,7 @@ impl Draft {
         }
         let property = match edit {
             RegionEdit::Color(property, _) => Some(property),
-            RegionEdit::Erase | RegionEdit::Spectrum(..) | RegionEdit::BreathingDuration(_) | RegionEdit::BreathingGradient(..) | RegionEdit::Wave(..) | RegionEdit::Starlight(..) | RegionEdit::Reactive(..) => None,
+            RegionEdit::Erase | RegionEdit::Spectrum(..) | RegionEdit::BreathingDuration(_) | RegionEdit::BreathingGradient(..) | RegionEdit::Wave(..) | RegionEdit::Starlight(..) | RegionEdit::Reactive(..) | RegionEdit::Audio(..) => None,
         };
         let item = layer(self, id, property)?;
         if matches!(edit, RegionEdit::Spectrum(..)) {

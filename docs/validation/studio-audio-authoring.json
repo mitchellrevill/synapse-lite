@@ -1,0 +1,162 @@
+{
+  "date": "2026-10-29",
+  "base_commit": "e6c21c3",
+  "scope": "Audio Meter authoring; reactive preview/output not implemented",
+  "sources": [
+    {
+      "id": "studio-main",
+      "file": "main.88ac681e.js",
+      "bytes": 436867,
+      "sha256": "109b483f129044e1c7c17b9fcae0e30fa775885667976807cf2c94bd1c696d19"
+    },
+    {
+      "id": "audio-ui",
+      "file": "412.f789b489.chunk.js",
+      "bytes": 13556,
+      "sha256": "38cfd5e0866469e3e7b0e45be4998d46fa1295157dda9280b6971a8acddeba75"
+    },
+    {
+      "id": "engine-main",
+      "file": "main.a383ea9e.js",
+      "bytes": 1830359,
+      "sha256": "c82c7074e5da8abcffbff95f23a6b962c1e14b04586715b9d4b7a6f11fe9e6d2"
+    },
+    {
+      "id": "engine-module2578",
+      "file": "module-2578.js",
+      "bytes": 19576,
+      "sha256": "008bf7b8aac4e86f47dd0c4e498402949c384d640553ca08d9c2424ad3527bda"
+    }
+  ],
+  "source_anchors": {
+    "studio-main": [
+      "module6257.Ge audio gradients",
+      "Ye seven stops",
+      "Xe/ze/Je boost bounds",
+      "Ke default boost1",
+      "qe/Qe/et decay bounds",
+      "tt default decay1",
+      "effect defaults case audio"
+    ],
+    "audio-ui": [
+      "module9120 custom-audio",
+      "disabled:t for autoBoost",
+      "paramsMixed",
+      "Low/High labels",
+      "shared picker audio sR/kI"
+    ],
+    "engine-module2578": [
+      "addEffect case12",
+      "Decay:1e3*r.decay",
+      "AutoBoost:r.autoBoost?1:0",
+      "Auto:0",
+      "Flow default0",
+      "transparent sentinel FU"
+    ]
+  },
+  "rea": {
+    "parent": "ev_7d0e95c1830d4384991fae331e799e5aa03e15e5d8dcc7035b241a3c7f305ff3",
+    "summary": "ev_3375f752a38c9759ec28645433dbcd5fdd8881d57a861a6846f2a57659516f27",
+    "files": 1,
+    "bytes": 13556,
+    "ast_nodes": 4675,
+    "parse_failures": 0,
+    "semantic_unknowns": 1097,
+    "execution": false
+  },
+  "native_analysis": {
+    "dll": "RzLightingEngineApi_v4.0.55.0.dll",
+    "sha256": "cd9fc2a61ff920b9b73e1f5e27632020e2f8586f443e426a875ad3b042b714fa",
+    "connected_provider": "provider_unavailable; GHIDRA_INSTALL_DIR not set",
+    "isolated_cli_provider": "existing Ghidra12.1.4 with existing snapshot; own temp/session",
+    "queries": [
+      {
+        "operation": "search_strings",
+        "pattern": "Audio",
+        "result": "provider_timeout",
+        "timeout_ms": 240000
+      },
+      {
+        "operation": "search_procedures",
+        "pattern": "Audio",
+        "result": "provider_timeout",
+        "timeout_ms": 240000
+      }
+    ],
+    "closed": true,
+    "native_algorithm_evidence_returned": false,
+    "vendor_dll_executed": false
+  },
+  "controlled_converter_replay": {
+    "cases": 2,
+    "native_calls": 0,
+    "decay_ms": [
+      300,
+      2000
+    ],
+    "auto_retains_manual_boost": true,
+    "none_sentinel": 1677721600,
+    "extends_missing_gradient_endpoints": true
+  },
+  "verification": {
+    "new_core_regressions": 4,
+    "isolated_native_authoring_passed": true,
+    "saved_boost": 2.25,
+    "saved_decay_seconds": 0.3,
+    "saved_stops": 7,
+    "none_omits_color": true,
+    "auto_disables_boost": true,
+    "invalid_values_refused": true,
+    "save_history_verified": true,
+    "read_only_inert": true,
+    "unsupported_preview_refused": true,
+    "simulated_device_requests": 0,
+    "physical_discovery_disabled": true,
+    "source_and_profile_bytes_unchanged": true,
+    "production_painter_captures_reviewed": true,
+    "child_edit_fields_verified_by_saved_values": true,
+    "workspace_core_passed": 513,
+    "workspace_core_ignored": 6,
+    "workspace_tray_passed": 306,
+    "workspace_tray_ignored": 48,
+    "workspace_cli_passed": 4,
+    "workspace_doc_passed": 1,
+    "optimized_workspace_build_passed": true,
+    "earlier_runs": [
+      {
+        "scope": "workspace",
+        "result": "32 core filesystem tests failed when default sandbox TEMP denied writes; rerun with workspace TEMP passed"
+      },
+      {
+        "scope": "debug native Studio group",
+        "passed": 11,
+        "failed": 2,
+        "failures": [
+          "Audio Meter layer was not added after the click sequence",
+          "existing save-failure recovery timed out waiting for Studio"
+        ],
+        "followup": "Audio test synchronously repaints the loaded model before clicks; optimized Audio and save-failure recovery pass. Optimized group has two different existing timeout failures, both pass separately."
+      }
+    ],
+    "optimized_audio_authoring_passed": true,
+    "optimized_studio_group_passed": 11,
+    "optimized_studio_group_failed": 2,
+    "optimized_studio_group_failures": [
+      "existing Breathing None-save timed out",
+      "existing preset two-device reopen timed out"
+    ],
+    "optimized_breathing_separate_process_passed": true,
+    "optimized_preset_reopen_separate_process_passed": true,
+    "whole_group_gui_timing_stability_open": true
+  },
+  "limits": {
+    "audio_capture_ui_integrated": false,
+    "audio_reactive_renderer_implemented": false,
+    "audio_device_output_implemented": false,
+    "non_silent_physical_capture_proven": false,
+    "physical_optical_output_proven": false,
+    "pixel_parity": false,
+    "complete_build_memory_acceptance": false,
+    "full_product_goal_complete": false
+  }
+}
