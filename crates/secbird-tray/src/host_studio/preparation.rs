@@ -18,6 +18,9 @@ pub(crate) struct ReadyStudio {
     source_byte_len: usize,
 }
 impl ReadyStudio {
+    pub(crate) fn into_prepared(self) -> PreparedStudio {
+        self.prepared
+    }
     pub(crate) fn prepared(&self) -> &PreparedStudio {
         &self.prepared
     }

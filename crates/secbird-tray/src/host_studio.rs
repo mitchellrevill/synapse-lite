@@ -1,7 +1,7 @@
 //! Compile Studio RGB into an authenticated Ornata physical frame.
 //!
-//! No output, ownership acquisition, scheduling, mode change or persistence.
-//! The live session must establish those separately before submitting a frame.
+//! Preparation performs no output. The session child owns explicit scheduling,
+//! cancellation and completion; live ownership/worker integration stays separate.
 use secbird_core::{
     ornata_frame::PreparedOrnataFrame,
     ornata_manifest::AuthenticatedLayout,
@@ -16,6 +16,7 @@ use serde::Deserialize;
 use std::time::Duration;
 
 pub(crate) mod preparation;
+pub(crate) mod session;
 
 #[derive(Deserialize)]
 struct Composition {
@@ -191,7 +192,7 @@ mod tests {
     const PROFILE: &str =
         include_str!("../../secbird-core/tests/fixtures/studio-preview-profile.json");
 
-    fn map() -> OrnataSpatialMap {
+    pub(super) fn map() -> OrnataSpatialMap {
         let fixture: Value = serde_json::from_str(include_str!(
             "../../secbird-core/tests/fixtures/ornata_spatial.json"
         ))
