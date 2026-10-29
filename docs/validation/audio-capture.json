@@ -1,0 +1,64 @@
+{
+  "date": "2026-10-29",
+  "scope": "opt-in render-loopback capture and defined analysis, not vendor FFT/effect parity",
+  "synthetic_reference": {
+    "numpy_version": "2.3.2",
+    "windows": 8,
+    "bins_per_window": 1025,
+    "all_bin_magnitudes": 8200,
+    "cases": [
+      "DC",
+      "opposite-phase stereo",
+      "8-channel tones",
+      "seeded noise"
+    ],
+    "tolerance": 1e-09
+  },
+  "live_diagnostic": {
+    "analysis_frames": 0,
+    "analysis_storage_bytes": 180224,
+    "discontinuities": 0,
+    "format": {
+      "block_align": 32,
+      "channels": 8,
+      "encoding": "float32",
+      "sample_rate": 96000
+    },
+    "native_buffer_frames": 9600,
+    "packet_storage_bytes": 0,
+    "packets": 0,
+    "sample_frames": 0,
+    "silent_frames": 0,
+    "stop_succeeded": true,
+    "timestamp_errors": 0
+  },
+  "live_default_exact_stop_reopen_passed": true,
+  "non_silent_playback_verified": false,
+  "raw_audio_or_live_spectra_persisted": false,
+  "ui_or_lighting_integration": false,
+  "full_memory_gate": "open",
+  "todo": [
+    "non-silent real packets and FFT",
+    "source FFT scaling/bin/colour contract",
+    "Audio Meter UI and output integration",
+    "unplug/default-change lifecycle",
+    "event-driven pacing and measured CPU/latency",
+    "complete-build memory/network/visual acceptance"
+  ],
+  "regression": {
+    "core_passed": 448,
+    "core_ignored": 6,
+    "tray_passed": 291,
+    "tray_ignored": 38,
+    "cli_passed": 3,
+    "doc_passed": 1,
+    "optimized_analysis_passed": 4,
+    "optimized_audio_passed": 14,
+    "release_build": "passed secbird and secbird-tray"
+  },
+  "release_diagnostic": {
+    "exit_code": 0,
+    "existing_report_exit_code": 2,
+    "existing_report_bytes_preserved": true
+  }
+}

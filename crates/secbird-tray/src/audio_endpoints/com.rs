@@ -1,6 +1,9 @@
 //! Narrow SDK ABI bindings. Vtable order is from Windows SDK26100 mmdeviceapi.h,
 //! propsys.h and endpointvolume.h; unused methods cannot be called here.
 use super::*;
+#[path = "capture.rs"]
+mod capture;
+pub(super) use capture::capture;
 use std::{
     ffi::c_void,
     marker::PhantomData,
@@ -30,7 +33,7 @@ const NOT_FOUND: HRESULT = 0x80070490u32 as i32;
 const MAX_TEXT: usize = 4096;
 #[repr(C)]
 struct Unknown {
-    query: usize,
+    query: unsafe extern "system" fn(*mut c_void, *const GUID, *mut *mut c_void) -> HRESULT,
     add_ref: usize,
     release: unsafe extern "system" fn(*mut c_void) -> u32,
 }
@@ -39,6 +42,7 @@ struct Enumerator {
     base: Unknown,
     enumerate: unsafe extern "system" fn(*mut c_void, i32, u32, *mut *mut c_void) -> HRESULT,
     default: unsafe extern "system" fn(*mut c_void, i32, i32, *mut *mut c_void) -> HRESULT,
+    device: unsafe extern "system" fn(*mut c_void, *const u16, *mut *mut c_void) -> HRESULT,
 }
 #[repr(C)]
 struct Collection {
@@ -292,9 +296,16 @@ mod tests {
             (*fake.releases).fetch_add(1, Ordering::SeqCst);
             0
         }
+        unsafe extern "system" fn fake_query(
+            _: *mut c_void,
+            _: *const GUID,
+            _: *mut *mut c_void,
+        ) -> HRESULT {
+            -1
+        }
         let releases = AtomicUsize::new(0);
         let table = Unknown {
-            query: 0,
+            query: fake_query,
             add_ref: 0,
             release,
         };

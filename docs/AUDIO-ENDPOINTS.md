@@ -16,10 +16,12 @@ and session token before calling the provider and does not hold the HID engine
 mutex. POST and request bodies are refused. Provider errors return503.
 
 This supplies a backend prerequisite for Audio Meter. It is not a working Audio
-Meter, loopback capture, FFT, audio-device selector or vendor-wrapper ABI emulation.
+Meter, audio-device selector or vendor-wrapper ABI emulation. A subsequent
+[capture checkpoint](AUDIO-CAPTURE.md) adds opt-in loopback and defined analysis;
+source FFT/effect parity and UI integration remain unfinished.
 The scalar is the OS volume setting, not measured sound intensity or FFT input.
 There are no audio streams, microphone reads, callbacks, volume/mute setters,
-default-device changes or vendor SDK calls in this module. Capture/FFT, source
+default-device changes or vendor SDK calls in this discovery module. Source
 effect math, UI selection/persistence, removal/default-change lifecycle and final
 lighting integration remain TODOs. Endpoint listing also does not implement
 headset EQ, THX, mixers or proprietary microphone controls. The retained App Engine API migration and

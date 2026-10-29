@@ -13,6 +13,7 @@ use std::{
 
 #[path = "audio_endpoints/com.rs"]
 mod com;
+pub(crate) fn capture(config:&crate::audio_capture::Config,cancel:&AtomicBool,sink:impl FnMut(secbird_core::audio_analysis::MeterFrame))->Result<crate::audio_capture::Report,String>{com::capture(config,cancel,sink)}
 
 pub(super) const MAX_ENDPOINTS: usize = 64;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]

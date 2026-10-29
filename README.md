@@ -77,8 +77,10 @@ physical/visual checks remain TODOs.
 
 A Rust [Windows audio endpoint backend](docs/AUDIO-ENDPOINTS.md) now reads playback
 device names, IDs, default roles, volume and mute on explicit request. It opens no
-audio streams. Audio Meter capture, FFT, device-selection UI and lighting output
-remain unfinished.
+audio streams. A separate opt-in [playback capture/analysis backend](docs/AUDIO-CAPTURE.md)
+now has bounded PCM decoding, RMS/peak/FFT, stop and reopen. Synthetic numerical
+references pass; the live endpoint was idle, so non-silent verification, source
+Audio Meter scaling/rendering, device-selection UI and lighting output remain open.
 
 Studio [Breathing](docs/STUDIO-BREATHING.md) now supports deterministic continuous
 playback, two-colour regional editing, source speed presets, None/transparency,

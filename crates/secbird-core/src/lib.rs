@@ -71,6 +71,7 @@ pub mod uniform_lighting;
 pub mod update;
 pub mod wave_lighting;
 pub mod studio_wave_lighting;
+pub mod audio_analysis;
 
 pub use db::{Db, DeviceSpec, Kind, Lighting, Matrix};
 pub use device::{discover, Device};
