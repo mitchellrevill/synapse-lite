@@ -93,6 +93,11 @@ selection, AVIF admission, revision preservation, resume and rate-limit behavior
 
 ## Remaining integration work
 
+The later [private asset pipeline](ASSET-PIPELINE.md) retains original image bytes
+and generates per-product edition/layout coverage audits and deterministic private
+packages. Its current counts, validation and remaining DeviceInfo/retail identity
+gaps are documented separately from the historical capture figures above.
+
 - Acquire source-declared device, edition and layout manifests, artwork and LED SVGs.
   Acquired dashboard artwork and lighting maps now cover many products, but existing
   native UI integration principally covers DeathAdder 196 and Ornata 605. This
@@ -109,7 +114,7 @@ Unresolved details become explicit TODOs with their evidence and next check; wor
 continues on independent features. Full functional and visual parity and the
 complete-build100MB acceptance gate remain open.
 
-The subsequent Studio preset pack now supports1268 exact layouts across177products
+The subsequent Studio preset pack now supports1396 exact layouts across183products
 for offline LED selection and regional editing in imported compositions. See
 STUDIO-PRESETS.md. This does not enable catalogue-wide physical controls/output
 or replace the separate evidence requirements for each API.

@@ -11,7 +11,8 @@ The current private pack contains 653 declared edition variants across 298 prima
 product IDs, stored as 556 deduplicated PNGs, approximately 70 MB on disk. These
 are source-defined category-default dashboard images, not all regional, sidepad,
 wrist or customization assets. Source AVIFs remain in the private acquisition
-snapshot; pack provisioning preserves their decoded alpha without adding a matte.
+snapshot; the [asset pipeline](ASSET-PIPELINE.md) also retains 556 deduplicated
+originals beside the native PNGs. Provisioning preserves their decoded alpha without adding a matte.
 Images are scaled down only when larger than 768 by 512 pixels and encoded
 losslessly. No fonts, vendor code, installers, profiles or device APIs are bundled
 by the pack tool.

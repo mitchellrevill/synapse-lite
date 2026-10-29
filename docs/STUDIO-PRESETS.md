@@ -7,10 +7,11 @@ admission and the remaining stock-presentation/physical-binding TODOs. The count
 and test results below describe the preceding geometry checkpoints.
 
 The native Studio canvas can now load exact product/edition/layout projections
-beyond Ornata. The current private pack contains1268 layouts across177 products
+beyond Ornata. The current private pack contains1396 layouts across183 products
 from the acquired source catalogue. These are source preset availability, not
 verified hardware support, and do not cover every current Razer product. The
-source-basic-shape extension is documented in STUDIO-SHAPES.md.
+source-basic-shape extension is documented in STUDIO-SHAPES.md; the later
+transform extension and current validation are in STUDIO-TRANSFORMS.md.
 
 Imported compositions can display their matching preset, select its explicit LED
 memberships and edit compatible regional data through existing controls. A native

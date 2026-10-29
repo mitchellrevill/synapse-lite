@@ -20,7 +20,7 @@ class PresetTests(unittest.TestCase):
         row=self.rows(self.document())[0];data=json.loads(row['_blob']);self.assertEqual(data['keys'][0]['d'],'M0 0H20V10H0Z');self.assertEqual((data['product_id'],data['edition_id'],data['layout_id']),(100,0,0))
         row=self.rows(self.document('<rect class="selection" data-row="0" data-col="1" x="2" y="3" width="20" height="10"/>'))[0];self.assertEqual(json.loads(row['_blob'])['keys'][0]['d'],'M2.0 3.0H22.0V13.0H2.0Z')
     def test_untraced_transform_shape_missing_layout_and_matrix_refuse(self):
-        for shape in ['<path class="selection" data-row="0" data-col="1" transform="translate(5)" d="M0 0H20V10Z"/>','<circle class="selection" data-row="0" data-col="1" r="-5"/>','<rect class="selection" data-row="0" data-col="1" rx="-2" width="20" height="10"/>','<path class="selection" data-row="0" data-col="9" d="M0 0H20V10Z"/>']:
+        for shape in ['<path class="selection" data-row="0" data-col="1" transform="skewX(5)" d="M0 0H20V10Z"/>','<circle class="selection" data-row="0" data-col="1" r="-5"/>','<rect class="selection" data-row="0" data-col="1" rx="-2" width="20" height="10"/>','<path class="selection" data-row="0" data-col="9" d="M0 0H20V10Z"/>']:
             self.assertIn('todo',self.rows(self.document(shape))[0])
         doc=self.document();doc['svg']={};self.assertIn('todo',self.rows(doc)[0])
     def test_curved_primitives_and_radius_defaults_preserve_source_geometry(self):
@@ -38,6 +38,11 @@ class PresetTests(unittest.TestCase):
             self.assertEqual(json.loads(row['_blob'])['keys'][0]['d'],'M1.0 2.0L3.0 4.0L5.0 6.0'+end)
         bad=self.rows(self.document('<rect class="selection" data-row="0" data-col="1" width="20" height="10" style="rx:2"/>'))[0]
         self.assertIn('todo',bad)
+    def test_nested_transform_projection_and_css_refusal(self):
+        row=self.rows(self.document('<g transform="translate(10 20)"><g transform="scale(2)"><rect class="selection" data-row="0" data-col="1" x="1" y="2" width="3" height="4"/></g></g>'))[0]
+        self.assertEqual(json.loads(row['_blob'])['keys'][0]['d'],'M12 24 L18 24 L18 32 L12 32 Z')
+        for shape in ['<g style="transform:translate(2px)"><path class="selection" data-row="0" data-col="1" d="M0 0H10V10Z"/></g>', '<g transform="scale(0)"><circle class="selection" data-row="0" data-col="1" r="1"/></g>']:
+            self.assertIn('todo',self.rows(self.document(shape))[0])
     def test_capture_hash_and_manifest_hash_are_checked_before_projection(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);blob=json.dumps(self.document()).encode();source=root/'source';source.mkdir();(source/'manifest.json').write_bytes(blob)

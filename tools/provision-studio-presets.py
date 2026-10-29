@@ -7,6 +7,7 @@ import math
 from pathlib import Path, PurePosixPath
 import re
 import xml.etree.ElementTree as ET
+import svg_affine
 
 MAX_MANIFEST = 8 * 1024 * 1024
 MAX_LAYOUT = 2 * 1024 * 1024
@@ -62,13 +63,19 @@ def project(document, manifest_sha, product):
                 if shape not in ('path', 'rect', 'circle', 'ellipse', 'polygon', 'polyline'):
                     raise ValueError('Untraced non-path selection shape')
                 ancestor = element
+                matrix = svg_affine.IDENTITY
+                depth = 0
                 while ancestor is not None:
                     if ancestor is not root and ancestor.tag.rsplit('}', 1)[-1] == 'svg':
                         raise ValueError('Untraced nested SVG viewport')
                     if GEOMETRY_STYLE.search(ancestor.get('style', '')):
                         raise ValueError('Untraced inline geometry style')
-                    if ancestor.get('transform') or 'transform' in ancestor.get('style', '').lower():
-                        raise ValueError('Untraced selection/ancestor transform')
+                    if 'transform' in ancestor.get('style', '').lower():
+                        raise ValueError('Untraced CSS transform')
+                    matrix = svg_affine.multiply(svg_affine.parse(ancestor.get('transform', '')), matrix)
+                    depth += 1
+                    if depth > 64:
+                        raise ValueError('Excessive SVG nesting')
                     ancestor = parents.get(ancestor)
                 key = (int(element.attrib['data-row']), int(element.attrib['data-col']))
                 if key in seen or key not in mapped:
@@ -121,6 +128,7 @@ def project(document, manifest_sha, product):
                     if len(path.encode('utf-8')) > 16384 or any(c not in 'MmLlHhVvCcZz ,\t\n\r' for c in NUMBER.sub('', path)):
                         raise ValueError('Untraced or excessive SVG path command')
                     entry['d'] = path
+                svg_affine.apply(entry, matrix)
                 entries.append(entry)
             if not entries or len(entries) > 512:
                 raise ValueError('No usable or excessive selection paths')
@@ -147,7 +155,7 @@ def provision(report, source_root, output, expected_report_sha):
     # A new private directory is required; never replace an installed pack.
     output.mkdir(exist_ok=False)
     records, errors, written, conflicts = [], [], {}, set()
-    for item in capture['records']:
+    for item in sorted(capture['records'], key=lambda r: (r.get('product_id', -1), r.get('edition_id', -1), r.get('fetched_path', ''))):
         if item.get('status') != 'available':
             continue
         try:
@@ -155,6 +163,8 @@ def provision(report, source_root, output, expected_report_sha):
             if not relative.is_absolute() or '..' in relative.parts or '\\' in str(relative) or ':' in str(relative):
                 raise ValueError('Unsafe captured asset path')
             path = source_root.joinpath(*relative.parts[1:])
+            if not path.resolve(strict=True).is_relative_to(source_root.resolve(strict=True)):
+                raise ValueError('Manifest escapes capture directory')
             blob = path.read_bytes()
             if len(blob) > MAX_MANIFEST or len(blob) != item['bytes'] or sha(blob) != item['sha256']:
                 raise ValueError('Manifest size/hash mismatch')
@@ -183,7 +193,7 @@ def provision(report, source_root, output, expected_report_sha):
                 written[filename] = row
         except (ValueError, KeyError, TypeError, OSError) as error:
             errors.append({'product_id': item.get('product_id'), 'edition_id': item.get('edition_id'), 'todo': str(error)})
-    records = list(written.values())
+    records = sorted(written.values(), key=lambda r: (r['product_id'], r['edition_id'], r['layout_id']))
     index = {'format': 'synapse-lite-studio-presets-v1', 'capture_report_sha256': expected_report_sha,
         'records': records, 'todos': errors, 'hardware_support_verified': False}
     (output / 'index.json').write_text(json.dumps(index, indent=2), encoding='utf-8')
