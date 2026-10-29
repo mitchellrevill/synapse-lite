@@ -1,0 +1,40 @@
+{
+  "compatible_local_save": true,
+  "duplicate_move_delete_group": true,
+  "mixed_structural_region_undo_redo": true,
+  "new_empty_root_layer": true,
+  "new_layer_id_shape": "12 lowercase hex",
+  "original_export_unchanged": true,
+  "physical_discovery_disabled": true,
+  "profile_bytes_unchanged": true,
+  "read_only_blocks_structure": true,
+  "sim_device_calls_added": 0,
+  "static_region_preview_rgb": [
+    18,
+    52,
+    86
+  ],
+  "format": "synapse-lite-studio-layer-authoring-v1",
+  "date": "2026-10-29",
+  "source_main_sha256": "109b483f129044e1c7c17b9fcae0e30fa775885667976807cf2c94bd1c696d19",
+  "core_tests_passed": 431,
+  "core_tests_ignored": 6,
+  "cli_tests_passed": 3,
+  "doc_tests_passed": 1,
+  "tray_tests_passed": 239,
+  "tray_tests_ignored": 30,
+  "source_constructor_count": 13,
+  "native_add_menu_effects": [
+    "static",
+    "spectrum",
+    "fire"
+  ],
+  "structural_core_tests_passed": 6,
+  "source_group_visibility_test_passed": true,
+  "existing_actual_preview_regression_passed": true,
+  "failed_save_and_unsaved_exit_regression_passed": true,
+  "hardware_output_verified": false,
+  "stock_import_of_authored_layers_verified": false,
+  "pixel_perfect_studio_verified": false,
+  "complete_build_ram_gate_verified": false
+}

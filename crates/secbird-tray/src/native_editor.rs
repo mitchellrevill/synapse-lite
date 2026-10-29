@@ -3950,6 +3950,7 @@ unsafe extern "system" fn window_proc(
     if message==WM_COMMAND && studio_view::command(&mut state,(wparam&0xffff)as u16,((wparam>>16)&0xffff)as u16) {return 0;}
     if message==WM_MOUSEWHEEL && studio_view::wheel(&mut state,((wparam>>16)as u16 as i16)as i32,
         POINT{x:(lparam as u32&0xffff)as i16 as i32,y:((lparam as u32>>16)&0xffff)as i16 as i32}) {return 0;}
+    if studio_view::layer_pointer(&mut state,message,lparam) {return 0;}
     if studio_canvas::Canvas::pointer(&mut state,message,lparam) {return 0;}
     if state.restricted_actions
         && matches!(

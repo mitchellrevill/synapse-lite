@@ -26,6 +26,9 @@ pub use regions::{
 
 #[path = "preview.rs"]
 mod preview;
+#[path = "tree.rs"]
+mod tree;
+pub use tree::NewEffect;
 pub use preview::Preview;
 
 pub const MAX_HISTORY: usize = 20;
@@ -237,17 +240,14 @@ struct Change {
     before: Option<Box<RawValue>>,
     after: Box<RawValue>,
 }
-struct Edit(Vec<Change>);
+enum Edit { Fields(Vec<Change>), Layers { before: Box<RawValue>, after: Box<RawValue> } }
 impl Edit {
     fn bytes(&self) -> usize {
-        self.0
-            .iter()
-            .map(|change| {
-                change.id.len()
-                    + change.after.get().len()
-                    + change.before.as_ref().map_or(0, |raw| raw.get().len())
-            })
-            .sum()
+        match self {
+            Self::Fields(changes) => changes.iter().map(|change|change.id.len() + change.after.get().len()
+                + change.before.as_ref().map_or(0, |raw|raw.get().len())).sum(),
+            Self::Layers {before, after} => before.get().len() + after.get().len(),
+        }
     }
 }
 
@@ -326,16 +326,24 @@ fn item(raw: &RawValue, id: &str) -> Result<Option<Object>> {
 }
 
 fn rewrite(raw: &RawValue, edit: &Edit, inverse: bool) -> Result<Box<RawValue>> {
+    let changes = match edit {
+        Edit::Layers {before, after} => {
+            let mut root = Object::parse(raw)?;
+            root.set("layers", Some(if inverse {before} else {after}));
+            return encode(&root);
+        }
+        Edit::Fields(changes) => changes,
+    };
     fn update(
         raw: &RawValue,
-        edit: &Edit,
+        changes: &[Change],
         inverse: bool,
         nested: bool,
     ) -> Result<Option<Box<RawValue>>> {
         let mut object = Object::parse(raw)?;
         let id = object.text("id")?;
         let mut changed = false;
-        for change in &edit.0 {
+        for change in changes {
             if change.id == id {
                 object.set(
                     change.field,
@@ -352,7 +360,7 @@ fn rewrite(raw: &RawValue, edit: &Edit, inverse: bool) -> Result<Box<RawValue>> 
             let mut children = layers(&object)?;
             let mut children_changed = false;
             for child in &mut children {
-                if let Some(updated) = update(child, edit, inverse, true)? {
+                if let Some(updated) = update(child, changes, inverse, true)? {
                     *child = updated;
                     children_changed = true;
                 }
@@ -371,7 +379,7 @@ fn rewrite(raw: &RawValue, edit: &Edit, inverse: bool) -> Result<Box<RawValue>> 
     let mut root = Object::parse(raw)?;
     let mut entries = layers(&root)?;
     for entry in &mut entries {
-        if let Some(updated) = update(entry, edit, inverse, false)? {
+        if let Some(updated) = update(entry, changes, inverse, false)? {
             *entry = updated;
         }
     }
@@ -471,13 +479,17 @@ impl Draft {
         if changes.is_empty() {
             return Ok(false);
         }
-        let edit = Edit(changes);
+        self.commit_edit(Edit::Fields(changes))
+    }
+    fn commit_edit(&mut self, edit: Edit) -> Result<bool> {
         if edit.bytes() > MAX_HISTORY_BYTES {
             return Err(invalid(
-                "region edit exceeds the 8 MiB reversible-history budget",
+                "edit exceeds the 8 MiB reversible-history budget",
             ));
         }
         let candidate = rewrite(&self.current, &edit, false)?;
+        if candidate.get().len() > MAX_DOCUMENT_BYTES { return Err(invalid("composition exceeds 8 MiB")); }
+        check_complexity(candidate.get().as_bytes())?;
         let candidate_rows = rows(&candidate)?;
         let regions_dirty = !regions_equal(&candidate, &self.saved)?;
         self.current = candidate.into();

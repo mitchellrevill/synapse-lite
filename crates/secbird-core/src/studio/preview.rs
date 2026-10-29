@@ -165,8 +165,10 @@ impl Preview {
             match item.text("type")?.as_str() {
                 "layer" => view.compile_layer(&item, &admitted)?,
                 "group" => {
-                    for child in layers(&item)?.into_iter().rev() {
-                        view.compile_layer(&Object::parse(&child)?, &admitted)?;
+                    if item.visible()? == Some(true) {
+                        for child in layers(&item)?.into_iter().rev() {
+                            view.compile_layer(&Object::parse(&child)?, &admitted)?;
+                        }
                     }
                 }
                 _ => return Err(invalid("unsupported preview item type")),
@@ -420,6 +422,24 @@ mod tests {
         assert_eq!(b.effect_count(), 1);
         assert_eq!(b.final_random_state(), 1);
         assert_ne!(a.frame(), b.frame());
+    }
+    #[test]
+    fn hidden_groups_do_not_render_children_even_when_their_own_visibility_is_true() {
+        let mut raw: serde_json::Value = serde_json::from_str(PROFILE).unwrap();
+        let mut children = raw["layers"].take();
+        for child in children.as_array_mut().unwrap() { child["groupId"] = "g".into(); }
+        raw["layers"] = serde_json::json!([{"id":"g","type":"group","title":"Group",
+            "opened":true,"visible":false,"layers":children}]);
+        let draft = Draft::open(&raw.to_string()).unwrap();
+        let hidden = Preview::from_snapshot(&draft.read_snapshot(), 1).unwrap();
+        assert_eq!(hidden.effect_count(), 0);
+        assert!(hidden.frame().iter().all(|pixel|*pixel == Rgb(0,0,0)));
+        raw["layers"][0]["visible"] = true.into();
+        let shown = Draft::open(&raw.to_string()).unwrap();
+        let shown = Preview::from_snapshot(&shown.read_snapshot(), 1).unwrap();
+        let original = Draft::open(PROFILE).unwrap();
+        let original = Preview::from_snapshot(&original.read_snapshot(), 1).unwrap();
+        assert_eq!(shown.frame(), original.frame());
     }
     #[test]
     fn unsupported_geometry_effects_and_foreign_memberships_refuse_instead_of_partial_preview() {

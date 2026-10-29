@@ -802,3 +802,100 @@ fn native_studio_edits_save_failure_and_exit_recovery() {
         directory.display()
     );
 }
+
+#[test]
+#[ignore = "opens isolated native Studio with explicitly selected private stock export"]
+fn native_studio_layer_authoring_preview_undo_and_save_preserve_source() {
+    let input = PathBuf::from(std::env::var_os("SYNAPSE_LITE_STOCK_STUDIO_FILE").expect("select private stock export"));
+    let original = std::fs::read(&input).unwrap();
+    let source = secbird_core::studio::Archive::parse(&original).unwrap();
+    let baseline = secbird_core::studio::document::Draft::open(source.profile_json(0).unwrap()).unwrap();
+    let original_count = baseline.layers().len();
+    let directory = std::env::temp_dir().join(format!("native-studio-layers-{}-{}",std::process::id(),
+        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+    std::fs::create_dir_all(&directory).unwrap();
+    let frame = directory.join("frame.json");
+    let _environment = Environment::set(&[("SYNAPSE_LITE_CONFIG_DIR",&directory),
+        ("SYNAPSE_LITE_SMOKE_REPORT",&frame),("SYNAPSE_LITE_SMOKE_VIEW",Path::new("studio"))]);
+    let sim = Sim::wireless_mouse(); let engine = Engine::with_simulated_mouse(&sim).unwrap();
+    let mut store = Store::load(&directory.join("profiles.json")).unwrap();
+    store.for_device(&engine.devices()[0]); store.save().unwrap();
+    let store_before = std::fs::read(directory.join("profiles.json")).unwrap();
+    let folder = directory.clone(); let observer = sim.clone(); let export = input.clone();
+    let controller = std::thread::spawn(move || {
+        let result = (|| -> Result<Value,String> { unsafe {
+            wait_for(||frame.exists(),"Studio layer window")?;
+            let hwnd = WINDOW.load(Ordering::Acquire) as HWND;
+            let query = || {let mut value=Value::Null;SendMessageW(hwnd,STUDIO_TEST,2,&mut value as *mut Value as isize);value};
+            wait_for(||query()["pending"]==0,"initial simulated queries")?;
+            let path=json!(export.to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,1,&path as *const Value as isize);
+            wait_for(||query()["busy"]==false && query()["profiles"]==1,"private export loaded")?;
+            observer.state().log.clear();
+            let scale=GetDpiForWindow(hwnd) as f64/96.;let mut rect:RECT=std::mem::zeroed();GetClientRect(hwnd,&mut rect);
+            let width=f64::from(rect.right)/scale;let height=f64::from(rect.bottom)/scale;
+            let right=width-250.;
+            let menu = |index:usize| {lighting_click(hwnd,770.,100.,scale);lighting_click(hwnd,770.,131.+index as f64*28.,scale);};
+            // Read-only routing must block adding, including opening its menu.
+            SendMessageW(hwnd,READ_ONLY_TEST_SET,1,0);menu(0);
+            if query()["rows"].as_array().unwrap().len()!=original_count || query()["dirty"]!=false {
+                return Err("Read-only Studio allowed structural editing".into());
+            }
+            SendMessageW(hwnd,READ_ONLY_TEST_SET,0,0);
+            menu(0);
+            let created=query();let id=created["selected"].as_str().ok_or("new layer not selected")?.to_string();
+            if id.len()!=12 || created["rows"].as_array().unwrap().len()!=original_count+1 || created["selected_leds"]!=0 {
+                return Err(format!("New empty layer did not follow source click-add: {created}"));
+            }
+            let fit=((width-540.)/960.).min((height-250.)/360.).clamp(0.05,4.);
+            lighting_click(hwnd,width/2.+(67.-480.)*fit,(168.+height)/2.+(76.-180.)*fit,scale);
+            let field=GetDlgItem(hwnd,i32::from(studio_view::COLOR));if field.is_null(){return Err("New Static properties missing".into());}
+            SendMessageW(field,WM_SETTEXT,0,wide("123456").as_ptr() as isize);
+            lighting_click(hwnd,right+80.,343.,scale);
+            lighting_click(hwnd,630.,100.,scale);
+            wait_for(||query()["preview"]["current"]==true,"new layer preview")?;
+            if query()["preview"]["effects"]!=3 || query()["preview"]["frame"][1]!=json!([18,52,86]) {
+                return Err(format!("New Static layer did not composite above existing effects: {}",query()));
+            }
+            let capture=json!(folder.join("new-static-layer.png").to_string_lossy());
+            if SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize)!=1{return Err("Owned layer render failed".into());}
+            menu(4); // duplicate selected Static
+            if query()["rows"].as_array().unwrap().len()!=original_count+2 || query()["selected_leds"]!=0 {
+                return Err("Duplicate failed or retained the other layer's LED selection".into());
+            }
+            menu(6); // move duplicate down
+            menu(7); // delete duplicate, leaving original Static
+            menu(3); // empty new group, retaining current effect
+            if query()["rows"].as_array().unwrap().len()!=original_count+2 {
+                return Err("Delete/group count did not preserve remaining layers".into());
+            }
+            for _ in 0..6 {lighting_click(hwnd,440.,100.,scale);}
+            if query()["dirty"]!=false || query()["rows"].as_array().unwrap().len()!=original_count {
+                return Err(format!("Structural/region undo did not return to saved baseline: {}",query()));
+            }
+            for _ in 0..6 {lighting_click(hwnd,515.,100.,scale);}
+            let output=folder.join("authored.ChromaEffects");let path=json!(output.to_string_lossy());
+            SendMessageW(hwnd,STUDIO_TEST,3,&path as *const Value as isize);
+            wait_for(||query()["busy"]==false,"authored file saved")?;
+            if query()["failed"]!=false || query()["dirty"]!=false {return Err(format!("Authoring save failed: {}",query()));}
+            let bytes=std::fs::read(&output).map_err(|error|error.to_string())?;
+            let archive=secbird_core::studio::Archive::parse(&bytes).map_err(|error|error.to_string())?;
+            let draft=secbird_core::studio::document::Draft::open(archive.profile_json(0).unwrap()).map_err(|error|error.to_string())?;
+            if draft.layers().len()!=original_count+2 || !draft.layers().iter().any(|row|row.id==id) {
+                return Err("Saved file omitted authored layers".into());
+            }
+            if !observer.state().log.is_empty(){return Err("Local layer editing made device calls".into());}
+            Ok(json!({"new_layer_id_shape":"12 lowercase hex","new_empty_root_layer":true,
+                "static_region_preview_rgb":[18,52,86],"duplicate_move_delete_group":true,
+                "mixed_structural_region_undo_redo":true,"compatible_local_save":true,
+                "read_only_blocks_structure":true,"sim_device_calls_added":0,"physical_discovery_disabled":true,
+                "profile_bytes_unchanged":true,"original_export_unchanged":true}))
+        }})();
+        unsafe {SendMessageW(WINDOW.load(Ordering::Acquire) as HWND,STUDIO_TEST,5,0);PostMessageW(WINDOW.load(Ordering::Acquire) as HWND,WM_CLOSE,0,0);}
+        std::fs::write(folder.join("interaction.json"),serde_json::to_vec_pretty(&match &result{Ok(value)=>value.clone(),Err(error)=>json!({"error":error})}).unwrap()).unwrap();
+        result
+    });
+    let run=run_standalone(Arc::new(Mutex::new(engine)),Some(Duration::from_secs(30)));
+    let result=controller.join().unwrap();assert!(run.is_ok(),"{run:?}");assert!(result.is_ok(),"{result:?}");
+    assert_eq!(std::fs::read(&input).unwrap(),original);assert_eq!(std::fs::read(directory.join("profiles.json")).unwrap(),store_before);
+    eprintln!("Studio authoring evidence: {}",directory.display());
+}

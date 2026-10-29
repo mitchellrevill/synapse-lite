@@ -11,6 +11,11 @@ use windows_sys::Win32::UI::Controls::Dialogs::*;
 mod playback;
 #[path = "studio_spectrum.rs"]
 mod spectrum;
+#[path = "studio_layers.rs"]
+mod layer_tools;
+pub(super) unsafe fn layer_pointer(state: &mut State, message: u32, lparam: isize) -> bool {
+    layer_tools::pointer(state, message, lparam)
+}
 pub(super) const PREVIEW_TIMER: usize = 79;
 pub(super) unsafe fn preview_tick(state: &mut State) {
     playback::tick(state);
@@ -47,6 +52,7 @@ pub(super) enum Control {
     ApplyCold,
     ClearColor(bool),
     Spectrum(spectrum::Control),
+    Layers(layer_tools::Control),
     Preview,
     Erase,
 }
@@ -77,6 +83,7 @@ pub(super) struct View {
     spectrum: spectrum::Properties,
     playback: playback::Playback,
     dropdown: bool,
+    layer_menu: bool,
     profile_scroll: usize,
     scroll: usize,
     epoch: u64,
@@ -208,6 +215,7 @@ impl View {
         self.expanded.clear();
         self.scroll = 0;
         self.dropdown = false;
+        self.layer_menu = false;
         self.renaming = false;
         self.canvas = studio_canvas::Canvas::load(raw, &assets_dir());
         match Draft::open(raw) {
@@ -477,6 +485,7 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
             | Control::ClearColor(_)
             | Control::Erase
     );
+    if !matches!(control, Control::Layers(_)) { state.studio.layer_menu = false; }
     match control {
         Control::Enter => {}
         Control::Open => transition(state, Next::Open),
@@ -529,6 +538,10 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
         Control::CancelRename => state.studio.renaming = false,
         Control::Preview => playback::toggle(state),
         Control::Spectrum(control) => spectrum::action(state, control),
+        Control::Layers(control) => {
+            layer_tools::action(state, control);
+            ReleaseCapture();
+        }
         Control::ApplyColor | Control::ApplyCold | Control::ClearColor(_) | Control::Erase => {
             let erase = matches!(control, Control::Erase);
             let cold = matches!(control, Control::ApplyCold | Control::ClearColor(true));
@@ -618,6 +631,7 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
             if let Err(message) = result {
                 error(state, message);
             }
+            layer_tools::reconcile_selection(state);
         }
     }
     if update_color {
@@ -924,6 +938,9 @@ pub(super) fn key(state: &State, key: usize, control: bool, edit: bool) -> Optio
         return None;
     }
     match (key, control) {
+        (27, _) if state.studio.layer_menu => Some(Control::Layers(layer_tools::Control::Dismiss)),
+        (0x44, true) if !edit => Some(Control::Layers(layer_tools::Control::Duplicate)),
+        (0x2e, false) if !edit => Some(Control::Layers(layer_tools::Control::Delete)),
         (13, _) if state.studio.renaming => Some(Control::CommitRename),
         (13, _) if edit && spectrum::has_focus(state) => {
             Some(Control::Spectrum(spectrum::Control::ApplyStop(false)))
@@ -1168,7 +1185,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
             }
             let x = if row.parent.is_some() { 35 } else { 28 };
             if !(selected && view.renaming) {
-                p.text(&row.title, x, y, 180 - x, 40, p.fonts.normal, TEXT, DT_LEFT);
+                p.text(layer_tools::display_title(row), x, y, 180 - x, 40, p.fonts.normal, TEXT, DT_LEFT);
             }
             p.hits.push(Hit {
                 rect: p.rect(28, y, 152, 40),
@@ -1198,7 +1215,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
     });
     p.text(
         selected
-            .map(|row| row.title.as_str())
+            .map(layer_tools::display_title)
             .unwrap_or("PROPERTIES"),
         right + 10,
         128,
@@ -1364,6 +1381,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         130,
         if view.failed { 0xfd4949 } else { MUTED },
     );
+    layer_tools::paint(state, p);
     if view.dropdown {
         let count = view
             .archive
