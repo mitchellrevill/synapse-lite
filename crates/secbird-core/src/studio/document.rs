@@ -23,7 +23,7 @@ pub use regions::{
     ColorProperty, GradientStop, LedSelection, SelectedColor, SelectedDuration, SelectedGradient,
     StopEdit, SPECTRUM_DURATIONS,
     WaveProperty, SelectedWaveValue, wave_preset,
-    StarlightProperty, SelectedStarlightValue, STARLIGHT_DURATIONS,
+    StarlightDescriptor, StarlightProperty, SelectedStarlightValue, STARLIGHT_DURATIONS,
     ReactiveProperty, SelectedReactiveValue, REACTIVE_DURATIONS,
     AudioProperty, SelectedAudioValue, audio_preset,
     AmbientEdit, AmbientProperty, AmbientValue, SelectedAmbientValue, AmbientRect, AMBIENT_PRESETS, AMBIENT_SCALE,
