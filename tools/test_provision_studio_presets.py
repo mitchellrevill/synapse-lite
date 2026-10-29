@@ -19,9 +19,24 @@ class PresetTests(unittest.TestCase):
         row=self.rows(self.document())[0];data=json.loads(row['_blob']);self.assertEqual(data['keys'][0]['d'],'M0 0H20V10H0Z');self.assertEqual((data['product_id'],data['edition_id'],data['layout_id']),(100,0,0))
         row=self.rows(self.document('<rect class="selection" data-row="0" data-col="1" x="2" y="3" width="20" height="10"/>'))[0];self.assertEqual(json.loads(row['_blob'])['keys'][0]['d'],'M2.0 3.0H22.0V13.0H2.0Z')
     def test_untraced_transform_shape_missing_layout_and_matrix_refuse(self):
-        for shape in ['<path class="selection" data-row="0" data-col="1" transform="translate(5)" d="M0 0H20V10Z"/>','<circle class="selection" data-row="0" data-col="1" r="5"/>','<rect class="selection" data-row="0" data-col="1" rx="2" width="20" height="10"/>','<path class="selection" data-row="0" data-col="9" d="M0 0H20V10Z"/>']:
+        for shape in ['<path class="selection" data-row="0" data-col="1" transform="translate(5)" d="M0 0H20V10Z"/>','<circle class="selection" data-row="0" data-col="1" r="-5"/>','<rect class="selection" data-row="0" data-col="1" rx="-2" width="20" height="10"/>','<path class="selection" data-row="0" data-col="9" d="M0 0H20V10Z"/>']:
             self.assertIn('todo',self.rows(self.document(shape))[0])
         doc=self.document();doc['svg']={};self.assertIn('todo',self.rows(doc)[0])
+    def test_curved_primitives_and_radius_defaults_preserve_source_geometry(self):
+        circle=self.rows(self.document('<circle class="selection" data-row="0" data-col="1" cx="20" cy="10" r="5"/>'))[0]
+        self.assertEqual(json.loads(circle['_blob'])['keys'][0]['shape'],{'kind':'ellipse','cx':20.,'cy':10.,'rx':5.,'ry':5.})
+        ellipse=self.rows(self.document('<ellipse class="selection" data-row="0" data-col="1" cx="20" cy="10" rx="5" ry="2"/>'))[0]
+        self.assertEqual(json.loads(ellipse['_blob'])['keys'][0]['shape']['ry'],2.)
+        rounded=self.rows(self.document('<rect class="selection" data-row="0" data-col="1" width="20" height="10" rx="50"/>'))[0]
+        self.assertEqual(json.loads(rounded['_blob'])['keys'][0]['shape'],{'kind':'rounded-rect','x':0.,'y':0.,'width':20.,'height':10.,'rx':10.,'ry':5.})
+        square=self.rows(self.document('<rect class="selection" data-row="0" data-col="1" width="20" height="10" rx="0" ry="5"/>'))[0]
+        self.assertIn('d',json.loads(square['_blob'])['keys'][0])
+    def test_polygons_and_polylines_preserve_open_or_closed_straight_edges(self):
+        for shape,end in [('polygon','Z'),('polyline','')]:
+            row=self.rows(self.document(f'<{shape} class="selection" data-row="0" data-col="1" points="1,2 3,4 5,6"/>'))[0]
+            self.assertEqual(json.loads(row['_blob'])['keys'][0]['d'],'M1.0 2.0L3.0 4.0L5.0 6.0'+end)
+        bad=self.rows(self.document('<rect class="selection" data-row="0" data-col="1" width="20" height="10" style="rx:2"/>'))[0]
+        self.assertIn('todo',bad)
     def test_capture_hash_and_manifest_hash_are_checked_before_projection(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);blob=json.dumps(self.document()).encode();source=root/'source';source.mkdir();(source/'manifest.json').write_bytes(blob)

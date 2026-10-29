@@ -116,8 +116,42 @@ enum Segment {
     Close,
 }
 
+#[derive(Clone, Copy, Debug, Deserialize)]
+#[serde(tag="kind",rename_all="kebab-case",deny_unknown_fields)]
+enum Primitive {
+    Ellipse {cx:f64,cy:f64,rx:f64,ry:f64},
+    RoundedRect {x:f64,y:f64,width:f64,height:f64,rx:f64,ry:f64},
+}
+impl Primitive {
+    fn geometry(mut self)->Result<Geometry,String> {
+        let bounds=match &mut self {
+            Self::Ellipse{cx,cy,rx,ry}=>{
+                if ![*cx,*cy,*rx,*ry].iter().all(|x|x.is_finite())||*rx<=0.||*ry<=0. {return Err("Invalid source ellipse".into());}
+                Bounds{left:*cx-*rx,top:*cy-*ry,right:*cx+*rx,bottom:*cy+*ry}
+            },
+            Self::RoundedRect{x,y,width,height,rx,ry}=>{
+                if ![*x,*y,*width,*height,*rx,*ry].iter().all(|x|x.is_finite())||*width<=0.||*height<=0.||*rx<0.||*ry<0. {return Err("Invalid source rounded rectangle".into());}
+                *rx=rx.min(*width/2.);*ry=ry.min(*height/2.);
+                Bounds{left:*x,top:*y,right:*x+*width,bottom:*y+*height}
+            },
+        };
+        if ![bounds.left,bounds.top,bounds.right,bounds.bottom].iter().all(|v|v.is_finite()&&v.abs()<=1_000_000.) {return Err("Source shape exceeds coordinate bounds".into());}
+        Ok(Geometry{segments:vec![],contours:vec![],bounds,primitive:Some(self)})
+    }
+    fn contains(self,p:Point)->bool {
+        match self {
+            Self::Ellipse{cx,cy,rx,ry}=>((p.x-cx)/rx).powi(2)+((p.y-cy)/ry).powi(2)<=1.,
+            Self::RoundedRect{x,y,width,height,rx,ry}=>{
+                if rx==0.||ry==0. {return true;}
+                let cx=p.x.clamp(x+rx,x+width-rx);let cy=p.y.clamp(y+ry,y+height-ry);
+                ((p.x-cx)/rx).powi(2)+((p.y-cy)/ry).powi(2)<=1.
+            },
+        }
+    }
+}
 #[derive(Debug)]
 struct Geometry {
+    primitive:Option<Primitive>,
     segments: Vec<Segment>,
     bounds: Bounds,
     contours: Vec<Vec<Point>>,
@@ -240,6 +274,7 @@ impl Geometry {
             contours.push(contour);
         }
         Ok(Self {
+            primitive:None,
             segments,
             bounds,
             contours,
@@ -250,6 +285,7 @@ impl Geometry {
         if !self.bounds.contains(point) {
             return false;
         }
+        if let Some(primitive)=self.primitive {return primitive.contains(point);}
         let mut winding = 0i32;
         for contour in &self.contours {
             if contour.len() < 3 {
@@ -461,6 +497,8 @@ struct RawKey {
     function_list: Vec<String>,
     #[serde(default)]
     d: Option<String>,
+    #[serde(default)]
+    shape:Option<Primitive>,
     #[serde(default, rename = "isEnabled")]
     enabled: bool,
 }
@@ -524,7 +562,12 @@ impl SourceLayout {
             .keys
             .into_iter()
             .map(|key| {
-                let geometry = key.d.as_deref().map(Geometry::parse).transpose()?;
+                let geometry = match (key.d.as_deref(),key.shape) {
+                    (Some(_),Some(_))=>return Err("Source key has conflicting path and primitive geometry".into()),
+                    (Some(path),None)=>Some(Geometry::parse(path)?),
+                    (None,Some(shape))=>Some(shape.geometry()?),
+                    (None,None)=>None,
+                };
                 Ok(KeyRegion {
                     button_key: key.button_key,
                     input_type: key.input_type,
@@ -617,6 +660,19 @@ impl SourceLayout {
         if BeginPath(dc) == 0 {
             return false;
         }
+        if let Some(primitive)=shape.primitive {
+            let a=convert(Point{x:shape.bounds.left,y:shape.bounds.top});let b=convert(Point{x:shape.bounds.right,y:shape.bounds.bottom});
+            let result=match primitive {
+                Primitive::Ellipse{..}=>Ellipse(dc,a.x,a.y,b.x,b.y),
+                Primitive::RoundedRect{rx,ry,..}=>{
+                    if rx==0.||ry==0. {Rectangle(dc,a.x,a.y,b.x,b.y)}else{
+                        RoundRect(dc,a.x,a.y,b.x,b.y,(2.*rx*transform.scale).round() as i32,(2.*ry*transform.scale).round() as i32)
+                    }
+                },
+            };
+            if result==0 {AbortPath(dc);return false;}
+            return EndPath(dc)!=0;
+        }
         for &segment in &shape.segments {
             let result = match segment {
                 Segment::Move(point) => {
@@ -688,4 +744,33 @@ mod tests {
         assert!(Geometry::parse("M0,0A20,20,0,0,0,30,40").is_err());
         assert!(Geometry::parse("M0,0C1,2,3,4").is_err());
     }
+    #[test]
+    fn curved_primitives_have_analytic_hit_boundaries_and_svg_radius_clamping() {
+        let circle=Primitive::Ellipse{cx:20.,cy:10.,rx:5.,ry:5.}.geometry().unwrap();
+        assert!(circle.contains(Point{x:20.,y:10.}));assert!(circle.contains(Point{x:25.,y:10.}));assert!(!circle.contains(Point{x:15.,y:5.}));
+        let rounded=Primitive::RoundedRect{x:0.,y:0.,width:20.,height:10.,rx:50.,ry:50.}.geometry().unwrap();
+        assert!(matches!(rounded.primitive,Some(Primitive::RoundedRect{rx:10.,ry:5.,..})));assert!(!rounded.contains(Point{x:0.,y:0.}));assert!(rounded.contains(Point{x:0.,y:5.}));
+        for shape in [Primitive::Ellipse{cx:0.,cy:0.,rx:0.,ry:1.},Primitive::Ellipse{cx:f64::NAN,cy:0.,rx:1.,ry:1.},Primitive::RoundedRect{x:0.,y:0.,width:1.,height:1.,rx:-1.,ry:0.}] {assert!(shape.geometry().is_err());}
+    }
+    #[test]
+    fn primitive_layouts_refuse_ambiguous_path_data_and_keep_exact_transformed_bounds() {
+        let mut raw=serde_json::json!({"product_id":100,"edition_id":0,"layout_id":0,"source_sha256":"0".repeat(64),"view_box":[0,0,100,100],"keys":[{"inputID":"0:1","buttonKey":"light","isEnabled":true,"shape":{"kind":"ellipse","cx":25,"cy":25,"rx":10,"ry":5}}]});
+        let layout=SourceLayout::from_slice(&serde_json::to_vec(&raw).unwrap()).unwrap();let viewport=Viewport{left:20.,top:20.,width:200.,height:200.};
+        let bounds=layout.bounds("0:1",viewport).unwrap();assert_eq!((bounds.left,bounds.top,bounds.right,bounds.bottom),(50.,60.,90.,80.));
+        assert_eq!(layout.hit_test(Point{x:70.,y:70.},viewport).unwrap().input_id,"0:1");assert!(layout.hit_test(Point{x:50.,y:60.},viewport).is_none());
+        raw["keys"][0]["d"]=serde_json::json!("M0 0H10V10Z");assert!(SourceLayout::from_slice(&serde_json::to_vec(&raw).unwrap()).is_err());
+    }
+    #[test]
+    fn native_gdi_primitive_paths_keep_rounded_corners_outside_the_fill_region() {
+        use windows_sys::Win32::Graphics::Gdi::*;
+        unsafe {
+            let dc=CreateCompatibleDC(std::ptr::null_mut());assert!(!dc.is_null());
+            for shape in [serde_json::json!({"kind":"ellipse","cx":50,"cy":50,"rx":40,"ry":30}),serde_json::json!({"kind":"rounded-rect","x":10,"y":20,"width":80,"height":60,"rx":20,"ry":20})] {
+                let raw=serde_json::json!({"product_id":100,"edition_id":0,"layout_id":0,"source_sha256":"0".repeat(64),"view_box":[0,0,100,100],"keys":[{"inputID":"0:1","buttonKey":"light","isEnabled":true,"shape":shape}]});
+                let layout=SourceLayout::from_slice(&serde_json::to_vec(&raw).unwrap()).unwrap();assert!(layout.trace_key_path(dc,"0:1",Viewport{left:0.,top:0.,width:100.,height:100.}));let region=PathToRegion(dc);assert!(!region.is_null());assert_ne!(PtInRegion(region,50,50),0);assert_eq!(PtInRegion(region,10,20),0);DeleteObject(region);
+            }
+            DeleteDC(dc);
+        }
+    }
+
 }

@@ -1,0 +1,93 @@
+{
+  "checkpoint": "studio-source-basic-shapes",
+  "date": "2026-10-29",
+  "capture_report_sha256": "72518b0b3fdf1812c221d795bbd08b1ee7afd4ffc4f869ad63ecaefd78774cc2",
+  "preset_index_sha256": "82f85aa6f41ef6a7449d8a4dcc36ebbda0e87590a5ddf1a9b04b2447d0c97e01",
+  "provisioner_sha256": "001264ead3e20dae7e3a0186ad6c0a0e707349723b8517407780da2c2998930a",
+  "layouts": 1268,
+  "products": 177,
+  "projected_bytes": 15538730,
+  "previous_layouts_retained": 977,
+  "previous_layouts_lost": 0,
+  "added_layouts": 291,
+  "todo_records": 908,
+  "todo_reasons": {
+    "No exact SVG; no layout fallback": 291,
+    "Duplicate or unmapped SVG LED identity": 43,
+    "'data-row'": 11,
+    "LED configuration identity mismatch": 116,
+    "Untraced or excessive SVG path command": 163,
+    "Manifest requires explicit LED and SVG maps": 10,
+    "Only base64 data is allowed": 35,
+    "not well-formed (invalid token): line 220, column 241": 1,
+    "duplicate attribute: line 109, column 134": 1,
+    "Untraced selection/ancestor transform": 214,
+    "XML or text declaration not at start of entity: line 2, column 0": 2,
+    "not well-formed (invalid token): line 281, column 4": 5,
+    "Untraced stylesheet geometry": 2,
+    "No usable or excessive selection paths": 1,
+    "mismatched tag: line 417, column 4": 1,
+    "mismatched tag: line 417, column 3": 2,
+    "not well-formed (invalid token): line 3, column 0": 1,
+    "Unrecognized layout key": 2,
+    "Untraced non-path selection shape": 6,
+    "duplicate attribute: line 1516, column 144": 1
+  },
+  "native_corpus_validation": {
+    "failures": [],
+    "hardware_verified": false,
+    "largest_owned_geometry_capacity": 383506,
+    "layouts": 1268,
+    "products": 177
+  },
+  "native_curved_interaction": {
+    "curved_shape": true,
+    "device_requests": 0,
+    "edition_id": 0,
+    "layout_id": 1,
+    "physical_discovery_disabled": true,
+    "product_id": 620,
+    "save_undo_redo": true,
+    "source_led_selected": true,
+    "static_rgb_saved": 11259375,
+    "unimplemented_preview_output_inert": true
+  },
+  "python_tests_passed": 6,
+  "workspace": {
+    "core_passed": 468,
+    "core_ignored": 6,
+    "tray_passed": 303,
+    "tray_ignored": 45,
+    "cli_passed": 4,
+    "doc_passed": 1
+  },
+  "optimized_build": "passed",
+  "optimized_native_studio_checks": {
+    "passed": 11,
+    "failed": 0,
+    "physical_hardware": false
+  },
+  "customize_regression": {
+    "restricted_run": {
+      "passed": 1,
+      "failed": 1,
+      "reason": "private font resource loading unavailable; zero fonts loaded"
+    },
+    "normal_font_access_run": {
+      "passed": 2,
+      "failed": 0,
+      "private_fonts_verified": true,
+      "simulated_devices": true
+    }
+  },
+  "visual": {
+    "native_curved_region_capture_reviewed": true,
+    "chassis_artwork_implemented": false,
+    "matched_stock_pixel_parity_claimed": false
+  },
+  "hardware_support_verified": false,
+  "references": [
+    "https://www.w3.org/TR/SVG/shapes.html",
+    "https://learn.microsoft.com/en-us/windows/win32/gdi/path-creation"
+  ]
+}

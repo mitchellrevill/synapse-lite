@@ -1,11 +1,10 @@
 # Broader Studio device presets
 
 The native Studio canvas can now load exact product/edition/layout projections
-beyond Ornata. The private pack contains977 layouts across117 products from the
-acquired source catalogue:20 mice,35 keyboards,36 systems,8 audio products,
-6 accessories,3 broadcasters,3 mouse mats,2 IoT products,2 monitors,one keypad
-and one gamepad. These are source categories and preset availability, not verified
-hardware support. They do not cover every current Razer product.
+beyond Ornata. The current private pack contains1268 layouts across177 products
+from the acquired source catalogue. These are source preset availability, not
+verified hardware support, and do not cover every current Razer product. The
+source-basic-shape extension is documented in STUDIO-SHAPES.md.
 
 Imported compositions can display their matching preset, select its explicit LED
 memberships and edit compatible regional data through existing controls. A native
@@ -27,17 +26,17 @@ not exist; it does not replace an installed pack. Generated assets remain privat
 build data, outside Git. The public tool and synthetic tests are included.
 
 Projection keeps literal supported selection paths and their row/column identity.
-Plain unrounded SVG rectangles become the exact same four straight edges; rounded
-rectangles, circles, transforms, unsupported path commands and missing exact SVGs
-remain TODOs. A layout is never substituted from another product, edition or locale.
+Plain SVG rectangles and polygon/polyline vertices preserve their straight edges;
+circles/ellipses and rounded rectangles use native numeric primitives. Transforms,
+untraced path commands and missing exact SVGs remain TODOs. A layout is never substituted from another product, edition or locale.
 Two conflicting source definitions remove the candidate rather than selecting an
 arbitrary winner. Matrix membership, explicit viewBox and optional configuration
 identity fields must agree. Existing source hashes remain in every projection.
 
-The pack index records1216 per-layout/source TODOs, including repeated missing
-layouts in edition manifests. These are not1216 distinct devices. The977 generated
-files total11786239bytes on disk. The complete index and per-resource TODOs remain
-with the private pack; a redacted summary is in validation/studio-presets.json.
+The pack index records908 per-layout/source TODOs, including repeated missing
+layouts in edition manifests. These are not908 distinct devices. The1268 generated
+files total15538730bytes on disk. The complete index and per-resource TODOs remain
+with the private pack; a redacted summary is in validation/studio-basic-shapes.json.
 
 Source EditorCanvas.21953e06.chunk.js SHA256
 190a2ef92615861142a1585b6cbffa578d2a716069f8d430cb6bd63ca103e5c6 supplies
@@ -54,12 +53,12 @@ and layout must match the composition exactly. Existing bounds of32 placements,
 512 LED references, finite geometry and quarter-turn orientation remain in place.
 Only source paths present in the composition's explicit LED inventory are selectable.
 
-Geometry loads on demand, not by loading the977-layout index. Equal identities
+Geometry loads on demand, not by loading the1268-layout index. Equal identities
 share one parsed Arc across placements. A canvas admits at most4MiB of unique
 serialized geometry and8MiB of estimated owned vector/string capacity. This
 estimate excludes allocator/GDI overhead and the rest of the app; parsing peak
 and the full-process100MB gate are not established by these local bounds. Native
-corpus validation found a largest owned geometry capacity of376338bytes; all977
+corpus validation found a largest owned geometry capacity of383506bytes; all1268
 files parsed with exact IDs. The whole pack is never retained as parsed geometry.
 
 Local Preview and Apply Saved keep the existing single unrotated Ornata backend
@@ -68,7 +67,7 @@ visual availability does not enable an unimplemented device API or output route.
 
 ## Verification and remaining work
 
-Four Python checks cover literal paths/rectangles, unsupported shapes/transforms,
+Six Python checks cover literal paths/rectangles, unsupported shapes/transforms,
 missing SVG/matrix identity, report/manifest hashes and conflicting definitions.
 Two regular native tests cover foreign selection, wrong-identity refusal, shared
 geometry across32 placements and the placement limit. The opt-in corpus check
@@ -82,10 +81,10 @@ states, remaining shape types, transforms and matched-DPI full visual comparison
 remain TODOs. No pixel-perfect or physical lighting claim follows. Existing
 Ornata and actual-export Studio checks remain required regression coverage.
 
-Workspace468core/300tray/4CLI/1doc checks pass; six core and44tray checks remain
+Workspace468core/303tray/4CLI/1doc checks pass; six core and45tray checks remain
 intentionally ignored. Full APIs, profiles/macros/input, remaining effects,
 source migration, privacy and three complete-build memory runs remain open.
 
-The optimized workspace build, full native preset-corpus check and all ten native
+The optimized workspace build, full native preset-corpus check and all eleven native
 Studio checks pass on simulated hardware. These checks do not establish device
 APIs or optical output for the broader preset pack.

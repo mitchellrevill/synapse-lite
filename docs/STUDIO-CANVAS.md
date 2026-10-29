@@ -1,7 +1,7 @@
 # Studio canvas geometry and selection
 
 The native Studio file editor draws source-defined LED outlines. The broader
-pack now covers977 layouts across117 products for offline editing; see
+pack now covers1268 layouts across177 products for offline editing; see
 STUDIO-PRESETS.md. The original pinned Ornata projection uses the shipped Studio
 SVG rather than the differently scaled Customize geometry.
 Single click replaces selection, Ctrl-click toggles it, and drag selects LED
