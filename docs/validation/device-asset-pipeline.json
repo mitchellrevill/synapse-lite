@@ -1,0 +1,38 @@
+{
+  "checkpoint": "private-device-asset-catalogue-pipeline",
+  "date": "2026-10-29",
+  "catalogue_source": {
+    "url": "https://apps.razer.com/synapse/dashboard/AvailableDevices.json",
+    "bytes": 10963,
+    "sha256": "f087e20349b803a11fa8299bfcb2e2c28c9e875c21aaa9242279655a22bc62e9",
+    "retrieved_utc": "2026-10-29T18:39:09.233423+00:00",
+    "etag": "\"765fa9b454a2a82c13882c25c13cf363\""
+  },
+  "audit_summary": {
+    "artwork_identities": 653,
+    "artwork_identities_without_original": 0,
+    "artwork_products": 298,
+    "catalogue_primary_products": 334,
+    "original_artwork_files": 556,
+    "payload_bytes": 104314151,
+    "studio_identities": 1396,
+    "studio_products": 183,
+    "unique_payload_files": 2511
+  },
+  "audit_sha256": "8bd0365c62e770a592d24ac9f20838e693956f0ad997fa51d45ce9e24c740b42",
+  "private_zip_sha256": "a6b64274390bce1593078f2eaaa6b11406353fe702aee72052a657402e1cb6c7",
+  "private_zip_bytes": 105744608,
+  "repeat_archive_identical": true,
+  "artwork_native_thumbnails_changed": 0,
+  "original_avif_bytes": 14720921,
+  "originals_verified_against_capture_hashes": true,
+  "python_tests_passed": 27,
+  "source_pack_in_git": false,
+  "redistribution_basis_established": false,
+  "hardware_support_verified": false,
+  "complete_build_memory_verified": false,
+  "tool_sha256": {
+    "provision-device-dashboard.py": "6225990848fff9dffbd8854652e3dd1c678344c81401740ebc8699ca433ba1fa",
+    "audit-device-assets.py": "b3459c36c33e0f9907a81345c390a6d2a5c8d2f3a24b8192e9bda6ed19297419"
+  }
+}

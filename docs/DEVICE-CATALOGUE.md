@@ -93,6 +93,11 @@ selection, AVIF admission, revision preservation, resume and rate-limit behavior
 
 ## Remaining integration work
 
+The later [private asset pipeline](ASSET-PIPELINE.md) retains original image bytes
+and generates per-product edition/layout coverage audits and deterministic private
+packages. Its current counts, validation and remaining DeviceInfo/retail identity
+gaps are documented separately from the historical capture figures above.
+
 - Acquire source-declared device, edition and layout manifests, artwork and LED SVGs.
   Acquired dashboard artwork and lighting maps now cover many products, but existing
   native UI integration principally covers DeathAdder 196 and Ornata 605. This
