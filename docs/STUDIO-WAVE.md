@@ -2,7 +2,8 @@
 
 Saved Studio Wave2 regions now compile into the local compositor and the existing
 explicit Apply Saved device-output path. This checkpoint adds playback of imported
-compositions, not Wave authoring controls. Quick Wave remains unchanged.
+compositions. A subsequent [authoring checkpoint](STUDIO-WAVE-AUTHORING.md) adds
+native direction, preset and motion controls. Quick Wave remains unchanged.
 
 Supported: continuous linear cardinal angles0/90/180/270, explicit cycles-1,
 speed0..50, width100..400 percent and pause0..60000ms. Layer parameters merge with
@@ -63,7 +64,8 @@ refusal are covered. Machine-readable evidence: validation/studio-wave.json.
 - Width10..99: decompiler unsigned index arithmetic can wrap for negative phases;
   next check is the corresponding machine instructions, not a guessed modulo.
 - Arbitrary angles, split/rotational and finite/input-triggered variants.
-- Native Add Wave, direction/speed/width/pause and gradient authoring controls.
+- Custom gradient-stop authoring; native Add Wave, direction, five presets and
+  speed/width/pause authoring are now implemented in the linked checkpoint.
 - Physical/optical verification, real stock import of authored Wave, screenshot
   comparison of its future controls, and complete-build memory/network gates.
 

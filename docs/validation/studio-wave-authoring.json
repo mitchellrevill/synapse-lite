@@ -1,0 +1,38 @@
+{
+  "invalid_motion_atomic": true,
+  "motion": {
+    "pause_ms": 79,
+    "speed": 0,
+    "width": 125
+  },
+  "new_wave_layer": true,
+  "physical_discovery_disabled": true,
+  "preview_rgb": [
+    0,
+    255,
+    0
+  ],
+  "readonly_inert": true,
+  "save_undo_redo": true,
+  "sim_device_requests": 0,
+  "source_direction": 270,
+  "source_preset": 4,
+  "date": "2026-10-29",
+  "source_presets_fixture": "crates/secbird-core/tests/fixtures/studio-wave-presets.json",
+  "screenshot": "app approval timed out; app-owned render inspected, child EDIT painting absent",
+  "pixel_perfect": false,
+  "physical_device_output": false,
+  "full_memory_gate": "open",
+  "regression": {
+    "core_passed": 444,
+    "core_ignored": 6,
+    "tray_passed": 279,
+    "tray_ignored": 36,
+    "cli_passed": 3,
+    "doc_passed": 1,
+    "optimized_wave_core_passed": 13,
+    "optimized_native_studio_passed": 6,
+    "release_build": "passed secbird and secbird-tray"
+  },
+  "optimized_native_evidence": "work/rust-temp/native-studio-wave-6364-1793270494068835200/interaction.json"
+}

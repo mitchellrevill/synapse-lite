@@ -22,6 +22,7 @@ mod regions;
 pub use regions::{
     ColorProperty, GradientStop, LedSelection, SelectedColor, SelectedDuration, SelectedGradient,
     StopEdit, SPECTRUM_DURATIONS,
+    WaveProperty, SelectedWaveValue, wave_preset,
 };
 
 #[path = "preview.rs"]

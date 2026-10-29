@@ -139,6 +139,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter) {
         ("Delete",Control::Delete,view.draft.as_ref().is_some_and(|draft|
             selected.is_some_and(|id|draft.can_delete_item(id)))),
         ("Add Breathing",Control::Add(NewEffect::Breathing),true),
+        ("Add Wave",Control::Add(NewEffect::Wave),true),
     ];
     p.fill(710,116,180,entries.len() as i32*28+4,PANEL);
     // Disabled rows still block the canvas beneath the popup.

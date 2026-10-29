@@ -67,10 +67,13 @@ The Lighting [brightness slider and switch](docs/STUDIO-BRIGHTNESS.md) now adjus
 Studio through LIVE brightness without selecting Quick effects or restarting the
 composition. The first accepted Studio frame also releases a previous LIVE0 using
 the configured intent; hardware/optical checks remain open.
-Imported Studio [Wave](docs/STUDIO-WAVE.md) now plays continuous cardinal regions
-with custom RGB/None gradients, speed, width and transparent pauses through Local
-Preview and the existing guarded Apply Saved output. Wave authoring, narrow widths,
-rotational/split/finite/input-triggered variants and physical checks remain TODOs.
+Studio [Wave](docs/STUDIO-WAVE.md) plays continuous cardinal regions with custom
+RGB/None gradients, speed, width and transparent pauses through Local Preview and
+the existing guarded Apply Saved output. [Add Wave and its native controls](docs/STUDIO-WAVE-AUTHORING.md)
+now assign selected LEDs with source defaults, four directions, five source
+presets and atomic speed/width/pause editing, save and undo/redo. Custom-stop
+authoring, narrow widths, rotational/split/finite/input-triggered variants and
+physical/visual checks remain TODOs.
 
 Studio [Breathing](docs/STUDIO-BREATHING.md) now supports deterministic continuous
 playback, two-colour regional editing, source speed presets, None/transparency,

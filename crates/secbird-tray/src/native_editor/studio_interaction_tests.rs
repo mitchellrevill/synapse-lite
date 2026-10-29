@@ -2,6 +2,75 @@
 use super::*;
 
 #[test]
+#[ignore = "requires private stock export/assets; opens isolated simulated Wave authoring window"]
+fn native_studio_wave_direction_presets_motion_preview_save_and_undo_preserve_source() {
+    let input=PathBuf::from(std::env::var_os("SYNAPSE_LITE_STOCK_STUDIO_FILE").expect("select stock export"));
+    let original=std::fs::read(&input).unwrap();
+    let directory=std::env::temp_dir().join(format!("native-studio-wave-{}-{}",std::process::id(),std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+    std::fs::create_dir_all(&directory).unwrap();let frame=directory.join("frame.json");
+    let _environment=Environment::set(&[("SYNAPSE_LITE_CONFIG_DIR",&directory),("SYNAPSE_LITE_SMOKE_REPORT",&frame),("SYNAPSE_LITE_SMOKE_VIEW",Path::new("studio"))]);
+    let sim=Sim::wireless_mouse();let engine=Engine::with_simulated_mouse(&sim).unwrap();
+    let mut store=Store::load(&directory.join("profiles.json")).unwrap();store.for_device(&engine.devices()[0]);store.save().unwrap();
+    let original_store=std::fs::read(directory.join("profiles.json")).unwrap();
+    let folder=directory.clone();let monitor=sim.clone();let source=input.clone();
+    let controller=std::thread::spawn(move || {
+        let result=(|| -> Result<Value,String> {unsafe {
+            wait_for(||frame.exists(),"Wave window")?;
+            let hwnd=WINDOW.load(Ordering::Acquire) as HWND;
+            let query=||{let mut value=Value::Null;SendMessageW(hwnd,STUDIO_TEST,2,&mut value as *mut Value as isize);value};
+            wait_for(||query()["pending"]==0,"initial reads")?;
+            monitor.state().log.clear();
+            let path=json!(source.to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,1,&path as *const Value as isize);
+            wait_for(||query()["profiles"]==1 && query()["busy"]==false,"composition load")?;
+            let scale=f64::from(GetDpiForWindow(hwnd).max(96))/96.;
+            let mut client:RECT=std::mem::zeroed();GetClientRect(hwnd,&mut client);
+            let width=f64::from(client.right)/scale;let height=f64::from(client.bottom)/scale;let right=width-250.;
+            lighting_click(hwnd,775.,100.,scale);lighting_click(hwnd,800.,384.,scale);
+            let id=query()["selected"].as_str().ok_or("new Wave not selected")?.to_owned();
+            if !query()["rows"].as_array().unwrap().iter().any(|row|row["id"]==id && row["title"]=="WAVE") {return Err("Wave menu did not create the source-shaped layer".into());}
+            let fit=((width-540.)/960.).min((height-250.)/360.).clamp(0.05,4.);
+            lighting_click(hwnd,width/2.+(67.-480.)*fit,(168.+height)/2.+(76.-180.)*fit,scale);
+            lighting_click(hwnd,right+211.,290.,scale); // Left270, assigns source defaults
+            lighting_click(hwnd,right+210.,360.,scale); // source preset5: solid green
+            for (id,text) in [(2105,"0"),(2106,"125"),(2107,"79")] {
+                let field=GetDlgItem(hwnd,id);if field.is_null(){return Err("Wave motion field missing".into());}
+                SendMessageW(field,WM_SETTEXT,0,wide(text).as_ptr() as isize);
+            }
+            lighting_click(hwnd,right+100.,500.,scale);
+            lighting_click(hwnd,630.,100.,scale);
+            wait_for(||query()["preview"]["current"]==true && query()["preview"]["effects"]==3,"Wave preview")?;
+            wait_for(||query()["preview"]["frame"][1]==json!([0,255,0]),"frozen Wave preset colour")?;
+            let capture=json!(folder.join("wave.png").to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize);
+            if std::env::var("SYNAPSE_LITE_STUDIO_VISUAL_HOLD").as_deref()==Ok("1") {std::thread::sleep(Duration::from_secs(20));}
+            let output=folder.join("wave.ChromaEffects");let path=json!(output.to_string_lossy());
+            SendMessageW(hwnd,STUDIO_TEST,3,&path as *const Value as isize);wait_for(||query()["busy"]==false && query()["dirty"]==false,"Wave save")?;
+            let bytes=std::fs::read(output).map_err(|e|e.to_string())?;let archive=secbird_core::studio::Archive::parse(&bytes).map_err(|e|e.to_string())?;
+            let saved:Value=serde_json::from_str(archive.profile_json(0).unwrap()).unwrap();
+            let row=saved["layers"].as_array().unwrap().iter().find(|row|row["id"]==id).ok_or("saved Wave missing")?;
+            let params=&row["regions"][0]["params"];
+            if params["angle"]!=270 || params["speed"]!=0 || params["width"]!=125 || params["pause"]!=79 || params["cycles"]!=-1 || params["colorStops"][0]["Color"]!=0x00ff00 {return Err(format!("Wave fields were not saved: {params}"));}
+            lighting_click(hwnd,450.,100.,scale);if query()["dirty"]!=true {return Err("Wave speed undo did not restore the previous draft".into());}
+            lighting_click(hwnd,520.,100.,scale);if query()["dirty"]!=false {return Err("Wave speed redo did not return to saved state".into());}
+            let field=GetDlgItem(hwnd,2106);SendMessageW(field,WM_SETTEXT,0,wide("99").as_ptr() as isize);
+            lighting_click(hwnd,right+100.,500.,scale);
+            if query()["dirty"]!=false || query()["failed"]!=true {return Err("Invalid motion did not refuse atomically".into());}
+            SendMessageW(hwnd,READ_ONLY_TEST_SET,1,0);lighting_click(hwnd,right+10.,290.,scale);
+            if query()["dirty"]!=false {return Err("Read-only Wave direction mutated the saved draft".into());}
+            SendMessageW(hwnd,READ_ONLY_TEST_SET,0,0);
+            if !monitor.state().log.is_empty() {return Err("Local Wave authoring made device requests".into());}
+            Ok(json!({"new_wave_layer":true,"source_direction":270,"source_preset":4,"motion":{"speed":0,"width":125,"pause_ms":79},"preview_rgb":[0,255,0],"save_undo_redo":true,"invalid_motion_atomic":true,"readonly_inert":true,"sim_device_requests":0,"physical_discovery_disabled":true}))
+        }})();
+        unsafe {let hwnd=WINDOW.load(Ordering::Acquire) as HWND;SendMessageW(hwnd,STUDIO_TEST,5,0);PostMessageW(hwnd,WM_CLOSE,0,0);}
+        std::fs::write(folder.join("interaction.json"),serde_json::to_vec_pretty(&match &result {Ok(value)=>value.clone(),Err(error)=>json!({"error":error})}).unwrap()).unwrap();result
+    });
+    let run=run_standalone(Arc::new(Mutex::new(engine)),Some(Duration::from_secs(30)));let result=controller.join().unwrap();
+    assert!(run.is_ok(),"{run:?}");assert!(result.is_ok(),"{result:?}");
+    assert_eq!(std::fs::read(input).unwrap(),original);assert_eq!(std::fs::read(directory.join("profiles.json")).unwrap(),original_store);
+    eprintln!("Wave native evidence: {}",directory.display());
+}
+
+
+#[test]
 #[ignore = "requires private stock export/assets; opens isolated simulated Breathing authoring window"]
 fn native_studio_breathing_colors_speed_preview_save_and_undo_preserve_source() {
     let input=PathBuf::from(std::env::var_os("SYNAPSE_LITE_STOCK_STUDIO_FILE").expect("select stock export"));

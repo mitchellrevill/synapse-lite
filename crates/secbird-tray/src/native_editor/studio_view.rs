@@ -11,6 +11,8 @@ use windows_sys::Win32::UI::Controls::Dialogs::*;
 mod playback;
 #[path = "studio_spectrum.rs"]
 mod spectrum;
+#[path = "studio_wave.rs"]
+mod wave;
 #[path = "studio_layers.rs"]
 mod layer_tools;
 #[path = "studio_output.rs"]
@@ -59,6 +61,7 @@ pub(super) enum Control {
     ApplyCold,
     ClearColor(bool),
     Spectrum(spectrum::Control),
+    Wave(wave::Control),
     Layers(layer_tools::Control),
     Preview,
     ApplyDevice,
@@ -91,6 +94,7 @@ pub(super) struct View {
     cold: String,
     selected_cold: Option<SelectedColor>,
     spectrum: spectrum::Properties,
+    wave: wave::Properties,
     playback: playback::Playback,
     output: output::View,
     dropdown: bool,
@@ -303,6 +307,7 @@ impl View {
 pub(super) fn selection_changed(state: &mut State) {
     let view = &mut state.studio;
     spectrum::refresh(view);
+    wave::refresh(view);
     view.selected_color = None;
     view.selected_cold = None;
     let Some(property) = view.color_property(false) else {
@@ -557,6 +562,7 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
         Control::ApplyDevice => output::apply(state),
         Control::StopDevice => unreachable!("handled before busy file operations"),
         Control::Spectrum(control) => spectrum::action(state, control),
+        Control::Wave(control) => wave::action(state, control),
         Control::BreathingDuration(index) => {
             let result=(|| -> Result<(),String> {
                 let view=&mut state.studio;
@@ -901,6 +907,7 @@ pub(super) unsafe fn rebuild_fields(state: &mut State) {
         return;
     }
     spectrum::fields(state);
+    wave::fields(state);
     if state.studio.color_property(false).is_some() {
         let text = state.studio.color.clone();
         let right = (state.width as f32 / state.scale) as i32 - 250;
@@ -946,6 +953,7 @@ pub(super) unsafe fn rebuild_fields(state: &mut State) {
     }
 }
 pub(super) fn command(state: &mut State, id: u16, notification: u16) -> bool {
+    if wave::command(state,id,notification) {return true;}
     if spectrum::command(state, id, notification) {
         return true;
     }
@@ -972,6 +980,7 @@ pub(super) fn key(state: &State, key: usize, control: bool, edit: bool) -> Optio
         (0x44, true) if !edit => Some(Control::Layers(layer_tools::Control::Duplicate)),
         (0x2e, false) if !edit => Some(Control::Layers(layer_tools::Control::Delete)),
         (13, _) if state.studio.renaming => Some(Control::CommitRename),
+        (13, _) if edit && wave::has_focus(state) => Some(Control::Wave(wave::Control::Motion)),
         (13, _) if edit && spectrum::has_focus(state) => {
             Some(Control::Spectrum(spectrum::Control::ApplyStop(false)))
         }
@@ -1371,6 +1380,8 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         );
     } else if view.effect() == Some("spectrum") {
         spectrum::paint(p, view, right);
+    } else if view.effect() == Some("wave") {
+        wave::paint(p,view,right);
     } else {
         paragraph(
             p,
@@ -1406,7 +1417,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         p,
         message,
         right + 10,
-        if view.is_breathing() { 566 } else if view.effect() == Some("spectrum") {
+        if view.is_breathing() { 566 } else if matches!(view.effect(),Some("spectrum"|"wave")) {
             590
         } else if view.is_fire() {
             506

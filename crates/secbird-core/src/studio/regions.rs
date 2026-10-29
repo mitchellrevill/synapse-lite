@@ -4,6 +4,9 @@ use std::collections::BTreeMap;
 
 #[path = "spectrum.rs"]
 mod spectrum;
+#[path = "wave.rs"]
+mod wave;
+pub use wave::{WaveProperty, SelectedWaveValue, wave_preset};
 pub use spectrum::{
     GradientStop, SelectedDuration, SelectedGradient, StopEdit, SPECTRUM_DURATIONS,
 };
@@ -52,6 +55,7 @@ enum RegionEdit<'a> {
     Color(ColorProperty, Option<u32>),
     Spectrum(spectrum::Edit<'a>, &'a Object),
     BreathingDuration(u32),
+    Wave(wave::Edit, &'a Object),
 }
 impl RegionEdit<'_> {
     fn assigns(self) -> bool {
@@ -72,6 +76,10 @@ impl RegionEdit<'_> {
             edit.apply(params, new)?;
         }
         if let Self::BreathingDuration(value)=self { params.set("duration",Some(&encode(&value)?)); }
+        if let Self::Wave(edit,projection)=self {
+            if new {for (name,value) in &projection.0 {params.set(name,Some(value));}}
+            edit.apply(params)?;
+        }
         Ok(())
     }
 }
@@ -306,12 +314,13 @@ impl Draft {
         }
         let property = match edit {
             RegionEdit::Color(property, _) => Some(property),
-            RegionEdit::Erase | RegionEdit::Spectrum(..) | RegionEdit::BreathingDuration(_) => None,
+            RegionEdit::Erase | RegionEdit::Spectrum(..) | RegionEdit::BreathingDuration(_) | RegionEdit::Wave(..) => None,
         };
         let item = layer(self, id, property)?;
         if matches!(edit, RegionEdit::Spectrum(..)) {
             spectrum::validate_layer(&item)?;
         }
+        if matches!(edit,RegionEdit::Wave(..)) {wave::validate_layer(&item)?;}
         if matches!(edit,RegionEdit::BreathingDuration(_)) && (item.text("name")?!="breathing" || item.get("value").is_some_and(|value|value.get()!="5")) {
             return Err(invalid("selected layer is not Studio Breathing5"));
         }
