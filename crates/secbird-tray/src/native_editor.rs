@@ -3683,6 +3683,8 @@ unsafe extern "system" fn window_proc(
                 5=>studio_view::reset_test(&mut state),
                 6=>{let value=&*(lparam as *const Value);return studio_view::capture_frame(&mut state,Path::new(value.as_str().unwrap())) as isize;},
                 7=>studio_view::output_test_dirty_apply(&mut state),
+                8=>{let value=&*(lparam as *const Value);studio_view::add_preset_test(&mut state,(value[0].as_u64().unwrap() as u16,value[1].as_u64().unwrap() as u16,value[2].as_u64().unwrap() as u16));},
+                9=>{EndMenu();},
                 _=>{},
             }
         }

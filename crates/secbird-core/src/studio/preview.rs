@@ -32,6 +32,8 @@ pub struct Preview {
 
 #[derive(Deserialize)]
 struct Placement {
+    #[serde(default,rename="editorPreset")]
+    editor_preset: bool,
     id: String,
     #[serde(rename = "productId")]
     product: u16,
@@ -110,6 +112,7 @@ impl Preview {
         let placement: Placement = serde_json::from_str(devices[0].get()).map_err(invalid)?;
         let c = &placement.config;
         if placement.id.is_empty()
+            || placement.editor_preset
             || placement.id.len() > 512
             || placement.product != 605
             || placement.edition != 0
@@ -479,6 +482,9 @@ mod tests {
     fn unsupported_geometry_effects_and_foreign_memberships_refuse_instead_of_partial_preview() {
         let raw: serde_json::Value = serde_json::from_str(PROFILE).unwrap();
         let mut cases = vec![];
+        let mut x = raw.clone();
+        x["devices"][0]["editorPreset"] = true.into();
+        cases.push(x);
         let mut x = raw.clone();
         x["devices"][0]["orientation"] = 90.into();
         cases.push(x);

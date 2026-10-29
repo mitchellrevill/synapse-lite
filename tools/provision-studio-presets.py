@@ -130,6 +130,7 @@ def project(document, manifest_sha, product):
             if len(blob) > MAX_LAYOUT:
                 raise ValueError('Projected layout exceeds2MiB')
             yield {**row, 'file': f'studio-{product}-{edition}-{layout}.json', 'bytes': len(blob),
+                'product_name': document.get('productName') if isinstance(document.get('productName'), str) else '',
                 'sha256': sha(blob), 'svg_sha256': sha(svg), 'manifest_sha256': manifest_sha,
                 'leds': len(entries), 'matrix_without_selection_path': [list(key) for key in sorted(mapped - seen)], '_blob': blob}
         except (ValueError, KeyError, TypeError, ET.ParseError) as error:

@@ -21,6 +21,8 @@ mod starlight;
 mod wave;
 #[path = "studio_layers.rs"]
 mod layer_tools;
+#[path = "studio_preset_picker.rs"]
+mod preset_picker;
 #[path = "studio_output.rs"]
 mod output;
 pub(super) use output::Request as OutputRequest;
@@ -71,6 +73,7 @@ pub(super) enum Control {
     Starlight(starlight::Control),
     Reactive(reactive::Control),
     Layers(layer_tools::Control),
+    AddPreset,
     Preview,
     ApplyDevice,
     StopDevice,
@@ -618,6 +621,11 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
             layer_tools::action(state, control);
             ReleaseCapture();
         }
+        Control::AddPreset => {
+            if state.studio.editable() && !state.read_only_smoke && !state.restricted_actions {
+                PostMessageW(state.hwnd, DIALOG, 3, 0);
+            }
+        }
         Control::ApplyColor | Control::ApplyCold | Control::ClearColor(_) | Control::Erase => {
             let erase = matches!(control, Control::Erase);
             let cold = matches!(control, Control::ApplyCold | Control::ClearColor(true));
@@ -685,6 +693,8 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
             ReleaseCapture();
         }
         control => {
+            let placement_history = matches!(&control, Control::Undo | Control::Redo);
+            let before = placement_history.then(||state.studio.draft.as_ref().map(Draft::read_snapshot)).flatten();
             let result = if let Some(draft) = &mut state.studio.draft {
                 match control {
                     Control::Visibility(id) => {
@@ -708,6 +718,14 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
                 error(state, message);
             }
             layer_tools::reconcile_selection(state);
+            if let Some(before) = before {
+                if let Some(draft) = &state.studio.draft {
+                    if !preset_picker::same_devices(before.json(),draft.json()) {
+                        state.studio.canvas = studio_canvas::Canvas::load(draft.json(), &assets_dir());
+                        state.studio.playback.clear_frame();
+                    }
+                }
+            }
         }
     }
     if update_color {
@@ -849,6 +867,7 @@ unsafe fn choose(hwnd: HWND, save: bool, initial: &str) -> Result<Option<PathBuf
 }
 
 pub(super) unsafe fn dialog(hwnd: HWND, pointer: *mut RefCell<State>, kind: usize) {
+    if kind == 3 { preset_picker::dialog(hwnd, pointer); return; }
     let epoch = {
         let Ok(mut state) = (*pointer).try_borrow_mut() else {
             return;
@@ -1477,6 +1496,8 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         if view.failed { 0xfd4949 } else { MUTED },
     );
     layer_tools::paint(state, p);
+    button(p,"ADD DEVICE",270,172,110,Control::AddPreset,
+        view.editable() && !state.read_only_smoke && !state.restricted_actions);
     output::paint(state, p);
     if view.dropdown {
         let count = view
@@ -1519,6 +1540,9 @@ pub(super) fn diagnostics(state: &State) -> Value {
         "undo":view.draft.as_ref().map_or(0,Draft::undo_len),"redo":view.draft.as_ref().map_or(0,Draft::redo_len),
         "rows":view.draft.as_ref().map(|draft|draft.layers().iter().map(|row|json!({"id":row.id,"title":row.title,"visible":row.visible})).collect::<Vec<_>>()).unwrap_or_default()})
 }
+
+#[cfg(test)]
+pub(super) unsafe fn add_preset_test(state:&mut State,key:(u16,u16,u16)) { preset_picker::add_test(state,key); }
 
 /// Render our own window state for review, without reading another app's pixels.
 #[cfg(test)]

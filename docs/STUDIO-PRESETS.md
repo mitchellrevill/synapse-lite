@@ -1,5 +1,11 @@
 # Broader Studio device presets
 
+**29 October addition:** Studio now exposes an Add Device chooser for the bundled
+presets, with local placement history and save/reopen. See
+[STUDIO-PRESET-PICKER.md](STUDIO-PRESET-PICKER.md) for verification, offline-only
+admission and the remaining stock-presentation/physical-binding TODOs. The counts
+and test results below describe the preceding geometry checkpoints.
+
 The native Studio canvas can now load exact product/edition/layout projections
 beyond Ornata. The current private pack contains1268 layouts across177 products
 from the acquired source catalogue. These are source preset availability, not

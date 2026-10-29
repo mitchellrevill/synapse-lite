@@ -16,6 +16,7 @@ class PresetTests(unittest.TestCase):
     def rows(self,document):
         return list(m.project(document,'a'*64,100))
     def test_literal_path_and_plain_rectangle_preserve_exact_identity(self):
+        named=self.document();named['productName']='Razer Example';self.assertEqual(self.rows(named)[0]['product_name'],'Razer Example')
         row=self.rows(self.document())[0];data=json.loads(row['_blob']);self.assertEqual(data['keys'][0]['d'],'M0 0H20V10H0Z');self.assertEqual((data['product_id'],data['edition_id'],data['layout_id']),(100,0,0))
         row=self.rows(self.document('<rect class="selection" data-row="0" data-col="1" x="2" y="3" width="20" height="10"/>'))[0];self.assertEqual(json.loads(row['_blob'])['keys'][0]['d'],'M2.0 3.0H22.0V13.0H2.0Z')
     def test_untraced_transform_shape_missing_layout_and_matrix_refuse(self):

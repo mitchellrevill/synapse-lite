@@ -22,6 +22,8 @@ struct Placement {
     height: f64,
     #[serde(default)]
     orientation: u16,
+    #[serde(default, rename="editorPreset")]
+    editor_preset: bool,
 }
 struct Device {
     placement: Placement,
@@ -105,6 +107,7 @@ impl Canvas {
         self.devices.len() == 1 && self.notes.is_empty()
             && self.devices[0].placement.product==605 && self.devices[0].placement.edition==0
             && self.devices[0].placement.orientation==0
+            && !self.devices[0].placement.editor_preset
     }
     pub fn load(raw: &str, assets: &Path) -> Self {
         let mut canvas = Self::default();
@@ -587,6 +590,7 @@ mod tests {
                     width,
                     height,
                     orientation,
+                    editor_preset: false,
                 },
                 geometry: geometry.clone(),
                 admitted: BTreeSet::from(["0:1".into()]),

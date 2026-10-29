@@ -1,0 +1,60 @@
+{
+  "date": "2026-10-29",
+  "scope": "Native offline Studio preset addition; physical device APIs remain separate",
+  "pack": {
+    "layouts": 1268,
+    "products": 177,
+    "index_sha256": "91e4b498c28194785fcd8d6620009b4f6b4c40b09400379a88c88a77dd65d1c3",
+    "geometry_bytes": 15538730,
+    "all_geometry_digests_unchanged": true,
+    "remaining_source_layout_todos": 908
+  },
+  "verification": {
+    "workspace_serial": {
+      "core_passed": 471,
+      "core_ignored": 6,
+      "tray_passed": 305,
+      "tray_ignored": 46,
+      "cli_passed": 4,
+      "doc_passed": 1
+    },
+    "python_passed": 6,
+    "optimized_workspace_build": true,
+    "optimized_native_studio_passed": 12,
+    "native": {
+      "device_requests": 0,
+      "keyboard_added": 620,
+      "layouts": [
+        0,
+        1
+      ],
+      "menu_selection_by_user_not_verified": true,
+      "mouse_added": 100,
+      "native_menu_open_cancel": true,
+      "opaque_number_preserved": true,
+      "physical_discovery_disabled": true,
+      "read_only_inert": true,
+      "save_reopen_undo_redo": true,
+      "selectable_leds": 108
+    }
+  },
+  "earlier_attempts": [
+    "Parallel workspace run failed the existing process-wide GDI handle-count assertion (5 vs 4); the same assertion and full suite pass serially, without assertion changes.",
+    "Initial new native run omitted the preset asset environment setting and timed out opening its menu; configured run passes.",
+    "Initial broad optimized native run omitted the stock export environment setting: five passed, seven refused missing fixture. All twelve pass with both asset/export settings."
+  ],
+  "evidence_sha256": {
+    "studio-picker-workspace-final.log": "a0137396026d051fead97175721dbea5882f2d09b807637e4f8e7727ae73fd11",
+    "studio-picker-release-build.log": "284f4a42f7712efa8c5ece7f3a6429c63220e2c46cfdd66a83bec9109f2eaf17",
+    "studio-picker-release-native-configured.log": "9517785ac18b333ce6a563b6d94315eee271ab4bd58ff5c0a9456382d2d13444",
+    "interaction.json": "18df5da0c6d79b4e3452bf2742f23b2f67adc233966e5353faffeb0e1a709e8b"
+  },
+  "remaining": [
+    "Manual menu-item selection acceptance; native check opens/cancels menu and invokes shared addition handler",
+    "Stock-style chooser, search and friendly edition/locale labels",
+    "Chassis/legend artwork, physical dimensions, placement transforms/removal and physical binding",
+    "Stock re-import of newly added offline placements",
+    "Full device API/effect/input/profile/privacy/visual coverage and three complete-build memory runs"
+  ],
+  "no_hardware_or_complete_build_acceptance_claim": true
+}

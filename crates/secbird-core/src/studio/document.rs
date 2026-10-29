@@ -31,6 +31,8 @@ pub use regions::{
 mod preview;
 #[path = "tree.rs"]
 mod tree;
+#[path = "devices.rs"]
+mod devices;
 pub use tree::NewEffect;
 pub use preview::Preview;
 
@@ -243,13 +245,17 @@ struct Change {
     before: Option<Box<RawValue>>,
     after: Box<RawValue>,
 }
-enum Edit { Fields(Vec<Change>), Layers { before: Box<RawValue>, after: Box<RawValue> } }
+enum Edit {
+    Fields(Vec<Change>),
+    Layers { before: Box<RawValue>, after: Box<RawValue> },
+    Devices { before: Box<RawValue>, after: Box<RawValue> },
+}
 impl Edit {
     fn bytes(&self) -> usize {
         match self {
             Self::Fields(changes) => changes.iter().map(|change|change.id.len() + change.after.get().len()
                 + change.before.as_ref().map_or(0, |raw|raw.get().len())).sum(),
-            Self::Layers {before, after} => before.get().len() + after.get().len(),
+            Self::Layers {before, after} | Self::Devices {before, after} => before.get().len() + after.get().len(),
         }
     }
 }
@@ -259,6 +265,8 @@ impl Edit {
 fn regions_equal(left: &RawValue, right: &RawValue) -> Result<bool> {
     #[derive(Deserialize)]
     struct Node<'a> {
+        #[serde(borrow)]
+        devices: Option<&'a RawValue>,
         #[serde(borrow, rename = "type")]
         kind: Option<&'a RawValue>,
         #[serde(borrow)]
@@ -269,6 +277,7 @@ fn regions_equal(left: &RawValue, right: &RawValue) -> Result<bool> {
     fn compare(left: &RawValue, right: &RawValue, root: bool) -> Result<bool> {
         let a: Node = serde_json::from_str(left.get()).map_err(invalid)?;
         let b: Node = serde_json::from_str(right.get()).map_err(invalid)?;
+        if root && a.devices.map(RawValue::get) != b.devices.map(RawValue::get) { return Ok(false); }
         if !root {
             let kind_a = a
                 .kind
@@ -330,6 +339,11 @@ fn item(raw: &RawValue, id: &str) -> Result<Option<Object>> {
 
 fn rewrite(raw: &RawValue, edit: &Edit, inverse: bool) -> Result<Box<RawValue>> {
     let changes = match edit {
+        Edit::Devices {before, after} => {
+            let mut root = Object::parse(raw)?;
+            root.set("devices", Some(if inverse {before} else {after}));
+            return encode(&root);
+        }
         Edit::Layers {before, after} => {
             let mut root = Object::parse(raw)?;
             root.set("layers", Some(if inverse {before} else {after}));

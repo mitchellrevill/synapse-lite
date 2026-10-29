@@ -6,7 +6,7 @@ use windows_sys::Win32::Security::Cryptography::{BCryptGenRandom, BCRYPT_USE_SYS
 #[derive(Clone)]
 pub enum Control { Menu, Dismiss, Add(NewEffect), Group, Duplicate, Delete, Move(i8) }
 
-fn identity() -> Result<String, String> {
+pub(super) fn identity() -> Result<String, String> {
     let mut bytes = [0u8; 6];
     let status = unsafe { BCryptGenRandom(null_mut(), bytes.as_mut_ptr(), 6, BCRYPT_USE_SYSTEM_PREFERRED_RNG) };
     if status < 0 { return Err(format!("Could not generate a layer identity ({status})")); }

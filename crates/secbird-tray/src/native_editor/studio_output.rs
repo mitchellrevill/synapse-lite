@@ -50,6 +50,10 @@ unsafe fn queue(state: &mut State, request: Request) {
     }
 }
 pub(super) unsafe fn apply(state: &mut State) {
+    if !state.studio.canvas.can_preview() {
+        error(state,"This composition contains offline presets or unsupported device geometry");
+        return;
+    }
     if state.studio.output.busy {
         return;
     }

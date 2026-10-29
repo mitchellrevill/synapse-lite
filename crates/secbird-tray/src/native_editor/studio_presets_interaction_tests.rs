@@ -1,5 +1,52 @@
 use super::*;
 #[test]
+#[ignore="requires private indexed preset pack; opens isolated native offline device authoring"]
+fn native_studio_add_presets_menu_cancel_save_reopen_and_history_preserve_profiles() {
+    let folder=std::env::temp_dir().join(format!("native-studio-picker-{}-{}",std::process::id(),std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+    std::fs::create_dir_all(&folder).unwrap();
+    let source=folder.join("source.ChromaEffects");
+    let source_bytes=br#"{"version":1,"profiles":[{"id":"desk","title":"Offline desk","devices":[],"layers":[{"id":"static","type":"layer","name":"static","title":"STATIC","value":6,"visible":true,"params":{},"regions":[]}],"opaque":9.9900e+100}]}"#.to_vec();
+    std::fs::write(&source,&source_bytes).unwrap();let frame=folder.join("frame.json");
+    let _environment=Environment::set(&[("SYNAPSE_LITE_CONFIG_DIR",&folder),("SYNAPSE_LITE_SMOKE_REPORT",&frame),("SYNAPSE_LITE_SMOKE_VIEW",Path::new("studio"))]);
+    let sim=Sim::mouse();let engine=Engine::with_simulated_mouse(&sim).unwrap();let mut store=Store::load(&folder.join("profiles.json")).unwrap();store.for_device(&engine.devices()[0]);store.save().unwrap();
+    let baseline=std::fs::read(folder.join("profiles.json")).unwrap();let output=folder.clone();let monitor=sim.clone();let input=source.clone();
+    let controller=std::thread::spawn(move||{
+        let result=(||->Result<Value,String>{unsafe {
+            wait_for(||frame.exists(),"preset editor")?;let hwnd=WINDOW.load(Ordering::Acquire) as HWND;
+            let query=||{let mut v=Value::Null;SendMessageW(hwnd,STUDIO_TEST,2,&mut v as *mut Value as isize);v};
+            wait_for(||query()["pending"]==0,"initial reads")?;monitor.state().log.clear();
+            let path=json!(input.to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,1,&path as *const Value as isize);
+            wait_for(||query()["profiles"]==1&&query()["pending"]==0,"composition open")?;
+            let scale=f64::from(GetDpiForWindow(hwnd).max(96))/96.;
+            lighting_click(hwnd,320.,184.,scale);wait_for(||query()["dialog"]==true,"native preset menu open")?;
+            SendMessageW(hwnd,STUDIO_TEST,9,0);wait_for(||query()["dialog"]==false,"native preset menu cancel")?;
+            if query()["canvas_devices"]!=0||query()["dirty"]!=false{return Err("Cancelling presets changed the composition".into());}
+            let mouse=json!([100,0,0]);SendMessageW(hwnd,STUDIO_TEST,8,&mouse as *const Value as isize);
+            if query()["canvas_devices"]!=1||query()["canvas_selectable_leds"]!=2||query()["dirty"]!=true{return Err(format!("Mouse preset was not added: {}",query()));}
+            let saved=output.join("saved.ChromaEffects");let path=json!(saved.to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,3,&path as *const Value as isize);
+            wait_for(||query()["pending"]==0&&query()["dirty"]==false,"preset save")?;
+            lighting_click(hwnd,450.,100.,scale);if query()["canvas_devices"]!=0||query()["dirty"]!=true{return Err("Placement Undo failed".into());}
+            lighting_click(hwnd,520.,100.,scale);if query()["canvas_devices"]!=1||query()["dirty"]!=false{return Err("Placement Redo failed".into());}
+            SendMessageW(hwnd,READ_ONLY_TEST_SET,1,0);let keyboard=json!([620,0,1]);SendMessageW(hwnd,STUDIO_TEST,8,&keyboard as *const Value as isize);
+            if query()["canvas_devices"]!=1||query()["dirty"]!=false{return Err("Read-only preset addition changed state".into());}SendMessageW(hwnd,READ_ONLY_TEST_SET,0,0);
+            SendMessageW(hwnd,STUDIO_TEST,8,&keyboard as *const Value as isize);
+            if query()["canvas_devices"]!=2||query()["canvas_selectable_leds"]!=108||query()["canvas_can_preview"]!=false{return Err(format!("Keyboard preset was not added: {}",query()));}
+            SendMessageW(hwnd,STUDIO_TEST,3,&path as *const Value as isize);wait_for(||query()["pending"]==0&&query()["dirty"]==false,"two-device save")?;
+            SendMessageW(hwnd,STUDIO_TEST,1,&path as *const Value as isize);wait_for(||query()["pending"]==0&&query()["canvas_devices"]==2,"two-device reopen")?;
+            let archive=secbird_core::studio::Archive::parse(&std::fs::read(&saved).map_err(|e|e.to_string())?).map_err(|e|e.to_string())?;
+            let raw=archive.profile_json(0).unwrap();let value:Value=serde_json::from_str(raw).unwrap();
+            if !raw.contains("9.9900e+100")||value["devices"][0]["editorPreset"]!=true||value["devices"][1]["editorPreset"]!=true||value["layers"][0]["regions"]!=json!([]){return Err("Preset save lost opaque or offline metadata".into());}
+            lighting_click(hwnd,630.,100.,scale);lighting_click(hwnd,915.,100.,scale);
+            if query()["preview"]["current"]==true||query()["output_busy"]==true||query()["pending"]!=0||!monitor.state().log.is_empty(){return Err("Offline presets issued playback or device requests".into());}
+            let capture=json!(output.join("added-presets.png").to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize);
+            Ok(json!({"native_menu_open_cancel":true,"mouse_added":100,"keyboard_added":620,"layouts":[0,1],"selectable_leds":108,"save_reopen_undo_redo":true,"read_only_inert":true,"opaque_number_preserved":true,"physical_discovery_disabled":true,"device_requests":0,"menu_selection_by_user_not_verified":true}))
+        }})();unsafe{let hwnd=WINDOW.load(Ordering::Acquire) as HWND;SendMessageW(hwnd,STUDIO_TEST,9,0);SendMessageW(hwnd,STUDIO_TEST,5,0);PostMessageW(hwnd,WM_CLOSE,0,0);}
+        std::fs::write(output.join("interaction.json"),serde_json::to_vec_pretty(&match &result{Ok(v)=>v.clone(),Err(e)=>json!({"error":e})}).unwrap()).unwrap();result
+    });
+    let run=run_standalone(Arc::new(Mutex::new(engine)),Some(Duration::from_secs(30)));let result=controller.join().unwrap();
+    assert!(run.is_ok(),"{run:?}");assert!(result.is_ok(),"{result:?}");assert_eq!(std::fs::read(source).unwrap(),source_bytes);assert_eq!(std::fs::read(folder.join("profiles.json")).unwrap(),baseline);eprintln!("Studio preset picker evidence: {}",folder.display());
+}
+#[test]
 #[ignore="requires private preset pack; opens an isolated native mouse-preset authoring window"]
 fn native_studio_foreign_preset_selection_colour_save_and_output_refusal_preserve_profiles() {
     exercise_preset("studio-100-0-0.json",100,0,0,2,false);

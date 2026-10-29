@@ -30,7 +30,7 @@ impl Playback {
         self.snapshot = None;
     }
 }
-unsafe fn stop(state: &mut State) {
+pub(super) unsafe fn stop(state: &mut State) {
     state.studio.playback.requested = false;
     state.studio.playback.clear_frame();
     // Keep pending true until its response returns. Repeated stop/start cannot
