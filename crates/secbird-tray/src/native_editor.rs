@@ -67,6 +67,9 @@ mod viewport;
 mod window_frame;
 mod studio_view;
 mod studio_canvas;
+// Live Reactive admission remains closed pending native pulse/input proof.
+#[allow(dead_code)]
+mod studio_reactive_source;
 mod device_artwork;
 
 const CLASS: &str = "SynapseLiteNativeEditor";

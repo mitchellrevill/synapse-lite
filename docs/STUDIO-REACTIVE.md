@@ -11,6 +11,11 @@ Active Reactive compositions continue to refuse those routes explicitly. No
 input observer, interception, generated input or device write starts by editing.
 This checkpoint implements source-compatible settings, not live Reactive lighting.
 
+The later [event and pulse replay boundary](STUDIO-REACTIVE-REPLAY.md) adds exact
+metadata mapping, a sample-driven diagnostic renderer and an owned simulated
+Windows message path. Ordinary preview/output remains closed pending verified
+native animation and input delivery. Diagnostic samples are not a vendor fade.
+
 ## Source contract
 
 Studio Reactive is name reactive, effect3; firmware quick effect IDs are separate.
