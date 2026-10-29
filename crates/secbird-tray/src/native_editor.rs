@@ -133,6 +133,10 @@ fn editor_private_messages_have_distinct_ids() {
         ("macro browse", macro_view::BROWSE),
         ("macro input menu", macro_view::INPUT_MENU),
         ("test macro", macro_view::TEST),
+        ("test chroma", chroma_view::TEST),
+        ("shortcut menu", shortcuts::MENU),
+        ("shortcut file", shortcuts::FILE),
+        ("test shortcuts", shortcuts::TEST),
     ];
     for (index, (name, id)) in messages.iter().enumerate() {
         for (other, other_id) in &messages[index + 1..] {
