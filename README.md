@@ -87,6 +87,13 @@ playback, two-colour regional editing, source speed presets, None/transparency,
 preview and saved device output. Random, finite and key-triggered variants remain
 explicitly unsupported; imported data is preserved.
 
+Macro [text, command and launch authoring](docs/MACRO-HOST-ACTIONS.md) now supports
+multiline Unicode text, command values and program/website rows with retained
+inactive values. Apply changes a local draft; Save persists it. Existing action
+rows can be edited, and Cancel leaves them intact. Read-only Apply, long Unicode
+values, source export/reopen and profile preservation are checked. Recording,
+live clipboard/process execution, recovery and exact stock popovers remain open.
+
 ## Attribution
 
 Secretarybird is by [infinityInfinite and contributors](https://github.com/infinityInfinite/secbird). Its MIT/Apache-2.0 license files and [NOTICE](NOTICE) are preserved. Razer device protocol facts also draw on [OpenRazer](https://github.com/openrazer/openrazer). This is an independent project.

@@ -6,9 +6,13 @@ use windows_sys::Win32::{Security::Cryptography::{BCryptGenRandom,BCRYPT_USE_SYS
 use windows_sys::Win32::UI::Controls::EM_SETREADONLY;
 use library::input_events::{self,Input,Gesture};
 use library::loops;
+use library::host_actions;
+mod form;
+pub(super) use form::Control as FormControl;
 pub(super) const ID:&str="module:macro";
 pub(super) const BROWSE:u32=WM_APP+172;
 pub(super) const INPUT_MENU:u32=WM_APP+174;
+pub(super) const HOST_BROWSE:u32=WM_APP+175;
 #[cfg(test)] pub(super) const TEST:u32=WM_APP+173;
 const NAME:u16=2300;const DELAY:u16=2301;const REPEAT:u16=2302;
 
@@ -46,7 +50,7 @@ pub enum Request {Read,Change(Change),Import(PathBuf)}
 impl Request {pub fn mutates(&self)->bool {!matches!(self,Self::Read)}}
 pub struct Data {library:Library}
 #[derive(Clone)]
-pub enum Control {Open,List,Select(String),New,Duplicate,Delete,Import,Save,Discard,Undo,Redo,Event(usize),AddDelay,ApplyDelay,DeleteEvent,Move(i8),InputMenu,GestureMenu,ChooseInput(Input),ChooseGesture(Gesture),ChooseNested(String),AddInput,RebindInput,MarkLoopStart,WrapLoop,ApplyLoop}
+pub enum Control {Open,List,Select(String),New,Duplicate,Delete,Import,Save,Discard,Undo,Redo,Event(usize),AddDelay,ApplyDelay,DeleteEvent,Move(i8),InputMenu,GestureMenu,ChooseInput(Input),ChooseGesture(Gesture),ChooseNested(String),AddInput,RebindInput,MarkLoopStart,WrapLoop,ApplyLoop,OpenHost(host_actions::Kind),Host(FormControl)}
 #[derive(Default)]
 pub(super) struct View {
     pub used:bool,
@@ -70,6 +74,8 @@ pub(super) struct View {
     pub popup:bool,
     nested_mode:bool,
     nested:Option<String>,
+    form:Option<form::Form>,
+    form_sequence:u64,
 }
 pub(super) fn active(state:&State)->bool {state.selected.as_deref()==Some(ID)}
 fn identity()->Result<String,String> {
@@ -105,6 +111,7 @@ impl View {
     }
 }
 pub(super) fn can_leave(state:&mut State)->bool {
+    if active(state)&&state.macros.form.is_some(){form::explain_leave(&mut state.macros);state.macros.status="Apply or cancel the action editor before leaving.".into();state.macros.failed=true;state.exit_tray=None;state.closing=false;unsafe{InvalidateRect(state.hwnd,null(),0);}return false;}
     if !active(state)||!state.macros.dirty(){return true;}
     state.macros.status="Save or discard the macro draft before leaving this page.".into();state.macros.failed=true;state.exit_tray=None;state.closing=false;unsafe{InvalidateRect(state.hwnd,null(),0);}false
 }
@@ -154,10 +161,13 @@ pub(super) unsafe fn action(state:&mut State,control:Control) {
     if matches!(control,Control::Open){state.macros.used=true;state.action(Action::Device(ID.into()));return;}
     if !active(state)||state.macros.busy{return;}
     let mutable=!state.read_only_smoke&&!state.restricted_actions;
-    if !mutable&&!matches!(control,Control::List|Control::Select(_)|Control::Event(_)){return;}
+    if !mutable&&!matches!(control,Control::List|Control::Select(_)|Control::Event(_)|Control::Host(FormControl::Cancel)){return;}
+    if state.macros.form.is_some(){if let Control::Host(control)=control{form::action(state,control);}return;}
     let result=(||->Result<(),String>{
         match control {
             Control::Open=>{},Control::List=>state.macros.picker=!state.macros.picker,
+            Control::OpenHost(kind)=>{commit_fields(state)?;form::open(state,kind,None)?;},
+            Control::Host(_)=>{},
             Control::Select(id)=>{if state.macros.dirty(){return Err("Save or discard before switching macros".into());}state.macros.select(Some(id));state.macros.status="Macro selected".into();state.macros.failed=false;},
             Control::Event(index)=>{if mutable{commit_fields(state)?;}state.macros.event=Some(index);state.macros.delay=state.macros.draft.as_ref().and_then(|d|fixed_delay(&d.entry,index)).map(|n|n.to_string()).unwrap_or_default();sync_input(&mut state.macros);sync_loop(&mut state.macros);},
             Control::New=>{
@@ -179,7 +189,7 @@ pub(super) unsafe fn action(state:&mut State,control:Control) {
                 let (change,count)=if state.macros.nested_mode{(Change::InsertNested{guid,index,target:state.macros.nested.clone().ok_or("Choose a nested macro")?},1)}else{let input=state.macros.input.clone().unwrap_or(Input::Keyboard("KEY_A".into()));let gesture=state.macros.gesture.unwrap_or(Gesture::Tap);let count=input_events::rows(&d.entry.events,index,&input,gesture).map_err(|e|e.to_string())?.len();(Change::InsertInput{guid,index,input,gesture},count)};
                 local(state,change)?;state.macros.event=Some(index+count-1);state.macros.delay="1000".into();
             },
-            Control::RebindInput=>{commit_fields(state)?;let d=state.macros.draft.as_ref().ok_or("Select a macro")?;let guid=d.entry.guid.clone();let index=state.macros.event.ok_or("Select an input event")?;let change=if d.entry.events.get(index).is_some_and(|row|row["Type"]==7)&&state.macros.nested_mode{Change::RebindNested{guid,index,target:state.macros.nested.clone().ok_or("Choose a nested macro")?}}else{Change::RebindInput{guid,index,input:state.macros.input.clone().ok_or("Choose an input")?}};local(state,change)?;sync_input(&mut state.macros);},
+            Control::RebindInput=>{commit_fields(state)?;let d=state.macros.draft.as_ref().ok_or("Select a macro")?;let guid=d.entry.guid.clone();let index=state.macros.event.ok_or("Select an input event")?;if let Some(action)=d.entry.events.get(index).and_then(|row|host_actions::from_row(row).ok().flatten()){form::open(state,action.kind(),Some(index))?;}else{let change=if d.entry.events.get(index).is_some_and(|row|row["Type"]==7)&&state.macros.nested_mode{Change::RebindNested{guid,index,target:state.macros.nested.clone().ok_or("Choose a nested macro")?}}else{Change::RebindInput{guid,index,input:state.macros.input.clone().ok_or("Choose an input")?}};local(state,change)?;sync_input(&mut state.macros);}},
             Control::MarkLoopStart=>{commit_fields(state)?;state.macros.loop_start=Some(state.macros.event.ok_or("Select the first row to repeat")?);state.macros.status="Loop start marked. Select the last row, then Wrap Loop.".into();state.macros.failed=false;},
             Control::WrapLoop=>{
                 commit_fields_with_repeat(state,false)?;let d=state.macros.draft.as_ref().ok_or("Select a macro")?;
@@ -203,6 +213,7 @@ pub(super) unsafe fn action(state:&mut State,control:Control) {
     state.rebuild_fields();InvalidateRect(state.hwnd,null(),0);
 }
 pub(super) unsafe fn fields(state:&mut State) {
+    if state.macros.form.is_some(){form::fields(state);return;}
     if state.macros.draft.is_none(){return;}
     let left=((state.width as f32/state.scale)as i32-900).max(10)/2;
     for (id,text,x,y,w) in [(NAME,state.macros.name.clone(),left+10,196,180),(DELAY,state.macros.delay.clone(),left+10,310,180),(REPEAT,state.macros.repeat.clone(),left+540,198,80)] {
@@ -211,6 +222,7 @@ pub(super) unsafe fn fields(state:&mut State) {
     }
 }
 pub(super) fn command(state:&mut State,id:u16,notification:u16)->bool {
+    if active(state)&&state.macros.form.is_some(){return form::command(state,id,notification);}
     if !active(state)||notification!=EN_CHANGE as u16||!matches!(id,NAME|DELAY|REPEAT){return false;}
     if state.read_only_smoke||state.restricted_actions||state.macros.busy{return true;}
     let text=state.raw_text(id);if id==NAME{state.macros.name=text;}else if id==DELAY{state.macros.delay=text;}else{state.macros.repeat=text;}unsafe{InvalidateRect(state.hwnd,null(),0);}true
@@ -219,6 +231,7 @@ unsafe fn button(p:&mut Painter,text:&str,x:i32,y:i32,width:i32,control:Control,
     if enabled{p.button(text,x,y,width,Action::MacroLibrary(control),false);}else{p.fill(x,y,width,28,0x242424);unsafe{p.text(text,x,y,width,28,p.fonts.normal,MUTED,DT_CENTER);}}
 }
 fn event_label(value:&Value,library:Option<&Library>)->String {
+    if let Some(label)=host_actions::label(value){return label;}
     if let Some(label)=input_events::label(value){return label;}
     if value["Type"]==7{return format!("Macro · {}",library.and_then(|library|library.entries.iter().find(|entry|value["guid"].as_str()==Some(entry.guid.as_str()))).map_or("Missing definition",|entry|entry.name.as_str()));}
     match value["Type"].as_u64(){Some(0)if value["Number"].is_object()=>"Random delay".into(),Some(0)=>format!("Delay · {} seconds",value["Number"].as_str().map(|s|s.chars().take(80).collect::<String>()).unwrap_or_else(||value["Number"].to_string())),Some(1)=>"Keyboard function".into(),Some(2)=>"Mouse function".into(),Some(7)=>"Nested macro".into(),Some(6)=>format!("Loop {} · {} times",match value["LoopEvent"]["State"].as_u64(){Some(0)=>"start",Some(1)=>"end",_=>"boundary (unverified)"},value["Number"].as_str().map(str::to_owned).unwrap_or_else(||value["Number"].to_string())),_=>"Retained source event".into()}
@@ -246,8 +259,9 @@ pub(super) unsafe fn paint(state:&State,p:&mut Painter,width:i32,height:i32) {
     let gesture=if complete_action{"Perform action"}else{match view.gesture.unwrap_or(Gesture::Tap){Gesture::Tap=>"Press and release",Gesture::Down=>"Down",Gesture::Up=>"Up"}};
     button(p,gesture,left+10,550,180,Control::GestureMenu,can&&draft.is_some()&&!complete_action);button(p,if view.nested_mode{"ADD MACRO"}else{"ADD INPUT"},left+10,586,180,Control::AddInput,can&&draft.is_some());
     let nested_row=draft.is_some_and(|draft|view.event.and_then(|i|draft.entry.events.get(i)).is_some_and(|row|row["Type"]==7));
-    let compatible=if nested_row {view.nested_mode&&view.nested.is_some()}else{!view.nested_mode&&group.as_ref().is_some_and(|group|view.input.as_ref().is_some_and(|input|input_events::can_rebind(&group.input,input)))};
-    button(p,if nested_row{"UPDATE MACRO"}else if paired{"UPDATE PAIR"}else{"UPDATE EVENT"},left+10,622,180,Control::RebindInput,can&&compatible);
+    let host_row=draft.is_some_and(|draft|view.event.and_then(|i|draft.entry.events.get(i)).is_some_and(|row|host_actions::from_row(row).ok().flatten().is_some()));
+    let compatible=host_row||if nested_row {view.nested_mode&&view.nested.is_some()}else{!view.nested_mode&&group.as_ref().is_some_and(|group|view.input.as_ref().is_some_and(|input|input_events::can_rebind(&group.input,input)))};
+    button(p,if host_row{"EDIT ACTION"}else if nested_row{"UPDATE MACRO"}else if paired{"UPDATE PAIR"}else{"UPDATE EVENT"},left+10,622,180,Control::RebindInput,can&&compatible);
     button(p,"UNDO",timeline+10,160,80,Control::Undo,can&&draft.is_some_and(|d|!d.undo.is_empty()));button(p,"REDO",timeline+100,160,80,Control::Redo,can&&draft.is_some_and(|d|!d.redo.is_empty()));
     button(p,"DISCARD",timeline+470,160,100,Control::Discard,can&&view.dirty());button(p,"SAVE",timeline+580,160,100,Control::Save,can&&view.dirty());
     button(p,"MARK START",timeline+10,198,110,Control::MarkLoopStart,can&&view.event.is_some());
@@ -263,6 +277,7 @@ pub(super) unsafe fn paint(state:&State,p:&mut Painter,width:i32,height:i32) {
     let status=if view.status.is_empty(){"Macro playback integration is still in progress."}else{&view.status};p.text(status,30,height-50,width-60,40,p.fonts.normal,if view.failed{0xfd4949}else{MUTED},DT_LEFT|DT_WORDBREAK);
     if let Some(data)=&view.data {if !data.library.missing.is_empty()||data.library.dependency_issues>0{p.text(&format!("{} macro definition(s) missing · {} nested chain(s) need attention",data.library.missing.len(),data.library.dependency_issues),30,height-80,width-60,25,p.fonts.small,MUTED,DT_LEFT);}}
     if view.picker {if let Some(data)=&view.data {let count=data.library.entries.len().saturating_sub(view.picker_scroll).min(8);p.fill(46,116,290,count as i32*28,0);for (offset,entry) in data.library.entries.iter().skip(view.picker_scroll).take(8).enumerate(){let y=116+offset as i32*28;p.text(&entry.name,52,y,278,28,p.fonts.normal,TEXT,DT_LEFT);p.hits.push(Hit{rect:p.rect(46,y,290,28),action:Action::MacroLibrary(Control::Select(entry.guid.clone()))});}}}
+    if view.form.is_some(){form::paint(state,p,width,height);}
 }
 struct InputMenu(HMENU);
 impl Drop for InputMenu {fn drop(&mut self){unsafe{DestroyMenu(self.0);}}}
@@ -281,11 +296,13 @@ pub(super) unsafe fn choose_input(hwnd:HWND,gesture:bool,targets:&[library::nest
         if AppendMenuW(root.0,MF_POPUP,mouse.0 as usize,wide("Mouse functions").as_ptr())==0{return Err("Could not populate mouse choices".into());}std::mem::forget(mouse);
         let macros=menu()?;for target in targets {choices.push(Control::ChooseNested(target.guid.clone()));let flags=MF_STRING|if target.reason.is_some(){MF_GRAYED}else{0};if AppendMenuW(macros.0,flags,choices.len(),wide(&target.name.replace('&',"&&")).as_ptr())==0{return Err("Could not populate macro choices".into());}}
         if AppendMenuW(root.0,MF_POPUP|if targets.is_empty(){MF_GRAYED}else{0},macros.0 as usize,wide("Macros").as_ptr())==0{return Err("Could not populate macro choices".into());}std::mem::forget(macros);
+        for (name,kind) in [("Text function",host_actions::Kind::Text),("Run command",host_actions::Kind::Command),("Launch program",host_actions::Kind::Program),("Launch website",host_actions::Kind::Website)]{choices.push(Control::OpenHost(kind));append(&root,choices.len(),name)?;}
     }
     let mut point:POINT=std::mem::zeroed();if GetCursorPos(&mut point)==0{return Err("Could not position input choices".into());}
     let result=TrackPopupMenu(root.0,TPM_RETURNCMD|TPM_NONOTIFY,point.x,point.y,0,hwnd,null()) as usize;
     Ok(result.checked_sub(1).and_then(|index|choices.get(index)).cloned())
 }
+pub(super) unsafe fn browse_host(hwnd:HWND,pointer:*mut RefCell<State>){form::browse(hwnd,pointer);}
 pub(super) unsafe fn wheel(state:&mut State,delta:i16) {
     let count=state.macros.draft.as_ref().map_or(0,|d|d.entry.events.len());
     let view=&mut state.macros;if view.picker{let max=view.data.as_ref().map_or(0,|d|d.library.entries.len().saturating_sub(8));view.picker_scroll=if delta<0{view.picker_scroll.saturating_add(1).min(max)}else{view.picker_scroll.saturating_sub(1)};}else{view.scroll=if delta<0{view.scroll.saturating_add(3).min(count.saturating_sub(1))}else{view.scroll.saturating_sub(3)};}InvalidateRect(state.hwnd,null(),0);
@@ -296,7 +313,7 @@ pub(super) unsafe fn browse(hwnd:HWND)->Result<Option<PathBuf>,String> {
     let end=file.iter().position(|v|*v==0).ok_or("Import path is not terminated")?;Ok(Some(PathBuf::from(String::from_utf16(&file[..end]).map_err(|e|e.to_string())?)))
 }
 #[cfg(test)] pub(super) fn diagnostics(state:&State)->Value {
-    let v=&state.macros;json!({"open":active(state),"busy":v.busy,"menu_open":v.popup,"dirty":v.dirty(),"selected":v.selected,"name":v.name,"delay":v.delay,"repeat":v.repeat,"loop_start":v.loop_start,"event":v.event,"status":v.status,"failed":v.failed,"entries":v.data.as_ref().map(|d|d.library.entries.iter().map(|e|json!({"guid":e.guid,"name":e.name,"referenced":e.referenced})).collect::<Vec<_>>()).unwrap_or_default(),"events":v.draft.as_ref().map(|d|&d.entry.events),"undo":v.draft.as_ref().map_or(0,|d|d.undo.len()),"redo":v.draft.as_ref().map_or(0,|d|d.redo.len())})
+    let v=&state.macros;json!({"open":active(state),"busy":v.busy,"form":form::diagnostics(v),"menu_open":v.popup,"dirty":v.dirty(),"selected":v.selected,"name":v.name,"delay":v.delay,"repeat":v.repeat,"loop_start":v.loop_start,"event":v.event,"status":v.status,"failed":v.failed,"entries":v.data.as_ref().map(|d|d.library.entries.iter().map(|e|json!({"guid":e.guid,"name":e.name,"referenced":e.referenced})).collect::<Vec<_>>()).unwrap_or_default(),"events":v.draft.as_ref().map(|d|&d.entry.events),"undo":v.draft.as_ref().map_or(0,|d|d.undo.len()),"redo":v.draft.as_ref().map_or(0,|d|d.redo.len())})
 }
 #[cfg(test)] mod tests {
     use super::*;
