@@ -1,0 +1,40 @@
+import base64
+import importlib.util
+import json
+from pathlib import Path
+import tempfile
+import unittest
+
+spec=importlib.util.spec_from_file_location('presets',Path(__file__).with_name('provision-studio-presets.py'))
+m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+
+class PresetTests(unittest.TestCase):
+    def document(self,shape=None):
+        shape=shape or '<path class="selection" data-row="0" data-col="1" d="M0 0H20V10H0Z"/>'
+        svg=f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50">{shape}</svg>'.encode()
+        return {'productId':100,'vendorId':5426,'ledConfig':{'ledConfig_0_0':{'VID':5426,'PID':100,'EID':0,'Layout':0,'LedMatrix':[{'MatrixPos':[0,1]}]}},'svg':{'svg_0_0':base64.b64encode(svg).decode()}}
+    def rows(self,document):
+        return list(m.project(document,'a'*64,100))
+    def test_literal_path_and_plain_rectangle_preserve_exact_identity(self):
+        row=self.rows(self.document())[0];data=json.loads(row['_blob']);self.assertEqual(data['keys'][0]['d'],'M0 0H20V10H0Z');self.assertEqual((data['product_id'],data['edition_id'],data['layout_id']),(100,0,0))
+        row=self.rows(self.document('<rect class="selection" data-row="0" data-col="1" x="2" y="3" width="20" height="10"/>'))[0];self.assertEqual(json.loads(row['_blob'])['keys'][0]['d'],'M2.0 3.0H22.0V13.0H2.0Z')
+    def test_untraced_transform_shape_missing_layout_and_matrix_refuse(self):
+        for shape in ['<path class="selection" data-row="0" data-col="1" transform="translate(5)" d="M0 0H20V10Z"/>','<circle class="selection" data-row="0" data-col="1" r="5"/>','<rect class="selection" data-row="0" data-col="1" rx="2" width="20" height="10"/>','<path class="selection" data-row="0" data-col="9" d="M0 0H20V10Z"/>']:
+            self.assertIn('todo',self.rows(self.document(shape))[0])
+        doc=self.document();doc['svg']={};self.assertIn('todo',self.rows(doc)[0])
+    def test_capture_hash_and_manifest_hash_are_checked_before_projection(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);blob=json.dumps(self.document()).encode();source=root/'source';source.mkdir();(source/'manifest.json').write_bytes(blob)
+            record={'status':'available','product_id':100,'edition_id':0,'fetched_path':'/manifest.json','sha256':m.sha(blob),'bytes':len(blob)}
+            report=root/'report.json';report.write_text(json.dumps({'stage':'lighting','records':[record]}));digest=m.sha(report.read_bytes())
+            with self.assertRaises(ValueError):m.provision(report,source,root/'bad', '0'*64)
+            self.assertFalse((root/'bad').exists())
+            record['sha256']='0'*64;report.write_text(json.dumps({'stage':'lighting','records':[record]}));result=m.provision(report,source,root/'hash',m.sha(report.read_bytes()));self.assertEqual(result['layouts'],0);self.assertEqual(result['todos'],1)
+    def test_conflicting_definitions_never_pick_an_arbitrary_winner(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);source=root/'source';source.mkdir();records=[]
+            for i,shape in enumerate(['M0 0H20V10Z','M0 0H30V10Z']):
+                blob=json.dumps(self.document(f'<path class="selection" data-row="0" data-col="1" d="{shape}"/>')).encode();(source/f'manifest{i}.json').write_bytes(blob);records.append({'status':'available','product_id':100,'edition_id':i,'fetched_path':f'/manifest{i}.json','sha256':m.sha(blob),'bytes':len(blob)})
+            report=root/'report.json';report.write_text(json.dumps({'stage':'lighting','records':records}));result=m.provision(report,source,root/'out',m.sha(report.read_bytes()));self.assertEqual(result['layouts'],0);self.assertFalse((root/'out/studio-100-0-0.json').exists());self.assertEqual(result['todos'],1)
+
+if __name__=='__main__':unittest.main()

@@ -1,0 +1,87 @@
+{
+  "checkpoint": "generic-studio-preset-canvas",
+  "date": "2026-10-29",
+  "capture_report_sha256": "72518b0b3fdf1812c221d795bbd08b1ee7afd4ffc4f869ad63ecaefd78774cc2",
+  "preset_index_sha256": "bd10763bd91bc413260483d769b2077469d357f6a1584531358289eb26d2fa9e",
+  "layouts": 977,
+  "products": 117,
+  "projected_bytes": 11786239,
+  "todo_records": 1216,
+  "todo_reasons": {
+    "Untraced non-path selection shape": 207,
+    "No exact SVG; no layout fallback": 318,
+    "'data-row'": 11,
+    "LED configuration identity mismatch": 116,
+    "Untraced or excessive SVG path command": 90,
+    "Untraced rounded rectangle": 252,
+    "Only base64 data is allowed": 35,
+    "Duplicate or unmapped SVG LED identity": 28,
+    "not well-formed (invalid token): line 220, column 241": 1,
+    "duplicate attribute: line 109, column 134": 1,
+    "Untraced selection/ancestor transform": 142,
+    "XML or text declaration not at start of entity: line 2, column 0": 2,
+    "not well-formed (invalid token): line 281, column 4": 5,
+    "No usable or excessive selection paths": 1,
+    "mismatched tag: line 417, column 4": 1,
+    "mismatched tag: line 417, column 3": 2,
+    "not well-formed (invalid token): line 3, column 0": 1,
+    "Unrecognized layout key": 2,
+    "duplicate attribute: line 1516, column 144": 1
+  },
+  "native_corpus_validation": {
+    "failures": [],
+    "hardware_verified": false,
+    "largest_owned_geometry_capacity": 376338,
+    "layouts": 977,
+    "products": 117
+  },
+  "native_interaction": {
+    "device_requests": 0,
+    "edition_id": 0,
+    "layout_id": 0,
+    "physical_discovery_disabled": true,
+    "product_id": 100,
+    "save_undo_redo": true,
+    "source_led_selected": true,
+    "static_rgb_saved": 11259375,
+    "unimplemented_preview_output_inert": true
+  },
+  "source_canvas_sha256": "190a2ef92615861142a1585b6cbffa578d2a716069f8d430cb6bd63ca103e5c6",
+  "rea": {
+    "summary": "ev_d9573f079a4e884517b9dc06f96ac18c8dfb6e40ccbad8b7361f464ba7bfcfbc",
+    "parent": "ev_f8ec1c065f7e29e33fc8e257ee7ed86da7d803c8dac9f20ac6fdc155f524da56",
+    "files": 1,
+    "bytes": 91019,
+    "ast_nodes": 28168,
+    "parse_failures": 0,
+    "semantic_unknowns": 6021,
+    "execution": false
+  },
+  "python_tests_passed": 4,
+  "workspace": {
+    "core_passed": 468,
+    "core_ignored": 6,
+    "tray_passed": 300,
+    "tray_ignored": 44,
+    "cli_passed": 4,
+    "doc_passed": 1
+  },
+  "visual": {
+    "native_source_led_capture_reviewed": true,
+    "chassis_artwork_implemented": false,
+    "pixel_parity_claimed": false
+  },
+  "hardware_support_verified": false,
+  "provisioner_sha256": "d9aab6fe2d323c5b0c33d8731349192d17eb3a114795c11e879a908653362775",
+  "optimized_build": "passed",
+  "optimized_native_corpus_check": {
+    "passed": 1,
+    "failed": 0,
+    "layouts": 977
+  },
+  "optimized_native_studio_checks": {
+    "passed": 10,
+    "failed": 0,
+    "physical_hardware": false
+  }
+}

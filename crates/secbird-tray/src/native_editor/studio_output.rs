@@ -200,7 +200,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter) {
         87,
         125,
         Control::ApplyDevice,
-        view.editable() && !view.dirty() && !view.output.busy && view.output.control.is_some(),
+        view.editable() && !view.dirty() && !view.output.busy && view.output.control.is_some() && view.canvas.can_preview(),
     );
     button(
         p,

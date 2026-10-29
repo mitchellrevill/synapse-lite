@@ -2197,3 +2197,6 @@ mod reactive;
 
 #[path="studio_session_interaction_tests.rs"]
 mod studio_session;
+
+#[path="studio_presets_interaction_tests.rs"]
+mod studio_presets;

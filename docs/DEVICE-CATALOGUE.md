@@ -108,3 +108,8 @@ selection, AVIF admission, revision preservation, resume and rate-limit behavior
 Unresolved details become explicit TODOs with their evidence and next check; work
 continues on independent features. Full functional and visual parity and the
 complete-build100MB acceptance gate remain open.
+
+The subsequent Studio preset pack now supports977 exact layouts across117products
+for offline LED selection and regional editing in imported compositions. See
+STUDIO-PRESETS.md. This does not enable catalogue-wide physical controls/output
+or replace the separate evidence requirements for each API.

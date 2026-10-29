@@ -490,6 +490,13 @@ pub struct SourceLayout {
 }
 
 impl SourceLayout {
+    /// Owned vector/string capacity estimate, excluding allocator/GDI overhead.
+    pub fn storage_bytes(&self)->usize {
+        std::mem::size_of::<Self>()+self.source_sha256.capacity()+self.keys.capacity()*std::mem::size_of::<KeyRegion>()+
+        self.keys.iter().map(|key|key.button_key.capacity()+key.input_type.capacity()+key.input_id.capacity()+key.label.capacity()+
+            key.function_list.capacity()*std::mem::size_of::<String>()+key.function_list.iter().map(String::capacity).sum::<usize>()+
+            key.geometry.as_ref().map_or(0,|g|g.segments.capacity()*std::mem::size_of::<Segment>()+g.contours.capacity()*std::mem::size_of::<Vec<Point>>()+g.contours.iter().map(|c|c.capacity()*std::mem::size_of::<Point>()).sum::<usize>())).sum::<usize>()
+    }
     pub fn load(path: &Path) -> Result<Self, String> {
         let metadata = std::fs::metadata(path).map_err(|e| e.to_string())?;
         if metadata.len() > 2 * 1024 * 1024 {

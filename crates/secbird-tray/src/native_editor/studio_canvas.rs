@@ -103,6 +103,8 @@ impl Device {
 impl Canvas {
     pub fn can_preview(&self) -> bool {
         self.devices.len() == 1 && self.notes.is_empty()
+            && self.devices[0].placement.product==605 && self.devices[0].placement.edition==0
+            && self.devices[0].placement.orientation==0
     }
     pub fn load(raw: &str, assets: &Path) -> Self {
         let mut canvas = Self::default();
@@ -113,6 +115,8 @@ impl Canvas {
             }
             let mut ids = BTreeSet::new();
             let mut cache: HashMap<(u16, u16, u16), Arc<SourceLayout>> = HashMap::new();
+            let mut source_bytes=0u64;
+            let mut owned_bytes=0usize;
             for raw in document.devices {
                 let item = (|| -> Result<Device, String> {
                     let p: Placement = serde_json::from_str(raw.get()).map_err(|_| {
@@ -123,9 +127,6 @@ impl Canvas {
                         .map_err(|error| error.to_string())?;
                     if p.id.is_empty() || p.id.len() > 512 || !ids.insert(p.id.clone()) {
                         return Err("Invalid or duplicate canvas device identity".into());
-                    }
-                    if p.product != 605 || p.edition != 0 {
-                        return Err("No researched Studio geometry for this product/edition".into());
                     }
                     if ![0, 90, 180, 270].contains(&p.orientation)
                         || ![p.x, p.y, p.width, p.height].iter().all(|n| n.is_finite())
@@ -142,10 +143,15 @@ impl Canvas {
                     let geometry = if let Some(g) = cache.get(&key) {
                         g.clone()
                     } else {
-                        let g = Arc::new(SourceLayout::load(&assets.join(format!(
-                            "studio-{}-{}-{}.json",
-                            p.product, p.edition, p.layout
-                        )))?);
+                        let filename=format!("studio-{}-{}-{}.json",p.product,p.edition,p.layout);
+                        let pack=assets.join("studio-presets").join(&filename);
+                        let path=if pack.exists(){pack}else{assets.join(filename)};
+                        let bytes=std::fs::metadata(&path).map_err(|e|e.to_string())?.len();
+                        if source_bytes.saturating_add(bytes)>4*1024*1024 {return Err("Canvas source geometry exceeds4MiB".into());}
+                        let g = Arc::new(SourceLayout::load(&path)?);
+                        let owned=g.storage_bytes();
+                        if owned_bytes.saturating_add(owned)>8*1024*1024 {return Err("Canvas geometry capacity exceeds8MiB".into());}
+                        source_bytes+=bytes;owned_bytes+=owned;
                         if (g.product_id, g.edition_id, g.layout_id) != key {
                             return Err("Studio geometry identity mismatch".into());
                         }
@@ -621,4 +627,52 @@ mod tests {
                 .is_some()));
         }
     }
+    #[test]
+    #[ignore="requires an explicitly selected private source preset directory"]
+    fn all_recovered_studio_presets_parse_and_keep_exact_identity() {
+        let directory=PathBuf::from(std::env::var_os("SYNAPSE_LITE_STUDIO_PRESETS").expect("select preset directory"));
+        let index:Value=serde_json::from_slice(&std::fs::read(directory.join("index.json")).unwrap()).unwrap();
+        let mut largest=0;let mut layouts=0;let mut products=BTreeSet::new();let mut failures=vec![];
+        for record in index["records"].as_array().unwrap() {
+            let filename=record["file"].as_str().unwrap();
+            match SourceLayout::load(&directory.join(filename)) {
+                Ok(geometry)=>{
+                    assert_eq!((geometry.product_id,geometry.edition_id,geometry.layout_id),(record["product_id"].as_u64().unwrap() as u16,record["edition_id"].as_u64().unwrap() as u16,record["layout_id"].as_u64().unwrap() as u16));
+                    assert_eq!(geometry.keys.len(),record["leds"].as_u64().unwrap() as usize);
+                    assert!(!geometry.keys.is_empty());largest=largest.max(geometry.storage_bytes());layouts+=1;products.insert(geometry.product_id);
+                },
+                Err(error)=>failures.push(json!({"file":filename,"error":error})),
+            }
+        }
+        let report=json!({"layouts":layouts,"products":products.len(),"largest_owned_geometry_capacity":largest,"failures":failures,"hardware_verified":false});
+        if let Some(path)=std::env::var_os("SYNAPSE_LITE_STUDIO_PRESETS_REPORT"){std::fs::write(path,serde_json::to_vec_pretty(&report).unwrap()).unwrap();}
+        assert!(failures.is_empty(),"{}",report);assert!(layouts>0);assert!(largest<8*1024*1024);
+    }
+
+    fn generic_fixture()->(PathBuf,serde_json::Value) {
+        let folder=std::env::temp_dir().join(format!("generic-studio-{}-{}",std::process::id(),std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        std::fs::create_dir_all(folder.join("studio-presets")).unwrap();
+        let raw=json!({"product_id":123,"edition_id":4,"layout_id":2,"source_sha256":"0".repeat(64),"view_box":[0,0,100,50],"keys":[{"buttonKey":"light","inputID":"0:1","isEnabled":true,"d":"M5 5H20V20H5Z"}]});
+        std::fs::write(folder.join("studio-presets/studio-123-4-2.json"),serde_json::to_vec(&raw).unwrap()).unwrap();
+        let placement=json!({"id":"foreign","productId":123,"editionId":4,"layout":2,"x":0,"y":0,"width":100,"height":50,"leds":[{"row":0,"col":1}]});
+        (folder,placement)
+    }
+    #[test]
+    fn generic_presets_select_exact_leds_and_refuse_mismatched_identity_without_output_admission() {
+        let (folder,placement)=generic_fixture();let raw=json!({"devices":[placement.clone()]}).to_string();let mut canvas=Canvas::load(&raw,&folder);
+        assert_eq!(canvas.devices.len(),1);assert!(canvas.notes.is_empty());assert!(!canvas.can_preview());
+        assert_eq!(canvas.hit(Point{x:10.,y:10.}),Some(("foreign".into(),"0:1".into())));
+        canvas.selected.insert(("foreign".into(),"0:1".into()));assert_eq!(canvas.selection(),vec![secbird_core::studio::document::LedSelection{device:"foreign".into(),row:0,col:1}]);
+        let path=folder.join("studio-presets/studio-123-4-2.json");let mut value:Value=serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();value["product_id"]=json!(124);std::fs::write(&path,serde_json::to_vec(&value).unwrap()).unwrap();
+        // A present wrong pack file cannot fall back to a different projection.
+        value["product_id"]=json!(123);std::fs::write(folder.join("studio-123-4-2.json"),serde_json::to_vec(&value).unwrap()).unwrap();let canvas=Canvas::load(&raw,&folder);assert!(canvas.devices.is_empty());assert_eq!(canvas.notes,["Studio geometry identity mismatch"]);
+    }
+    #[test]
+    fn repeated_generic_placements_share_geometry_and_keep_placement_limit() {
+        let (folder,placement)=generic_fixture();let placements:Vec<_>=(0..32).map(|i|{let mut p=placement.clone();p["id"]=json!(format!("device-{i}"));p}).collect();
+        let canvas=Canvas::load(&json!({"devices":placements}).to_string(),&folder);assert_eq!(canvas.devices.len(),32);assert!(canvas.notes.is_empty());
+        for device in &canvas.devices {assert!(Arc::ptr_eq(&canvas.devices[0].geometry,&device.geometry));}
+        let oversized=vec![placement;33];let refused=Canvas::load(&json!({"devices":oversized}).to_string(),&folder);assert!(refused.devices.is_empty());assert_eq!(refused.notes.len(),1);
+    }
+
 }

@@ -1,7 +1,9 @@
 # Studio canvas geometry and selection
 
-The native Studio file editor now draws Ornata LED outlines from the shipped
-Studio SVG rather than reusing the differently scaled Customize geometry.
+The native Studio file editor draws source-defined LED outlines. The broader
+pack now covers977 layouts across117 products for offline editing; see
+STUDIO-PRESETS.md. The original pinned Ornata projection uses the shipped Studio
+SVG rather than the differently scaled Customize geometry.
 Single click replaces selection, Ctrl-click toggles it, and drag selects LED
 bounds. Canceling a drag restores the prior selection. Zoom/Fit and navigation
 do not dirty a composition. Selection is transient;
@@ -19,7 +21,7 @@ exact layouts exist:1–8,10–12,15–18,20. Layout9 has a matrix but no matchi
 no fallback is inferred. Five matrix entries have no selection path in most
 layouts; layout12 has six. No shapes are fabricated for them.
 
-Placement admission currently requires explicit `id`, `productId:605`,
+The original Ornata checkpoint required explicit `id`, `productId:605`,
 `editionId:0`, `layout`, finite x/y/width/height, quarter-turn `orientation`
 (optional zero), and `leds` or `ledRef` row/column membership. Both forms must agree
 if supplied together. At most32 placements and512
@@ -65,3 +67,8 @@ properties, actual stock reconciliation, preview/output, optical verification
 and the complete-build100MB target remain unfinished. Canvas fit/zoom and
 Ctrl-toggle behavior are an explicit partial native interaction, not demonstrated
 stock pixel/interaction parity.
+
+The later generic preset pack extends offline canvas admission beyond Ornata; see
+STUDIO-PRESETS.md. The original pinned Ornata output/layout contract remains
+separate from broader visual preset availability. Chassis and full visual acceptance
+remain unfinished.

@@ -1,0 +1,31 @@
+use super::*;
+#[test]
+#[ignore="requires private preset pack; opens an isolated native mouse-preset authoring window"]
+fn native_studio_foreign_preset_selection_colour_save_and_output_refusal_preserve_profiles() {
+    let preset=assets_dir().join("studio-presets/studio-100-0-0.json");let geometry=source_layout::SourceLayout::load(&preset).expect("provision exact Basilisk preset");
+    let first=geometry.keys.first().unwrap();let (row,col)=first.input_id.split_once(':').unwrap();let (row,col):(u16,u16)=(row.parse().unwrap(),col.parse().unwrap());
+    let b=geometry.bounds(&first.input_id,source_layout::Viewport{left:0.,top:0.,width:geometry.view_box[2],height:geometry.view_box[3]}).unwrap();let center=((b.left+b.right)/2.,(b.top+b.bottom)/2.);let dims=(geometry.view_box[2],geometry.view_box[3]);
+    let leds:Vec<Value>=geometry.keys.iter().map(|key|{let (r,c)=key.input_id.split_once(':').unwrap();json!({"row":r.parse::<u16>().unwrap(),"col":c.parse::<u16>().unwrap()})}).collect();
+    let profile=json!({"id":"preset","title":"Basilisk preset","devices":[{"id":"basilisk","productId":100,"editionId":0,"layout":0,"x":0,"y":0,"width":dims.0,"height":dims.1,"orientation":0,"leds":leds}],"layers":[{"id":"static","type":"layer","name":"static","value":6,"title":"STATIC","params":{},"regions":[],"visible":true}]});
+    let folder=std::env::temp_dir().join(format!("native-studio-presets-{}-{}",std::process::id(),std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));std::fs::create_dir_all(&folder).unwrap();let source=folder.join("source.ChromaEffects");let source_bytes=serde_json::to_vec(&json!({"version":1,"profiles":[profile]})).unwrap();std::fs::write(&source,&source_bytes).unwrap();let frame=folder.join("frame.json");
+    let _environment=Environment::set(&[("SYNAPSE_LITE_CONFIG_DIR",&folder),("SYNAPSE_LITE_SMOKE_REPORT",&frame),("SYNAPSE_LITE_SMOKE_VIEW",Path::new("studio"))]);let sim=Sim::mouse();let engine=Engine::with_simulated_mouse(&sim).unwrap();let mut store=Store::load(&folder.join("profiles.json")).unwrap();store.for_device(&engine.devices()[0]);store.save().unwrap();let baseline=std::fs::read(folder.join("profiles.json")).unwrap();let output=folder.clone();let monitor=sim.clone();let input=source.clone();
+    let controller=std::thread::spawn(move||{
+        let result=(||->Result<Value,String>{unsafe {
+            wait_for(||frame.exists(),"preset window")?;let hwnd=WINDOW.load(Ordering::Acquire) as HWND;let query=||{let mut v=Value::Null;SendMessageW(hwnd,STUDIO_TEST,2,&mut v as *mut Value as isize);v};wait_for(||query()["pending"]==0,"initial reads")?;monitor.state().log.clear();
+            let path=json!(input.to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,1,&path as *const Value as isize);wait_for(||query()["profiles"]==1&&query()["pending"]==0,"preset open")?;
+            if query()["canvas_devices"]!=1||query()["canvas_selectable_leds"]!=2||query()["canvas_notes"].as_array().is_none_or(|notes|!notes.is_empty())||query()["canvas_can_preview"]!=false{return Err(format!("Preset admission was wrong: {}",query()));}
+            let scale=f64::from(GetDpiForWindow(hwnd).max(96))/96.;let mut client:RECT=std::mem::zeroed();GetClientRect(hwnd,&mut client);let width=f64::from(client.right)/scale;let height=f64::from(client.bottom)/scale;let right=width-250.;let fit=((width-540.)/dims.0).min((height-250.)/dims.1).clamp(0.05,4.);
+            lighting_click(hwnd,width/2.+(center.0-dims.0/2.)*fit,(168.+height)/2.+(center.1-dims.1/2.)*fit,scale);if query()["selected_leds"]!=1{return Err("Exact source mouse LED did not select".into());}
+            let color=GetDlgItem(hwnd,2101);if color.is_null(){return Err("Static colour field missing".into());}SendMessageW(color,WM_SETTEXT,0,wide("ABCDEF").as_ptr() as isize);lighting_click(hwnd,right+100.,343.,scale);
+            let capture=json!(output.join("basilisk-preset.png").to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize);
+            let saved=output.join("saved.ChromaEffects");let path=json!(saved.to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,3,&path as *const Value as isize);wait_for(||query()["dirty"]==false&&query()["pending"]==0,"preset save")?;
+            let archive=secbird_core::studio::Archive::parse(&std::fs::read(saved).map_err(|e|e.to_string())?).map_err(|e|e.to_string())?;let value:Value=serde_json::from_str(archive.profile_json(0).unwrap()).unwrap();let region=&value["layers"][0]["regions"][0];
+            if region["params"]["color"]!=0xabcdef||region["devices"][0]["id"]!="basilisk"||region["devices"][0]["leds"][0]["row"]!=row||region["devices"][0]["leds"][0]["col"]!=col{return Err(format!("Preset LED save mismatch: {region}"));}
+            lighting_click(hwnd,630.,100.,scale);lighting_click(hwnd,915.,100.,scale);if query()["preview"]["current"]==true||query()["output_busy"]==true||query()["pending"]!=0{return Err("A canvas preset incorrectly enabled unimplemented device playback".into());}
+            lighting_click(hwnd,450.,100.,scale);if query()["dirty"]!=true{return Err("Preset Undo failed".into());}lighting_click(hwnd,520.,100.,scale);if query()["dirty"]!=false{return Err("Preset Redo failed".into());}
+            if !monitor.state().log.is_empty(){return Err("Offline preset authoring issued device requests".into());}
+            Ok(json!({"product_id":100,"edition_id":0,"layout_id":0,"source_led_selected":true,"static_rgb_saved":0xabcdef,"save_undo_redo":true,"unimplemented_preview_output_inert":true,"device_requests":0,"physical_discovery_disabled":true}))
+        }})();unsafe{let hwnd=WINDOW.load(Ordering::Acquire) as HWND;SendMessageW(hwnd,STUDIO_TEST,5,0);PostMessageW(hwnd,WM_CLOSE,0,0);}std::fs::write(output.join("interaction.json"),serde_json::to_vec_pretty(&match &result{Ok(v)=>v.clone(),Err(e)=>json!({"error":e})}).unwrap()).unwrap();result
+    });
+    let run=run_standalone(Arc::new(Mutex::new(engine)),Some(Duration::from_secs(30)));let result=controller.join().unwrap();assert!(run.is_ok(),"{run:?}");assert!(result.is_ok(),"{result:?}");assert_eq!(std::fs::read(source).unwrap(),source_bytes);assert_eq!(std::fs::read(folder.join("profiles.json")).unwrap(),baseline);eprintln!("Generic Studio preset native evidence: {}",folder.display());
+}

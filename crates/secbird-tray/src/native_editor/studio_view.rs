@@ -255,7 +255,7 @@ impl View {
             Ok(draft) => {
                 self.selected = draft.layers().first().map(|row| row.id.clone());
                 self.draft = Some(draft);
-                self.status = "Choose Local Preview to animate the canvas".into();
+                self.status = if self.canvas.can_preview() {"Choose Local Preview to animate the canvas"} else {"Select LEDs for offline editing; device preview/output is unavailable for this layout"}.into();
                 self.failed = false;
             }
             Err(error) => {
@@ -1514,7 +1514,7 @@ pub(super) unsafe fn output_test_dirty_apply(state: &mut State) {
 #[cfg(test)]
 pub(super) fn diagnostics(state: &State) -> Value {
     let view = &state.studio;
-    json!({"open":view.open,"busy":view.busy,"dialog":view.dialog,"dirty":view.dirty(),"renaming":view.renaming,"status":view.status,"failed":view.failed,"pending":state.pending,"selected_leds":view.canvas.count(),"canvas_notes":view.canvas.notes,"canvas_devices":view.canvas.device_count(),"canvas_selectable_leds":view.canvas.selectable_count(),"color":view.color,
+    json!({"open":view.open,"busy":view.busy,"dialog":view.dialog,"dirty":view.dirty(),"renaming":view.renaming,"status":view.status,"failed":view.failed,"pending":state.pending,"selected_leds":view.canvas.count(),"canvas_notes":view.canvas.notes,"canvas_devices":view.canvas.device_count(),"canvas_can_preview":view.canvas.can_preview(),"canvas_selectable_leds":view.canvas.selectable_count(),"color":view.color,
         "preview":playback::diagnostics(state),"device_output":view.output.status,"output_busy":view.output.busy,"output_control_ready":view.output.control.is_some(),"index":view.index,"profile_id":view.archive.as_ref().and_then(|a|a.profile_header(view.index).ok()).and_then(|h|h.id),"profiles":view.archive.as_ref().map_or(0,|archive|archive.profile_count()),"selected":view.selected,
         "undo":view.draft.as_ref().map_or(0,Draft::undo_len),"redo":view.draft.as_ref().map_or(0,Draft::redo_len),
         "rows":view.draft.as_ref().map(|draft|draft.layers().iter().map(|row|json!({"id":row.id,"title":row.title,"visible":row.visible})).collect::<Vec<_>>()).unwrap_or_default()})
