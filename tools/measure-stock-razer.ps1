@@ -7,20 +7,26 @@ param(
     [ValidateRange(2,300)][int]$SampleCount=12,
     [ValidateRange(0.1,30)][double]$IntervalSeconds=2
 )
+$ErrorActionPreference = 'Stop'
+. "$PSScriptRoot/stock-runtime-counters.ps1"
 $taskExe=Get-Item -LiteralPath $AppEngineExe -ErrorAction Stop
 if ($taskExe.Extension -ne '.exe') { throw 'Select the installed AppEngine executable' }
 if (Test-Path -LiteralPath $OutputPath) { throw 'Choose a new report path' }
+$targetHash = (Get-FileHash -LiteralPath $taskExe.FullName -Algorithm SHA256).Hash
 
 $samples = [System.Collections.Generic.List[object]]::new()
 $prior = @{}
 $priorTime = $null
 for ($sampleIndex=0; $sampleIndex -lt $SampleCount; $sampleIndex++) {
     $now = [DateTime]::UtcNow
-    $items = @(Get-CimInstance Win32_Process | Where-Object {
-        $_.ExecutablePath -like 'C:\Program Files\Razer\*' -or $_.ExecutablePath -like 'C:\Program Files (x86)\Razer\*'
-    } | ForEach-Object {
-        $p = Get-Process -Id $_.ProcessId -ErrorAction SilentlyContinue
-        if ($p) { [pscustomobject]@{pid=$p.Id;name=$p.ProcessName;start_utc=$p.StartTime.ToUniversalTime().ToString('o');working_set=[long]$p.WorkingSet64;private_bytes=[long]$p.PrivateMemorySize64;cpu_seconds=$p.CPU} }
+    $inventory = @(Get-CimInstance Win32_Process -Property Name,ProcessId,ExecutablePath,CreationDate)
+    $items = @(Read-VerifiedStockSample -Inventory $inventory -TargetPath $taskExe.FullName -ReadCounters {
+        param($processId)
+        $p = Get-Process -Id $processId -ErrorAction Stop
+        try {
+            $p.Refresh()
+            [pscustomobject]@{Id=$p.Id;StartUtc=$p.StartTime.ToUniversalTime();WorkingSet=$p.WorkingSet64;PrivateBytes=$p.PrivateMemorySize64;CpuSeconds=$p.TotalProcessorTime.TotalSeconds}
+        } finally { $p.Dispose() }
     })
     $cpuDelta = 0.0
     $next = @{}
@@ -35,7 +41,21 @@ for ($sampleIndex=0; $sampleIndex -lt $SampleCount; $sampleIndex++) {
     $prior=$next; $priorTime=$now
     if ($sampleIndex -lt ($SampleCount-1)) { Start-Sleep -Milliseconds ([int]($IntervalSeconds*1000)) }
 }
-$report=[pscustomobject]@{scope=$Workload;version_info=$taskExe.VersionInfo.ProductVersion;executable_sha256=(Get-FileHash -LiteralPath $taskExe.FullName -Algorithm SHA256).Hash;logical_processors=[Environment]::ProcessorCount;samples=$samples;peak_working_set=[long](($samples | Measure-Object working_set -Maximum).Maximum);peak_private_bytes=[long](($samples | Measure-Object private_bytes -Maximum).Maximum);mean_cpu_percent_machine=(($samples | Where-Object {$null -ne $_.cpu_percent_machine} | Measure-Object cpu_percent_machine -Average).Average);limitations='Sampled peaks, shared working-set pages may be counted across processes; exited-process tail CPU and kernel allocations are unmeasured. Other desktop applications remained open. No full Synapse UI/replacement comparison or three-run acceptance.'}
+if ((Get-FileHash -LiteralPath $taskExe.FullName -Algorithm SHA256).Hash -ne $targetHash) { throw 'Target executable changed during measurement; no baseline written' }
+$report = [pscustomobject]@{
+    schema_version = 2
+    scope = $Workload
+    process_scope = 'All readable executables under both Program Files Razer roots; selected executable must be present in every sample. Named stock candidates with unreadable paths or outside those roots abort the capture.'
+    coverage = 'Complete counters for the enumerated scope at each sample, not proof of all installed Razer components'
+    version_info = $taskExe.VersionInfo.ProductVersion
+    executable_sha256 = $targetHash
+    logical_processors = [Environment]::ProcessorCount
+    samples = $samples
+    peak_working_set = [long](($samples | Measure-Object working_set -Maximum).Maximum)
+    peak_private_bytes = [long](($samples | Measure-Object private_bytes -Maximum).Maximum)
+    mean_cpu_percent_machine = (($samples | Where-Object {$null -ne $_.cpu_percent_machine} | Measure-Object cpu_percent_machine -Average).Average)
+    limitations = 'Sampled peaks; processes may start/exit between inventories. Shared working-set pages may be counted across processes; private bytes are committed memory, not private resident memory. Exited-process tail CPU and kernel allocations are unmeasured. Other desktop applications remained open. No full Synapse UI/replacement comparison or three-run acceptance.'
+}
 $bytes=[Text.Encoding]::UTF8.GetBytes(($report | ConvertTo-Json -Depth 6))
 $stream=[IO.File]::Open([IO.Path]::GetFullPath($OutputPath),[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
 try { $stream.Write($bytes,0,$bytes.Length); $stream.Flush($true) } finally { $stream.Dispose() }

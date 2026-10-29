@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-29",
+  "scope": "Read-only stock baseline capture guards; no application or device changes",
+  "verification": {
+    "command": "tools/Test-StockRuntimeCounters.ps1",
+    "passed": 16,
+    "fixtures": "Synthetic process inventory and injected counters; actual report-writer early refusal",
+    "empty_inventory_writes_report": false
+  },
+  "fresh_stock_baseline": "Not collected: no matching process visible in read-only Get-Process name inventory",
+  "todo": "Open representative stock workload and verify process scope before collecting a fresh baseline. Continue independent feature work while unavailable.",
+  "limitations": [
+    "Fixture tests do not establish physical process counters or complete installed-component coverage",
+    "Original 2026-10-28 stock measurements remain unchanged",
+    "Three complete replacement runs below both memory limits remain required"
+  ]
+}

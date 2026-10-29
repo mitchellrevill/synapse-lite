@@ -40,3 +40,23 @@ target/workload arguments and exclusive report creation. Its parameterized
 wrapper passed PowerShell syntax validation; the underlying sampling logic
 produced both traces above. Complete replacement baselines still need the final
 retained workload, all required helpers and three representative runs.
+
+## Capture guards, 29 October 2026
+
+New captures use schema version 2. Each sample requires the selected executable
+to be present, a nonempty process roster, readable counters and matching process
+creation identities. A known stock process name with an unreadable executable
+path or a path outside the documented roots aborts the capture for scope review.
+An exited, replaced or unreadable process aborts the run rather than contributing
+zero. The selected executable hash must also remain unchanged. Reports are created
+only after every sample succeeds, using exclusive creation; failures do not write
+a partial or zero-memory baseline. Process counter handles are disposed each read.
+
+`tools/Test-StockRuntimeCounters.ps1` passes 16 deterministic checks, including
+the actual report writer's refusal to create a file for an empty inventory.
+These fixtures do not measure stock or the replacement. No matching stock process
+was visible during the latest read-only process-name check, so a fresh stock
+capture remains TODO: open a representative stock workload, establish readable
+scope including any components outside these roots, and then run the capture.
+Do not repeat empty samples or infer zero usage. The historical measurements
+above are retained unchanged. Full replacement three-run acceptance remains open.
