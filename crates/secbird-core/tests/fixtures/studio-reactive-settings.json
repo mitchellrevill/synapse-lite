@@ -1,0 +1,13 @@
+{
+  "source_sha256": "109b483f129044e1c7c17b9fcae0e30fa775885667976807cf2c94bd1c696d19",
+  "durations": [
+    2000,
+    1500,
+    500
+  ],
+  "duration": 1500,
+  "color": 65280,
+  "playbackStart": "onPress",
+  "playbackEnd": "after",
+  "cycles": 1
+}

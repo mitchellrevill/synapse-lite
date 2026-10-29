@@ -141,6 +141,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter) {
         ("Add Breathing",Control::Add(NewEffect::Breathing),true),
         ("Add Wave",Control::Add(NewEffect::Wave),true),
         ("Add Starlight",Control::Add(NewEffect::Starlight),true),
+        ("Add Reactive",Control::Add(NewEffect::Reactive),true),
     ];
     p.fill(710,116,180,entries.len() as i32*28+4,PANEL);
     // Disabled rows still block the canvas beneath the popup.

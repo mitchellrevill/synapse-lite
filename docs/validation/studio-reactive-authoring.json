@@ -1,0 +1,64 @@
+{
+  "checkpoint": "studio-reactive-authoring",
+  "date": "2026-10-29",
+  "source_main_sha256": "109b483f129044e1c7c17b9fcae0e30fa775885667976807cf2c94bd1c696d19",
+  "source_sha256": {
+    "42.0132a52b.chunk.js": "6bb30057bfa357fc7e2927cfaf3267ec6dc5b122e771eea1abc5109a5292cd42",
+    "effect-defaults.js": "81135f0c67380ab3654fec6ff88a731573aee47ea704df120b7b5d351a839ef8",
+    "module-6257.js": "b78e31c6d57f820cc1fc4f8e75e05a6b2991ba27c1154bfde763199c1ae42fc8"
+  },
+  "rea": {
+    "summary": "ev_4875e64860c324585658eaeef3b0a97da33ceb13d7ae7a6fda296a0894c0a4da",
+    "parent": "ev_dcfb5a721718a8095a0b6a32ea7ee0ccbf1edf7b5e54b785767e53ec6037e0a8",
+    "files": 3,
+    "bytes": 23931,
+    "ast_nodes": 6745,
+    "parse_failures": 0,
+    "semantic_unknowns": 929,
+    "execution": false
+  },
+  "independent_fixture": "crates/secbird-core/tests/fixtures/studio-reactive-settings.json",
+  "native_interaction": {
+    "add_reactive": true,
+    "device_requests": 0,
+    "duration_ms": 500,
+    "invalid_colour_atomic": true,
+    "none_omits_colour": true,
+    "physical_discovery_disabled": true,
+    "random_preserves_colour_and_disables_edit": true,
+    "read_only_inert": true,
+    "rgb_saved": 1122867,
+    "save_undo_redo": true,
+    "source_trigger_defaults_saved": true,
+    "unsupported_preview_refused": true
+  },
+  "workspace": {
+    "core_passed": 468,
+    "core_ignored": 6,
+    "tray_passed": 295,
+    "tray_ignored": 41,
+    "cli_passed": 4,
+    "doc_passed": 1
+  },
+  "visual": {
+    "native_parent_painter_capture_reviewed": true,
+    "native_child_edits_omitted_from_capture": true,
+    "child_edit_existence_and_values_verified_by_save": true,
+    "matched_stock_reactive_state": false,
+    "pixel_parity_claimed": false
+  },
+  "todos": [
+    "source input trigger delivery and lifecycle",
+    "native Reactive fade/retrigger/random colour algorithm",
+    "preview and saved-device playback",
+    "inherited layer colour clear semantics",
+    "stock picker/checkbox/slider and matched-DPI visual states",
+    "physical lighting, full profiles/input/device/privacy and three complete-build memory gates"
+  ],
+  "optimized_build": "passed",
+  "optimized_native_studio_checks": {
+    "passed": 8,
+    "failed": 0,
+    "physical_hardware": false
+  }
+}

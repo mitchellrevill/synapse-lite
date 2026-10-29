@@ -24,6 +24,7 @@ pub use regions::{
     StopEdit, SPECTRUM_DURATIONS,
     WaveProperty, SelectedWaveValue, wave_preset,
     StarlightProperty, SelectedStarlightValue, STARLIGHT_DURATIONS,
+    ReactiveProperty, SelectedReactiveValue, REACTIVE_DURATIONS,
 };
 
 #[path = "preview.rs"]

@@ -1,7 +1,7 @@
 # Studio layer authoring
 
 Open a local composition, then choose **Layer Actions**. The native editor now
-offers Add Static, Add Spectrum, Add Fire, Add Breathing, Add Wave, Add Starlight,
+offers Add Static, Add Spectrum, Add Fire, Add Breathing, Add Wave, Add Starlight, Add Reactive,
 New Group, Duplicate, Move Up/Down
 and Delete. Ctrl+D duplicates and Delete removes the selected item when an edit
 field is not focused. Escape dismisses the menu. All changes participate in the
@@ -12,7 +12,8 @@ LEDs and assign properties afterward; adding does not silently light the previou
 selection. Newly added Static/Spectrum/Fire and [fixed Breathing](STUDIO-BREATHING.md) regions work with Local Preview.
 Local Preview sends no hardware frames. [Starlight settings](STUDIO-STARLIGHT.md)
 can be authored and saved; Starlight preview/output remain unimplemented and
-refuse explicitly.
+refuse explicitly. [Reactive settings](STUDIO-REACTIVE.md) can also be authored
+and saved; key-triggered Reactive preview/output remain unimplemented.
 
 New groups are empty, closed root groups and do not wrap selected layers or
 change the current effect. Copies prepend to the same sibling list. A group

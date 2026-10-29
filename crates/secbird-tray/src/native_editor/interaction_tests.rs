@@ -2191,3 +2191,6 @@ fn native_dashboard_uses_lazy_product_art_without_device_or_profile_writes() {
     assert!(WINDOW.load(Ordering::Acquire) == 0);
     eprintln!("Dashboard pack evidence: {}", directory.display());
 }
+
+#[path="studio_reactive_interaction_tests.rs"]
+mod reactive;
