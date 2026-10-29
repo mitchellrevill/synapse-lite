@@ -94,6 +94,12 @@ rows can be edited, and Cancel leaves them intact. Read-only Apply, long Unicode
 values, source export/reopen and profile preservation are checked. Recording,
 live clipboard/process execution, recovery and exact stock popovers remain open.
 
+The macro [playback state model](docs/MACRO-MIXED-OUTPUT.md) now supports balanced
+mixed keyboard/mouse passes, separate destinations, owned button cleanup and
+one-shot wheels. Late or uncertain completion stops later actions and preserves
+unconfirmed holds. Refused cleanup still permits other releases. Live dispatch,
+physical input recovery and the remaining playback modes remain unfinished.
+
 ## Attribution
 
 Secretarybird is by [infinityInfinite and contributors](https://github.com/infinityInfinite/secbird). Its MIT/Apache-2.0 license files and [NOTICE](NOTICE) are preserved. Razer device protocol facts also draw on [OpenRazer](https://github.com/openrazer/openrazer). This is an independent project.

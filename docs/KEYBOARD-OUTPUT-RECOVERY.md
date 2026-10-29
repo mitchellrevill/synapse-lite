@@ -61,6 +61,13 @@ goal is unchanged.
 
 ## Verification
 
+The mixed-output checkpoint adds per-key refusal latching: refusing one cleanup
+up leaves it possibly held, permits other eligible releases, and reports
+RecoveryUnconfirmed without automatically retrying the refused key. The mouse
+ledger and shared scheduler apply the same rule. See
+[MACRO-MIXED-OUTPUT.md](MACRO-MIXED-OUTPUT.md) for current evidence and counts.
+The earlier counts below describe the original keyboard-only checkpoint.
+
 Ten focused ledger tests pass, covering coalesced ownership, exact release
 metadata, release-before-down ordering, stale/duplicate phases, late completion
 after stop, prepared-command cancellation, refusal without phantom release,

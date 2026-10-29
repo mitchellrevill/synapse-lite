@@ -37,6 +37,7 @@ pub mod lighting_readback;
 pub mod log;
 pub mod macros;
 pub mod mouse_symbolic_bridge;
+pub mod mouse_output_ledger;
 pub mod mouse_sensor;
 pub mod dynamic_sensitivity;
 pub mod sensor_curve;

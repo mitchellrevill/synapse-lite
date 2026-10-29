@@ -82,6 +82,7 @@ struct Entry {
     owners: BTreeSet<Owner>,
     possibly_held: bool,
     release_attempts: u8,
+    release_refused: bool,
 }
 struct Pending {
     command: Command,
@@ -130,6 +131,7 @@ impl Ledger {
                 owners: BTreeSet::new(),
                 possibly_held: false,
                 release_attempts: 0,
+                release_refused: false,
             })
             .owners
             .insert(owner);
@@ -192,6 +194,7 @@ impl Ledger {
             .find(|(_, entry)| {
                 entry.possibly_held
                     && entry.owners.is_empty()
+                    && !entry.release_refused
                     && entry.release_attempts < MAX_RELEASE_ATTEMPTS
             })
             .map(|(id, _)| (*id, Direction::Up));
@@ -199,7 +202,7 @@ impl Ledger {
             && self.entries.values().any(|entry| {
                 entry.possibly_held
                     && entry.owners.is_empty()
-                    && entry.release_attempts >= MAX_RELEASE_ATTEMPTS
+                    && (entry.release_refused || entry.release_attempts >= MAX_RELEASE_ATTEMPTS)
             })
         {
             return Err(Failure::RecoveryUnconfirmed);
@@ -267,6 +270,8 @@ impl Ledger {
     }
     /// Refusal before calling the native API needs no speculative key-up. This
     /// is not the appropriate completion for an API that was already dispatched.
+    /// A refused cleanup up is latched for its own key, without blocking other
+    /// releases or automatically attempting this key again.
     pub fn refused_before_dispatch(&mut self, ticket: Ticket) -> Result<(), Failure> {
         let pending = self
             .pending
@@ -275,6 +280,14 @@ impl Ledger {
             .ok_or(Failure::WrongTicket)?;
         if pending.dispatched {
             return Err(Failure::WrongPhase);
+        }
+        if pending.command.direction == Direction::Up {
+            // Refusal is local to this release. Other owned entries must still
+            // drain, but this one must not be automatically submitted again.
+            self.entries
+                .get_mut(&pending.key)
+                .expect("pending entry retained")
+                .release_refused = true;
         }
         self.pending = None;
         self.stop();
@@ -301,6 +314,7 @@ impl Ledger {
             entry.possibly_held = pending.command.direction == Direction::Down;
             if pending.command.direction == Direction::Up {
                 entry.release_attempts = 0;
+                entry.release_refused = false;
             }
         } else {
             self.uncertain = true;
@@ -410,6 +424,52 @@ mod tests {
         ledger.refused_before_dispatch(command.ticket()).unwrap();
         assert!(ledger.is_drained());
         assert!(ledger.next_command().unwrap().is_none());
+    }
+
+    #[test]
+    fn refused_up_does_not_strand_other_held_keys_or_retry_the_refused_key() {
+        let mut ledger = Ledger::default();
+        ledger.press(owner(1), input(30)).unwrap();
+        ledger.press(owner(1), input(32)).unwrap();
+        assert_eq!(
+            delivered(&mut ledger).packet(),
+            InputPacket::Keyboard(input(30))
+        );
+        assert_eq!(
+            delivered(&mut ledger).packet(),
+            InputPacket::Keyboard(input(32))
+        );
+        ledger.stop();
+        let first = ledger.next_command().unwrap().unwrap();
+        assert_eq!(
+            first.packet(),
+            InputPacket::Keyboard(KeyboardInput {
+                flags: 1,
+                ..input(30)
+            })
+        );
+        ledger.refused_before_dispatch(first.ticket()).unwrap();
+        assert_eq!(ledger.entries[&key(input(30)).unwrap()].release_attempts, 0);
+        assert!(ledger.entries[&key(input(30)).unwrap()].release_refused);
+        assert_eq!(ledger.possibly_held_count(), 2);
+        let remaining = delivered(&mut ledger);
+        assert_eq!(
+            remaining.packet(),
+            InputPacket::Keyboard(KeyboardInput {
+                flags: 1,
+                ..input(32)
+            })
+        );
+        assert_eq!(ledger.possibly_held_count(), 1);
+        assert!(!ledger.is_drained());
+        for _ in 0..5 {
+            assert_eq!(ledger.next_command(), Err(Failure::RecoveryUnconfirmed));
+        }
+        assert_eq!(ledger.entries[&key(input(30)).unwrap()].release_attempts, 0);
+        assert_eq!(
+            ledger.dispatch_started(first.ticket()),
+            Err(Failure::WrongTicket)
+        );
     }
     #[test]
     fn stop_invalidates_a_prepared_down_without_sending_a_release() {
