@@ -610,7 +610,7 @@ async function api(path, body) {
   const r = await fetch(path, {
     method: body ? 'POST' : 'GET',
     headers: { 'X-Secbird-Token': T, 'Content-Type': 'application/json' },
-    body: body ? JSON.stringify({ id: dev && dev.id, ...body }) : undefined,
+    body: body ? JSON.stringify({ id: dev && dev.id, expected_connection: dev && dev.connection_id, ...body }) : undefined,
   });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.error || 'Request failed');

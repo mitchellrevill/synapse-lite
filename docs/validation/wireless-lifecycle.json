@@ -1,0 +1,62 @@
+{
+  "date": "2026-10-29",
+  "base_commit": "e6c21c3",
+  "scope": "DeathAdder V3 HyperSpeed deterministic transport lifecycle; no physical receiver acceptance",
+  "core": {
+    "command": "cargo test --offline -p secbird-core --lib -- --test-threads=1",
+    "passed": 511,
+    "failed": 0,
+    "ignored": 6
+  },
+  "tray": {
+    "command": "cargo test --offline -p secbird-tray -- --test-threads=1",
+    "passed": 309,
+    "failed": 0,
+    "ignored": 47
+  },
+  "native_simulated": {
+    "test_executable_sha256": "2966e4d4625cc89129674e7ec09fb96b7c3b6331a915701b01fae80f66b0355b",
+    "asset_scope": "Empty assets directory, fallback fonts, simulated devices and isolated config/temp files",
+    "power_pointer_and_profile_scope": "passed",
+    "calibration_and_named_profiles": "passed",
+    "advanced_optional_test": "Earlier iteration passed enable/mode/curve steps, then timed out at Jump template dropdown selection; unresolved, later Rotation UI steps not validated",
+    "private_asset_power_attempt": "Initial four-second frame wait timed out; valid Power frame subsequently present. Empty-assets functional runs passed.",
+    "visual_parity_established": false
+  },
+  "deterministic_checks": [
+    "Wired and receiver SETs refuse unavailable or changed protocol serials",
+    "Empty and placeholder receiver serials cannot become discovered mouse targets",
+    "Shared receiver PID does not inherit DeathAdder power controls",
+    "Reopened same PID/serial/path has a different connection token",
+    "Stale Power, Calibration, Dynamic Sensitivity and Rotation POSTs fail before writes or profile access",
+    "Battery and charging failures remain independent and unknown states stay null",
+    "Wired-to-receiver reconnect replays exact-serial Calibration and Rotation intent",
+    "Unrelated receiver receives no SET",
+    "Same-key handle replacement still requests connection replay",
+    "Rotation baseline restored before handle removal and controller reacquired",
+    "Failed calibration replay restores raw checkpoint",
+    "Profile bytes, active selection, other profiles and opaque fields preserved"
+  ],
+  "rea": {
+    "middleware_sha256": "df8334aa3021d129893918cecb3c1d14b3727f476c42981bac3fb02f6736b633",
+    "partial_full_file_evidence": "ev_bc8ae7e2d688529b7c27faa70a648e7e12adc7b7b0b96cc21525c87e89f554ef",
+    "full_file_limit": "256 MiB static worker heap exhausted; incomplete coverage",
+    "focused_excerpt_evidence": "ev_cd6ef7855ee4d57d731ec6287eff0955a90ed991e1a04431b3f62556ebf1e391",
+    "focused_parse_failures": 0,
+    "generic_get_07_95_enabled": false,
+    "remaining_contract": "Product196 caller, firmware/transport gate and raw-state enumeration not established"
+  },
+  "physical_hid_opened": false,
+  "normal_profiles_changed": false,
+  "pairing_or_firmware_flash": false,
+  "driver_installation": false,
+  "personal_input_or_audio_capture": false,
+  "physical_wireless_sleep_battery_charging_verified": false,
+  "complete_build_memory_acceptance_established": false,
+  "notes": [
+    "TEMP/TMP redirected into the workspace after sandbox temp-file permission failures",
+    "An old lighting test fixture now supplies a valid synthetic serial for strict receiver admission",
+    "git diff --check passed",
+    "Hardware and Advanced UI follow-up diagnostics are documented in WIRELESS-LIFECYCLE.md"
+  ]
+}

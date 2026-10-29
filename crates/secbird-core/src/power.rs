@@ -53,6 +53,7 @@ impl Device {
             ));
         }
         let seconds = minutes * 60;
+        self.require_mouse_identity()?;
         self.transact(cmd::IDLE_TIME, cmd::IDLE_TIME_SIZE, &seconds.to_be_bytes())?;
         if self.device_sleep_seconds()? != seconds {
             return Err(Error::Unsupported(
@@ -77,6 +78,7 @@ impl Device {
     /// Write and verify an exact byte, suitable for restoring a captured register.
     pub fn set_critical_threshold_raw(&self, raw: u8) -> Result<()> {
         self.require_power_model()?;
+        self.require_mouse_identity()?;
         self.transact(cmd::CRITICAL_LEVEL, cmd::CRITICAL_LEVEL_SIZE, &[raw])?;
         if self.critical_threshold_raw()? != raw {
             return Err(Error::Unsupported(
@@ -170,5 +172,50 @@ mod tests {
         let dev = sim.open(196, None).unwrap();
         assert!(dev.critical_threshold_raw().is_err());
         assert!(dev.set_critical_threshold_raw(77).is_err());
+    }
+
+    #[test]
+    fn wireless_lifecycle_never_writes_to_sleeping_or_changed_identity() {
+        for pid in [196, 197] {
+            let (sim, dev) = mouse(pid);
+            let original = sim.state().idle_seconds;
+            sim.state().available = false; // sleep/unplug/failure all mean unknown
+            assert!(dev.set_device_sleep_minutes(4).is_err());
+            assert!(dev.set_critical_threshold_raw(64).is_err());
+            assert_eq!(sim.state().idle_seconds, original);
+            assert_eq!(sim.state().critical_threshold, Some(78));
+            assert!(sim.open(pid, None).is_none());
+            sim.state().available = true;
+            sim.state().serial = "UNRELATED-MOUSE".into();
+            sim.state().log.clear();
+            assert!(dev.set_device_sleep_minutes(4).is_err());
+            assert!(dev.set_critical_threshold_raw(64).is_err());
+            assert!(sim.state().log.iter().all(|c| c.id & 0x80 != 0));
+            sim.state().serial = dev.serial.clone();
+            let reopened = sim.open(pid, None).unwrap();
+            assert_eq!(reopened.key(), dev.key());
+            assert_ne!(reopened.connection_id(), dev.connection_id());
+            reopened.set_device_sleep_minutes(4).unwrap();
+            reopened.set_critical_threshold_raw(64).unwrap();
+            assert_eq!(sim.state().idle_seconds, Some(240));
+            assert_eq!(sim.state().critical_threshold, Some(64));
+        }
+    }
+
+    #[test]
+    fn ambiguous_receiver_does_not_become_a_mouse() {
+        let sim = Sim::wireless_mouse();
+        for serial in ["", "000000", "FFFFFF"] {
+            sim.state().serial = serial.into();
+            assert!(sim.open(197, None).is_none());
+        }
+        // A shared dongle retains its own PID even when it reports a paired mouse.
+        sim.state().serial = "SHARED-RECEIVER".into();
+        sim.state().paired = vec![(true, 196)];
+        let shared = sim.open(0x00b3, None).unwrap();
+        sim.state().log.clear();
+        assert!(shared.set_device_sleep_minutes(4).is_err());
+        assert!(shared.set_critical_threshold_raw(64).is_err());
+        assert!(sim.state().log.is_empty());
     }
 }

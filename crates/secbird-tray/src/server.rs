@@ -356,6 +356,8 @@ struct Body {
     #[serde(default)]
     wheel_control: Option<secbird_core::wheel_controls::WheelControl>,
     #[serde(default)]
+    expected_connection: Option<u64>,
+    #[serde(default)]
     critical_threshold_percent: Option<u8>,
     #[serde(default)]
     tracking_distance_mm: Option<u8>,
@@ -441,6 +443,9 @@ fn buttons_json(dev: &Device, store: &mut Store) -> Value {
 
 fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
     let b: Body = serde_json::from_slice(body).map_err(|e| Error::InvalidArg(e.to_string()))?;
+    if matches!(path, "/api/device-sleep" | "/api/critical-threshold" | "/api/calibration-tracking" | "/api/dynamic-sensitivity" | "/api/sensor-rotation") {
+        validate_mouse_connection(engine, &b)?;
+    }
     if path=="/api/profile" && b.action=="paths" && (b.id.is_empty() || b.expected_device.as_deref()!=Some(&b.id) || !engine.devices().iter().any(|dev|dev.key()==b.id)) {return Err(Error::InvalidArg("Executable links require the selected device identity".into()));}
     if path=="/api/sensor-rotation" {
         if b.id.is_empty() || b.expected_device.as_deref()!=Some(&b.id){return Err(Error::InvalidArg("Rotation requires the selected device identity".into()));}
@@ -1015,7 +1020,8 @@ pub(crate) fn mouse_sensor_snapshot(engine: &mut Engine, id: &str, profile: &str
     };
     let firmware=dev.firmware_version().ok();
     let rotation=match engine.rotation_snapshot(id,profile){Ok(value)=>value,Err(error)=>json!({"available":false,"error":error.to_string()})};
-    Ok(json!({"device":id,"profile":profile,"calibration":calibration,"dynamic":dynamic,"rotation":rotation,"firmware":firmware}))
+    let connection = engine.devices().iter().find(|d|d.key()==id).map(Device::connection_id);
+    Ok(json!({"device":id,"connection_id":connection,"profile":profile,"calibration":calibration,"dynamic":dynamic,"rotation":rotation,"firmware":firmware}))
 }
 
 fn state(engine: &Engine) -> Value {
@@ -1113,6 +1119,18 @@ fn device_sleep_post(dev: &Device, body: &Body) -> Result<Value, Error> {
     Ok(json!({"device_sleep":device_sleep_json(dev)}))
 }
 
+fn validate_mouse_connection(engine: &Engine, body: &Body) -> Result<(), Error> {
+    if body.id.is_empty() || body.expected_device.as_deref() != Some(body.id.as_str()) {
+        return Err(Error::InvalidArg("Mouse actions require the exact selected device identity".into()));
+    }
+    let device = engine.devices().iter().find(|d| d.key() == body.id)
+        .ok_or_else(|| Error::InvalidArg("Mouse disconnected; refresh before changing settings".into()))?;
+    if body.expected_connection != Some(device.connection_id()) {
+        return Err(Error::InvalidArg("Mouse connection changed; refresh before changing settings".into()));
+    }
+    device.require_mouse_identity()
+}
+
 fn critical_threshold_json(dev: &Device) -> Value {
     if !matches!(dev.pid, 196 | 197) {
         return json!({"supported":false,"available":false,"enabled":false,"raw":null,"percent":null,"polling_hz":null,"error":"Low-power threshold is not verified for this model"});
@@ -1153,6 +1171,88 @@ fn sleep_json(dev: &Device) -> Value {
     }
 }
 
+/// Independent GET results: absence of an answer does not establish sleep,
+/// charge state, or the runtime low-power mode. No new command is guessed.
+fn mouse_power_status(dev: &Device) -> Value {
+    if !matches!(dev.pid,196|197) {
+        return Value::Null;
+    }
+    if let Err(error) = dev.require_mouse_identity() {
+        return json!({"transport":if dev.pid==196 {"wired"} else {"receiver"},
+            "identity_verified":false,"identity_error":error.to_string(),
+            "battery_percent":null,"charging":null,"sleeping":null,"low_power_active":null,
+            "battery_error":"Mouse identity could not be verified","charging_error":"Mouse identity could not be verified"});
+    }
+    let battery = dev.battery();
+    let charging = dev.charging();
+    json!({
+        "transport": if dev.pid==196 { "wired" } else { "receiver" },
+        "identity_verified": true,
+        "battery_percent": battery.as_ref().ok().copied().flatten(),
+        "battery_error": battery.err().map(|e|e.to_string()),
+        "charging": charging.as_ref().ok(),
+        "charging_error": charging.err().map(|e|e.to_string()),
+        "sleeping": null,
+        "low_power_active": null,
+        "low_power_reason": "Runtime low-power status command is not established; threshold is configuration only"
+    })
+}
+
+#[cfg(test)]
+mod wireless_lifecycle_tests {
+    use super::*;
+    use secbird_core::sim::Sim;
+
+    #[test]
+    fn reconnect_rejects_queued_actions_before_hardware_or_profile_access() {
+        let sim = Sim::wireless_mouse();
+        let mut engine = Engine::with_simulated_mouse(&sim).unwrap();
+        let device = &engine.devices()[0];
+        let key = device.key();
+        let body = json!({"id":key,"expected_device":key,"expected_connection":device.connection_id()+1});
+        sim.state().log.clear();
+        for path in ["/api/device-sleep", "/api/critical-threshold", "/api/calibration-tracking", "/api/dynamic-sensitivity", "/api/sensor-rotation"] {
+            assert!(post(&mut engine, path, &serde_json::to_vec(&body).unwrap()).unwrap_err().to_string().contains("connection changed"));
+        }
+        assert!(sim.state().log.is_empty());
+        let mut current = body.clone();
+        current["expected_connection"] = json!(engine.devices()[0].connection_id());
+        let request: Body = serde_json::from_value(current).unwrap();
+        validate_mouse_connection(&engine, &request).unwrap();
+        sim.state().available = false;
+        assert!(validate_mouse_connection(&engine, &request).is_err());
+    }
+
+    #[test]
+    fn battery_and_charging_are_observed_separately_from_power_configuration() {
+        let sim = Sim::wireless_mouse();
+        let db = secbird_core::Db::builtin().unwrap();
+        for pid in [196,197] {
+            let device = sim.open(pid, db.get(pid).cloned()).unwrap();
+            sim.state().charging = true;
+            let value = mouse_power_status(&device);
+            assert!(value["battery_percent"].is_number());
+            assert_eq!(value["charging"], true);
+            assert_eq!(value["transport"], if pid==196 {"wired"} else {"receiver"});
+            assert!(value["sleeping"].is_null());
+            assert!(value["low_power_active"].is_null());
+            sim.state().unavailable_commands.push(secbird_core::commands::CHARGING.get());
+            let partial = mouse_power_status(&device);
+            assert!(partial["battery_percent"].is_number());
+            assert!(partial["charging"].is_null());
+            assert!(partial["charging_error"].is_string());
+            sim.state().unavailable_commands.clear();
+            sim.state().available = false;
+            let value = mouse_power_status(&device);
+            assert!(value["battery_percent"].is_null());
+            assert!(value["charging"].is_null());
+            assert!(value["battery_error"].is_string());
+            assert!(value["charging_error"].is_string());
+            sim.state().available = true;
+        }
+    }
+}
+
 fn device_json(dev: &Device) -> Value {
     let spec = dev.spec.as_ref();
     let (profile_names, active) = Engine::profiles(dev);
@@ -1179,8 +1279,11 @@ fn device_json(dev: &Device) -> Value {
         Some(Kind::Accessory) => "accessory",
         None => "unknown",
     };
+    let power_status = mouse_power_status(dev);
     json!({
         "id": dev.key(),
+        "connection_id": dev.connection_id(),
+        "power_status": power_status,
         "pid": format!("{:04X}", dev.pid),
         "name": dev.name(),
         "kind": kind,
@@ -1208,7 +1311,7 @@ fn device_json(dev: &Device) -> Value {
             .then(|| dev.polling_rate().ok())
             .flatten()
             .map(|hz| json!({ "hz": hz, "options": polling_options })),
-        "battery": dev.battery().ok().flatten(),
+        "battery": if matches!(dev.pid,196|197) { power_status["battery_percent"].clone() } else { json!(dev.battery().ok().flatten()) },
         "stages": spec
             .is_none_or(|s| s.dpi.is_some())
             .then(|| dev.dpi_stages().ok())

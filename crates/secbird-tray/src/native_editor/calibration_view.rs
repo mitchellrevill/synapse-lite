@@ -9,6 +9,7 @@ pub(super) enum Control {
 }
 
 pub(super) struct View {
+    connection: Option<u64>,
     pub(super) owner: Option<(String, String)>,
     pub(super) snapshot: Option<Value>,
     pub(super) loading: bool,
@@ -46,6 +47,7 @@ impl Default for View {
         let valid = loaded.is_ok();
         let prefs = loaded.unwrap_or_else(|_| json!({"schema":1}));
         Self {
+            connection: None,
             owner: None,
             snapshot: None,
             loading: false,
@@ -72,10 +74,12 @@ fn owner(state: &State) -> Option<(String, String)> {
 
 pub(super) unsafe fn request(state: &mut State, force: bool) {
     let Some(owner) = owner(state) else { return };
+    let connection = state.device().and_then(|d|d["connection_id"].as_u64());
     if state.calibration.loading && state.calibration.owner.as_ref() == Some(&owner) {
         return;
     }
-    if !force && state.calibration.owner.as_ref() == Some(&owner) {
+    if !force && state.calibration.owner.as_ref() == Some(&owner)
+        && state.calibration.connection == connection {
         return;
     }
     let before = (state.pending, state.pending_jobs.len());
@@ -84,6 +88,7 @@ pub(super) unsafe fn request(state: &mut State, force: bool) {
         return;
     }
     state.calibration.owner = Some(owner);
+    state.calibration.connection = connection;
     state.calibration.loading = true;
     state.calibration.error = None;
     if force {
@@ -105,6 +110,12 @@ pub(super) unsafe fn receive(
     }
     match result {
         Ok(value) => {
+            if !state.device().is_some_and(|d|d["connection_id"]==value["connection_id"]) {
+                state.calibration.snapshot = None;
+                state.calibration.error = Some("Mouse connection changed; refresh Calibration".into());
+                InvalidateRect(state.hwnd, null(), 0);
+                return;
+            }
             state.calibration.snapshot = Some(value);
             state.calibration.error = None;
             advanced_view::sync(state);

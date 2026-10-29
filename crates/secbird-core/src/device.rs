@@ -21,6 +21,7 @@ pub const TXID_CANDIDATES: [u8; 4] = [0x1F, 0x3F, 0xFF, 0x9F];
 
 pub struct Device {
     transport: Box<dyn Transport>,
+    connection_id: u64,
     query_only: bool,
     pub pid: u16,
     /// Serial number read during discovery; empty if the device reports none.
@@ -32,6 +33,24 @@ pub struct Device {
 }
 
 impl Device {
+    /// Process-local handle generation. A reopened path/serial is a new connection.
+    /// Never persist this token as a profile identity.
+    pub fn connection_id(&self) -> u64 {
+        self.connection_id
+    }
+
+    /// Revalidate the scoped mouse on this handle before a lifecycle-sensitive write.
+    /// An unanswered receiver, placeholder serial, or changed serial is not identity.
+    pub fn require_mouse_identity(&self) -> Result<()> {
+        if !matches!(self.pid, 0x00c4 | 0x00c5) || self.serial.is_empty() {
+            return Err(Error::Unsupported("A responding DeathAdder with an exact serial is required".into()));
+        }
+        let reply = self.get(cmd::SERIAL, cmd::SERIAL_SIZE, &[])?;
+        if parse_serial(reply.args()) != self.serial {
+            return Err(Error::Unsupported("Mouse identity changed; refresh the connection".into()));
+        }
+        Ok(())
+    }
     /// Irreversibly restrict this handle to protocol GETs. Used by explicit
     /// read-only measurements; it does not alter the physical device.
     pub fn enforce_query_only(&mut self) {
@@ -562,8 +581,15 @@ impl Device {
             .map(|r| (t, r))
         })?;
         let serial = parse_serial(reply.args());
+        // Do not publish a bare receiver PID as a mouse/profile target. A shared
+        // dongle (00B3/00A4) keeps its own identity and is never aliased here.
+        if pid == 0x00c5 && serial.is_empty() {
+            return None;
+        }
+        static NEXT_CONNECTION: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
         Some(Device {
             transport,
+            connection_id: NEXT_CONNECTION.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
             query_only: false,
             pid,
             serial,

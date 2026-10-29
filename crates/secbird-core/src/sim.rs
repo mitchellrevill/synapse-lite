@@ -52,6 +52,9 @@ pub type SimMacro = (Vec<u8>, Vec<u8>);
 /// Everything the simulated device remembers. Tests read and tweak it via [`Sim::state`].
 #[derive(Debug, Clone)]
 pub struct SimState {
+    /// Deterministic sleep/unplug/failure boundary. Refuses I/O before mutation.
+    pub available: bool,
+    pub unavailable_commands: Vec<Command>,
     /// Explicit196/197 sensor mock [proximityState,liftMode,rawHeight].
     pub sensor_calibration: Option<[u8; 3]>,
     /// Opt-in Advanced register bank: enable, mode, exact 250 float32 samples.
@@ -139,6 +142,8 @@ pub struct SimState {
 impl SimState {
     fn new(serial: &str) -> Self {
         SimState {
+            available: true,
+            unavailable_commands: Vec::new(),
             txid: 0x1F,
             serial: serial.into(),
             firmware: (1, 2),
@@ -818,6 +823,10 @@ impl Transport for Sim {
         let req = Report(body);
         let mut s = self.state();
         let command = req.command();
+        if !s.available || s.unavailable_commands.contains(&command) {
+            s.reply = None;
+            return Err(Error::NoReply(command));
+        }
 
         let to_dock = req.txid() == crate::device::DOCK_TXID && req.txid() != s.txid && s.dock_light.is_some();
         if req.txid() != s.txid && !to_dock {
