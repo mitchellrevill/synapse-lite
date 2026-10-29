@@ -199,6 +199,10 @@ impl Server {
     }
 
     fn route(&self, req: &Request) -> Response {
+        self.route_with_audio(req, crate::audio_endpoints::discover)
+    }
+
+    fn route_with_audio(&self, req: &Request, audio: impl FnOnce()->Result<crate::audio_endpoints::Snapshot,String>) -> Response {
         if !self.origin_ok(req) {
             return Response::text("403 Forbidden", "Forbidden");
         }
@@ -216,6 +220,15 @@ impl Server {
         }
         if req.header("x-secbird-token") != Some(self.token.as_str()) {
             return Response::error("403 Forbidden", "bad token");
+        }
+        // Endpoint metadata is independent of HID and must not hold its engine
+        // mutex while calling Windows audio services.
+        if req.path=="/api/audio/endpoints" {
+            if req.method!="GET" {return Response::error("405 Method Not Allowed","Audio discovery accepts GET only");}
+            if !req.body.is_empty() {return Response::error("400 Bad Request","Audio discovery takes no request body");}
+            return match audio().and_then(|value|serde_json::to_value(value).map_err(|error|error.to_string())) {
+                Ok(value)=>Response::json(value),Err(error)=>Response::error("503 Service Unavailable",error),
+            };
         }
         let mut engine = match self.engine.lock() {
             Ok(e) => e,
@@ -1173,6 +1186,25 @@ mod tests {
     use secbird_core::sim::Sim;
     use std::sync::atomic::{AtomicUsize,Ordering};
     static SEQUENCE:AtomicUsize=AtomicUsize::new(0);
+
+    #[test]
+    fn audio_discovery_requires_auth_read_only_requests_and_no_engine_lock() {
+        let sim=Sim::wireless_mouse();let engine=Engine::with_simulated_mouse(&sim).unwrap();
+        let server=Server{port:43210,token:"unit-token".into(),engine:Arc::new(Mutex::new(engine))};
+        let mut req=Request{method:"GET".into(),path:"/api/audio/endpoints".into(),query:String::new(),headers:vec![("host".into(),"127.0.0.1:43210".into()),("x-secbird-token".into(),"unit-token".into())],body:vec![]};
+        let calls=AtomicUsize::new(0);
+        let provider=||{calls.fetch_add(1,Ordering::SeqCst);assert!(server.engine.try_lock().is_ok(),"Audio metadata held the HID engine lock");crate::audio_endpoints::assemble(vec![],[None,None,None])};
+        let response=server.route_with_audio(&req,provider);assert_eq!(response.status,"200 OK");assert_eq!(calls.load(Ordering::SeqCst),1);
+        let value:Value=serde_json::from_slice(&response.body).unwrap();assert_eq!(value["opens_audio_stream"],false);
+        for invalid in 0..4 {
+            let mut request=Request{method:req.method.clone(),path:req.path.clone(),query:String::new(),headers:req.headers.clone(),body:vec![]};
+            match invalid {0=>request.headers[0].1="evil.example".into(),1=>request.headers[1].1="wrong".into(),2=>request.method="POST".into(),_=>request.body=b"{}".to_vec()}
+            let response=server.route_with_audio(&request,provider);assert_ne!(response.status,"200 OK");assert_eq!(calls.load(Ordering::SeqCst),1);
+        }
+        req.headers.push(("origin".into(),"https://outside.example".into()));
+        assert_eq!(server.route_with_audio(&req,provider).status,"403 Forbidden");assert_eq!(calls.load(Ordering::SeqCst),1);
+        req.headers.pop();let response=server.route_with_audio(&req,||Err("unavailable".into()));assert_eq!(response.status,"503 Service Unavailable");
+    }
 
     fn power_device(high:bool)->(Sim,Device) {
         let sim=Sim::wireless_mouse();

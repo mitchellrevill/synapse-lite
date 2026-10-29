@@ -1,0 +1,69 @@
+{
+  "sdk_version": "10.0.26100.0",
+  "headers_sha256": {
+    "mmdeviceapi.h": "8e485045f210d8af351bad66df34fe4049f883cc92b0de389e84d099d5de95e1",
+    "propsys.h": "01e7c04dc26439c581ec36cd3d8477373d7883575e3a126138117a6a3647f767",
+    "endpointvolume.h": "3fdc2cc5b039a8fc5e6497b51cf8b1c591b7fabdbea5f2973d44428f69907185"
+  },
+  "methods": {
+    "IMMDeviceEnumerator": [
+      "QueryInterface",
+      "AddRef",
+      "Release",
+      "EnumAudioEndpoints",
+      "GetDefaultAudioEndpoint",
+      "GetDevice",
+      "RegisterEndpointNotificationCallback",
+      "UnregisterEndpointNotificationCallback"
+    ],
+    "IMMDeviceCollection": [
+      "QueryInterface",
+      "AddRef",
+      "Release",
+      "GetCount",
+      "Item"
+    ],
+    "IMMDevice": [
+      "QueryInterface",
+      "AddRef",
+      "Release",
+      "Activate",
+      "OpenPropertyStore",
+      "GetId",
+      "GetState"
+    ],
+    "IPropertyStore": [
+      "QueryInterface",
+      "AddRef",
+      "Release",
+      "GetCount",
+      "GetAt",
+      "GetValue",
+      "SetValue",
+      "Commit"
+    ],
+    "IAudioEndpointVolume": [
+      "QueryInterface",
+      "AddRef",
+      "Release",
+      "RegisterControlChangeNotify",
+      "UnregisterControlChangeNotify",
+      "GetChannelCount",
+      "SetMasterVolumeLevel",
+      "SetMasterVolumeLevelScalar",
+      "GetMasterVolumeLevel",
+      "GetMasterVolumeLevelScalar",
+      "SetChannelVolumeLevel",
+      "SetChannelVolumeLevelScalar",
+      "GetChannelVolumeLevel",
+      "GetChannelVolumeLevelScalar",
+      "SetMute",
+      "GetMute",
+      "GetVolumeStepInfo",
+      "VolumeStepUp",
+      "VolumeStepDown",
+      "QueryHardwareSupport",
+      "GetVolumeRange"
+    ]
+  }
+}

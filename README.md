@@ -75,6 +75,11 @@ presets and atomic speed/width/pause editing, save and undo/redo. Custom-stop
 authoring, narrow widths, rotational/split/finite/input-triggered variants and
 physical/visual checks remain TODOs.
 
+A Rust [Windows audio endpoint backend](docs/AUDIO-ENDPOINTS.md) now reads playback
+device names, IDs, default roles, volume and mute on explicit request. It opens no
+audio streams. Audio Meter capture, FFT, device-selection UI and lighting output
+remain unfinished.
+
 Studio [Breathing](docs/STUDIO-BREATHING.md) now supports deterministic continuous
 playback, two-colour regional editing, source speed presets, None/transparency,
 preview and saved device output. Random, finite and key-triggered variants remain

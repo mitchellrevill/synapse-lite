@@ -6,6 +6,8 @@
 #[cfg(windows)]
 mod apps;
 #[cfg(windows)]
+mod audio_endpoints;
+#[cfg(windows)]
 mod engine;
 #[cfg(windows)]
 mod lighting_runtime;
@@ -37,6 +39,11 @@ mod win;
 #[cfg(windows)]
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    if args.iter().any(|arg|arg=="--audio-endpoints") {
+        let result=audio_endpoints::diagnostic(&args);
+        if let Err(error)=result {eprintln!("{error}");std::process::exit(2);}
+        return;
+    }
     if args.iter().any(|arg| arg == "--quit") {
         if args.len() != 1 {
             eprintln!("Use --quit alone to exit the running Synapse Lite tray instance");

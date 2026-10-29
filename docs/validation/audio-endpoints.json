@@ -1,0 +1,45 @@
+{
+  "date": "2026-10-29",
+  "scope": "explicit read-only Windows playback endpoint discovery",
+  "live_repeated_reads": 20,
+  "live_endpoint_count": 9,
+  "names_read": 9,
+  "volume_readbacks": 9,
+  "mute_readbacks": 9,
+  "resolved_default_roles": 3,
+  "issues": 0,
+  "warnings": [],
+  "opens_audio_stream": false,
+  "capture_or_fft_verified": false,
+  "full_memory_gate": "open",
+  "schema": "own typed API; not Razer vendor JSON/ABI compatibility",
+  "private_endpoint_ids_and_names_included": false,
+  "todo": [
+    "Audio Meter opt-in loopback capture and FFT",
+    "source effect math and physical lighting",
+    "native audio selector and persistence",
+    "default change/unplug/reconnect lifecycle",
+    "full-process memory acceptance"
+  ],
+  "regression": {
+    "core_passed": 444,
+    "core_ignored": 6,
+    "tray_passed": 287,
+    "tray_ignored": 37,
+    "cli_passed": 3,
+    "doc_passed": 1,
+    "optimized_audio_passed": 9,
+    "release_build": "passed secbird and secbird-tray"
+  },
+  "request_timeout_ms": 2500,
+  "outstanding_os_work_limit": 1,
+  "timeout_cancels_os_call": false,
+  "sdk_abi_fixture": "crates/secbird-tray/tests/fixtures/audio-endpoint-sdk-abi.json",
+  "release_diagnostic": {
+    "exit_code": 0,
+    "endpoint_count": 9,
+    "issues": 0,
+    "existing_report_exit_code": 2,
+    "existing_bytes_preserved": true
+  }
+}
