@@ -2197,7 +2197,7 @@ impl State {
         let leaving_macro=matches!(&action,Action::Home|Action::Device(_)|Action::Refresh|Action::Close|Action::Studio(studio_view::Control::Enter))||matches!(&action,Action::HostClose(id) if id==macro_view::ID);
         if leaving_macro&&!macro_view::can_leave(self){return;}
         if self.restricted_actions
-            && !matches!(&action, Action::Close | Action::Minimize | Action::Maximize)
+            && !matches!(&action, Action::Close | Action::Minimize | Action::Maximize | Action::MacroLibrary(macro_view::Control::Host(macro_view::FormControl::Cancel)))
         {
             return;
         }
@@ -3726,6 +3726,7 @@ unsafe extern "system" fn window_proc(
             },
             7=>{let value=&*(lparam as *const Value);state.action(Action::MacroLibrary(macro_view::Control::Select(value.as_str().unwrap().into())));},
             8=>{*(lparam as *mut Value)=match macro_view::menu_targets(&state){Ok(targets)=>json!(targets.into_iter().map(|target|json!({"guid":target.guid,"name":target.name,"disabled":target.reason.is_some()})).collect::<Vec<_>>()),Err(error)=>json!({"error":error})};},
+            9=>{use secbird_core::profile_compat::macro_library::host_actions::Kind;let value=&*(lparam as *const Value);let kind=match value.as_str(){Some("command")=>Kind::Command,Some("program")=>Kind::Program,Some("website")=>Kind::Website,_=>Kind::Text};state.action(Action::MacroLibrary(macro_view::Control::OpenHost(kind)));},
             _=>{},
         }}return 0;
     }
@@ -3754,6 +3755,7 @@ unsafe extern "system" fn window_proc(
         if allowed {let targets=(*pointer).try_borrow().map_err(|_|"Macro editor is busy".to_string()).and_then(|state|if wparam==0{macro_view::menu_targets(&state)}else{Ok(vec![])});let result=targets.and_then(|targets|{if let Ok(mut state)=(*pointer).try_borrow_mut(){state.macros.popup=true;}macro_view::choose_input(hwnd,wparam!=0,&targets)});if let Ok(mut state)=(*pointer).try_borrow_mut(){state.macros.popup=false;match result {Ok(Some(control))=>state.action(Action::MacroLibrary(control)),Ok(None)=>{},Err(error)=>state.error(&error)}}}
         return 0;
     }
+    if message==macro_view::HOST_BROWSE {macro_view::browse_host(hwnd,pointer);return 0;}
     if message==studio_view::EXIT_REQUEST {
         let tray=lparam as HWND;
         let mut process=0;
