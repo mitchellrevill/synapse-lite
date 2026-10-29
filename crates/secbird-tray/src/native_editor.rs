@@ -1667,7 +1667,18 @@ impl State {
         json!({ "id": self.selected.as_deref().unwrap_or("") })
     }
 
-    unsafe fn queue(&mut self, job: Job) {
+    unsafe fn queue(&mut self, mut job: Job) {
+        if let Job::Action(path, body) = &mut job {
+            if matches!(*path, "/api/device-sleep" | "/api/critical-threshold" | "/api/calibration-tracking" | "/api/dynamic-sensitivity" | "/api/sensor-rotation")
+                && body.get("expected_connection").is_none()
+            {
+                if let Some(device) = self.device().filter(|d| d["id"] == body["id"]) {
+                    body["expected_connection"] = if matches!(*path, "/api/calibration-tracking" | "/api/dynamic-sensitivity" | "/api/sensor-rotation") {
+                        self.calibration.snapshot.as_ref().map(|s|s["connection_id"].clone()).unwrap_or(Value::Null)
+                    } else { device["connection_id"].clone() };
+                }
+            }
+        }
         self.submit(job, true);
     }
     unsafe fn submit(&mut self, job: Job, user_operation: bool) {

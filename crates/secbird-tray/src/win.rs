@@ -935,7 +935,7 @@ impl App {
         let settings = TraySettings::load();
         let low = settings.low_battery();
         for b in &batteries {
-            if b.charging || b.percent >= low.saturating_add(10) {
+            if b.charging != Some(false) || b.percent >= low.saturating_add(10) {
                 self.low_battery.remove(&b.key);
             } else if b.percent <= low && self.low_battery.insert(b.key.clone()) {
                 log::append(&format!("low battery: {} {}%", b.name, b.percent));
@@ -970,7 +970,7 @@ impl App {
                 }
             }
             let battery = match self.batteries.iter().find(|b| b.key == dev.key()) {
-                Some(b) if b.charging => format!(" · {}% charging", b.percent),
+                Some(b) if b.charging == Some(true) => format!(" · {}% charging", b.percent),
                 Some(b) => format!(" · {}%", b.percent),
                 None => String::new(),
             };

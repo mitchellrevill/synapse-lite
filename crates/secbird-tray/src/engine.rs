@@ -61,7 +61,7 @@ pub struct Battery {
     pub key: String,
     pub name: String,
     pub percent: u8,
-    pub charging: bool,
+    pub charging: Option<bool>,
 }
 
 /// A connected Razer product that can't be controlled (yet), shown so it isn't silently missing.
@@ -304,8 +304,11 @@ impl Engine {
         self.devices
             .iter()
             .filter_map(|d| {
+                if matches!(d.pid, 196 | 197) && d.require_mouse_identity().is_err() {
+                    return None;
+                }
                 let percent = d.battery().ok().flatten()?;
-                Some(Battery { key: d.key(), name: d.name(), percent, charging: d.charging().unwrap_or(false) })
+                Some(Battery { key: d.key(), name: d.name(), percent, charging: d.charging().ok() })
             })
             .collect()
     }
@@ -513,16 +516,13 @@ impl Engine {
         self.frames_paused_until = pause.then(|| Instant::now() + FINDER_PAUSE);
     }
 
-    /// Re-enumerate devices. Returns the keys of devices that were not present before.
+    /// Re-enumerate devices. Return arrivals and scoped mouse handles needing
+    /// reconnection replay, including a reopened identical PID/serial/path.
     pub fn rescan(&mut self) -> Vec<String> {
         #[cfg(test)]
         if self.simulated_only { return Vec::new(); }
-        self.invalidate_studio("device handles replaced by rescan", true);
         let before: HashSet<String> = self.devices.iter().map(|d| d.key()).collect();
-        let rotation_keys:Vec<_>=self.sensor_rotation.keys().cloned().collect();
-        for error in self.shutdown_rotation(){eprintln!("{error}");}
-        self.host_static_results.borrow_mut().clear();
-        self.reset_uniform_handles();
+        let rotation_keys = self.release_connections();
         self.devices.clear(); // close stale handles before reopening
         let _ = self.api.refresh_devices();
         let db = Db::load(Some(&config_dir().join("devices.json")))
@@ -557,7 +557,27 @@ impl Engine {
         }
         self.lighting_runtime.borrow_mut().invalidate_all();
         self.refresh_lighting_runtime();
-        self.devices.iter().map(|d| d.key()).filter(|k| !before.contains(k)).collect()
+        self.connection_replay_keys(&before)
+    }
+
+    fn release_connections(&mut self) -> Vec<String> {
+        self.invalidate_studio("device handles replaced by rescan", true);
+        let rotation_keys = self.sensor_rotation.keys().cloned().collect();
+        for error in self.shutdown_rotation() { eprintln!("{error}"); }
+        self.host_static_results.borrow_mut().clear();
+        self.reset_uniform_handles();
+        // These observations belong to closed handles, even when the new handle
+        // has the same PID, serial and path. Saved profile intent stays on disk.
+        self.live_dpi.clear();
+        self.foreground_profiles.clear();
+        self.relight.clear();
+        rotation_keys
+    }
+
+    fn connection_replay_keys(&self, before: &HashSet<String>) -> Vec<String> {
+        self.devices.iter().filter(|d| {
+            !before.contains(&d.key()) || matches!(d.pid, 196 | 197)
+        }).map(Device::key).collect()
     }
 
     /// A known wireless device is plugged in (its receiver is) but not answering yet.
@@ -845,6 +865,12 @@ impl Engine {
             }
             let dev = &self.devices[index];
             let key = dev.key();
+            if matches!(dev.pid, 196 | 197) {
+                if let Err(error) = dev.require_mouse_identity() {
+                    reports.push(ApplyReport { device: dev.name(), profile: String::new(), failures: vec![format!("Connection identity: {error}")] });
+                    continue;
+                }
+            }
             let mut report = match &mut store {
                 Ok(store) => {
                     let config = self.lighting_config(dev, store);

@@ -1,5 +1,9 @@
 # DeathAdder V3 HyperSpeed power controls
 
+Connection tokens, exact-serial mutation checks, battery/charging availability,
+reconnection replay and remaining wireless gates are documented in
+[WIRELESS-LIFECYCLE.md](WIRELESS-LIFECYCLE.md).
+
 The source Power page has two separate settings: idle sleep in whole minutes and the battery percentage at which low-power mode begins. The core implements the threshold register for the verified wired/wireless product IDs 196/197 (00C4/00C5). The native page now connects source-derived cards and sliders to the shared device actions. Full interaction and visual parity remain unverified.
 
 The threshold is one byte: GET `07:81`, SET `07:01`. The source displays `floor(raw * 100 / 255)` and encodes a displayed value with `ceil(percent * 255 / 100)`. Its rendered range is 5–100%, in steps of five. The raw and displayed APIs are separate because conversion loses information: raw 78 displays as 30%, but encoding 30% gives raw 77. Backups and temporary changes must retain the raw byte. Setters verify exact raw readback.
