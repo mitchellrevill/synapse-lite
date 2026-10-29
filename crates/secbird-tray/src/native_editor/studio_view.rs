@@ -78,6 +78,7 @@ pub(super) enum Control {
     ApplyDevice,
     StopDevice,
     BreathingDuration(usize),
+    BreathingGradient,
     Erase,
 }
 #[derive(Clone, Copy)]
@@ -109,6 +110,7 @@ pub(super) struct View {
     wave: wave::Properties,
     starlight: starlight::Properties,
     reactive: reactive::Properties,
+    breathing_gradient: bool,
     playback: playback::Playback,
     output: output::View,
     dropdown: bool,
@@ -252,6 +254,7 @@ impl View {
         self.scroll = 0;
         self.dropdown = false;
         self.layer_menu = false;
+        self.breathing_gradient = false;
         self.renaming = false;
         self.canvas = studio_canvas::Canvas::load(raw, &assets_dir());
         match Draft::open(raw) {
@@ -303,7 +306,7 @@ impl View {
         self.effect() == Some("fire")
     }
     fn is_breathing(&self) -> bool { self.effect()==Some("breathing") }
-    fn has_two_colors(&self) -> bool { self.is_fire() || self.is_breathing() }
+    fn has_two_colors(&self) -> bool { self.is_fire() || (self.is_breathing() && !self.breathing_gradient) }
     fn effect(&self) -> Option<&str> {
         self.draft
             .as_ref()?
@@ -314,6 +317,7 @@ impl View {
             .as_deref()
     }
     fn color_property(&self, cold: bool) -> Option<ColorProperty> {
+        if self.is_breathing() && self.breathing_gradient {return None;}
         match (self.effect()?, cold) {
             ("static", false) => Some(ColorProperty::Static),
             ("fire", false) => Some(ColorProperty::FireHot),
@@ -616,6 +620,12 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
                 Ok(())
             })();
             match result {Ok(())=>{state.studio.status="Breathing speed changed for selected LEDs; save to keep it".into();state.studio.failed=false;},Err(message)=>error(state,message)}
+        }
+        Control::BreathingGradient => {
+            if state.studio.is_breathing() {
+                state.studio.breathing_gradient=!state.studio.breathing_gradient;
+                selection_changed(state);
+            }
         }
         Control::Layers(control) => {
             layer_tools::action(state, control);
@@ -1393,6 +1403,8 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
             Control::Erase,
             enabled,
         );
+    } else if view.is_breathing() && view.breathing_gradient {
+        spectrum::paint(p,view,right);
     } else if view.has_two_colors() {
         for (cold, title, value, text, y) in [
             (false, if view.is_breathing(){"COLOUR 1"}else{"HOT"}, view.selected_color, &view.color, 246),
@@ -1460,7 +1472,10 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
             MUTED,
         );
     }
-    if view.is_breathing() {
+    if view.is_breathing() && !view.breathing_gradient && !view.renaming {
+        button(p,"CUSTOM GRADIENT",right+10,220,220,Control::BreathingGradient,view.editable());
+    }
+    if view.is_breathing() && !view.breathing_gradient {
         p.text("SPEED · SELECT LEDS",right+10,500,230,25,p.fonts.small,TEXT,DT_LEFT);
         for (index,title) in ["SLOW","NORMAL","FAST"].iter().enumerate() {
             button(p,title,right+10+index as i32*77,530,72,Control::BreathingDuration(index),view.editable() && view.canvas.count()>0);
@@ -1484,7 +1499,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         p,
         message,
         right + 10,
-        if view.is_breathing() { 566 } else if matches!(view.effect(),Some("spectrum"|"wave"|"starlight"|"reactive")) {
+        if view.is_breathing() && !view.breathing_gradient { 566 } else if matches!(view.effect(),Some("breathing"|"spectrum"|"wave"|"starlight"|"reactive")) {
             590
         } else if view.is_fire() {
             506

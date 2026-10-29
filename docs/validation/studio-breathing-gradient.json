@@ -1,0 +1,74 @@
+{
+  "date": "2026-10-29",
+  "scope": "Fixed Studio Breathing custom stop authoring using existing recovered converter and runtime",
+  "source": {
+    "dll_sha256": "cd9fc2a61ff920b9b73e1f5e27632020e2f8586f443e426a875ad3b042b714fa",
+    "dll_current_hash_reverified": true,
+    "existing_js_rea_evidence": "ev_942d8521b67e4562f40aa61df404a8b2af9afb4d1656fd8e9a426102d5afa060",
+    "vendor_dll_executed": false
+  },
+  "verification": {
+    "workspace_serial": {
+      "core_passed": 475,
+      "core_ignored": 6,
+      "tray_passed": 305,
+      "tray_ignored": 46,
+      "cli_passed": 4,
+      "doc_passed": 1
+    },
+    "new_core_checks": 4,
+    "existing_reference_palette_pixels": 1952,
+    "existing_reference_layered_frames": 150,
+    "optimized_workspace_build": true,
+    "optimized_native_studio_passed": 12,
+    "native": {
+      "custom_gradient_preview_rgb": [
+        171,
+        205,
+        239
+      ],
+      "custom_stop_history": true,
+      "custom_stops_saved": 9,
+      "invalid_stop_atomic": true,
+      "new_breathing_layer": true,
+      "none_omits_colour": true,
+      "peak_rgb": [
+        17,
+        34,
+        51
+      ],
+      "physical_discovery_disabled": true,
+      "read_only_inert": true,
+      "save_undo_redo": true,
+      "sim_device_requests": 0,
+      "source_fast_ms": 6000,
+      "two_color_fields": true
+    }
+  },
+  "native_analysis_todo": {
+    "procedure": "0x1800601a0",
+    "operation": "procedure_pseudo_code",
+    "heap": "2GiB",
+    "result": "provider_timeout",
+    "timeout_ms": 240000,
+    "cli_duration_ms": 241267,
+    "result_sha256": "4c6bc56c2a4b4227bd169dbbdf002302be98f23ba440bab12ce7726b70aa8fa1",
+    "next_check": "Resolve startup/provider constraints before repeating; continue independent features. No new animation or Evidence ID claimed."
+  },
+  "evidence_sha256": {
+    "breathing-gradient-workspace.log": "6a56068ca4cd3544afcd837751fc1890b76f63a9287d948dbe310e312c53d6c6",
+    "breathing-gradient-release-build.log": "831641872df3e40ac9914c8108f5be42c61d6bf27bc416b7943beaa9aad040fb",
+    "breathing-gradient-release-native-held.log": "f6640898e6b411f461e0030c58bb3c59d22dd4ea9c719e74f769bf5f1b053d28",
+    "interaction.json": "98e9f1c4892954a0f164afa53445e627c1e518b713a8e32288520051e0509dd4",
+    "breathing-gradient.png": "7da176a0fd88245158b79872502172f6b16461cb7b3160402d92bbf7df696391"
+  },
+  "fixture_corrections": "Initial tests assumed selected partition remained region0 and used col2, absent from explicit source inventory. They now locate the edited partition and use declared col4. Invalid and mixed edits still refuse atomically.",
+  "native_timing_correction": "The first optimized check missed a single40ms first pixel. Native test now authors the same colour at0 and12 percent, verifies both saved stops and observes the held segment. Core still checks the exact first pixel.",
+  "remaining": [
+    "Random/finite/input-triggered/toggle modes and optical checks",
+    "Stock-style widgets and matched-state screenshot comparisons",
+    "Explicit reset from custom/inherited gradients to two-colour data",
+    "Full device/API/input/profile/privacy coverage and three complete-build memory runs"
+  ],
+  "complete_goal_acceptance": false
+}

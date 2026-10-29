@@ -4,6 +4,8 @@ use std::collections::BTreeMap;
 
 #[path = "spectrum.rs"]
 mod spectrum;
+#[path = "breathing_gradient.rs"]
+mod breathing_gradient;
 #[path = "reactive.rs"]
 mod reactive;
 pub use reactive::{ReactiveProperty, SelectedReactiveValue, REACTIVE_DURATIONS};
@@ -61,6 +63,7 @@ enum RegionEdit<'a> {
     Color(ColorProperty, Option<u32>),
     Spectrum(spectrum::Edit<'a>, &'a Object),
     BreathingDuration(u32),
+    BreathingGradient(StopEdit, &'a Object),
     Wave(wave::Edit, &'a Object),
     Reactive(reactive::Edit, &'a Object),
     Starlight(starlight::Edit, &'a Object),
@@ -84,6 +87,7 @@ impl RegionEdit<'_> {
             edit.apply(params, new)?;
         }
         if let Self::BreathingDuration(value)=self { params.set("duration",Some(&encode(&value)?)); }
+        if let Self::BreathingGradient(edit,defaults)=self { breathing_gradient::apply(params,defaults,edit)?; }
         if let Self::Wave(edit,projection)=self {
             if new {for (name,value) in &projection.0 {params.set(name,Some(value));}}
             if matches!(edit,wave::Edit::Stop(_)) && params.get("colorStops").is_none() {
@@ -327,7 +331,7 @@ impl Draft {
         }
         let property = match edit {
             RegionEdit::Color(property, _) => Some(property),
-            RegionEdit::Erase | RegionEdit::Spectrum(..) | RegionEdit::BreathingDuration(_) | RegionEdit::Wave(..) | RegionEdit::Starlight(..) | RegionEdit::Reactive(..) => None,
+            RegionEdit::Erase | RegionEdit::Spectrum(..) | RegionEdit::BreathingDuration(_) | RegionEdit::BreathingGradient(..) | RegionEdit::Wave(..) | RegionEdit::Starlight(..) | RegionEdit::Reactive(..) => None,
         };
         let item = layer(self, id, property)?;
         if matches!(edit, RegionEdit::Spectrum(..)) {
@@ -337,6 +341,7 @@ impl Draft {
         if matches!(edit,RegionEdit::BreathingDuration(_)) && (item.text("name")?!="breathing" || item.get("value").is_some_and(|value|value.get()!="5")) {
             return Err(invalid("selected layer is not Studio Breathing5"));
         }
+        if matches!(edit,RegionEdit::BreathingGradient(..)) {breathing_gradient::validate_layer(&item)?;}
         let available = inventory(self, &selection)?;
         let mut seen = BTreeSet::new();
         let mut kept = Vec::new();

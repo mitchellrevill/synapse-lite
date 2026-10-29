@@ -1,5 +1,11 @@
 # Studio Breathing
 
+**29 October addition:** explicit custom gradients now have native stop authoring,
+RGB/None, Add/Delete and history, with the existing renderer and file workflow.
+See [STUDIO-BREATHING-GRADIENT.md](STUDIO-BREATHING-GRADIENT.md) for current checks
+and remaining UI/mode/reset TODOs. The original checkpoint below describes the
+two-colour implementation and its retained source evidence.
+
 Layer Actions now includes **Add Breathing**. Select LEDs, assign Colour1/Colour2,
 choose Slow/Normal/Fast, preview and save. Colour clearing retains membership;
 erasing membership is separate. Colour and duration edits use the existing bounded

@@ -203,8 +203,31 @@ fn native_studio_breathing_colors_speed_preview_save_and_undo_preserve_source() 
             if params["color"]!=0x112233 || params["color2"]!=0xaabbcc || params["duration"]!=6000 {return Err(format!("Breathing fields were not saved: {params}"));}
             lighting_click(hwnd,450.,100.,scale);if query()["dirty"]!=true {return Err("Breathing speed undo did not restore the previous draft".into());}
             lighting_click(hwnd,520.,100.,scale);if query()["dirty"]!=false {return Err("Breathing speed redo did not return to saved state".into());}
+            lighting_click(hwnd,630.,100.,scale); // Stop the two-colour preview.
+            lighting_click(hwnd,right+100.,234.,scale); // Open custom stop authoring.
+            let position=GetDlgItem(hwnd,i32::from(studio_view::POSITION));let color=GetDlgItem(hwnd,i32::from(studio_view::STOP_COLOR));
+            if position.is_null()||color.is_null(){return Err("Breathing gradient fields missing".into());}
+            SendMessageW(position,WM_SETTEXT,0,wide("0").as_ptr() as isize);SendMessageW(color,WM_SETTEXT,0,wide("ABCDEF").as_ptr() as isize);lighting_click(hwnd,right+70.,493.,scale);
+            // Keep the expected colour for0..12 percent, so native polling does
+            // not have to catch a single40ms frame on a busy desktop.
+            lighting_click(hwnd,right+175.,422.,scale);let color=GetDlgItem(hwnd,i32::from(studio_view::STOP_COLOR));SendMessageW(color,WM_SETTEXT,0,wide("ABCDEF").as_ptr() as isize);lighting_click(hwnd,right+70.,493.,scale);lighting_click(hwnd,right+50.,422.,scale);
+            lighting_click(hwnd,630.,100.,scale);wait_for(||query()["preview"]["current"]==true&&query()["preview"]["frame"][1]==json!([171,205,239]),"custom Breathing first gradient pixel")?;
+            lighting_click(hwnd,630.,100.,scale);
+            SendMessageW(hwnd,STUDIO_TEST,3,&path as *const Value as isize);wait_for(||query()["pending"]==0&&query()["dirty"]==false,"custom Breathing save")?;
+            let saved=secbird_core::studio::Archive::parse(&std::fs::read(&path.as_str().unwrap()).map_err(|e|e.to_string())?).map_err(|e|e.to_string())?;
+            let saved:Value=serde_json::from_str(saved.profile_json(0).unwrap()).unwrap();let row=saved["layers"].as_array().unwrap().iter().find(|r|r["id"]==id).unwrap();let params=&row["regions"][0]["params"];
+            if params["colorStops"][0]["Color"]!=0xabcdef||params["colorStops"][1]["Color"]!=0xabcdef||params["colorStops"].as_array().unwrap().len()!=9||params["duration"]!=6000||params["color"]!=0x112233||params["color2"]!=0xaabbcc{return Err(format!("Custom Breathing save mismatch: {params}"));}
+            lighting_click(hwnd,450.,100.,scale);if query()["dirty"]!=true{return Err("Custom gradient Undo failed".into());}lighting_click(hwnd,520.,100.,scale);if query()["dirty"]!=false{return Err("Custom gradient Redo failed".into());}
+            let position=GetDlgItem(hwnd,i32::from(studio_view::POSITION));SendMessageW(position,WM_SETTEXT,0,wide("101").as_ptr() as isize);let history=query()["undo"].clone();lighting_click(hwnd,right+70.,493.,scale);
+            if query()["undo"]!=history||query()["dirty"]!=false{return Err("Invalid gradient stop changed the draft".into());}
+            SendMessageW(hwnd,READ_ONLY_TEST_SET,1,0);lighting_click(hwnd,right+185.,493.,scale);if query()["dirty"]!=false{return Err("Read-only Breathing gradient changed".into());}SendMessageW(hwnd,READ_ONLY_TEST_SET,0,0);
+            let position=GetDlgItem(hwnd,i32::from(studio_view::POSITION));SendMessageW(position,WM_SETTEXT,0,wide("0").as_ptr() as isize);lighting_click(hwnd,right+185.,493.,scale);
+            SendMessageW(hwnd,STUDIO_TEST,3,&path as *const Value as isize);wait_for(||query()["pending"]==0&&query()["dirty"]==false,"Breathing None save")?;
+            let saved=secbird_core::studio::Archive::parse(&std::fs::read(path.as_str().unwrap()).map_err(|e|e.to_string())?).map_err(|e|e.to_string())?;let saved:Value=serde_json::from_str(saved.profile_json(0).unwrap()).unwrap();let row=saved["layers"].as_array().unwrap().iter().find(|r|r["id"]==id).unwrap();
+            if row["regions"][0]["params"]["colorStops"][0].get("Color").is_some(){return Err("Breathing None serialized a colour instead of omitting it".into());}
+            let capture=json!(folder.join("breathing-gradient.png").to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize);
             if !monitor.state().log.is_empty() {return Err("Local Breathing authoring made device requests".into());}
-            Ok(json!({"new_breathing_layer":true,"two_color_fields":true,"source_fast_ms":6000,"peak_rgb":[17,34,51],"save_undo_redo":true,"sim_device_requests":0,"physical_discovery_disabled":true}))
+            Ok(json!({"new_breathing_layer":true,"two_color_fields":true,"source_fast_ms":6000,"peak_rgb":[17,34,51],"custom_gradient_preview_rgb":[171,205,239],"custom_stops_saved":9,"none_omits_colour":true,"custom_stop_history":true,"invalid_stop_atomic":true,"read_only_inert":true,"save_undo_redo":true,"sim_device_requests":0,"physical_discovery_disabled":true}))
         }})();
         unsafe {let hwnd=WINDOW.load(Ordering::Acquire) as HWND;SendMessageW(hwnd,STUDIO_TEST,5,0);PostMessageW(hwnd,WM_CLOSE,0,0);}
         std::fs::write(folder.join("interaction.json"),serde_json::to_vec_pretty(&match &result {Ok(value)=>value.clone(),Err(error)=>json!({"error":error})}).unwrap()).unwrap();result
