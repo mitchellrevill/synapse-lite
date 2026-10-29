@@ -21,7 +21,10 @@ impl Draft {
     fn new(entry:Entry)->Self {Self{base_revision:entry.revision.clone(),entry,undo:VecDeque::new(),redo:VecDeque::new()}}
     fn dirty(&self)->bool {self.entry.revision!=self.base_revision}
     fn apply(&mut self,change:Change)->Result<(),String> {
-        let next=library::edit_definition(&self.entry.encoded_record,change).map_err(|e|e.to_string())?;
+        self.apply_with_library(change,&[])
+    }
+    fn apply_with_library(&mut self,change:Change,context:&[Value])->Result<(),String> {
+        let next=library::edit_definition_with_library(&self.entry.encoded_record,change,context).map_err(|e|e.to_string())?;
         if next==self.entry.encoded_record{return Ok(());}
         let mut described=library::describe(&next).map_err(|e|e.to_string())?;described.referenced=self.entry.referenced;
         self.undo.push_back(self.entry.encoded_record.to_string());self.redo.clear();self.entry=described;self.trim();Ok(())
@@ -42,7 +45,7 @@ pub enum Request {Read,Change(Change),Import(PathBuf)}
 impl Request {pub fn mutates(&self)->bool {!matches!(self,Self::Read)}}
 pub struct Data {library:Library}
 #[derive(Clone)]
-pub enum Control {Open,List,Select(String),New,Duplicate,Delete,Import,Save,Discard,Undo,Redo,Event(usize),AddDelay,ApplyDelay,DeleteEvent,Move(i8),InputMenu,GestureMenu,ChooseInput(Input),ChooseGesture(Gesture),AddInput,RebindInput}
+pub enum Control {Open,List,Select(String),New,Duplicate,Delete,Import,Save,Discard,Undo,Redo,Event(usize),AddDelay,ApplyDelay,DeleteEvent,Move(i8),InputMenu,GestureMenu,ChooseInput(Input),ChooseGesture(Gesture),ChooseNested(String),AddInput,RebindInput}
 #[derive(Default)]
 pub(super) struct View {
     pub used:bool,
@@ -62,6 +65,8 @@ pub(super) struct View {
     input:Option<Input>,
     gesture:Option<Gesture>,
     pub popup:bool,
+    nested_mode:bool,
+    nested:Option<String>,
 }
 pub(super) fn active(state:&State)->bool {state.selected.as_deref()==Some(ID)}
 fn identity()->Result<String,String> {
@@ -117,7 +122,9 @@ pub(super) unsafe fn receive(state:&mut State,result:Result<Data,String>) {
     if active(state){state.rebuild_fields();InvalidateRect(state.hwnd,null(),0);}
 }
 fn local(state:&mut State,change:Change)->Result<(),String> {
-    let draft=state.macros.draft.as_mut().ok_or("Create or select a macro first")?;draft.apply(change)?;
+    let nested=matches!(change,Change::InsertNested{..}|Change::RebindNested{..});
+    let context:Vec<_>=if nested {state.macros.data.as_ref().map(|data|data.library.entries.iter().map(|entry|entry.encoded_record.clone()).collect()).unwrap_or_default()}else{vec![]};
+    let draft=state.macros.draft.as_mut().ok_or("Create or select a macro first")?;if nested{draft.apply_with_library(change,&context)?;}else{draft.apply(change)?;}
     state.macros.name=draft.entry.name.clone();state.macros.status="Local macro changes · save to keep them".into();state.macros.failed=false;Ok(())
 }
 fn commit_fields(state:&mut State)->Result<(),String> {
@@ -130,7 +137,8 @@ fn commit_fields(state:&mut State)->Result<(),String> {
     Ok(())
 }
 fn sync_input(view:&mut View) {
-    if let Some(group)=view.draft.as_ref().and_then(|d|input_events::selection(&d.entry.events,view.event?).ok()) {view.input=Some(group.input);view.gesture=Some(group.gesture);}
+    if let Some(group)=view.draft.as_ref().and_then(|d|input_events::selection(&d.entry.events,view.event?).ok()) {view.input=Some(group.input);view.gesture=Some(group.gesture);view.nested_mode=false;view.nested=None;}
+    else if let Some(row)=view.draft.as_ref().and_then(|draft|draft.entry.events.get(view.event?)).filter(|row|row["Type"]==7) {view.nested_mode=true;view.nested=row["guid"].as_str().map(str::to_string);view.input=None;}
 }
 pub(super) unsafe fn action(state:&mut State,control:Control) {
     if matches!(control,Control::Open){state.macros.used=true;state.action(Action::Device(ID.into()));return;}
@@ -140,7 +148,7 @@ pub(super) unsafe fn action(state:&mut State,control:Control) {
     let result=(||->Result<(),String>{
         match control {
             Control::Open=>{},Control::List=>state.macros.picker=!state.macros.picker,
-            Control::Select(id)=>{if state.macros.dirty(){return Err("Save or discard before switching macros".into());}state.macros.select(Some(id));},
+            Control::Select(id)=>{if state.macros.dirty(){return Err("Save or discard before switching macros".into());}state.macros.select(Some(id));state.macros.status="Macro selected".into();state.macros.failed=false;},
             Control::Event(index)=>{if mutable{commit_fields(state)?;}state.macros.event=Some(index);state.macros.delay=state.macros.draft.as_ref().and_then(|d|fixed_delay(&d.entry,index)).map(|n|n.to_string()).unwrap_or_default();sync_input(&mut state.macros);},
             Control::New=>{
                 if state.macros.dirty(){return Err("Save or discard the current draft first".into());}
@@ -152,16 +160,16 @@ pub(super) unsafe fn action(state:&mut State,control:Control) {
             Control::Import=>{if state.macros.dirty(){return Err("Save or discard the current draft first".into());}PostMessageW(state.hwnd,BROWSE,0,0);},
             Control::InputMenu=>{PostMessageW(state.hwnd,INPUT_MENU,0,0);},
             Control::GestureMenu=>{PostMessageW(state.hwnd,INPUT_MENU,1,0);},
-            Control::ChooseInput(input)=>{state.macros.input=Some(input);state.macros.gesture=Some(Gesture::Tap);},
+            Control::ChooseInput(input)=>{state.macros.input=Some(input);state.macros.gesture=Some(Gesture::Tap);state.macros.nested_mode=false;state.macros.nested=None;},
+            Control::ChooseNested(target)=>{state.macros.nested_mode=true;state.macros.nested=Some(target);state.macros.input=None;},
             Control::ChooseGesture(gesture)=>{state.macros.gesture=Some(gesture);},
             Control::AddInput=>{
                 commit_fields(state)?;let d=state.macros.draft.as_ref().ok_or("Select a macro")?;
                 let index=state.macros.event.map_or(d.entry.events.len(),|i|(i+1).min(d.entry.events.len()));let guid=d.entry.guid.clone();
-                let input=state.macros.input.clone().unwrap_or(Input::Keyboard("KEY_A".into()));let gesture=state.macros.gesture.unwrap_or(Gesture::Tap);
-                let count=input_events::rows(&d.entry.events,index,&input,gesture).map_err(|e|e.to_string())?.len();
-                local(state,Change::InsertInput{guid,index,input,gesture})?;state.macros.event=Some(index+count-1);state.macros.delay="1000".into();
+                let (change,count)=if state.macros.nested_mode{(Change::InsertNested{guid,index,target:state.macros.nested.clone().ok_or("Choose a nested macro")?},1)}else{let input=state.macros.input.clone().unwrap_or(Input::Keyboard("KEY_A".into()));let gesture=state.macros.gesture.unwrap_or(Gesture::Tap);let count=input_events::rows(&d.entry.events,index,&input,gesture).map_err(|e|e.to_string())?.len();(Change::InsertInput{guid,index,input,gesture},count)};
+                local(state,change)?;state.macros.event=Some(index+count-1);state.macros.delay="1000".into();
             },
-            Control::RebindInput=>{commit_fields(state)?;let d=state.macros.draft.as_ref().ok_or("Select a macro")?;let guid=d.entry.guid.clone();let index=state.macros.event.ok_or("Select an input event")?;let input=state.macros.input.clone().ok_or("Choose an input")?;local(state,Change::RebindInput{guid,index,input})?;sync_input(&mut state.macros);},
+            Control::RebindInput=>{commit_fields(state)?;let d=state.macros.draft.as_ref().ok_or("Select a macro")?;let guid=d.entry.guid.clone();let index=state.macros.event.ok_or("Select an input event")?;let change=if d.entry.events.get(index).is_some_and(|row|row["Type"]==7)&&state.macros.nested_mode{Change::RebindNested{guid,index,target:state.macros.nested.clone().ok_or("Choose a nested macro")?}}else{Change::RebindInput{guid,index,input:state.macros.input.clone().ok_or("Choose an input")?}};local(state,change)?;sync_input(&mut state.macros);},
             Control::Save=>{commit_fields(state)?;let d=state.macros.draft.as_ref().ok_or("Select a macro")?;if d.dirty(){request(state,Request::Change(Change::Replace{guid:d.entry.guid.clone(),expected_revision:d.base_revision.clone(),record:d.entry.encoded_record.clone()}));}},
             Control::Discard=>{state.macros.select(state.macros.selected.clone());state.macros.status="Unsaved macro changes discarded".into();state.macros.failed=false;},
             Control::Undo|Control::Redo=>{let redo=matches!(control,Control::Redo);let d=state.macros.draft.as_mut().ok_or("Select a macro")?;d.history(redo)?;state.macros.name=d.entry.name.clone();state.macros.delay=state.macros.event.and_then(|i|fixed_delay(&d.entry,i)).map(|n|n.to_string()).unwrap_or("1000".into());sync_input(&mut state.macros);},
@@ -190,8 +198,9 @@ pub(super) fn command(state:&mut State,id:u16,notification:u16)->bool {
 unsafe fn button(p:&mut Painter,text:&str,x:i32,y:i32,width:i32,control:Control,enabled:bool) {
     if enabled{p.button(text,x,y,width,Action::MacroLibrary(control),false);}else{p.fill(x,y,width,28,0x242424);unsafe{p.text(text,x,y,width,28,p.fonts.normal,MUTED,DT_CENTER);}}
 }
-fn event_label(value:&Value)->String {
+fn event_label(value:&Value,library:Option<&Library>)->String {
     if let Some(label)=input_events::label(value){return label;}
+    if value["Type"]==7{return format!("Macro · {}",library.and_then(|library|library.entries.iter().find(|entry|value["guid"].as_str()==Some(entry.guid.as_str()))).map_or("Missing definition",|entry|entry.name.as_str()));}
     match value["Type"].as_u64(){Some(0)if value["Number"].is_object()=>"Random delay".into(),Some(0)=>format!("Delay · {} seconds",value["Number"].as_str().map(|s|s.chars().take(80).collect::<String>()).unwrap_or_else(||value["Number"].to_string())),Some(1)=>"Keyboard function".into(),Some(2)=>"Mouse function".into(),Some(7)=>"Nested macro".into(),Some(6)=>"Loop".into(),_=>"Retained source event".into()}
 }
 pub(super) unsafe fn paint(state:&State,p:&mut Painter,width:i32,height:i32) {
@@ -211,27 +220,30 @@ pub(super) unsafe fn paint(state:&State,p:&mut Painter,width:i32,height:i32) {
     let input_row=draft.is_some_and(|d|view.event.and_then(|i|d.entry.events.get(i)).is_some_and(|event|event["Type"]==1||event["Type"]==2));
     button(p,"MOVE UP",left+10,432,85,Control::Move(-1),can&&view.event.is_some());button(p,"DOWN",left+105,432,85,Control::Move(1),can&&view.event.is_some());button(p,if paired{"DELETE PAIR"}else{"DELETE EVENT"},left+10,470,180,Control::DeleteEvent,can&&view.event.is_some()&&(!input_row||group.is_some()));
     let input=match &view.input{Some(Input::Mouse(button))=>input_events::MOUSE_NAMES.get(*button as usize).copied().unwrap_or("Choose input"),Some(Input::Keyboard(id))=>input_events::keys().iter().find(|key|&key.id==id).map_or("Choose input",|key|key.name.as_str()),None=>"A"};
-    button(p,&format!("INPUT: {input}"),left+10,514,180,Control::InputMenu,can&&draft.is_some());
-    let complete_action=matches!(view.input,Some(Input::Mouse(5..=9)));
+    let chosen=if view.nested_mode {format!("MACRO: {}",view.data.as_ref().and_then(|data|data.library.entries.iter().find(|entry|Some(&entry.guid)==view.nested.as_ref())).map_or("Choose macro",|entry|entry.name.as_str()))}else{format!("INPUT: {input}")};
+    button(p,&chosen,left+10,514,180,Control::InputMenu,can&&draft.is_some());
+    let complete_action=view.nested_mode||matches!(view.input,Some(Input::Mouse(5..=9)));
     let gesture=if complete_action{"Perform action"}else{match view.gesture.unwrap_or(Gesture::Tap){Gesture::Tap=>"Press and release",Gesture::Down=>"Down",Gesture::Up=>"Up"}};
-    button(p,gesture,left+10,550,180,Control::GestureMenu,can&&draft.is_some()&&!complete_action);button(p,"ADD INPUT",left+10,586,180,Control::AddInput,can&&draft.is_some());
-    let compatible=group.as_ref().is_some_and(|group|view.input.as_ref().is_some_and(|input|input_events::can_rebind(&group.input,input)));
-    button(p,if paired{"UPDATE PAIR"}else{"UPDATE EVENT"},left+10,622,180,Control::RebindInput,can&&compatible);
+    button(p,gesture,left+10,550,180,Control::GestureMenu,can&&draft.is_some()&&!complete_action);button(p,if view.nested_mode{"ADD MACRO"}else{"ADD INPUT"},left+10,586,180,Control::AddInput,can&&draft.is_some());
+    let nested_row=draft.is_some_and(|draft|view.event.and_then(|i|draft.entry.events.get(i)).is_some_and(|row|row["Type"]==7));
+    let compatible=if nested_row {view.nested_mode&&view.nested.is_some()}else{!view.nested_mode&&group.as_ref().is_some_and(|group|view.input.as_ref().is_some_and(|input|input_events::can_rebind(&group.input,input)))};
+    button(p,if nested_row{"UPDATE MACRO"}else if paired{"UPDATE PAIR"}else{"UPDATE EVENT"},left+10,622,180,Control::RebindInput,can&&compatible);
     button(p,"UNDO",timeline+10,160,80,Control::Undo,can&&draft.is_some_and(|d|!d.undo.is_empty()));button(p,"REDO",timeline+100,160,80,Control::Redo,can&&draft.is_some_and(|d|!d.redo.is_empty()));
     button(p,"DISCARD",timeline+470,160,100,Control::Discard,can&&view.dirty());button(p,"SAVE",timeline+580,160,100,Control::Save,can&&view.dirty());
     if let Some(d)=draft {
         let visible:Vec<_>=d.entry.events.iter().enumerate().filter(|(_,e)|e["Type"]!="actionBar").collect();
-        for (offset,(index,value)) in visible.into_iter().skip(view.scroll).take(((height-285).max(0)/38) as usize).enumerate(){let y=204+offset as i32*38;let chosen=view.event==Some(index);p.fill(timeline+10,y,670,36,if chosen{0x343434}else{0x151515});p.text(&event_label(value),timeline+20,y,650,36,p.fonts.normal,if chosen{GREEN}else{TEXT},DT_LEFT);p.hits.push(Hit{rect:p.rect(timeline+10,y,670,36),action:Action::MacroLibrary(Control::Event(index))});}
+        for (offset,(index,value)) in visible.into_iter().skip(view.scroll).take(((height-285).max(0)/38) as usize).enumerate(){let y=204+offset as i32*38;let chosen=view.event==Some(index);p.fill(timeline+10,y,670,36,if chosen{0x343434}else{0x151515});p.text(&event_label(value,view.data.as_ref().map(|data|&data.library)),timeline+20,y,650,36,p.fonts.normal,if chosen{GREEN}else{TEXT},DT_LEFT);p.hits.push(Hit{rect:p.rect(timeline+10,y,670,36),action:Action::MacroLibrary(Control::Event(index))});}
     } else {p.text("Create a macro or import definitions from a Synapse4 profile export.",timeline+20,220,650,70,p.fonts.normal,MUTED,DT_LEFT|DT_WORDBREAK);}
     let status=if view.status.is_empty(){"Macro playback integration is still in progress."}else{&view.status};p.text(status,30,height-50,width-60,40,p.fonts.normal,if view.failed{0xfd4949}else{MUTED},DT_LEFT|DT_WORDBREAK);
-    if let Some(data)=&view.data {if !data.library.missing.is_empty(){p.text(&format!("{} linked macro definition(s) missing · import an export containing their macros",data.library.missing.len()),30,height-80,width-60,25,p.fonts.small,MUTED,DT_LEFT);}}
+    if let Some(data)=&view.data {if !data.library.missing.is_empty()||data.library.dependency_issues>0{p.text(&format!("{} macro definition(s) missing · {} nested chain(s) need attention",data.library.missing.len(),data.library.dependency_issues),30,height-80,width-60,25,p.fonts.small,MUTED,DT_LEFT);}}
     if view.picker {if let Some(data)=&view.data {let count=data.library.entries.len().saturating_sub(view.picker_scroll).min(8);p.fill(46,116,290,count as i32*28,0);for (offset,entry) in data.library.entries.iter().skip(view.picker_scroll).take(8).enumerate(){let y=116+offset as i32*28;p.text(&entry.name,52,y,278,28,p.fonts.normal,TEXT,DT_LEFT);p.hits.push(Hit{rect:p.rect(46,y,290,28),action:Action::MacroLibrary(Control::Select(entry.guid.clone()))});}}}
 }
 struct InputMenu(HMENU);
 impl Drop for InputMenu {fn drop(&mut self){unsafe{DestroyMenu(self.0);}}}
 unsafe fn menu()->Result<InputMenu,String>{let handle=CreatePopupMenu();if handle.is_null(){Err("Could not open input choices".into())}else{Ok(InputMenu(handle))}}
 unsafe fn append(menu:&InputMenu,id:usize,title:&str)->Result<(),String>{if AppendMenuW(menu.0,MF_STRING,id,wide(&title.replace('&',"&&")).as_ptr())==0{Err("Could not populate input choices".into())}else{Ok(())}}
-pub(super) unsafe fn choose_input(hwnd:HWND,gesture:bool)->Result<Option<Control>,String>{
+pub(super) fn menu_targets(state:&State)->Result<Vec<library::nested::Target>,String>{let Some(draft)=&state.macros.draft else{return Ok(vec![]);};let context:Vec<_>=state.macros.data.as_ref().map(|data|data.library.entries.iter().map(|entry|entry.encoded_record.clone()).collect()).unwrap_or_default();library::nested::targets(&draft.entry.encoded_record,&context).map_err(|error|error.to_string())}
+pub(super) unsafe fn choose_input(hwnd:HWND,gesture:bool,targets:&[library::nested::Target])->Result<Option<Control>,String>{
     let root=menu()?;let mut choices=vec![];
     if gesture {for (label,value) in [("Press and release",Gesture::Tap),("Down",Gesture::Down),("Up",Gesture::Up)] {choices.push(Control::ChooseGesture(value));append(&root,choices.len(),label)?;}}
     else {
@@ -241,6 +253,8 @@ pub(super) unsafe fn choose_input(hwnd:HWND,gesture:bool)->Result<Option<Control
         }
         let mouse=menu()?;for (button,name) in input_events::MOUSE_NAMES.iter().enumerate(){choices.push(Control::ChooseInput(Input::Mouse(button as u8)));append(&mouse,choices.len(),name)?;}
         if AppendMenuW(root.0,MF_POPUP,mouse.0 as usize,wide("Mouse functions").as_ptr())==0{return Err("Could not populate mouse choices".into());}std::mem::forget(mouse);
+        let macros=menu()?;for target in targets {choices.push(Control::ChooseNested(target.guid.clone()));let flags=MF_STRING|if target.reason.is_some(){MF_GRAYED}else{0};if AppendMenuW(macros.0,flags,choices.len(),wide(&target.name.replace('&',"&&")).as_ptr())==0{return Err("Could not populate macro choices".into());}}
+        if AppendMenuW(root.0,MF_POPUP|if targets.is_empty(){MF_GRAYED}else{0},macros.0 as usize,wide("Macros").as_ptr())==0{return Err("Could not populate macro choices".into());}std::mem::forget(macros);
     }
     let mut point:POINT=std::mem::zeroed();if GetCursorPos(&mut point)==0{return Err("Could not position input choices".into());}
     let result=TrackPopupMenu(root.0,TPM_RETURNCMD|TPM_NONOTIFY,point.x,point.y,0,hwnd,null()) as usize;

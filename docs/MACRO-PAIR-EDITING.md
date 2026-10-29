@@ -69,3 +69,6 @@ acceptance and the two previous broader native failures remain open. Approved
 shared tab geometry was not revisited. Continue independent inventory work when
 an exact behaviour stalls. Full device APIs, privacy and three complete-build
 memory measurements remain unfinished.
+
+Nested reference authoring and dependency-aware profile interchange are now
+covered by MACRO-NESTED.md; live nested execution is still unfinished.

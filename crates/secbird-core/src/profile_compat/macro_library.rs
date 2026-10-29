@@ -4,6 +4,7 @@ use serde::{Deserialize,Serialize};
 use serde_json::value::RawValue;
 use std::collections::BTreeSet;
 pub mod input_events;
+pub mod nested;
 use input_events::{Input,Gesture};
 
 const KEY:&str="_synapseLiteMacroLibrary";
@@ -20,7 +21,7 @@ pub struct Entry {
     pub revision:String,
     pub encoded_record:Value,
 }
-pub struct Library {pub entries:Vec<Entry>,pub missing:Vec<String>}
+pub struct Library {pub entries:Vec<Entry>,pub missing:Vec<String>,pub dependency_issues:usize}
 #[derive(Clone)]
 pub enum Change {
     Create{guid:String,name:String},
@@ -33,6 +34,8 @@ pub enum Change {
     InsertInput{guid:String,index:usize,input:Input,gesture:Gesture},
     RebindInput{guid:String,index:usize,input:Input},
     DeleteInputGroup{guid:String,index:usize},
+    InsertNested{guid:String,index:usize,target:String},
+    RebindNested{guid:String,index:usize,target:String},
     DeleteEvent{guid:String,index:usize},
     MoveEvent{guid:String,index:usize,direction:i8},
     SetDelay{guid:String,index:usize,milliseconds:u32},
@@ -79,7 +82,8 @@ fn referenced(store:&Store,records:&BTreeMap<String,Value>,id:&str)->Result<bool
     Ok(false)
 }
 pub fn read(store:&Store)->Result<Library> {
-    let records=collect(store)?;let refs=references(store);let mut entries=vec![];
+    let records=collect(store)?;let mut refs=references(store);let mut entries=vec![];
+    let graph=nested::Graph::new(&records)?;refs.extend(graph.references());let dependency_issues=graph.issues();
     for (id,record) in &records {
         let body=decode_record(record)?;let events=body["macroEvents"].as_array().ok_or_else(||invalid("Macro has no event array"))?;
         if events.len()>MAX_EVENTS{return Err(invalid("Macro exceeds512 event rows"));}
@@ -87,7 +91,7 @@ pub fn read(store:&Store)->Result<Library> {
         entries.push(Entry{guid:id.clone(),name:name.into(),events:events.clone(),referenced:referenced(store,&records,id)?,revision:revision(record)?,encoded_record:record.clone()});
     }
     entries.sort_by_key(|r|(r.name.to_lowercase(),r.guid.clone()));
-    Ok(Library{missing:refs.into_iter().filter(|id|!records.contains_key(id)).collect(),entries})
+    Ok(Library{missing:refs.into_iter().filter(|id|!records.contains_key(id)).collect(),entries,dependency_issues})
 }
 fn name(value:&str)->Result<()> {
     if value.trim().is_empty()||value.encode_utf16().count()>128||value.chars().any(char::is_control){return Err(invalid("Macro names need1..128 characters without control characters"));}Ok(())
@@ -173,6 +177,7 @@ fn propagate(store:&mut Store,record:&Value)->Result<()> {
 pub fn edit(current:&Store,change:Change)->Result<Store> {
     let mut records=collect(current)?;let mut candidate=current.clone();
     let mut changed=None;
+    let mut explicit_target=None;
     match change {
         Change::Replace{guid:id,expected_revision,record}=>{
             let old=records.get(&id).ok_or_else(||invalid("Macro disappeared; refresh before saving"))?;
@@ -196,7 +201,7 @@ pub fn edit(current:&Store,change:Change)->Result<Store> {
             for r in incoming {let id=guid(r)?;if let Some(old)=records.get(&id){if old!=r{return Err(invalid("Import conflicts with an existing macro GUID"));}}else{records.insert(id,r.clone());}propagate(&mut candidate,r)?;}
         }
         other=>{
-            let (id,index)=match &other {Change::InsertDelay{guid,index,..}|Change::InsertInput{guid,index,..}|Change::RebindInput{guid,index,..}|Change::DeleteInputGroup{guid,index}|Change::DeleteEvent{guid,index}|Change::MoveEvent{guid,index,..}|Change::SetDelay{guid,index,..}=>(guid.clone(),*index),_=>unreachable!()};
+            let (id,index)=match &other {Change::InsertDelay{guid,index,..}|Change::InsertInput{guid,index,..}|Change::RebindInput{guid,index,..}|Change::DeleteInputGroup{guid,index}|Change::InsertNested{guid,index,..}|Change::RebindNested{guid,index,..}|Change::DeleteEvent{guid,index}|Change::MoveEvent{guid,index,..}|Change::SetDelay{guid,index,..}=>(guid.clone(),*index),_=>unreachable!()};
             let original=records.get(&id).ok_or_else(||invalid("Unknown macro"))?;let mut rows=event_rows(original)?;
             match other {
                 Change::InsertDelay{milliseconds,..}=>{if rows.len()>=MAX_EVENTS||index>rows.len(){return Err(invalid("Event insertion exceeds macro bounds"));}rows.insert(index,delay(milliseconds)?);}
@@ -208,6 +213,8 @@ pub fn edit(current:&Store,change:Change)->Result<Store> {
                 }
                 Change::RebindInput{input,..}=>{rows=input_events::rebind(&rows,index,&input)?;}
                 Change::DeleteInputGroup{..}=>{rows=input_events::delete_group(&rows,index)?;}
+                Change::InsertNested{target,..}=>{if rows.len()>=MAX_EVENTS||index>rows.len()||index==0&&rows.first().is_some_and(|row|protected(row)){return Err(invalid("Nested event insertion exceeds macro bounds"));}rows.insert(index,nested::row(&target)?);explicit_target=Some(target);}
+                Change::RebindNested{target,..}=>{let old=rows.get(index).ok_or_else(||invalid("Select a nested macro event"))?;rows[index]=nested::retarget(old,&target)?;explicit_target=Some(target);}
                 Change::SetDelay{milliseconds,..}=>{let old=rows.get(index).ok_or_else(||invalid("Unknown event"))?;let value:Value=serde_json::from_str(old.get()).map_err(|e|invalid(e.to_string()))?;if value["Type"]!=0{return Err(invalid("Select a delay event"));}
                     if value["Number"].is_object()||value["Number"].is_array(){return Err(invalid("Random/structured delay editing is not implemented; its source data was preserved"));}
                     // Preserve unknown leaves in an explicitly edited delay row.
@@ -219,7 +226,11 @@ pub fn edit(current:&Store,change:Change)->Result<Store> {
             let r=patch(original,"macroEvents",raw(&rows)?)?;records.insert(id,r.clone());changed=Some(r);
         }
     }
-    if let Some(record)=changed {propagate(&mut candidate,&record)?;}
+    if let Some(record)=changed {
+        let id=guid(&record)?;let before=collect(current)?;nested::validate_change(before.get(&id),&record,&records,explicit_target.as_deref())?;
+        propagate(&mut candidate,&record)?;
+    }
+    nested::retain_required(&mut candidate,&records)?;
     install(&mut candidate,records.into_values().collect())?;
     read(&candidate)?;validate_store_budget(&candidate)?;Ok(candidate)
 }
@@ -231,13 +242,21 @@ pub fn revision(record:&Value)->Result<String> {decode_record(record)?;Ok(format
 /// final Replace checks the original revision in a freshly loaded real store,
 /// and propagates that definition without replacing profiles from a stale copy.
 pub fn edit_definition(record:&Value,change:Change)->Result<Value> {
+    edit_definition_with_library(record,change,&[])
+}
+pub(super) fn definition_store(record:&Value,context:&[Value])->Result<Store> {
+    let id=guid(record)?;let mut rows=vec![];
+    for other in context {if guid(other)?!=id{rows.push(other.clone());}}
+    rows.push(record.clone());let mut store=Store::default();store.extra.insert(KEY.into(),json!({"version":1,"records":rows}));collect(&store)?;Ok(store)
+}
+pub fn edit_definition_with_library(record:&Value,change:Change,context:&[Value])->Result<Value> {
     let id=guid(record)?;
     match &change {
-        Change::Rename{guid,..}|Change::InsertDelay{guid,..}|Change::InsertInput{guid,..}|Change::RebindInput{guid,..}|Change::DeleteInputGroup{guid,..}|Change::DeleteEvent{guid,..}|Change::MoveEvent{guid,..}|Change::SetDelay{guid,..} if guid==&id=>{},
+        Change::Rename{guid,..}|Change::InsertDelay{guid,..}|Change::InsertInput{guid,..}|Change::RebindInput{guid,..}|Change::DeleteInputGroup{guid,..}|Change::InsertNested{guid,..}|Change::RebindNested{guid,..}|Change::DeleteEvent{guid,..}|Change::MoveEvent{guid,..}|Change::SetDelay{guid,..} if guid==&id=>{},
         _=>return Err(invalid("This operation is not a local definition edit")),
     }
-    let mut isolated=Store::default();isolated.extra.insert(KEY.into(),json!({"version":1,"records":[record]}));
-    let edited=edit(&isolated,change)?;Ok(global(&edited)?.remove(0))
+    let isolated=definition_store(record,context)?;
+    let edited=edit(&isolated,change)?;collect(&edited)?.remove(&id).ok_or_else(||invalid("Edited macro disappeared"))
 }
 
 pub fn describe(record:&Value)->Result<Entry> {

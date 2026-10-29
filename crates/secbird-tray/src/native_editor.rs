@@ -3721,10 +3721,11 @@ unsafe extern "system" fn window_proc(
             5=>state.action(Action::MacroLibrary(macro_view::Control::Discard)),
             6=>{
                 use secbird_core::profile_compat::macro_library::input_events::{Input,Gesture};
-                let value=&*(lparam as *const Value);let input=if let Some(key)=value["key"].as_str(){Input::Keyboard(key.into())}else{Input::Mouse(value["mouse"].as_u64().unwrap() as u8)};
-                state.action(Action::MacroLibrary(macro_view::Control::ChooseInput(input)));
+                let value=&*(lparam as *const Value);if let Some(target)=value["macro"].as_str(){state.action(Action::MacroLibrary(macro_view::Control::ChooseNested(target.into())));}else{let input=if let Some(key)=value["key"].as_str(){Input::Keyboard(key.into())}else{Input::Mouse(value["mouse"].as_u64().unwrap() as u8)};state.action(Action::MacroLibrary(macro_view::Control::ChooseInput(input)));}
                 let gesture=match value["gesture"].as_str(){Some("down")=>Gesture::Down,Some("up")=>Gesture::Up,_=>Gesture::Tap};state.action(Action::MacroLibrary(macro_view::Control::ChooseGesture(gesture)));
             },
+            7=>{let value=&*(lparam as *const Value);state.action(Action::MacroLibrary(macro_view::Control::Select(value.as_str().unwrap().into())));},
+            8=>{*(lparam as *mut Value)=match macro_view::menu_targets(&state){Ok(targets)=>json!(targets.into_iter().map(|target|json!({"guid":target.guid,"name":target.name,"disabled":target.reason.is_some()})).collect::<Vec<_>>()),Err(error)=>json!({"error":error})};},
             _=>{},
         }}return 0;
     }
@@ -3750,7 +3751,7 @@ unsafe extern "system" fn window_proc(
     }
     if message==macro_view::INPUT_MENU {
         let allowed=(*pointer).try_borrow().is_ok_and(|state|macro_view::active(&state)&&!state.read_only_smoke&&!state.restricted_actions&&!state.macros.busy);
-        if allowed {if let Ok(mut state)=(*pointer).try_borrow_mut(){state.macros.popup=true;}let result=macro_view::choose_input(hwnd,wparam!=0);if let Ok(mut state)=(*pointer).try_borrow_mut(){state.macros.popup=false;match result {Ok(Some(control))=>state.action(Action::MacroLibrary(control)),Ok(None)=>{},Err(error)=>state.error(&error)}}}
+        if allowed {let targets=(*pointer).try_borrow().map_err(|_|"Macro editor is busy".to_string()).and_then(|state|if wparam==0{macro_view::menu_targets(&state)}else{Ok(vec![])});let result=targets.and_then(|targets|{if let Ok(mut state)=(*pointer).try_borrow_mut(){state.macros.popup=true;}macro_view::choose_input(hwnd,wparam!=0,&targets)});if let Ok(mut state)=(*pointer).try_borrow_mut(){state.macros.popup=false;match result {Ok(Some(control))=>state.action(Action::MacroLibrary(control)),Ok(None)=>{},Err(error)=>state.error(&error)}}}
         return 0;
     }
     if message==studio_view::EXIT_REQUEST {

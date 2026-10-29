@@ -522,8 +522,10 @@ pub fn selected_import(
         .filter(|c| c.selected)
         .flat_map(|c| c.macros.iter().cloned())
         .collect();
+    let selected_ids=macro_library::nested::required(&incoming_macros,&selected_ids)?;
     let mut rewritten = BTreeMap::new();
     let mut macros = Vec::new();
+    let mut pending_macros=Vec::new();
     for id in &selected_ids {
         let original = incoming_macros
             .get(id)
@@ -541,7 +543,11 @@ pub fn selected_import(
             decoded["name"] = json!(name)
         }
         rewritten.insert(id.clone(), (new_id, name.clone()));
-        macros.push(record(original.clone(), &decoded, &name)?);
+        pending_macros.push((original.clone(),decoded,name));
+    }
+    for (original,mut decoded,name) in pending_macros {
+        macro_library::nested::rewrite_guids(&mut decoded,&rewritten)?;
+        macros.push(record(original,&decoded,&name)?);
     }
     let mut profiles = Vec::new();
     for (row, choice) in preview.rows.iter().zip(choices).filter(|(_, c)| c.selected) {
@@ -676,6 +682,8 @@ pub fn selected_export(preview: &Preview, choices: &[Choice]) -> Result<ExportRe
         .filter(|c| c.selected)
         .flat_map(|c| c.macros.iter().cloned())
         .collect();
+    let records=macro_records(&store.devices[target])?;
+    let ids=macro_library::nested::required(&records,&ids)?;
     if let Some(macros) = envelope.get_mut("macros").and_then(Value::as_array_mut) {
         let mut selected = Vec::new();
         for entry in macros.drain(..) {
