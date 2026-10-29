@@ -2278,12 +2278,15 @@ function renderSettings() {
     return [input, el('label', { htmlFor: id, className: 'sr', textContent: label })];
   };
   // A switch the tray keeps: sent, then the page shows what the tray says.
-  const traySwitch = (key, label) => toggle(label, !!a[key], async (on, input) => {
+  const traySwitch = (key, label) => { const controls = toggle(label, !!a[key], async (on, input) => {
     input.disabled = true;
     try { appSettings = await api('/api/settings', { key, on }); toast(label + (on ? ' on' : ' off')); }
     catch (e) { toast(e.message, true); input.checked = !on; }
-    input.disabled = false;
+    renderSettings();
   });
+    controls[0].disabled = !!a.measurement_read_only || !!a.settings_error || (key === 'autostart' && a.autostart == null) || (key === 'start_minimized' && a.autostart !== true);
+    return controls;
+  };
   const seg = (label, options, current, pick) => {
     const g = el('span', { className: 'seg', role: 'group', ariaLabel: label });
     options.forEach(([v, t]) => g.append(el('button', { textContent: t, ariaPressed: v === current, onclick: () => pick(v) })));
@@ -2303,7 +2306,8 @@ function renderSettings() {
 
   // Startup and games
   const startup = group('Startup and games',
-    row('Start with Windows', 'Your settings go back on as soon as you sign in. Off means they only apply while Secretarybird is running.', ...traySwitch('autostart', 'Start with Windows')),
+    row('Start with Windows', a.autostart_error || a.settings_error || 'Your settings go back on as soon as you sign in. Off means they only apply while Secretarybird is running.', ...traySwitch('autostart', 'Start with Windows')),
+    row('Minimize to system tray on startup', 'Applies to Windows sign-in launches. Opening the app normally shows its editor.', ...traySwitch('start_minimized', 'Minimize to system tray on startup')),
     row('Switch profiles with games', 'A profile tied to a program comes up while that program is in front, and goes back after.', ...traySwitch('auto_switch', 'Switch profiles with games')),
     row('Lights when away', 'While the PC is locked or its screen is off, the lights dim to a quarter or turn off, and come back when you return. Nothing is saved on the devices.',
       seg('Lights when away', [['', 'Leave on'], ['dim', 'Dim'], ['off', 'Off']], a.away_lights || '', async v => {
@@ -2368,8 +2372,8 @@ function renderSettings() {
     row('Low battery warning', 'A notification when a wireless device drops to ' + a.battery_warning_at + '%.',
       batteryLevel(),
       ...traySwitch('battery_warning', 'Low battery warning')),
-    row('New version notices', 'Once a day, asks GitHub whether a newer Secretarybird is out. Nothing else is sent.', checkOut, checkBtn, ...traySwitch('updates', 'New version notices')),
-    row('Weekly firmware check', 'Once a week, asks Razer’s website whether newer firmware is out for your devices. It never installs anything.', ...traySwitch('firmware_weekly', 'Weekly firmware check')));
+    row('Manual update check', 'Runs only when Check now is pressed. Automatic update checks are disabled.', checkOut, checkBtn),
+    row('Firmware checks', 'Automatic firmware checks are disabled. Existing raw preferences are retained for compatibility.'));
 
   // Profiles and backup
   const file = el('input', { type: 'file', accept: '.json,application/json', hidden: true, onchange: async e => {

@@ -43,6 +43,7 @@ mod lighting_view;
 mod image_render;
 mod host_tabs;
 mod linked_games;
+mod settings_view;
 mod macro_view;
 mod host_tab_model;
 mod calibration_view;
@@ -54,7 +55,7 @@ mod performance_layout;
 mod performance_view;
 mod power_layout;
 mod power_view;
-mod profile_files;
+pub(crate) mod profile_files;
 mod profile_modal_backend;
 mod profile_modal_files;
 mod profile_modal_layout;
@@ -384,6 +385,7 @@ impl Tab {
 
 #[derive(Clone)]
 enum Action {
+    Settings(settings_view::Control),
     Studio(studio_view::Control),
     LinkedGames(linked_games::Control),
     MacroLibrary(macro_view::Control),
@@ -460,6 +462,7 @@ struct Hit {
 }
 
 enum Job {
+    Settings(Option<Value>),
     Studio(studio_view::Request),
     LinkedGames(linked_games::Request),
     MacroLibrary(macro_view::Request),
@@ -525,6 +528,7 @@ struct Reply {
 }
 
 enum WorkerReply {
+    Settings(Result<Value,String>),
     StudioControl(crate::host_studio::session::Control, crate::lighting_status::Reader, Value),
     StudioOutput(Result<Value, String>),
     Studio(studio_view::Response),
@@ -571,6 +575,20 @@ fn worker(
                     .and_then(|mut engine| studio_view::output_work(&mut engine, request));
                 if replies.send(WorkerReply::StudioOutput(result)).is_err() { break; }
                 continue;
+            }
+            Job::Settings(body) => {
+                let result=engine.lock().map_err(|_|"Device worker is unavailable".to_string()).and_then(|mut engine| {
+                    if let Some(value)=body.as_ref().filter(|value|value["key"]=="lighting_control") {
+                        if engine.is_measurement_read_only(){return Err("Read-only mode refuses lighting ownership changes".into());}
+                        let snapshot=server::dispatch(&mut engine,"GET","/api/state",&[]).map_err(|e|e.to_string())?;
+                        if !snapshot["devices"].as_array().is_some_and(|devices|devices.iter().any(|device|device["id"]==value["id"] && device["active"]==value["expected_profile"])) {return Err("Device or profile changed; refresh before changing lighting control".into());}
+                        server::dispatch(&mut engine,"POST","/api/lighting-control",&serde_json::to_vec(value).map_err(|e|e.to_string())?).map_err(|e|e.to_string())?;
+                        return Ok(server::settings_json(&engine));
+                    }
+                    let (method,bytes)=match body {Some(value)=>("POST",serde_json::to_vec(&value).map_err(|e|e.to_string())?),None=>("GET",vec![])};
+                    server::dispatch(&mut engine,method,"/api/settings",&bytes).map_err(|e|e.to_string())
+                });
+                if replies.send(WorkerReply::Settings(result)).is_err(){break;}continue;
             }
             Job::Studio(request) => {
                 // Drop the device lock before reading/writing composition or bookmark files.
@@ -721,6 +739,7 @@ fn worker(
                 | Job::SensorRead(..)
                 | Job::Profiles(_)
                 | Job::ImportFile { .. }
+                | Job::Settings(_)
                 | Job::ExportFile { .. } => return Err("File operation was not routed".into()),
             }
             .map_err(|e| e.to_string())?;
@@ -943,6 +962,7 @@ impl Drop for Bitmap {
 }
 
 struct State {
+    settings: settings_view::View,
     linked_games:linked_games::View,
     macros:macro_view::View,
     studio: studio_view::View,
@@ -1678,7 +1698,7 @@ impl State {
                 &job,
                 Job::Profiles(profile_modal_model::Request::PreviewExport { .. })
             );
-        if self.restricted_actions && !matches!(&job, Job::Refresh | Job::SensorRead(..) | Job::LinkedGames(linked_games::Request::Read) | Job::MacroLibrary(macro_view::Request::Read) | Job::Studio(studio_view::Request::Restore{..})) && !presentation_preview {
+        if self.restricted_actions && !matches!(&job, Job::Refresh | Job::Settings(None) | Job::SensorRead(..) | Job::LinkedGames(linked_games::Request::Read) | Job::MacroLibrary(macro_view::Request::Read) | Job::Studio(studio_view::Request::Restore{..})) && !presentation_preview {
             return;
         }
         if self.pending > 0 {
@@ -1805,6 +1825,7 @@ impl State {
     unsafe fn collect(&mut self) {
         while let Ok(message) = self.replies.try_recv() {
             let reply = match message {
+                WorkerReply::Settings(result)=>{self.pending=self.pending.saturating_sub(1);settings_view::receive(self,result);continue;}
                 WorkerReply::LinkedGames(result)=>{self.pending=self.pending.saturating_sub(1);linked_games::receive(self,result);continue;}
                 WorkerReply::MacroLibrary(result)=>{self.pending=self.pending.saturating_sub(1);macro_view::receive(self,result);continue;}
                 WorkerReply::StudioControl(control, reader, status) => {
@@ -1904,7 +1925,7 @@ impl State {
                 );
                 self.notices = reply.notices;
             }
-            if self.selected.is_some() && self.device().is_none() && !linked_games::active(self) && !macro_view::active(self) {
+            if self.selected.is_some() && self.device().is_none() && !settings_view::active(self) && !linked_games::active(self) && !macro_view::active(self) {
                 self.selected = None;
                 self.buttons.clear();
             }
@@ -2062,6 +2083,7 @@ impl State {
             self.focus = 0;
             return;
         }
+        if settings_view::active(self) {return;}
         if linked_games::active(self) {linked_games::fields(self);return;}
         if macro_view::active(self) {macro_view::fields(self);return;}
         if self.studio.open {
@@ -2196,9 +2218,11 @@ impl State {
         }
         let leaving_macro=matches!(&action,Action::Home|Action::Device(_)|Action::Refresh|Action::Close|Action::Studio(studio_view::Control::Enter))||matches!(&action,Action::HostClose(id) if id==macro_view::ID);
         if leaving_macro&&!macro_view::can_leave(self){return;}
-        if self.restricted_actions
-            && !matches!(&action, Action::Close | Action::Minimize | Action::Maximize)
-        {
+        let allowed_when_restricted = matches!(&action, Action::Close | Action::Minimize | Action::Maximize
+            | Action::Settings(settings_view::Control::Open | settings_view::Control::Page(_) | settings_view::Control::Scroll(_)))
+            || matches!(&action, Action::Device(id) if id == settings_view::ID)
+            || (matches!(&action, Action::Refresh) && settings_view::active(self));
+        if self.restricted_actions && !allowed_when_restricted {
             return;
         }
         let stays_on_page = matches!(&action, Action::HostMove(..))
@@ -2229,6 +2253,7 @@ impl State {
             return;
         }
         match action {
+            Action::Settings(control)=>settings_view::action(self,control),
             Action::LinkedGames(control)=>linked_games::action(self,control),
             Action::MacroLibrary(control)=>macro_view::action(self,control),
             Action::Studio(control) => studio_view::action(self,control),
@@ -2269,7 +2294,7 @@ impl State {
                 self.rebuild_fields();
             }
             Action::Device(id) => {
-                if (id==linked_games::ID||id==macro_view::ID) && self.studio.open && studio_view::block_close(self){return;}
+                if (id==settings_view::ID||id==linked_games::ID||id==macro_view::ID) && self.studio.open && studio_view::block_close(self){return;}
                 self.studio.canvas.cancel();ReleaseCapture();
                 self.studio.open=false;
                 if !host_tabs::open(self, &id) { return; }
@@ -2278,6 +2303,7 @@ impl State {
                 self.renaming = None;
                 self.profile_actions = false;
                 self.selected = Some(id);
+                if settings_view::active(self){settings_view::request(self,None);}
                 if linked_games::active(self){linked_games::request(self,linked_games::Request::Read);}
                 if macro_view::active(self){macro_view::request(self,macro_view::Request::Read);}
                 self.tab = page;
@@ -2299,6 +2325,7 @@ impl State {
                 self.rebuild_fields();
                 calibration_view::request(self,true);
             }
+            Action::Refresh if settings_view::active(self)=>settings_view::request(self,None),
             Action::Refresh if linked_games::active(self)=>linked_games::request(self,linked_games::Request::Read),
             Action::Refresh if macro_view::active(self)=>macro_view::request(self,macro_view::Request::Read),
             Action::Refresh => {mouse_feedback::stop(self);self.calibration.owner=None;self.queue(Job::Rescan);}
@@ -2893,8 +2920,9 @@ unsafe fn paint(state: &mut State, dc: HDC) {
         rect: p.rect(40, 42, 40, 38),
         action: Action::Refresh,
     });
+    p.button("Settings",width-110,47,95,Action::Settings(settings_view::Control::Open),settings_view::active(state));
     let device = state.device().cloned();
-    let title = if macro_view::active(state) {"MACRO"} else if linked_games::active(state) {"LINKED GAMES"} else if state.studio.open { "RAZER CHROMA STUDIO" } else { device
+    let title = if settings_view::active(state) {"SETTINGS"} else if macro_view::active(state) {"MACRO"} else if linked_games::active(state) {"LINKED GAMES"} else if state.studio.open { "RAZER CHROMA STUDIO" } else { device
         .as_ref()
         .and_then(|d| d["name"].as_str())
         .unwrap_or("RAZER SYNAPSE") };
@@ -2922,7 +2950,8 @@ unsafe fn paint(state: &mut State, dc: HDC) {
         );
     }
     p.line(0, 79, width, 0);
-    if macro_view::active(state) {macro_view::paint(state,&mut p,width,height);
+    if settings_view::active(state) {settings_view::paint(state,&mut p,width,height);
+    } else if macro_view::active(state) {macro_view::paint(state,&mut p,width,height);
     } else if linked_games::active(state) {linked_games::paint(state,&mut p,width,height);
     } else if state.studio.open {
         studio_view::paint(state,&mut p,width,height);
@@ -3532,7 +3561,7 @@ unsafe fn paint(state: &mut State, dc: HDC) {
             }
         }
     }
-    if !state.source_viewport() && !linked_games::active(state) && !macro_view::active(state) {
+    if !state.source_viewport() && !settings_view::active(state) && !linked_games::active(state) && !macro_view::active(state) {
         p.line(0, height - 35, width, 0);
         p.text(
             &state.status,
@@ -3728,6 +3757,16 @@ unsafe extern "system" fn window_proc(
             8=>{*(lparam as *mut Value)=match macro_view::menu_targets(&state){Ok(targets)=>json!(targets.into_iter().map(|target|json!({"guid":target.guid,"name":target.name,"disabled":target.reason.is_some()})).collect::<Vec<_>>()),Err(error)=>json!({"error":error})};},
             _=>{},
         }}return 0;
+    }
+    #[cfg(test)]
+    if message==settings_view::TEST {
+        if let Ok(mut state)=(*pointer).try_borrow_mut() {match wparam {
+            1=>state.action(Action::Settings(settings_view::Control::Open)),
+            2=>*(lparam as *mut Value)=settings_view::diagnostics(&state),
+            3=>{let body=(*(lparam as *const Value)).clone();settings_view::request(&mut state,Some(body));},
+            _=>{}
+        }}
+        return 0;
     }
     #[cfg(test)]
     if message==linked_games::TEST {
@@ -4516,6 +4555,7 @@ unsafe extern "system" fn window_proc(
             }
             0
         }
+        WM_MOUSEWHEEL if settings_view::active(&state) => {settings_view::wheel(&mut state,(wparam>>16) as u16 as i16);0}
         WM_MOUSEWHEEL if linked_games::active(&state) => {linked_games::wheel(&mut state,(wparam>>16) as u16 as i16);0}
         WM_MOUSEWHEEL if macro_view::active(&state) => {macro_view::wheel(&mut state,(wparam>>16) as u16 as i16);0}
         WM_MOUSEWHEEL if state.profile_open => {
@@ -4878,6 +4918,7 @@ fn run_window(
             .spawn(move || worker(engine, jobs_rx, replies_tx))
             .map_err(|e| e.to_string())?;
         let mut state = Box::new(RefCell::new(State {
+            settings: settings_view::View::default(),
             linked_games:linked_games::View::default(),
             macros:macro_view::View::default(),
             studio: studio_view::View::default(),

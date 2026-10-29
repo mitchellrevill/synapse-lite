@@ -815,15 +815,20 @@ fn sync(engine: &mut Engine, color: &str, effect: &str) -> Result<Value, Error> 
 }
 
 /// The app's own settings, for the editor's Settings page.
-fn settings_json(engine: &Engine) -> Value {
+pub(crate) fn settings_json(engine: &Engine) -> Value {
     let s = crate::settings::TraySettings::load();
+    let startup=crate::settings::autostart_enabled();
     json!({
         "version": env!("CARGO_PKG_VERSION"),
         "measurement_read_only":engine.is_measurement_read_only(),
         "query_only_device_handles":engine.is_measurement_read_only() && engine.devices().iter().all(Device::is_query_only),
         "repository": env!("CARGO_PKG_REPOSITORY"),
         "folder": config_dir().display().to_string(),
-        "autostart": crate::settings::autostart_enabled(),
+        "autostart": startup.as_ref().ok().copied(),
+        "autostart_error": startup.err(),
+        "settings_error": s.read_error,
+        "start_minimized": s.start_minimized,
+        "lighting_devices": state(engine)["devices"].as_array().map(|devices|devices.iter().map(|d|json!({"id":d["id"],"name":d["name"],"active":d["active"],"lighting_control":d["lighting_control"]})).collect::<Vec<_>>()).unwrap_or_default(),
         "updates": !s.updates_off,
         "firmware_weekly": s.firmware_weekly,
         "popups": !s.popups_off,
@@ -837,41 +842,12 @@ fn settings_json(engine: &Engine) -> Value {
 
 /// Settings page actions that are about the app, not one device. `None` for other paths.
 fn app_post(engine: &mut Engine, path: &str, b: &Body) -> Option<Result<Value, Error>> {
-    use crate::settings::{set_autostart, TraySettings};
     Some(match path {
-        "/api/settings" => {
-            let mut s = TraySettings::load();
-            match b.key.as_str() {
-                "autostart" => set_autostart(b.on),
-                "updates" => s.updates_off = !b.on,
-                "firmware_weekly" => s.firmware_weekly = b.on,
-                "popups" => s.popups_off = !b.on,
-                "battery_warning" => s.battery_warning_off = !b.on,
-                "battery_warning_at" => {
-                    let range = crate::settings::BATTERY_RANGE;
-                    if !range.contains(&b.value) {
-                        return Some(Err(Error::InvalidArg(format!(
-                            "pick a battery warning level from {}% to {}%",
-                            range.start(),
-                            range.end()
-                        ))));
-                    }
-                    s.battery_warning_at = Some(b.value);
-                }
-                "auto_switch" => s.auto_switch_off = !b.on,
-                // `data`: "dim", "off", or "" to leave the lights as they are.
-                "away_lights" => {
-                    let want = b.data.as_str().unwrap_or_default();
-                    if !want.is_empty() && !crate::settings::AWAY_LIGHTS.iter().any(|(name, _)| *name == want) {
-                        return Some(Err(Error::InvalidArg(format!("unknown choice '{want}' for the lights when away"))));
-                    }
-                    s.away_lights = (!want.is_empty()).then(|| want.to_string());
-                }
-                other => return Some(Err(Error::InvalidArg(format!("unknown setting '{other}'")))),
-            }
-            s.save();
+        "/api/settings" => (|| {
+            crate::settings::change_local(&b.key,b.on,b.value,b.data.as_str().unwrap_or_default(),engine.is_measurement_read_only())
+                .map_err(Error::InvalidArg)?;
             Ok(settings_json(engine))
-        }
+        })(),
         "/api/update-check" => secbird_core::update::check().map(|r| match r {
             Some(r) => json!({ "latest": r.version, "url": r.url, "installed": secbird_core::update::installed() }),
             None => json!({ "latest": null }),

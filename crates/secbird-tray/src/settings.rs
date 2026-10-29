@@ -16,8 +16,14 @@ fn wide(s: &str) -> Vec<u16> {
 }
 
 /// Tray settings in `tray.json`.
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct TraySettings {
+    #[serde(default = "minimized_default")]
+    pub start_minimized: bool,
+    #[serde(flatten)]
+    pub extra: std::collections::BTreeMap<String, serde_json::Value>,
+    #[serde(skip)]
+    pub read_error: Option<String>,
     /// Check Razer's product pages for newer firmware once a week. Off until turned on.
     #[serde(default)]
     pub firmware_weekly: bool,
@@ -57,11 +63,19 @@ pub struct TraySettings {
     pub away_lights: Option<String>,
 }
 
-fn updates_disabled() -> bool { true }
+fn updates_disabled() -> bool {
+    true
+}
+fn minimized_default() -> bool {
+    true
+}
 
 impl Default for TraySettings {
     fn default() -> Self {
         Self {
+            start_minimized: true,
+            extra: Default::default(),
+            read_error: None,
             firmware_weekly: false,
             firmware_checked: 0,
             firmware_notified: Default::default(),
@@ -88,13 +102,18 @@ pub const BATTERY_DEFAULT: u8 = 15;
 impl TraySettings {
     /// The low battery level, falling back to the default for a missing or hand-edited value.
     pub fn low_battery(&self) -> u8 {
-        self.battery_warning_at.filter(|v| BATTERY_RANGE.contains(v)).unwrap_or(BATTERY_DEFAULT)
+        self.battery_warning_at
+            .filter(|v| BATTERY_RANGE.contains(v))
+            .unwrap_or(BATTERY_DEFAULT)
     }
 
     /// Brightness, in percent of the saved level, for the lights while away; `None` leaves them.
     pub fn away_percent(&self) -> Option<u8> {
         let want = self.away_lights.as_deref()?;
-        AWAY_LIGHTS.iter().find(|(name, _)| *name == want).map(|(_, pct)| *pct)
+        AWAY_LIGHTS
+            .iter()
+            .find(|(name, _)| *name == want)
+            .map(|(_, pct)| *pct)
     }
 
     pub fn path() -> std::path::PathBuf {
@@ -102,56 +121,131 @@ impl TraySettings {
     }
 
     pub fn load() -> Self {
-        std::fs::read_to_string(Self::path())
-            .ok()
-            .and_then(|t| serde_json::from_str(t.trim_start_matches('\u{feff}')).ok())
-            .unwrap_or_default()
+        Self::read(&Self::path()).unwrap_or_else(|error| Self {
+            read_error: Some(error),
+            ..Self::default()
+        })
     }
 
-    pub fn save(&self) {
-        if let Ok(text) = serde_json::to_string_pretty(self) {
-            let _ = std::fs::create_dir_all(config_dir());
-            let _ = std::fs::write(Self::path(), text);
+    pub fn read(path: &std::path::Path) -> Result<Self, String> {
+        use std::io::Read;
+        let file = match std::fs::File::open(path) {
+            Ok(file) => file,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Self::default()),
+            Err(e) => return Err(format!("Cannot read tray settings: {e}")),
+        };
+        let mut bytes = Vec::new();
+        file.take(MAX_SETTINGS_BYTES + 1)
+            .read_to_end(&mut bytes)
+            .map_err(|e| e.to_string())?;
+        if bytes.len() as u64 > MAX_SETTINGS_BYTES {
+            return Err("Tray settings exceed 128 KiB; original retained".into());
         }
+        let bytes = bytes.strip_prefix(&[0xef, 0xbb, 0xbf]).unwrap_or(&bytes);
+        serde_json::from_slice(bytes)
+            .map_err(|e| format!("Cannot parse tray settings; original retained: {e}"))
+    }
+
+    pub fn write(&self, path: &std::path::Path) -> Result<(), String> {
+        if let Some(error) = &self.read_error {
+            return Err(error.clone());
+        }
+        // Refuse to overwrite a file which became unreadable since loading it.
+        let current = Self::read(path)?;
+        let mut saved = self.clone();
+        saved.extra.extend(current.extra);
+        let bytes = serde_json::to_vec_pretty(&saved).map_err(|e| e.to_string())?;
+        if bytes.len() as u64 > MAX_SETTINGS_BYTES {
+            return Err("Tray settings exceed 128 KiB; original retained".into());
+        }
+        std::fs::create_dir_all(path.parent().ok_or("Settings path has no folder")?)
+            .map_err(|e| e.to_string())?;
+        crate::native_editor::profile_files::write(path, &bytes)
+    }
+
+    pub fn save(&self) -> Result<(), String> {
+        let result = self.write(&Self::path());
+        if let Err(error) = &result {
+            secbird_core::log::append(error);
+        }
+        result
     }
 }
 
-pub fn autostart_enabled() -> bool {
-    unsafe {
-        let mut key: HKEY = null_mut();
-        if RegOpenKeyExW(HKEY_CURRENT_USER, wide(RUN_KEY).as_ptr(), 0, KEY_READ, &mut key) != ERROR_SUCCESS {
-            return false;
-        }
-        let found =
-            RegQueryValueExW(key, wide(APP_NAME).as_ptr(), null(), null_mut(), null_mut(), null_mut()) == ERROR_SUCCESS;
-        RegCloseKey(key);
-        found
-    }
-}
+pub const MAX_SETTINGS_BYTES: u64 = 128 * 1024;
+static SETTINGS_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+mod startup;
+pub use startup::{autostart_enabled, set_autostart};
 
-pub fn set_autostart(enable: bool) {
-    unsafe {
-        let mut key: HKEY = null_mut();
-        if RegOpenKeyExW(HKEY_CURRENT_USER, wide(RUN_KEY).as_ptr(), 0, KEY_SET_VALUE, &mut key) != ERROR_SUCCESS {
-            return;
+/// A single read/modify/write path for both editors and the tray menu.
+pub fn change(
+    path: &std::path::Path,
+    startup: &mut dyn startup::Backend,
+    key: &str,
+    on: bool,
+    value: u8,
+    data: &str,
+    read_only: bool,
+) -> Result<TraySettings, String> {
+    if read_only {
+        return Err("Read-only mode refuses settings changes".into());
+    }
+    let _guard = SETTINGS_LOCK
+        .lock()
+        .map_err(|_| "Settings are unavailable")?;
+    let mut settings = TraySettings::read(path)?;
+    match key {
+        "autostart" => {
+            startup::set(startup, on)?;
+            return Ok(settings);
         }
-        if enable {
-            if let Ok(exe) = std::env::current_exe() {
-                let value = wide(&format!("\"{}\" --tray", exe.display()));
-                RegSetValueExW(
-                    key,
-                    wide(APP_NAME).as_ptr(),
-                    0,
-                    REG_SZ,
-                    value.as_ptr() as *const u8,
-                    (value.len() * 2) as u32,
-                );
+        "start_minimized" => {
+            if !startup::enabled(startup)? {
+                return Err("Enable Auto Launch before changing minimized startup".into());
             }
-        } else {
-            RegDeleteValueW(key, wide(APP_NAME).as_ptr());
+            // Migrate the old unconditional --tray command so the child choice is honored.
+            startup::set(startup, true)?;
+            settings.start_minimized = on;
         }
-        RegCloseKey(key);
+        "popups" => settings.popups_off = !on,
+        "battery_warning" => settings.battery_warning_off = !on,
+        "battery_warning_at" if BATTERY_RANGE.contains(&value) => {
+            settings.battery_warning_at = Some(value)
+        }
+        "auto_switch" => settings.auto_switch_off = !on,
+        "away_lights" if data.is_empty() || AWAY_LIGHTS.iter().any(|(key, _)| *key == data) => {
+            settings.away_lights = (!data.is_empty()).then(|| data.to_owned())
+        }
+        _ => return Err(format!("Unsupported or invalid setting: {key}")),
     }
+    settings.write(path)?;
+    TraySettings::read(path)
+}
+
+pub fn change_local(
+    key: &str,
+    on: bool,
+    value: u8,
+    data: &str,
+    read_only: bool,
+) -> Result<TraySettings, String> {
+    change(
+        &TraySettings::path(),
+        &mut startup::Registry,
+        key,
+        on,
+        value,
+        data,
+        read_only,
+    )
+}
+
+/// Explicit --tray always hides; an autostart launch honors the stored child preference.
+pub fn opens_editor(args: &[String], settings: &TraySettings) -> bool {
+    let hidden = args
+        .iter()
+        .any(|arg| arg == "--tray" || (arg == "--startup" && settings.start_minimized));
+    !hidden
 }
 
 pub fn open_config_folder() {
@@ -166,5 +260,137 @@ pub fn open_config_folder() {
             null(),
             SW_SHOWNORMAL,
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use startup::tests::Fake;
+    struct Folder(std::path::PathBuf);
+    impl Folder {
+        fn new() -> Self {
+            static SEQUENCE: std::sync::atomic::AtomicUsize =
+                std::sync::atomic::AtomicUsize::new(0);
+            let path = std::env::temp_dir().join(format!(
+                "lite-settings-{}-{}",
+                std::process::id(),
+                SEQUENCE.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+            ));
+            std::fs::create_dir_all(&path).unwrap();
+            Self(path)
+        }
+        fn file(&self) -> std::path::PathBuf {
+            self.0.join("tray.json")
+        }
+    }
+    impl Drop for Folder {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+    #[test]
+    fn shared_settings_preserve_unknowns_and_real_consumer_values() {
+        let folder = Folder::new();
+        let path = folder.file();
+        std::fs::write(
+            &path,
+            br#"{"future":{"nested":[true,"opaque",null]},"firmware_weekly":true}"#,
+        )
+        .unwrap();
+        let mut startup = Fake::default();
+        let s = change(&path, &mut startup, "popups", false, 0, "", false).unwrap();
+        assert!(s.popups_off);
+        let s = change(
+            &path,
+            &mut startup,
+            "battery_warning_at",
+            false,
+            27,
+            "",
+            false,
+        )
+        .unwrap();
+        assert_eq!(s.low_battery(), 27);
+        let s = change(&path, &mut startup, "auto_switch", false, 0, "", false).unwrap();
+        assert!(s.auto_switch_off);
+        let s = change(&path, &mut startup, "away_lights", false, 0, "dim", false).unwrap();
+        assert_eq!(s.away_percent(), Some(25));
+        assert_eq!(
+            s.extra["future"],
+            serde_json::json!({"nested":[true,"opaque",null]})
+        );
+        assert!(s.firmware_weekly);
+        assert_eq!(startup.writes, 0);
+        let before = std::fs::read(&path).unwrap();
+        for (key, value, data) in [
+            ("battery_warning_at", 0, ""),
+            ("battery_warning_at", 96, ""),
+            ("away_lights", 0, "invented"),
+            ("updates", 0, ""),
+        ] {
+            assert!(change(&path, &mut startup, key, true, value, data, false).is_err());
+        }
+        assert_eq!(std::fs::read(path).unwrap(), before);
+    }
+    #[test]
+    fn damaged_oversize_and_failed_writes_preserve_original() {
+        let folder = Folder::new();
+        let path = folder.file();
+        let mut backend = Fake::default();
+        for bytes in [
+            b"{broken".to_vec(),
+            vec![b' '; MAX_SETTINGS_BYTES as usize + 1],
+            br#"{"popups_off":"bad type"}"#.to_vec(),
+        ] {
+            std::fs::write(&path, &bytes).unwrap();
+            assert!(change(&path, &mut backend, "autostart", true, 0, "", false).is_err());
+            assert!(TraySettings::default().write(&path).is_err());
+            assert_eq!(std::fs::read(&path).unwrap(), bytes);
+        }
+        assert_eq!(backend.writes, 0);
+        std::fs::write(&path, b"{}").unwrap();
+        let mut s = TraySettings::read(&path).unwrap();
+        s.extra.insert(
+            "huge".into(),
+            serde_json::json!("x".repeat(MAX_SETTINGS_BYTES as usize)),
+        );
+        assert!(s.write(&path).is_err());
+        assert_eq!(std::fs::read(&path).unwrap(), b"{}");
+        std::fs::create_dir(folder.0.join("directory.json")).unwrap();
+        assert!(s.write(&folder.0.join("directory.json")).is_err());
+        let original_permissions = std::fs::metadata(&path).unwrap().permissions();
+        let mut read_only = original_permissions.clone();
+        read_only.set_readonly(true);
+        std::fs::set_permissions(&path, read_only).unwrap();
+        assert!(TraySettings::default().write(&path).is_err());
+        assert_eq!(std::fs::read(&path).unwrap(), b"{}");
+        std::fs::set_permissions(&path, original_permissions).unwrap();
+    }
+    #[test]
+    fn startup_dependency_and_window_semantics_are_not_decorative() {
+        let folder = Folder::new();
+        let path = folder.file();
+        let mut backend = Fake::default();
+        assert!(change(&path, &mut backend, "start_minimized", false, 0, "", false).is_err());
+        assert!(!path.exists());
+        change(&path, &mut backend, "autostart", true, 0, "", false).unwrap();
+        let s = change(&path, &mut backend, "start_minimized", false, 0, "", false).unwrap();
+        assert!(opens_editor(&["--startup".into()], &s));
+        assert!(opens_editor(&[], &s));
+        assert!(!opens_editor(&["--tray".into()], &s));
+        let s = change(&path, &mut backend, "start_minimized", true, 0, "", false).unwrap();
+        assert!(!opens_editor(&["--startup".into()], &s));
+        assert!(opens_editor(&[], &s));
+        let before = std::fs::read(&path).unwrap();
+        let writes = backend.writes;
+        for key in ["autostart", "popups", "away_lights", "start_minimized"] {
+            assert!(change(&path, &mut backend, key, false, 0, "", true).is_err());
+        }
+        assert_eq!(std::fs::read(&path).unwrap(), before);
+        assert_eq!(backend.writes, writes);
+        backend.fail = true;
+        assert!(change(&path, &mut backend, "start_minimized", false, 0, "", false).is_err());
+        assert_eq!(std::fs::read(&path).unwrap(), before);
     }
 }
