@@ -7,6 +7,8 @@ use secbird_core::studio::{
 use std::{collections::BTreeMap, fs::File, os::windows::ffi::OsStringExt};
 use windows_sys::Win32::UI::Controls::Dialogs::*;
 
+#[path = "studio_session.rs"]
+mod session;
 #[path = "studio_preview.rs"]
 mod playback;
 #[path = "studio_spectrum.rs"]
@@ -86,6 +88,7 @@ enum Next {
 pub(super) struct View {
     pub(super) canvas: studio_canvas::Canvas,
     pub open: bool,
+    restore_attempted: bool,
     archive: Option<Arc<Archive>>,
     titles: Vec<String>,
     draft: Option<Draft>,
@@ -119,6 +122,8 @@ pub(super) struct View {
     pub test_decision: Option<i32>,
 }
 pub(super) enum Request {
+    Restore {epoch:u64},
+    Remember {epoch:u64,selection:session::Selection},
     Preview {
         epoch: u64,
         generation: u64,
@@ -138,6 +143,8 @@ pub(super) enum Request {
     },
 }
 pub(super) enum Response {
+    Restore {epoch:u64,result:Result<Option<session::Restored>,String>},
+    Remember {epoch:u64,result:Result<(),String>},
     Preview {
         epoch: u64,
         generation: u64,
@@ -156,8 +163,10 @@ pub(super) enum Response {
     },
 }
 
-pub(super) fn work(request: Request) -> Response {
+pub(super) fn work(request: Request, read_only:bool) -> Response {
     match request {
+        Request::Restore{epoch}=>Response::Restore{epoch,result:session::restore(&secbird_core::config_dir().join("studio-editor.json"))},
+        Request::Remember{epoch,selection}=>Response::Remember{epoch,result:session::save(&secbird_core::config_dir().join("studio-editor.json"),selection,read_only)},
         Request::Preview {
             epoch,
             generation,
@@ -196,6 +205,7 @@ pub(super) fn work(request: Request) -> Response {
             checkpoint,
         } => {
             let result = (|| {
+                if read_only {return Err("Read-only mode refuses Studio file changes".into());}
                 let bytes = archive
                     .replace_profile_bytes(index, checkpoint.json())
                     .map_err(|error| error.to_string())?;
@@ -375,6 +385,22 @@ fn cancel_exit(state: &mut State) {
     state.closing = false;
 }
 
+unsafe fn remember(state:&mut State) {
+    if state.read_only_smoke||state.restricted_actions {return;}
+    let (Some(path),Some(archive))=(&state.studio.path,&state.studio.archive) else {return;};
+    match session::Selection::from_archive(path.clone(),archive,state.studio.index) {
+        Ok(selection)=>{let epoch=state.studio.epoch;state.queue(Job::Studio(Request::Remember{epoch,selection}));},
+        Err(message)=>error(state,format!("File is open, but its session cannot be remembered: {message}")),
+    }
+}
+unsafe fn restore_last(state:&mut State) {
+    if state.studio.restore_attempted||state.studio.archive.is_some()||state.studio.busy {return;}
+    state.studio.restore_attempted=true;
+    let Some(epoch)=state.studio.epoch.checked_add(1) else {error(state,"Studio session limit reached");return;};
+    state.studio.epoch=epoch;state.studio.busy=true;
+    let before=(state.pending,state.pending_jobs.len());state.queue(Job::Studio(Request::Restore{epoch}));
+    if before==(state.pending,state.pending_jobs.len()){state.studio.busy=false;error(state,"Studio session restore was not accepted");}
+}
 pub(super) unsafe fn read_path(state: &mut State, path: PathBuf) {
     let Some(epoch) = state.studio.epoch.checked_add(1) else {
         error(state, "Studio session limit reached");
@@ -429,6 +455,7 @@ unsafe fn proceed(state: &mut State, next: Next) {
                 error(state, message);
             }
             selection_changed(state);
+            remember(state);
         }
         Next::Close => {
             PostMessageW(state.hwnd, WM_CLOSE, 0, 0);
@@ -492,6 +519,7 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
         state.profile_actions = false;
         mouse_feedback::stop(state);
         state.sync_performance(true);
+        restore_last(state);
         redraw(state);
         return;
     }
@@ -688,8 +716,19 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
     redraw(state);
 }
 
+fn install_archive(state:&mut State,path:PathBuf,archive:Arc<Archive>,index:usize)->Result<(),String> {
+    state.studio.titles=(0..archive.profile_count()).map(|index|archive.profile_header(index).ok().and_then(|header|header.title).unwrap_or_else(||format!("Composition {}",index+1))).collect();
+    state.studio.archive=Some(archive);state.studio.path=Some(path);
+    if state.studio.archive.as_ref().unwrap().profile_count()==0 {
+        state.studio.canvas=studio_canvas::Canvas::default();state.studio.draft=None;state.studio.selected=None;state.studio.status="This file contains no compositions".into();Ok(())
+    } else {state.studio.profile(index)}
+}
 pub(super) unsafe fn receive(state: &mut State, response: Response) {
     let response = match response {
+        Response::Remember{epoch,result}=>{
+            if epoch==state.studio.epoch {if let Err(message)=result {error(state,format!("Composition remains open; could not remember session: {message}"));redraw(state);}}
+            return;
+        }
         Response::Preview {
             epoch,
             generation,
@@ -702,36 +741,22 @@ pub(super) unsafe fn receive(state: &mut State, response: Response) {
         other => other,
     };
     let epoch = match &response {
-        Response::Read { epoch, .. } | Response::Save { epoch, .. } => *epoch,
+        Response::Read { epoch, .. } | Response::Save { epoch, .. } | Response::Restore{epoch,..} => *epoch,
+        Response::Remember{..}=>unreachable!(),
         Response::Preview { .. } => unreachable!(),
     };
     if epoch != state.studio.epoch {
         return;
     }
     state.studio.busy = false;
+    let should_remember=!matches!(&response,Response::Restore{..});
     let result = match response {
-        Response::Read { path, result, .. } => result.and_then(|archive| {
-            state.studio.titles = (0..archive.profile_count())
-                .map(|index| {
-                    archive
-                        .profile_header(index)
-                        .ok()
-                        .and_then(|header| header.title)
-                        .unwrap_or_else(|| format!("Composition {}", index + 1))
-                })
-                .collect();
-            state.studio.archive = Some(archive);
-            state.studio.path = Some(path);
-            if state.studio.archive.as_ref().unwrap().profile_count() == 0 {
-                state.studio.canvas = studio_canvas::Canvas::default();
-                state.studio.draft = None;
-                state.studio.selected = None;
-                state.studio.status = "This file contains no compositions".into();
-                Ok(())
-            } else {
-                state.studio.profile(0)
-            }
+        Response::Remember{..}=>unreachable!(),
+        Response::Restore{result,..}=>result.and_then(|restored| {
+            if let Some(restored)=restored { install_archive(state,restored.path,restored.archive,restored.index)?; }
+            Ok(())
         }),
+        Response::Read { path, result, .. } => result.and_then(|archive| install_archive(state,path,archive,0)),
         Response::Save { path, result, .. } => result.and_then(|(archive, checkpoint)| {
             state
                 .studio
@@ -756,6 +781,7 @@ pub(super) unsafe fn receive(state: &mut State, response: Response) {
     match result {
         Ok(()) => {
             selection_changed(state);
+            if should_remember && state.studio.draft.is_some(){remember(state);}
             if let Some(next) = state.studio.next.take() {
                 proceed(state, next);
             }
@@ -1489,7 +1515,7 @@ pub(super) unsafe fn output_test_dirty_apply(state: &mut State) {
 pub(super) fn diagnostics(state: &State) -> Value {
     let view = &state.studio;
     json!({"open":view.open,"busy":view.busy,"dialog":view.dialog,"dirty":view.dirty(),"renaming":view.renaming,"status":view.status,"failed":view.failed,"pending":state.pending,"selected_leds":view.canvas.count(),"canvas_notes":view.canvas.notes,"canvas_devices":view.canvas.device_count(),"canvas_selectable_leds":view.canvas.selectable_count(),"color":view.color,
-        "preview":playback::diagnostics(state),"device_output":view.output.status,"output_busy":view.output.busy,"output_control_ready":view.output.control.is_some(),"index":view.index,"profiles":view.archive.as_ref().map_or(0,|archive|archive.profile_count()),"selected":view.selected,
+        "preview":playback::diagnostics(state),"device_output":view.output.status,"output_busy":view.output.busy,"output_control_ready":view.output.control.is_some(),"index":view.index,"profile_id":view.archive.as_ref().and_then(|a|a.profile_header(view.index).ok()).and_then(|h|h.id),"profiles":view.archive.as_ref().map_or(0,|archive|archive.profile_count()),"selected":view.selected,
         "undo":view.draft.as_ref().map_or(0,Draft::undo_len),"redo":view.draft.as_ref().map_or(0,Draft::redo_len),
         "rows":view.draft.as_ref().map(|draft|draft.layers().iter().map(|row|json!({"id":row.id,"title":row.title,"visible":row.visible})).collect::<Vec<_>>()).unwrap_or_default()})
 }

@@ -1,0 +1,69 @@
+{
+  "checkpoint": "studio-editor-session-persistence",
+  "date": "2026-10-29",
+  "native_interaction": [
+    {
+      "device_requests": 0,
+      "dirty": false,
+      "phase": 0,
+      "preview_started": false,
+      "profile_id": "second",
+      "restored_index": 1
+    },
+    {
+      "device_requests": 0,
+      "dirty": false,
+      "phase": 1,
+      "preview_started": false,
+      "profile_id": "second",
+      "restored_index": 0
+    }
+  ],
+  "native_assertions": {
+    "selected_profile_identity_survives_reorder": true,
+    "bookmark_byte_equal_during_restore": true,
+    "composition_byte_equal_after_each_window": true,
+    "device_profiles_byte_equal_after_each_window": true,
+    "physical_discovery_disabled": true
+  },
+  "unit_cases": [
+    "identity following after archive reorder",
+    "missing and duplicate identity refusal",
+    "read-only refusal before file creation",
+    "malformed/unsupported/oversized bookmark retention",
+    "unknown bookmark fields retained",
+    "failed metadata replacement preserves existing reference",
+    "relative and device namespace refusal"
+  ],
+  "visual_review": {
+    "restored_profile_title_reviewed": true,
+    "new_controls": false,
+    "host_tabs_changed": false,
+    "full_stock_visual_parity_claimed": false
+  },
+  "workspace": {
+    "core_passed": 468,
+    "core_ignored": 6,
+    "tray_passed": 298,
+    "tray_ignored": 42,
+    "cli_passed": 4,
+    "doc_passed": 1
+  },
+  "limits": [
+    "editor bookmark only; automatic device playback not implemented",
+    "stable profile IDs required; missing or ambiguous identity does not select an ordinal fallback",
+    "external file access can fail or stall; no synchronous file I/O deadline claimed",
+    "no source global Studio library/profile migration",
+    "full privacy/input/device/profile/visual/three-run memory acceptance open"
+  ],
+  "optimized_build": "passed",
+  "optimized_session_unit_checks": {
+    "passed": 3,
+    "failed": 0
+  },
+  "optimized_native_studio_checks": {
+    "passed": 9,
+    "failed": 0,
+    "physical_hardware": false
+  }
+}

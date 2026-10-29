@@ -84,7 +84,8 @@ claim follows from these checks. See `validation/studio-worker.json`.
   real unplug/sleep/wake. Driver mode acquisition remains tied to input coordination.
 - Physically verify live brightness editing, including zero/off/on during playback
   and suppression, without changing saved brightness, mode or input state.
-- Persist the global Studio selection and its saved archive reference, with verified
+- Editor-only last-file/profile reopening is now implemented; see STUDIO-EDITOR-SESSION.md.
+  Persist the global Studio output selection and its saved archive reference, with verified
   launch/reconnect behavior. Current explicit in-memory output survives editor close
   but is not automatically restored on application restart or reconnect.
 - Add explicit target selection/multi-device compositions and the remaining effects;

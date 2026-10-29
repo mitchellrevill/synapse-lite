@@ -564,7 +564,10 @@ fn worker(
                 continue;
             }
             Job::Studio(request) => {
-                if replies.send(WorkerReply::Studio(studio_view::work(request))).is_err() {break;}
+                // Drop the device lock before reading/writing composition or bookmark files.
+                let read_only=matches!(&request,studio_view::Request::Save{..}|studio_view::Request::Remember{..})
+                    && engine.lock().map(|engine|engine.is_measurement_read_only()).unwrap_or(true);
+                if replies.send(WorkerReply::Studio(studio_view::work(request,read_only))).is_err() {break;}
                 continue;
             }
             Job::SensorRead(id, profile) => {
@@ -1664,7 +1667,7 @@ impl State {
                 &job,
                 Job::Profiles(profile_modal_model::Request::PreviewExport { .. })
             );
-        if self.restricted_actions && !matches!(&job, Job::Refresh | Job::SensorRead(..) | Job::LinkedGames(linked_games::Request::Read)) && !presentation_preview {
+        if self.restricted_actions && !matches!(&job, Job::Refresh | Job::SensorRead(..) | Job::LinkedGames(linked_games::Request::Read) | Job::Studio(studio_view::Request::Restore{..})) && !presentation_preview {
             return;
         }
         if self.pending > 0 {
