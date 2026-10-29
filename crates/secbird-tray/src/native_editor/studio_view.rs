@@ -15,6 +15,8 @@ mod playback;
 mod spectrum;
 #[path = "studio_reactive.rs"]
 mod reactive;
+#[path = "studio_audio.rs"]
+mod audio;
 #[path = "studio_starlight.rs"]
 mod starlight;
 #[path = "studio_wave.rs"]
@@ -72,6 +74,7 @@ pub(super) enum Control {
     Wave(wave::Control),
     Starlight(starlight::Control),
     Reactive(reactive::Control),
+    Audio(audio::Control),
     Layers(layer_tools::Control),
     AddPreset,
     Preview,
@@ -110,6 +113,7 @@ pub(super) struct View {
     wave: wave::Properties,
     starlight: starlight::Properties,
     reactive: reactive::Properties,
+    audio: audio::Properties,
     breathing_gradient: bool,
     playback: playback::Playback,
     output: output::View,
@@ -335,6 +339,7 @@ pub(super) fn selection_changed(state: &mut State) {
     wave::refresh(view);
     starlight::refresh(view);
     reactive::refresh(view);
+    audio::refresh(view);
     view.selected_color = None;
     view.selected_cold = None;
     let Some(property) = view.color_property(false) else {
@@ -610,6 +615,7 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
         Control::Wave(control) => wave::action(state, control),
         Control::Starlight(control) => starlight::action(state, control),
         Control::Reactive(control) => reactive::action(state, control),
+        Control::Audio(control) => audio::action(state, control),
         Control::BreathingDuration(index) => {
             let result=(|| -> Result<(),String> {
                 let view=&mut state.studio;
@@ -977,6 +983,7 @@ pub(super) unsafe fn rebuild_fields(state: &mut State) {
     wave::fields(state);
     starlight::fields(state);
     reactive::fields(state);
+    audio::fields(state);
     if state.studio.color_property(false).is_some() {
         let text = state.studio.color.clone();
         let right = (state.width as f32 / state.scale) as i32 - 250;
@@ -1025,6 +1032,7 @@ pub(super) fn command(state: &mut State, id: u16, notification: u16) -> bool {
     if wave::command(state,id,notification) {return true;}
     if starlight::command(state,id,notification) {return true;}
     if reactive::command(state,id,notification) {return true;}
+    if audio::command(state,id,notification) {return true;}
     if spectrum::command(state, id, notification) {
         return true;
     }
@@ -1051,6 +1059,7 @@ pub(super) fn key(state: &State, key: usize, control: bool, edit: bool) -> Optio
         (0x44, true) if !edit => Some(Control::Layers(layer_tools::Control::Duplicate)),
         (0x2e, false) if !edit => Some(Control::Layers(layer_tools::Control::Delete)),
         (13, _) if state.studio.renaming => Some(Control::CommitRename),
+        (13, _) if edit && audio::enter(state).is_some() => audio::enter(state).map(Control::Audio),
         (13, _) if edit && reactive::has_focus(state) => Some(Control::Reactive(reactive::Control::Color(false))),
         (13, _) if edit && starlight::has_focus(state) => Some(Control::Starlight(starlight::Control::Density)),
         (13, _) if edit && wave::has_focus(state) => Some(Control::Wave(wave::Control::Motion)),
@@ -1455,6 +1464,8 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         );
     } else if view.effect() == Some("spectrum") {
         spectrum::paint(p, view, right);
+    } else if view.effect() == Some("audio") {
+        audio::paint(p,view,right);
     } else if view.effect() == Some("reactive") {
         reactive::paint(p,view,right);
     } else if view.effect() == Some("starlight") {
@@ -1499,7 +1510,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         p,
         message,
         right + 10,
-        if view.is_breathing() && !view.breathing_gradient { 566 } else if matches!(view.effect(),Some("breathing"|"spectrum"|"wave"|"starlight"|"reactive")) {
+        if view.is_breathing() && !view.breathing_gradient { 566 } else if matches!(view.effect(),Some("breathing"|"spectrum"|"wave"|"starlight"|"reactive"|"audio")) {
             590
         } else if view.is_fire() {
             506

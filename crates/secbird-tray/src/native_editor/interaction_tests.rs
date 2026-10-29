@@ -2262,3 +2262,6 @@ mod studio_session;
 
 #[path="studio_presets_interaction_tests.rs"]
 mod studio_presets;
+
+#[path="studio_audio_interaction_tests.rs"]
+mod audio;
