@@ -1007,6 +1007,7 @@ fn state(engine: &Engine) -> Value {
         "devices": engine.devices().iter().map(|dev|{
             let mut device=device_json(dev);
             device["lighting_runtime"]=runtime.get(&dev.key()).cloned().unwrap_or(Value::Null);
+            device["chroma_quick"]=chroma_quick_capabilities(dev,engine.uniform_is_enabled());
             device
         }).collect::<Vec<_>>(),
         "unsupported": engine.unsupported().iter().map(|u| json!({
@@ -1014,6 +1015,26 @@ fn state(engine: &Engine) -> Value {
         })).collect::<Vec<_>>(),
         "synapse": engine.synapse(),
     })
+}
+
+/// Conservative dashboard admission, not a replacement for action-time gates.
+/// No capability is inferred for another product or an unreadable mode.
+fn chroma_quick_capabilities(dev: &Device, worker_ready: bool) -> Value {
+    if dev.pid != 605 || dev.interface != 2 || dev.spec.is_none() {
+        return json!({"source_effects":[],"mode":null,"error":"No verified Chroma Quick route"});
+    }
+    match dev.ornata_mode_readback() {
+        Ok(mode) => {
+            let effects: &[u8] = match mode.mode() {
+                0 => &[1,2,3,7],
+                3 if worker_ready => &[1,2,3,4],
+                3 => &[1],
+                _ => &[],
+            };
+            json!({"source_effects":effects,"mode":mode.mode(),"error":if effects.is_empty(){Some("No supported Quick effect route in this mode")}else{None}})
+        }
+        Err(error) => json!({"source_effects":[],"mode":null,"error":error.to_string()}),
+    }
 }
 
 /// The macro id an action text plays (`macro:3@hold` -> 3).

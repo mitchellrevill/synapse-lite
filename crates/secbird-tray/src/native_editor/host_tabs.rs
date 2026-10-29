@@ -31,7 +31,9 @@ impl View {
 fn entries(state:&State)->Vec<&Value> {
     static LINKED:std::sync::LazyLock<Value>=std::sync::LazyLock::new(||json!({"id":linked_games::ID,"name":"LINKED GAMES","module":"linked-games"}));
     static MACRO:std::sync::LazyLock<Value>=std::sync::LazyLock::new(||json!({"id":macro_view::ID,"name":"MACRO","module":"macro"}));
+    static CHROMA:std::sync::LazyLock<Value>=std::sync::LazyLock::new(||json!({"id":chroma_view::ID,"name":"CHROMA","module":"chroma"}));
     let mut entries:Vec<_>=state.devices().iter().collect();
+    if state.chroma.used||state.host_tabs.borrow().session.known(chroma_view::ID) {entries.push(&CHROMA);}
     if state.linked_games.used||state.host_tabs.borrow().session.known(linked_games::ID) {entries.push(&LINKED);}
     if state.macros.used||state.host_tabs.borrow().session.known(macro_view::ID) {entries.push(&MACRO);}
     entries
@@ -420,7 +422,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, window: i32) {
         let width = widths[index];
         let id = device["id"].as_str().unwrap_or("");
         if x + width > g.start && x < g.start + g.viewport {
-            let icon = if device["module"]=="linked-games" {"host-linked-games"} else if device["pid"] == "025D" {
+            let icon = if device["module"]=="chroma" {"host-chroma"} else if device["module"]=="linked-games" {"host-linked-games"} else if device["pid"] == "025D" {
                 "host-keyboard"
             } else {
                 "host-mouse"

@@ -143,6 +143,12 @@ impl Engine {
     }
 
     #[cfg(test)]
+    pub(crate) fn add_simulated_device(&mut self, device: Device) {
+        assert!(self.simulated_only && device.path.as_bytes().starts_with(b"sim:"));
+        self.devices.push(device);
+    }
+
+    #[cfg(test)]
     pub(crate) fn with_simulated_keyboard(
         sim: &secbird_core::sim::Sim,
         path: std::path::PathBuf,
