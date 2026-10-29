@@ -1,5 +1,11 @@
 # Source macro parsing and symbolic planning
 
+**29 October addition:** a separate bounded scheduler now joins admitted one-pass
+keyboard plans with packet planning and the output ledger under simulated
+completion/clock control. See [MACRO-SCHEDULER.md](MACRO-SCHEDULER.md). It has no
+live input adapter; the symbolic runtime gaps below remain unresolved for actual
+execution, and no profile macro activation is enabled by that model.
+
 `secbird_core::source_macro` is a pure Rust boundary for the shipped source's AppEngine event JSON and macroGroup playback metadata. It opens no files/devices, creates no scheduling thread, sends no input and does not construct RZCONTROL packets. The existing `macros` module is separate onboard HID-usage bytecode; their key/button namespaces must not be merged.
 
 `SourceJson::parse(text, Limits)` retains the exact original JSON plus a bounded semantic Value. Unknown fields, lexical number spelling and duplicate keys survive through `original_json()`; the Value view has ordinary last-key semantics, so any duplicate key blocks planning. Existing profile_compat source storage is unchanged. Planning explicitly selects the root event array or `/appEngine/events`; it projects that complete array and does not claim to validate the outer macro cache/envelope, hash or GUID identity.

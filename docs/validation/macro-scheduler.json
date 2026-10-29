@@ -1,0 +1,56 @@
+{
+  "date": "2026-10-29",
+  "scope": "Pure completion-driven single-run keyboard macro scheduler; no live input adapter",
+  "implemented": [
+    "Explicit native context; no source UnitId inference from routing",
+    "Source plan to bounded packet/ledger steps",
+    "Completion-relative explicit delays and source10ms adjacency with delay0 exception",
+    "One-command handoff and separate dispatch/terminal completion",
+    "Owned stop/late-completion recovery with bounded uncertain releases",
+    "Clock and callback validation without dropping terminal evidence"
+  ],
+  "verification": {
+    "scheduler_checks": 12,
+    "workspace_serial": {
+      "core_passed": 487,
+      "core_ignored": 6,
+      "tray_passed": 305,
+      "tray_ignored": 46,
+      "cli_passed": 4,
+      "doc_passed": 1
+    },
+    "optimized_workspace_build": true,
+    "simulated_clock_and_completion_only": true,
+    "live_input_sent": false,
+    "host_driver_changes": false,
+    "normal_profile_store_changed": false,
+    "ui_changed": false
+  },
+  "bounds": {
+    "source_steps": 512,
+    "fixture_step_storage_max_bytes": 32768,
+    "storage_excludes_ledger_allocator_and_runtime": true,
+    "complete_build_memory_acceptance": false
+  },
+  "vm_prerequisite_recheck": {
+    "available_host_ram_bytes": 10683760640,
+    "minimum_host_ram_bytes": 10737418240,
+    "guest_started": false,
+    "guest_disk_created": false,
+    "outcome": "below_existing_gate; continue independent work"
+  },
+  "remaining": [
+    "Proved native routing, selector ownership, completion/cancellation and physical held-key recovery",
+    "Mouse events and conditional E1/Pause packet chain",
+    "Repetition boundaries and remaining playback modes",
+    "Concurrent macro/physical-key ownership arbitration",
+    "Macro authoring and live activation",
+    "Full device/profile/effect/privacy/visual and three complete-build memory gates"
+  ],
+  "evidence_sha256": {
+    "macro-scheduler-workspace-final.log": "4986085dd7ab75460a0e2c77c73a9b485455e348aa8cbb5d998c680749a059d1",
+    "macro-scheduler-release-final.log": "6d95098f5b8fc19d4977d9dea0f2fe6e80d3b4533333114111b5a87fff256a84",
+    "macro_scheduler.rs": "41d756abe9868ceba6070dccea8710e65b63d2e994e8c0b0d8f3acee95299278"
+  },
+  "complete_goal_acceptance": false
+}
