@@ -1,7 +1,8 @@
 # Local Studio animation preview
 
 Open a composition in Chroma Studio and choose **Local Preview**. Static, Spectrum,
-Fire and deterministic continuous [Breathing](STUDIO-BREATHING.md) layers animate
+Fire, deterministic continuous [Breathing](STUDIO-BREATHING.md), and imported
+continuous cardinal [Wave](STUDIO-WAVE.md) layers animate
 the native canvas. Edits and Undo/Redo rebuild the
 preview from the current draft; file data is not changed merely by previewing.
 Stop Preview drops its frame plan. Navigating away stops playback; reopening

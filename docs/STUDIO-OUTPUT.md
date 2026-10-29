@@ -10,7 +10,9 @@ in that report; hardware/optical validation remains unfinished.
 `PreparedStudio` compiles one immutable composition snapshot and retains its
 originating draft identity. Current admission is the compositor's existing single,
 unrotated Ornata V2 placement, edition 0, supported source layout, default geometry
-and Static/Spectrum/Fire layers. The production constructor requires the manifest
+and Static/Spectrum/Fire layers (later checkpoints add deterministic continuous
+[Breathing](STUDIO-BREATHING.md) and imported cardinal [Wave](STUDIO-WAVE.md)).
+The production constructor requires the manifest
 loader's opaque `AuthenticatedLayout`; declaring a hash in a composition cannot
 substitute for source authentication.
 

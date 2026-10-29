@@ -218,6 +218,33 @@ mod tests {
         assert_eq!(before,after);assert_eq!(spy.state.lock().unwrap().mode,3);
     }
 
+    #[test]
+    fn wave_composition_matches_independent200_physical_frames_and1400_mock_outs() {
+        let reference:Value=serde_json::from_str(include_str!("../../secbird-core/tests/fixtures/studio-wave-reference.json")).unwrap();
+        let mut raw:Value=serde_json::from_str(PROFILE).unwrap();
+        let mut wave=raw["layers"][0].clone();
+        wave["id"]="wave".into();wave["name"]="wave".into();wave["value"]=2.into();
+        wave["params"]=json!({"speed":15,"width":125,"pause":120,"cycles":-1,"angle":90,"playbackStart":"random","playbackEnd":"never"});wave["regions"][0]["params"]=json!({"angle":270,"colorStops":[{"Stop":0,"Color":0xf01020},{"Stop":33},{"Stop":66,"Color":0x2080ff},{"Stop":100,"Color":0xf01020}]});
+        let mut base=wave.clone();base["id"]="base".into();base["name"]="static".into();base["value"]=6.into();base["params"]=json!({});base["regions"][0]["params"]=json!({"color":0x0410f0});
+        raw["layers"]=json!([wave,base]);
+        let draft=Draft::open(&raw.to_string()).unwrap();
+        let mut prepared=program(&draft);let mut bytes=vec![];
+        let (mut device,spy)=test_support::fixture();let mut controls=StreamState::default();
+        let before={let sim=spy.sim.state();(sim.brightness.clone(),sim.effects.clone(),sim.macros.clone(),sim.game_mode)};
+        for _ in 0..200 {
+            let frame=prepared.current_frame().unwrap();bytes.extend(rgb(&frame));
+            let result=controls.submit_frame(&mut device,&frame,Instant::now()+Duration::from_secs(1),||false);
+            assert!(result.completion.error.is_none());assert_eq!(result.completion.accepted_packets,7);
+            let expected=rgb(&frame);let sim=spy.sim.state();
+            assert_eq!(sim.matrix.as_ref().unwrap().2.iter().flatten().copied().collect::<Vec<_>>(),expected);drop(sim);
+            prepared.advance().unwrap();
+        }
+        assert_eq!(format!("{:x}",md5::compute(bytes)),reference["composition"]["physical_rgb_md5"].as_str().unwrap());
+        assert_eq!(spy.state.lock().unwrap().attempts,1400);
+        let after={let sim=spy.sim.state();(sim.brightness.clone(),sim.effects.clone(),sim.macros.clone(),sim.game_mode)};
+        assert_eq!(before,after);assert_eq!(spy.state.lock().unwrap().mode,3);
+    }
+
     pub(super) fn map() -> OrnataSpatialMap {
         let fixture: Value = serde_json::from_str(include_str!(
             "../../secbird-core/tests/fixtures/ornata_spatial.json"

@@ -14,6 +14,7 @@ enum Generator {
     Spectrum(SpectrumCycle),
     Fire(FireCycle),
     Breathing(crate::breathing_lighting::BreathingCycle),
+    Wave(crate::studio_wave_lighting::StudioWaveCycle),
 }
 struct Effect {
     generator: Generator,
@@ -93,6 +94,7 @@ impl Generator {
             Self::Spectrum(cycle) => cycle.storage_bytes(),
             Self::Fire(cycle) => cycle.storage_bytes(),
             Self::Breathing(cycle) => cycle.storage_bytes(),
+            Self::Wave(cycle) => cycle.storage_bytes(),
         }
     }
 }
@@ -196,6 +198,7 @@ impl Preview {
             "spectrum" => 4,
             "fire" => 8,
             "breathing" => 5,
+            "wave" => 2,
             _ => return Err(invalid(format!("preview does not yet implement {name}"))),
         };
         if let Some(value) = item.get("value") {
@@ -243,6 +246,28 @@ impl Preview {
                 params.set(&name, Some(&value));
             }
             let generator = match expected {
+                2 => {
+                    let value = |key: &str| -> Result<u32> {
+                        serde_json::from_str(params.get(key).ok_or_else(||invalid(format!("Wave needs explicit {key}")))?.get()).map_err(invalid)
+                    };
+                    let start=params.get("playbackStart").map(|raw|serde_json::from_str::<String>(raw.get()).map_err(invalid)).transpose()?;
+                    let end=params.get("playbackEnd").map(|raw|serde_json::from_str::<String>(raw.get()).map_err(invalid)).transpose()?;
+                    let split=params.get("split").map(|raw|serde_json::from_str::<bool>(raw.get()).map_err(invalid)).transpose()?.unwrap_or(false);
+                    let cycles=params.get("cycles").map(|raw|serde_json::from_str::<i64>(raw.get()).map_err(invalid)).transpose()?;
+                    if split || params.get("counterclockwise").is_some() || cycles!=Some(-1)
+                        || start.as_deref().is_some_and(|s|s!="random") || end.as_deref().is_some_and(|s|s!="never") {
+                        return Err(invalid("Wave split, rotational, finite and input-triggered modes are not implemented; continuous cycles must be explicit"));
+                    }
+                    use crate::wave_lighting::{CardinalDirection as Direction,WaveRegion};
+                    let direction=match value("angle")? {0=>Direction::Up,90=>Direction::Right,180=>Direction::Down,270=>Direction::Left,_=>return Err(invalid("Wave arbitrary angles are not implemented"))};
+                    let points:Vec<_>=mask.iter().enumerate().filter(|(_,m)|**m!=0).map(|(i,_)|(i/COLS,i%COLS)).collect();
+                    let top=points.iter().map(|p|p.0).min().unwrap() as u16;
+                    let bottom=points.iter().map(|p|p.0).max().unwrap() as u16+1;
+                    let left=points.iter().map(|p|p.1).min().unwrap() as u16;
+                    let right=points.iter().map(|p|p.1).max().unwrap() as u16+1;
+                    let stops=gradient(&params)?;
+                    Generator::Wave(crate::studio_wave_lighting::StudioWaveCycle::new(WaveRegion::new(7,23,left,top,right,bottom)?,direction,value("speed")?,value("width")?,value("pause")?,stops.as_deref())?)
+                }
                 5 => {
                     let random=params.get("randomColor").map(|raw|serde_json::from_str::<bool>(raw.get()).map_err(invalid)).transpose()?.unwrap_or(false);
                     let start=params.get("playbackStart").map(|raw|serde_json::from_str::<String>(raw.get()).map_err(invalid)).transpose()?;
@@ -325,6 +350,7 @@ impl Preview {
                 Generator::Spectrum(cycle) => self.scratch.fill(cycle.next_pixel()),
                 Generator::Fire(cycle) => cycle.next_frame(&mut self.scratch)?,
                 Generator::Breathing(cycle) => self.scratch.fill(cycle.next_pixel()),
+                Generator::Wave(cycle) => {self.scratch.fill(Pixel::EMPTY);cycle.next_frame(&mut self.scratch)?;},
             }
             Layer {
                 pixels: &self.scratch,
@@ -373,6 +399,9 @@ impl Preview {
 #[cfg(test)]
 #[path="breathing_tests.rs"]
 mod breathing_tests;
+#[cfg(test)]
+#[path="wave_tests.rs"]
+mod wave_tests;
 #[cfg(test)]
 mod tests {
     use super::*;
