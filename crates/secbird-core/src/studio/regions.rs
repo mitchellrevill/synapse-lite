@@ -11,7 +11,7 @@ mod reactive;
 pub use reactive::{ReactiveProperty, SelectedReactiveValue, REACTIVE_DURATIONS};
 #[path = "starlight.rs"]
 mod starlight;
-pub use starlight::{StarlightProperty, SelectedStarlightValue, STARLIGHT_DURATIONS};
+pub use starlight::{StarlightDescriptor, StarlightProperty, SelectedStarlightValue, STARLIGHT_DURATIONS};
 #[path = "wave.rs"]
 mod wave;
 pub use wave::{WaveProperty, SelectedWaveValue, wave_preset};

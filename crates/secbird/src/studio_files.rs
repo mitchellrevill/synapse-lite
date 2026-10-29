@@ -31,6 +31,26 @@ pub(super) fn run(args: &[String]) -> Result<(), Error> {
             );
             Ok(())
         }
+        Some("starlight") if args.len() == 4 => {
+            let archive = Archive::read(File::open(&args[1]).map_err(invalid)?)?;
+            let index = args[2]
+                .parse::<usize>()
+                .ok()
+                .and_then(|n| n.checked_sub(1))
+                .ok_or_else(|| invalid("select a positive composition number"))?;
+            let draft = secbird_core::studio::document::Draft::open(
+                archive.profile_json(index)
+                    .ok_or_else(|| invalid("unknown composition number"))?,
+            )?;
+            let descriptors = draft.starlight_region_descriptors(&args[3])?;
+            // Serialize RawValue stops directly; routing through json!/Value
+            // would round opaque imported numeric fields in their metadata.
+            let descriptors_json = serde_json::to_string(&descriptors).map_err(invalid)?;
+            println!(
+                "{{\n  \"effect_id\":7,\n  \"region_descriptors\":{descriptors_json},\n  \"animation_implemented\":false,\n  \"lighting_applied\":false,\n  \"device_compatibility_checked\":false\n}}"
+            );
+            Ok(())
+        }
         Some("export") if args.len() >= 4 => {
             let selection = if args[3..] == ["all"] {
                 None
@@ -58,7 +78,7 @@ pub(super) fn run(args: &[String]) -> Result<(), Error> {
             Ok(())
         }
         _ => Err(invalid(
-            "use studio inspect FILE or studio export INPUT NEW_OUTPUT all|NUMBER...",
+            "use studio inspect FILE, studio starlight FILE NUMBER LAYER_ID or studio export INPUT NEW_OUTPUT all|NUMBER...",
         )),
     }
 }
@@ -108,6 +128,23 @@ mod tests {
         fn drop(&mut self) {
             std::fs::remove_dir_all(&self.0).unwrap();
         }
+    }
+    #[test]
+    fn starlight_inspection_keeps_archive_bytes_and_rejects_invalid_selection() {
+        let fixture = Fixture::new();
+        let input = fixture.0.join("source.ChromaEffects");
+        let original = br#"{"version":1,"profiles":[{"id":"p","title":"Stars","devices":[],"layers":[{"id":"s","title":"Starlight","type":"layer","name":"starlight","value":7,"params":{"density":7,"duration":500,"colorStops":[{"Stop":0,"Color":1},{"Stop":100}]},"regions":[{"devices":[]}]}]}]}"#;
+        std::fs::write(&input, original).unwrap();
+        for (number, layer, accepted) in [
+            ("1", "s", true), ("0", "s", false), ("2", "s", false),
+            ("1", "missing", false), ("garbage", "s", false),
+        ] {
+            let args = ["starlight", input.to_str().unwrap(), number, layer]
+                .into_iter().map(str::to_owned).collect::<Vec<_>>();
+            assert_eq!(run(&args).is_ok(), accepted);
+            assert_eq!(std::fs::read(&input).unwrap(), original);
+        }
+        assert_eq!(std::fs::read_dir(&fixture.0).unwrap().count(), 1);
     }
     #[test]
     fn file_export_preserves_input_and_never_overwrites_an_existing_target() {

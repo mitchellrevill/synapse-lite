@@ -2,6 +2,131 @@
 use super::*;
 
 pub const STARLIGHT_DURATIONS: [u32; 3] = [3000, 1700, 500];
+/// Prepared source AddEffect7 data. This is not a playable animation or a
+/// vendor ABI, and producing it never admits preview or physical output.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct StarlightDescriptor {
+    pub mode: u8,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color_stops: Option<Vec<Box<RawValue>>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration: Option<u32>,
+    pub max_star: Option<u32>,
+    pub regen: u8,
+    pub cycles: u8,
+    pub pause: u8,
+}
+impl StarlightDescriptor {
+    fn prepare(params: &Object) -> Result<Self> {
+        let random = params
+            .get("randomColor")
+            .map(|raw| serde_json::from_str::<bool>(raw.get()).map_err(invalid))
+            .transpose()?
+            .unwrap_or(false);
+        let duration = params
+            .get("duration")
+            .map(|raw| serde_json::from_str::<u32>(raw.get()).map_err(invalid))
+            .transpose()?;
+        let density = params
+            .get("density")
+            .map(|raw| serde_json::from_str::<u32>(raw.get()).map_err(invalid))
+            .transpose()?;
+        if density.is_some_and(|value| !(1..=10).contains(&value)) {
+            return Err(invalid(
+                "Starlight preparation supports integer density1..10",
+            ));
+        }
+        // Source normalizes the saved gradient before Random Colour replaces
+        // the outgoing stops. Retain order: the converter's sorted copy is
+        // discarded when case7 assigns its descriptor.
+        let mut stops = params.get("colorStops").map(array).transpose()?;
+        if let Some(stops) = &mut stops {
+            if stops.len() > 10 {
+                return Err(invalid(
+                    "Starlight preparation supports at most ten saved stops",
+                ));
+            }
+            let mut has_zero = false;
+            let mut has_hundred = false;
+            for raw in stops.iter_mut() {
+                let mut stop = Object::parse(raw)?;
+                let position: u8 = serde_json::from_str(
+                    stop.get("Stop")
+                        .ok_or_else(|| invalid("missing Starlight Stop"))?
+                        .get(),
+                )
+                .map_err(invalid)?;
+                if position > 100 {
+                    return Err(invalid("Starlight Stop must be0..100"));
+                }
+                has_zero |= position == 0;
+                has_hundred |= position == 100;
+                if let Some(raw) = stop.get("Color") {
+                    let color: u32 = serde_json::from_str(raw.get()).map_err(invalid)?;
+                    if color > 0xffffff && color != 0x64000000 {
+                        return Err(invalid("Starlight Color must be RGB24 or None"));
+                    }
+                } else {
+                    stop.set("Color", Some(&encode(&0x64000000u32)?));
+                }
+                *raw = encode(&stop)?;
+            }
+            if !stops.is_empty() {
+                if !has_zero {
+                    let first = Object::parse(&stops[0])?;
+                    let mut anchor = Object(vec![]);
+                    anchor.set("Stop", Some(&encode(&0)?));
+                    anchor.set("Color", first.get("Color"));
+                    stops.insert(0, encode(&anchor)?);
+                }
+                if !has_hundred {
+                    let last = Object::parse(stops.last().unwrap())?;
+                    let mut anchor = Object(vec![]);
+                    anchor.set("Stop", Some(&encode(&100)?));
+                    anchor.set("Color", last.get("Color"));
+                    stops.push(encode(&anchor)?);
+                }
+            }
+        }
+        Ok(Self {
+            mode: u8::from(random),
+            color_stops: if random { Some(vec![]) } else { stops },
+            duration,
+            // Missing density becomes NaN in JS and null at its JSON boundary.
+            max_star: density.map(|density| density * 10),
+            regen: 10,
+            cycles: 1,
+            pause: 0,
+        })
+    }
+}
+
+impl Draft {
+    /// Inspect each declared region after layer/region parameter inheritance.
+    /// No UI defaults are invented for missing runtime parameters. Hidden/offline
+    /// regions are inspected too; this is not playback or compatibility admission.
+    /// The draft and its history remain untouched, including opaque numeric text.
+    pub fn starlight_region_descriptors(&self, id: &str) -> Result<Vec<StarlightDescriptor>> {
+        let item = layer(self, id, None)?;
+        validate_layer(&item)?;
+        let mut result = Vec::new();
+        let mut bytes = 0usize;
+        for raw in entries(&item, "regions")? {
+            let region = Object::parse(&raw)?;
+            let descriptor = StarlightDescriptor::prepare(&merged(&item, Some(&region), false)?)?;
+            bytes = bytes
+                .checked_add(encode(&descriptor)?.get().len())
+                .ok_or_else(|| invalid("Starlight descriptor budget overflow"))?;
+            if bytes > MAX_DOCUMENT_BYTES {
+                return Err(invalid("Starlight descriptors exceed8MiB"));
+            }
+            result.push(descriptor);
+        }
+        Ok(result)
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum StarlightProperty {
     Duration,
@@ -275,6 +400,103 @@ mod tests {
                 col,
             })
             .collect()
+    }
+    #[test]
+    fn region_descriptors_match69_independent_shipped_converter_replays() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../tests/fixtures/studio-starlight-descriptors.json"
+        ))
+        .unwrap();
+        assert_eq!(
+            fixture["source_module_sha256"],
+            "008bf7b8aac4e86f47dd0c4e498402949c384d640553ca08d9c2424ad3527bda"
+        );
+        assert_eq!(fixture["native_calls"], 0);
+        assert_eq!(fixture["cases"].as_array().unwrap().len(), 69);
+        for case in fixture["cases"].as_array().unwrap() {
+            let mut profile: serde_json::Value = serde_json::from_str(PROFILE).unwrap();
+            profile["layers"][0]["params"] = serde_json::json!({});
+            profile["layers"][0]["regions"][0]["params"] = case["params"].clone();
+            let raw = profile.to_string();
+            let draft = Draft::open(&raw).unwrap();
+            let snapshot = draft.read_snapshot();
+            let descriptors = draft.starlight_region_descriptors("s").unwrap();
+            assert_eq!(descriptors.len(), 1);
+            assert_eq!(
+                serde_json::to_value(&descriptors[0]).unwrap(),
+                case["descriptor"],
+                "{}",
+                case["name"]
+            );
+            assert_eq!(draft.json(), raw);
+            assert!(draft.matches_snapshot(&snapshot));
+            assert!(!draft.is_dirty());
+        }
+    }
+    #[test]
+    fn descriptor_inheritance_preserves_missing_values_order_and_opaque_stop_text() {
+        let raw = r#"{"id":"p","title":"Test","devices":[],"layers":[{"id":"s","title":"Stars","type":"layer","name":"starlight","value":7,"visible":false,"params":{"duration":9999,"density":3,"randomColor":true,"colorStops":[{"Stop":80,"Color":1,"opaque":9.9900e+100},{"Stop":20}]},"regions":[{"devices":[{"id":"offline","leds":[{"row":0,"col":1}]}],"params":{"randomColor":false}},{"devices":[],"params":{"density":10,"duration":500}},{"devices":[]}]}]}"#;
+        let draft = Draft::open(raw).unwrap();
+        let descriptors = draft.starlight_region_descriptors("s").unwrap();
+        assert_eq!(descriptors.len(), 3);
+        assert_eq!(descriptors[0].max_star, Some(30));
+        assert_eq!(descriptors[0].duration, Some(9999));
+        let stops = descriptors[0].color_stops.as_ref().unwrap();
+        assert_eq!(stops.len(), 4);
+        assert!(stops[1].get().contains("9.9900e+100"));
+        assert_eq!(
+            Object::parse(&stops[1]).unwrap().get("Stop").unwrap().get(),
+            "80"
+        );
+        assert_eq!(
+            Object::parse(&stops[2]).unwrap().get("Stop").unwrap().get(),
+            "20"
+        );
+        assert_eq!(descriptors[1].max_star, Some(100));
+        assert_eq!(descriptors[1].duration, Some(500));
+        assert_eq!(descriptors[1].mode, 1);
+        assert!(descriptors[1].color_stops.as_ref().unwrap().is_empty());
+        assert_eq!(descriptors[2].max_star, Some(30));
+        assert_eq!(draft.json(), raw);
+        assert!(!draft.is_dirty());
+        assert!(draft.starlight_region_descriptors("missing").is_err());
+        let conflict = Draft::open(&raw.replace("\"value\":7", "\"value\":8")).unwrap();
+        assert!(conflict.starlight_region_descriptors("s").is_err());
+    }
+    #[test]
+    fn descriptor_bounds_and_malformed_fields_refuse_without_editing() {
+        for params in [
+            serde_json::json!({"density":0}),
+            serde_json::json!({"density":11}),
+            serde_json::json!({"density":1.5}),
+            serde_json::json!({"duration":-1}),
+            serde_json::json!({"randomColor":1}),
+            serde_json::json!({"colorStops":[{"Stop":101}]}),
+            serde_json::json!({"colorStops":[{"Stop":0,"Color":-1}]}),
+            serde_json::json!({"colorStops":[{"Stop":0,"Color":0xffffffffu32}]}),
+            serde_json::json!({"colorStops":[{"Color":0}]}),
+            serde_json::json!({"colorStops":vec![serde_json::json!({"Stop":0});11]}),
+        ] {
+            let mut profile: serde_json::Value = serde_json::from_str(PROFILE).unwrap();
+            profile["layers"][0]["regions"][0]["params"] = params;
+            let raw = profile.to_string();
+            let draft = Draft::open(&raw).unwrap();
+            assert!(draft.starlight_region_descriptors("s").is_err());
+            assert_eq!(draft.json(), raw);
+            assert!(!draft.is_dirty());
+        }
+        let profile = serde_json::json!({"id":"p","title":"Test","devices":[],"layers":[{
+            "id":"s","title":"Stars","type":"layer","name":"starlight","value":7,
+            "params":{"colorStops":[{"Stop":0,"future":"x".repeat(32768)},{"Stop":100}]},
+            "regions": vec![serde_json::json!({"devices":[]}); 300]
+        }]});
+        let draft = Draft::open(&profile.to_string()).unwrap();
+        assert!(draft
+            .starlight_region_descriptors("s")
+            .unwrap_err()
+            .to_string()
+            .contains("8MiB"));
+        assert!(!draft.is_dirty());
     }
     #[test]
     fn defaults_match_independently_extracted_source_constants() {

@@ -18,6 +18,8 @@ STUDIO FILES (local interchange only; does not apply lighting):
                             does not activate profiles, run macros or install the store
   catalog inspect FILE      Inspect a local Razer catalogue without opening hardware
   studio inspect FILE       List compositions in a JSON-v1 .ChromaEffects file
+  studio starlight FILE NUMBER LAYER_ID
+                            Inspect prepared Starlight region descriptors (no playback)
   studio export INPUT OUTPUT all|NUMBER...
                             Export selected compositions to a new file (1-based numbers)
 

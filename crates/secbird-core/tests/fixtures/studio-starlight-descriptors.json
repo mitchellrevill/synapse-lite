@@ -1,0 +1,2133 @@
+{
+  "source_module_sha256": "008bf7b8aac4e86f47dd0c4e498402949c384d640553ca08d9c2424ad3527bda",
+  "source_bundle_sha256": "c82c7074e5da8abcffbff95f23a6b962c1e14b04586715b9d4b7a6f11fe9e6d2",
+  "native_calls": 0,
+  "cases": [
+    {
+      "name": "duration3000_density1_randomfalse",
+      "params": {
+        "duration": 3000,
+        "density": 1,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 3000,
+        "MaxStar": 10,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration3000_density1_randomtrue",
+      "params": {
+        "duration": 3000,
+        "density": 1,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 3000,
+        "MaxStar": 10,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration3000_density2_randomfalse",
+      "params": {
+        "duration": 3000,
+        "density": 2,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 3000,
+        "MaxStar": 20,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration3000_density2_randomtrue",
+      "params": {
+        "duration": 3000,
+        "density": 2,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 3000,
+        "MaxStar": 20,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration3000_density3_randomfalse",
+      "params": {
+        "duration": 3000,
+        "density": 3,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 3000,
+        "MaxStar": 30,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration3000_density3_randomtrue",
+      "params": {
+        "duration": 3000,
+        "density": 3,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 3000,
+        "MaxStar": 30,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration3000_density4_randomfalse",
+      "params": {
+        "duration": 3000,
+        "density": 4,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 3000,
+        "MaxStar": 40,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration3000_density4_randomtrue",
+      "params": {
+        "duration": 3000,
+        "density": 4,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 3000,
+        "MaxStar": 40,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration3000_density5_randomfalse",
+      "params": {
+        "duration": 3000,
+        "density": 5,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 3000,
+        "MaxStar": 50,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration3000_density5_randomtrue",
+      "params": {
+        "duration": 3000,
+        "density": 5,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 3000,
+        "MaxStar": 50,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration3000_density6_randomfalse",
+      "params": {
+        "duration": 3000,
+        "density": 6,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 3000,
+        "MaxStar": 60,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration3000_density6_randomtrue",
+      "params": {
+        "duration": 3000,
+        "density": 6,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 3000,
+        "MaxStar": 60,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration3000_density7_randomfalse",
+      "params": {
+        "duration": 3000,
+        "density": 7,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 3000,
+        "MaxStar": 70,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration3000_density7_randomtrue",
+      "params": {
+        "duration": 3000,
+        "density": 7,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 3000,
+        "MaxStar": 70,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration3000_density8_randomfalse",
+      "params": {
+        "duration": 3000,
+        "density": 8,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 3000,
+        "MaxStar": 80,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration3000_density8_randomtrue",
+      "params": {
+        "duration": 3000,
+        "density": 8,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 3000,
+        "MaxStar": 80,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration3000_density9_randomfalse",
+      "params": {
+        "duration": 3000,
+        "density": 9,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 3000,
+        "MaxStar": 90,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration3000_density9_randomtrue",
+      "params": {
+        "duration": 3000,
+        "density": 9,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 3000,
+        "MaxStar": 90,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration3000_density10_randomfalse",
+      "params": {
+        "duration": 3000,
+        "density": 10,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 3000,
+        "MaxStar": 100,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration3000_density10_randomtrue",
+      "params": {
+        "duration": 3000,
+        "density": 10,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 3000,
+        "MaxStar": 100,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration1700_density1_randomfalse",
+      "params": {
+        "duration": 1700,
+        "density": 1,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 1700,
+        "MaxStar": 10,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration1700_density1_randomtrue",
+      "params": {
+        "duration": 1700,
+        "density": 1,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 1700,
+        "MaxStar": 10,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration1700_density2_randomfalse",
+      "params": {
+        "duration": 1700,
+        "density": 2,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 1700,
+        "MaxStar": 20,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration1700_density2_randomtrue",
+      "params": {
+        "duration": 1700,
+        "density": 2,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 1700,
+        "MaxStar": 20,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration1700_density3_randomfalse",
+      "params": {
+        "duration": 1700,
+        "density": 3,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 1700,
+        "MaxStar": 30,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration1700_density3_randomtrue",
+      "params": {
+        "duration": 1700,
+        "density": 3,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 1700,
+        "MaxStar": 30,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration1700_density4_randomfalse",
+      "params": {
+        "duration": 1700,
+        "density": 4,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 1700,
+        "MaxStar": 40,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration1700_density4_randomtrue",
+      "params": {
+        "duration": 1700,
+        "density": 4,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 1700,
+        "MaxStar": 40,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration1700_density5_randomfalse",
+      "params": {
+        "duration": 1700,
+        "density": 5,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 1700,
+        "MaxStar": 50,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration1700_density5_randomtrue",
+      "params": {
+        "duration": 1700,
+        "density": 5,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 1700,
+        "MaxStar": 50,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration1700_density6_randomfalse",
+      "params": {
+        "duration": 1700,
+        "density": 6,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 1700,
+        "MaxStar": 60,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration1700_density6_randomtrue",
+      "params": {
+        "duration": 1700,
+        "density": 6,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 1700,
+        "MaxStar": 60,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration1700_density7_randomfalse",
+      "params": {
+        "duration": 1700,
+        "density": 7,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 1700,
+        "MaxStar": 70,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration1700_density7_randomtrue",
+      "params": {
+        "duration": 1700,
+        "density": 7,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 1700,
+        "MaxStar": 70,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration1700_density8_randomfalse",
+      "params": {
+        "duration": 1700,
+        "density": 8,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 1700,
+        "MaxStar": 80,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration1700_density8_randomtrue",
+      "params": {
+        "duration": 1700,
+        "density": 8,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 1700,
+        "MaxStar": 80,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration1700_density9_randomfalse",
+      "params": {
+        "duration": 1700,
+        "density": 9,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 1700,
+        "MaxStar": 90,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration1700_density9_randomtrue",
+      "params": {
+        "duration": 1700,
+        "density": 9,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 1700,
+        "MaxStar": 90,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration1700_density10_randomfalse",
+      "params": {
+        "duration": 1700,
+        "density": 10,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 1700,
+        "MaxStar": 100,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration1700_density10_randomtrue",
+      "params": {
+        "duration": 1700,
+        "density": 10,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 1700,
+        "MaxStar": 100,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration500_density1_randomfalse",
+      "params": {
+        "duration": 500,
+        "density": 1,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 500,
+        "MaxStar": 10,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration500_density1_randomtrue",
+      "params": {
+        "duration": 500,
+        "density": 1,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 500,
+        "MaxStar": 10,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration500_density2_randomfalse",
+      "params": {
+        "duration": 500,
+        "density": 2,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 500,
+        "MaxStar": 20,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration500_density2_randomtrue",
+      "params": {
+        "duration": 500,
+        "density": 2,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 500,
+        "MaxStar": 20,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration500_density3_randomfalse",
+      "params": {
+        "duration": 500,
+        "density": 3,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 500,
+        "MaxStar": 30,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration500_density3_randomtrue",
+      "params": {
+        "duration": 500,
+        "density": 3,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 500,
+        "MaxStar": 30,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration500_density4_randomfalse",
+      "params": {
+        "duration": 500,
+        "density": 4,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 500,
+        "MaxStar": 40,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration500_density4_randomtrue",
+      "params": {
+        "duration": 500,
+        "density": 4,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 500,
+        "MaxStar": 40,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration500_density5_randomfalse",
+      "params": {
+        "duration": 500,
+        "density": 5,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 500,
+        "MaxStar": 50,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration500_density5_randomtrue",
+      "params": {
+        "duration": 500,
+        "density": 5,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 500,
+        "MaxStar": 50,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration500_density6_randomfalse",
+      "params": {
+        "duration": 500,
+        "density": 6,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 500,
+        "MaxStar": 60,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration500_density6_randomtrue",
+      "params": {
+        "duration": 500,
+        "density": 6,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 500,
+        "MaxStar": 60,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration500_density7_randomfalse",
+      "params": {
+        "duration": 500,
+        "density": 7,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 500,
+        "MaxStar": 70,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration500_density7_randomtrue",
+      "params": {
+        "duration": 500,
+        "density": 7,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 500,
+        "MaxStar": 70,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration500_density8_randomfalse",
+      "params": {
+        "duration": 500,
+        "density": 8,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 500,
+        "MaxStar": 80,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration500_density8_randomtrue",
+      "params": {
+        "duration": 500,
+        "density": 8,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 500,
+        "MaxStar": 80,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration500_density9_randomfalse",
+      "params": {
+        "duration": 500,
+        "density": 9,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 500,
+        "MaxStar": 90,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration500_density9_randomtrue",
+      "params": {
+        "duration": 500,
+        "density": 9,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 500,
+        "MaxStar": 90,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration500_density10_randomfalse",
+      "params": {
+        "duration": 500,
+        "density": 10,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 500,
+        "MaxStar": 100,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duration500_density10_randomtrue",
+      "params": {
+        "duration": 500,
+        "density": 10,
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 1193046
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "Duration": 500,
+        "MaxStar": 100,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "single_none",
+      "params": {
+        "duration": 9999,
+        "density": 4,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 35
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1677721600
+          },
+          {
+            "Stop": 35,
+            "Color": 1677721600
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 9999,
+        "MaxStar": 40,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "duplicate_stops",
+      "params": {
+        "duration": 9999,
+        "density": 4,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 50,
+            "Color": 1
+          },
+          {
+            "Stop": 50
+          },
+          {
+            "Stop": 100,
+            "Color": 3
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1
+          },
+          {
+            "Stop": 50,
+            "Color": 1
+          },
+          {
+            "Stop": 50,
+            "Color": 1677721600
+          },
+          {
+            "Stop": 100,
+            "Color": 3
+          }
+        ],
+        "Duration": 9999,
+        "MaxStar": 40,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "unordered_stops",
+      "params": {
+        "duration": 9999,
+        "density": 4,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 80,
+            "Color": 1
+          },
+          {
+            "Stop": 20,
+            "Color": 2
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1
+          },
+          {
+            "Stop": 80,
+            "Color": 1
+          },
+          {
+            "Stop": 20,
+            "Color": 2
+          },
+          {
+            "Stop": 100,
+            "Color": 2
+          }
+        ],
+        "Duration": 9999,
+        "MaxStar": 40,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "unordered_anchors",
+      "params": {
+        "duration": 9999,
+        "density": 4,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 100,
+            "Color": 1
+          },
+          {
+            "Stop": 0,
+            "Color": 2
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 100,
+            "Color": 1
+          },
+          {
+            "Stop": 0,
+            "Color": 2
+          }
+        ],
+        "Duration": 9999,
+        "MaxStar": 40,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "stop_metadata",
+      "params": {
+        "duration": 9999,
+        "density": 4,
+        "randomColor": false,
+        "colorStops": [
+          {
+            "Stop": 20,
+            "Color": 7,
+            "future": {
+              "keep": [
+                true,
+                "x"
+              ]
+            }
+          },
+          {
+            "Stop": 90
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 7
+          },
+          {
+            "Stop": 20,
+            "Color": 7,
+            "future": {
+              "keep": [
+                true,
+                "x"
+              ]
+            }
+          },
+          {
+            "Stop": 90,
+            "Color": 1677721600
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 9999,
+        "MaxStar": 40,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "empty_stops",
+      "params": {
+        "duration": 9999,
+        "density": 4,
+        "randomColor": false,
+        "colorStops": []
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [],
+        "Duration": 9999,
+        "MaxStar": 40,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "missing_stops",
+      "params": {
+        "duration": 9999,
+        "density": 4,
+        "randomColor": false
+      },
+      "descriptor": {
+        "Mode": 0,
+        "Duration": 9999,
+        "MaxStar": 40,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "missing_scalars",
+      "params": {
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 0
+          },
+          {
+            "Stop": 100
+          }
+        ]
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 0
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "MaxStar": null,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    },
+    {
+      "name": "random_missing_scalars",
+      "params": {
+        "randomColor": true
+      },
+      "descriptor": {
+        "Mode": 1,
+        "ColorStops": [],
+        "MaxStar": null,
+        "Regen": 10,
+        "Cycles": 1,
+        "Pause": 0
+      }
+    }
+  ]
+}
