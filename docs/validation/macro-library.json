@@ -1,0 +1,79 @@
+{
+  "date": "2026-10-29",
+  "scope": "Local source-compatible macro library and explicitly saved fixed-delay definition drafts",
+  "source": {
+    "main_js_sha256": "fd20eeea9ac259a741c5deec4cc23f7e293cb99fa8ed658816af50bbd894941d",
+    "rea_evidence": "ev_66d7b015c4e2ac27f16ee68fcdee4536bda647103c605063420847db62c821d7",
+    "static_extracts": 7,
+    "parse_failures": 0,
+    "semantic_unknowns": 587,
+    "vendor_code_executed": false
+  },
+  "verification": {
+    "core_library_checks": 7,
+    "tray_history_check": true,
+    "workspace": {
+      "core_passed": 494,
+      "core_ignored": 6,
+      "tray_passed": 306,
+      "tray_ignored": 47,
+      "cli_passed": 4,
+      "doc_passed": 1
+    },
+    "optimized_build": true,
+    "optimized_native_suite": {
+      "passed": 23,
+      "failed": 2,
+      "all_studio_checks_passed": 12,
+      "macro_workflow_passed": true,
+      "failed_checks": [
+        "Quick Lighting focused close file/transport count",
+        "Wave dropdown missing geometry value"
+      ],
+      "cause": "unresolved; not classified as pre-existing"
+    },
+    "native_macro": {
+      "definition_import_without_profile_import": true,
+      "dirty_home_and_close_guard": true,
+      "drafts_local_until_save": true,
+      "duplicate_and_delete": true,
+      "hardware_sets": 0,
+      "history_survives_save": true,
+      "invalid_delay_refused": true,
+      "physical_discovery_disabled": true,
+      "profiles_preserved": true,
+      "read_only_inert": true,
+      "save_guid_preserved": true,
+      "stale_save_refused": true
+    },
+    "normal_profile_store_changed": false,
+    "driver_changes": false,
+    "live_playback_enabled": false,
+    "full_visual_acceptance": false
+  },
+  "bounds": {
+    "definitions": 256,
+    "rows_per_definition": 512,
+    "combined_encoded_payload_bytes": 1048576,
+    "store_bytes": 2097152,
+    "draft_history_snapshots": 20,
+    "draft_history_serialized_bytes": 4194304
+  },
+  "remaining": [
+    "Recording and remaining event authoring",
+    "Binding and playback settings",
+    "Native routing, ownership and physical-key recovery",
+    "Source macro-only export and cache invalidation",
+    "Stock menu/widgets/visual fidelity",
+    "Two broader native regressions: isolate trace and baseline comparison",
+    "All device API coverage/privacy and three complete-build memory gates"
+  ],
+  "evidence_sha256": {
+    "macro-library-workspace.log": "5172de871ebefc15e9ec45bf127a3024afe9f6c9d77dc2895300f1e24c968be1",
+    "macro-library-native-test.log": "aed83e1861e52f5136f8c65d054ae467acff90c7c58d4f65887cb0f6c3d11c3d",
+    "macro-library-native-regressions.log": "80d71abc1b90fcb26b215ae5ad6496dc13f09c97af57a2636e96f396ca0673c6",
+    "macro-library-native-regressions-fonts.log": "2257142a58fba470e6b34d4b852c13ba40ef0f5ec3b6d36fa5d663de77cb120c",
+    "macro-library-release.log": "e45bb2db7efc4609979a7f624d9156a113b6da35fc3d84c1566cac260a070935"
+  },
+  "complete_goal_acceptance": false
+}

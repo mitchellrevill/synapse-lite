@@ -30,8 +30,10 @@ impl View {
 
 fn entries(state:&State)->Vec<&Value> {
     static LINKED:std::sync::LazyLock<Value>=std::sync::LazyLock::new(||json!({"id":linked_games::ID,"name":"LINKED GAMES","module":"linked-games"}));
+    static MACRO:std::sync::LazyLock<Value>=std::sync::LazyLock::new(||json!({"id":macro_view::ID,"name":"MACRO","module":"macro"}));
     let mut entries:Vec<_>=state.devices().iter().collect();
     if state.linked_games.used||state.host_tabs.borrow().session.known(linked_games::ID) {entries.push(&LINKED);}
+    if state.macros.used||state.host_tabs.borrow().session.known(macro_view::ID) {entries.push(&MACRO);}
     entries
 }
 

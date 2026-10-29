@@ -7,6 +7,8 @@ mod calibration;
 mod advanced;
 #[path="linked_games_interaction_tests.rs"]
 mod linked_games;
+#[path="macro_interaction_tests.rs"]
+mod macros;
 #[path="studio_interaction_tests.rs"]
 mod studio;
 use super::*;
