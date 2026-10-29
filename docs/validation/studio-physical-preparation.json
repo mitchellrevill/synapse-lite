@@ -1,0 +1,30 @@
+{
+  "format": "synapse-lite-studio-physical-preparation-v1",
+  "date": "2026-10-29",
+  "logical_frames": 500,
+  "physical_pixels_per_frame": 132,
+  "simulated_frame_out_packets": 3500,
+  "physical_rgb_md5": "b0c46374f3ff3a91d3bf64f197e30345",
+  "logical_rgb_md5": "15c72331781274566ba1d29ebfc5b0d1",
+  "source_mapping_entries": 114,
+  "manifest_sha256": "3595e11f1d8778180d1dd6edd2463c8b3b8e446542c5020dc1fa038c67937a93",
+  "actual_export_prepared_with_mock_identity": true,
+  "actual_manifest_authenticated": true,
+  "actual_test_device_queries": [
+    "00:86"
+  ],
+  "preparation_performed_device_output": false,
+  "snapshot_identity_and_phase_tests_passed": true,
+  "wrong_map_and_scope_tests_passed": true,
+  "cancel_mode_and_partial_transfer_tests_passed": true,
+  "scoped_debug_tests_passed": 7,
+  "scoped_release_tests_passed": 7,
+  "regular_serial_tray_tests_passed": 245,
+  "regular_tray_tests_opt_in_ignored": 31,
+  "live_studio_output_enabled": false,
+  "quick_studio_handoff_implemented": false,
+  "session_generation_and_drain_implemented": false,
+  "physical_hardware_output_verified": false,
+  "optical_verification": false,
+  "complete_build_ram_gate_verified": false
+}
