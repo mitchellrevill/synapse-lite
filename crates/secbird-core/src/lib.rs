@@ -110,3 +110,4 @@ pub fn config_dir() -> std::path::PathBuf {
 pub use hidapi;
 
 pub mod linked_games;
+pub mod global_shortcuts;

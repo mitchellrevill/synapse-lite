@@ -37,6 +37,8 @@ mod settings;
 mod runtime_probe;
 #[cfg(windows)]
 mod win;
+#[cfg(windows)]
+mod global_shortcuts;
 
 #[cfg(windows)]
 fn main() {
