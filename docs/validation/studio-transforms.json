@@ -1,0 +1,26 @@
+{
+  "checkpoint": "source-studio-transform-projection",
+  "date": "2026-10-29",
+  "capture_report_sha256": "72518b0b3fdf1812c221d795bbd08b1ee7afd4ffc4f869ad63ecaefd78774cc2",
+  "index_sha256": "8e3a5bbfd983a7777da287ead26eabb0d8f09755c05fc9e2eebd93e173cde9d1",
+  "repeat_builds_identical": true,
+  "layouts": 1396,
+  "products": 183,
+  "prior_layouts_retained": 1268,
+  "prior_layouts_lost": 0,
+  "added_layouts": 128,
+  "todos": 780,
+  "native_corpus": "studio-transform-corpus.json",
+  "native_source_layout_tests_passed": 7,
+  "python_geometry_tests_passed": 11,
+  "raster_comparison": "studio-transform-comparison.json",
+  "whole_ui_pixel_parity": false,
+  "hardware_support_verified": false,
+  "complete_build_memory_verified": false,
+  "tool_sha256": {
+    "provision-studio-presets.py": "9e322748a31ca806840ffcaf474d0785996a210c3272eb61d2c3a16b3bc0a466",
+    "svg_affine.py": "5a29505e4d17653321850cf0dc80a055d78264a462365edf06035ed4c1b47f37",
+    "prepare-studio-comparisons.py": "bdbd8c0d37056c0be3b9384ebaa0a3a937ddbc4dea834a38bac99184df671eb2",
+    "verify-studio-projection.cjs": "abf3ae0301d3077f648be3a01854583ef6bb5a5d31dcddd447dd89875a1b3c19"
+  }
+}

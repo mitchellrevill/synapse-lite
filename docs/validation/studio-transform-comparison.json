@@ -1,0 +1,214 @@
+{
+  "renderer": "151.0.7922.34",
+  "scope": "selection interiors only; no chassis, legend, CSS stroke or native pixel parity claim",
+  "records": [
+    {
+      "identity": [
+        659,
+        0,
+        1
+      ],
+      "source_sha256": "0e2dd63be8dc63a7e33580a1e9550c37f270032acf9425d171a8ea1b30b45ab1",
+      "projection_sha256": "223b2a1ebf60e68309959283f9f96ecfa17727128f0e1d4eb41381a7b3551f18",
+      "raster_equal": false,
+      "changed_pixels": 28,
+      "max_alpha_delta": 52,
+      "total_alpha_delta": 388,
+      "maximum_bounds_delta": 0.00006103515625,
+      "nonempty_pixels": 156151,
+      "regions": 110
+    },
+    {
+      "identity": [
+        677,
+        0,
+        1
+      ],
+      "source_sha256": "bc5933a5e12b5bbf81e28dbaeffae0a033c079d230aa3cfa7b30296f447baef3",
+      "projection_sha256": "41fcc3f3b30cd25f90fae33b4f19d6e20938e0a9093c3deaaa9bbe15f0da3cc6",
+      "raster_equal": false,
+      "changed_pixels": 358,
+      "max_alpha_delta": 52,
+      "total_alpha_delta": 5327,
+      "maximum_bounds_delta": 0.00006103515625,
+      "nonempty_pixels": 125262,
+      "regions": 101
+    },
+    {
+      "identity": [
+        678,
+        0,
+        1
+      ],
+      "source_sha256": "c9ab211e5b37fb16552c8b8390b55648db8b941451dceb8663b52777ec1ba4f4",
+      "projection_sha256": "1a1ef2566cc41368195802b03ab8b7f2a1ada610123309c43ebf6e30f235bee4",
+      "raster_equal": false,
+      "changed_pixels": 35,
+      "max_alpha_delta": 36,
+      "total_alpha_delta": 623,
+      "maximum_bounds_delta": 0.00006103515625,
+      "nonempty_pixels": 155327,
+      "regions": 106
+    },
+    {
+      "identity": [
+        679,
+        0,
+        1
+      ],
+      "source_sha256": "060fbc34bbc0a29c73d6e70a714236ae29173d9b1463105f76c8b43a5d4745ec",
+      "projection_sha256": "7049398047f4c05954d5a3bd9694dacfc14664601ca80aa2e4ac5f03357dde94",
+      "raster_equal": false,
+      "changed_pixels": 249,
+      "max_alpha_delta": 41,
+      "total_alpha_delta": 739,
+      "maximum_bounds_delta": 0.000064849853515625,
+      "nonempty_pixels": 123062,
+      "regions": 86
+    },
+    {
+      "identity": [
+        719,
+        0,
+        1
+      ],
+      "source_sha256": "e9e5a554eb7f624bdec43fa2e2c771f84e49c8706b9e34055e234ebd8948a2b9",
+      "projection_sha256": "a7e4174a8ca36c741e7ed925d073674c4119df0f7703815aaa8b3f49476084a0",
+      "raster_equal": false,
+      "changed_pixels": 63,
+      "max_alpha_delta": 49,
+      "total_alpha_delta": 949,
+      "maximum_bounds_delta": 0.00006103515625,
+      "nonempty_pixels": 155335,
+      "regions": 106
+    },
+    {
+      "identity": [
+        720,
+        0,
+        1
+      ],
+      "source_sha256": "0bac07653eabe75c52de07705ed0c197982024298f05b292658e81a23eb8216e",
+      "projection_sha256": "e0b81d8c761ff12417d249ec9b2550bf007489070f03cf33472e287c2ede35fb",
+      "raster_equal": false,
+      "changed_pixels": 2,
+      "max_alpha_delta": 1,
+      "total_alpha_delta": 2,
+      "maximum_bounds_delta": 0.000064849853515625,
+      "nonempty_pixels": 122385,
+      "regions": 86
+    },
+    {
+      "identity": [
+        724,
+        0,
+        3
+      ],
+      "source_sha256": "de2e2015a1697bb10cd41e993d92b7b9f5dc36191e383d81550227fb64c836cf",
+      "projection_sha256": "0cf264b02dbea7f92a1577422d8c8fea8bb022b02150b0f9a77cfc67d428d162",
+      "raster_equal": false,
+      "changed_pixels": 104,
+      "max_alpha_delta": 40,
+      "total_alpha_delta": 1454,
+      "maximum_bounds_delta": 0.00006103515625,
+      "nonempty_pixels": 102240,
+      "regions": 88
+    },
+    {
+      "identity": [
+        727,
+        0,
+        3
+      ],
+      "source_sha256": "e96a30cefe4303bee63686485281ac069baf657cad4eccb3ce8c7b47cdebd759",
+      "projection_sha256": "8f42338766f74d923459424b8135305d392ef731c177ba711a811cb0b1b931be",
+      "raster_equal": true,
+      "changed_pixels": 0,
+      "max_alpha_delta": 0,
+      "total_alpha_delta": 0,
+      "maximum_bounds_delta": 0.000030517578125,
+      "nonempty_pixels": 96320,
+      "regions": 88
+    },
+    {
+      "identity": [
+        728,
+        0,
+        3
+      ],
+      "source_sha256": "713121f3f74e13fdabad2b95d6984f30c9462420f1d8bb1141ee56d132eed8f1",
+      "projection_sha256": "ec9acfbcf598c79f7c9f83ed52bc236d58d3fd8e07200fd8e07b31c8f8b439d1",
+      "raster_equal": false,
+      "changed_pixels": 1,
+      "max_alpha_delta": 1,
+      "total_alpha_delta": 1,
+      "maximum_bounds_delta": 0.00006103515625,
+      "nonempty_pixels": 122910,
+      "regions": 87
+    },
+    {
+      "identity": [
+        741,
+        0,
+        3
+      ],
+      "source_sha256": "4372bb93eb3fb7ab505a8aa543b7ef2b423d462b9494cff39f1ba5d6af13cea9",
+      "projection_sha256": "1bf59f6813efb0776ca02da9c169f73065ec728f0848558f44c3cbc21ecdd35b",
+      "raster_equal": false,
+      "changed_pixels": 5,
+      "max_alpha_delta": 1,
+      "total_alpha_delta": 5,
+      "maximum_bounds_delta": 0.00006103515625,
+      "nonempty_pixels": 122491,
+      "regions": 88
+    },
+    {
+      "identity": [
+        746,
+        0,
+        1
+      ],
+      "source_sha256": "3449ca89838444bc33d66d96ccc5a80944526e08a7c66bc32d568e67b0df2f29",
+      "projection_sha256": "574c47f8027a594cc54df5f39769b28b90ba9fd3acef959a876d5d84d6919c30",
+      "raster_equal": false,
+      "changed_pixels": 175,
+      "max_alpha_delta": 53,
+      "total_alpha_delta": 1954,
+      "maximum_bounds_delta": 0.00006103515625,
+      "nonempty_pixels": 123381,
+      "regions": 87
+    },
+    {
+      "identity": [
+        752,
+        0,
+        6
+      ],
+      "source_sha256": "e177da533884caba770f3abe9382490bb604068a6ae07f885ee558d3c61dd966",
+      "projection_sha256": "26d78d503fd6ad0a9fa2cea0e72dee1126d664f78bd08c5483facd16d48a69e7",
+      "raster_equal": false,
+      "changed_pixels": 358,
+      "max_alpha_delta": 52,
+      "total_alpha_delta": 5327,
+      "maximum_bounds_delta": 0.00006103515625,
+      "nonempty_pixels": 125224,
+      "regions": 102
+    },
+    {
+      "identity": [
+        2596,
+        131,
+        1
+      ],
+      "source_sha256": "f2ba1099fae2205f1e50b4e2811a99f2d99796bc9a591a32f0886b227f42c9bd",
+      "projection_sha256": "8d48776503609a2edc5a76cc3426ba4710568beaba5875d618167ac78029937e",
+      "raster_equal": false,
+      "changed_pixels": 63,
+      "max_alpha_delta": 45,
+      "total_alpha_delta": 918,
+      "maximum_bounds_delta": 0.00006103515625,
+      "nonempty_pixels": 123550,
+      "regions": 87
+    }
+  ]
+}

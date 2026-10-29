@@ -109,7 +109,7 @@ Unresolved details become explicit TODOs with their evidence and next check; wor
 continues on independent features. Full functional and visual parity and the
 complete-build100MB acceptance gate remain open.
 
-The subsequent Studio preset pack now supports1268 exact layouts across177products
+The subsequent Studio preset pack now supports1396 exact layouts across183products
 for offline LED selection and regional editing in imported compositions. See
 STUDIO-PRESETS.md. This does not enable catalogue-wide physical controls/output
 or replace the separate evidence requirements for each API.
