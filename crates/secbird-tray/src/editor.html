@@ -863,6 +863,8 @@ function sections() {
   if (dev.stages) sens.push({ key: 'stages', label: 'DPI stages' });
   if (dev.polling) sens.push({ key: 'polling', label: 'Polling rate' });
   if (sens.length) s.push({ id: 'sens', name: 'Sensitivity', rows: sens });
+  if (dev.wheel_controls && dev.wheel_controls.length) s.push({ id: 'wheel', name: 'Scroll wheel',
+    rows: dev.wheel_controls.map(c => ({ key: 'wheel:' + c.control, label: c.title })) });
   if (dev.kind === 'mouse' || isBoard()) {
     const list = btnData[dev.id];
     s.push({ id: 'buttons', name: isBoard() ? 'Keys' : 'Buttons', tools: 'layer', loading: !list,
@@ -1236,6 +1238,10 @@ const differs = (key, name) => name !== dev.active && cellValue(key, name) !== c
 // mouse saved. Other columns get their mark from differs().
 function cellView(key, name) {
   const p = prof(name), active = name === dev.active;
+  if (key.startsWith('wheel:')) {
+    const c = (dev.wheel_controls || []).find(c => c.control === key.slice(6));
+    return [c && c.available ? (c.enabled ? 'On' : 'Off') + ' · onboard slot 1' : '<span class="unset">Unavailable</span>'];
+  }
   if (key === 'lighting-control') return [dev.lighting_control ? 'Secretarybird' : '<span class="unset">Not controlled</span>'];
   if (key === 'onboard') {
     const o = onboardData[dev.id];
@@ -1347,6 +1353,7 @@ function buildEditor(host, r) {
   const box = el('div', { className: 'edbox' });
   host.append(box);
   if (r.key === 'lighting-control') lightingControlEditor(box);
+  else if (r.key.startsWith('wheel:')) wheelEditor(box, r.key.slice(6));
   else if (r.key.startsWith('zone:')) zoneEditor(box, r.key.slice(5));
   else if (r.key === 'keys') keysEditor(box);
   else if (r.key === 'dpi') dpiEditor(box);
@@ -1716,6 +1723,24 @@ function sleepOf(name) {
   if (name === dev.active && dev.sleep) return dev.sleep;
   const p = prof(name);
   return p.sleep_minutes || p.auto_sleep != null ? { minutes: p.sleep_minutes, auto: p.auto_sleep } : null;
+}
+
+function wheelEditor(box, control) {
+  const c = (dev.wheel_controls || []).find(c => c.control === control);
+  if (!c) return;
+  const id = dev.id;
+  const button = el('button', { textContent: c.enabled ? 'Turn off' : 'Turn on', disabled: !c.writable,
+    onclick: async () => {
+      button.disabled = true;
+      try {
+        const r = await api('/api/wheel-control', { id, expected_device: id, wheel_control: control, enabled: !c.enabled });
+        const updated = r.state.devices.find(d => d.id === id);
+        if (dev && dev.id === id && updated) { dev.wheel_controls = updated.wheel_controls; render(); }
+        toast('Wheel setting verified');
+      } catch (e) { toast(e.message, true); button.disabled = !c.writable; }
+    } });
+  box.append(el('h3', { textContent: c.title }), button,
+    el('p', { className: 'note', textContent: c.error || 'Onboard slot 1. Source-supported; physical validation pending.' }));
 }
 
 function sleepEditor(box) {

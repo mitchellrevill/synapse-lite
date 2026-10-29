@@ -47,6 +47,7 @@ mod macro_view;
 mod host_tab_model;
 mod calibration_view;
 mod advanced_view;
+mod wheel_view;
 mod mouse_speed;
 mod mouse_feedback;
 mod mouse_input_worker;
@@ -394,6 +395,7 @@ enum Action {
     HostMove(String, usize),
     Calibration(calibration_view::Control),
     Advanced(advanced_view::Control),
+    WheelControl(String, secbird_core::wheel_controls::WheelControl, bool),
     Tab(Tab),
     Refresh,
     ProfileMenu,
@@ -2234,6 +2236,11 @@ impl State {
             Action::Studio(control) => studio_view::action(self,control),
             Action::Calibration(control) => calibration_view::action(self,control),
             Action::Advanced(control) => advanced_view::action(self,control),
+            Action::WheelControl(id, control, enabled) => {
+                if self.selected.as_deref() == Some(id.as_str()) {
+                    self.queue(Job::Action("/api/wheel-control", json!({"id":id,"expected_device":id,"wheel_control":control,"enabled":enabled})));
+                }
+            }
             Action::HostClose(id) => host_tabs::close(self, &id),
             Action::HostMove(id, target) => host_tabs::move_to(self, &id, target),
             Action::HostScroll(direction) => host_tabs::scroll(self, direction),
@@ -3365,7 +3372,11 @@ unsafe fn paint(state: &mut State, dc: HDC) {
                 }
             }
             Tab::Calibration => calibration_view::paint(state,&mut p),
-            Tab::Advanced => advanced_view::paint(state,&mut p),
+            Tab::Advanced => {
+                if !wheel_view::paint(state, &mut p, &device) {
+                    advanced_view::paint(state,&mut p);
+                }
+            }
             Tab::Help => {}
         }
         if matches!(state.tab, Tab::Help) {

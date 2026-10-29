@@ -1,0 +1,76 @@
+{
+  "base_commit": "e6c21c3",
+  "scope": "Basilisk V3 USB and V3 Pro cable/receiver wheel mode, acceleration and Smart Reel",
+  "models": [
+    {
+      "pid": "0099",
+      "interface": 3
+    },
+    {
+      "pid": "00AA",
+      "interface": 0
+    },
+    {
+      "pid": "00AB",
+      "interface": 0
+    }
+  ],
+  "transaction_id": "1F",
+  "active_onboard_slot": 1,
+  "coverage": {
+    "source_supported": true,
+    "simulated": true,
+    "physically_verified": false
+  },
+  "checks": {
+    "core_library_tests": {
+      "passed": 515,
+      "failed": 0,
+      "ignored": 6
+    },
+    "tray_tests": {
+      "passed": 307,
+      "failed": 0,
+      "ignored": 48
+    },
+    "isolated_native_hwnd": {
+      "passed": 1,
+      "failed": 0,
+      "all_three_registers_round_tripped": true,
+      "exactly_six_sets": true,
+      "readonly_refused": true,
+      "profile_bytes_preserved": true
+    },
+    "workspace_cargo_check": "passed",
+    "browser_script_node_check": "passed",
+    "git_diff_check": "passed"
+  },
+  "test_environment": "Offline Cargo cache, dedicated target directory and TEMP/TMP under this chat work directory. Initial sandbox-default temp run encountered access-denied writes; workspace-temp rerun passed.",
+  "packet_vectors": [
+    {
+      "command": "02:14",
+      "argument_size": 2,
+      "arguments_prefix": "01 01",
+      "xor_checksum": "14"
+    },
+    {
+      "command": "02:16",
+      "argument_size": 2,
+      "arguments_prefix": "01 01",
+      "xor_checksum": "16"
+    },
+    {
+      "command": "02:17",
+      "argument_size": 80,
+      "arguments_prefix": "01 01 then 78 zero bytes",
+      "xor_checksum": "45"
+    }
+  ],
+  "remaining": [
+    "Physical USB collection/firmware/control round trips for each transport",
+    "Atomic multi-slot changes when active onboard slot differs from1",
+    "Source-faithful Basilisk card layout and dependency rules",
+    "Exact dock charging caller and native Nommo audio implementation",
+    "Full-device compatibility, accepted driver path and complete-build memory target"
+  ]
+}

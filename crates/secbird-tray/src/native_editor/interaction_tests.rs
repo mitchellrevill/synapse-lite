@@ -5,6 +5,8 @@
 mod calibration;
 #[path="advanced_interaction_tests.rs"]
 mod advanced;
+#[path="wheel_interaction_tests.rs"]
+mod wheel;
 #[path="linked_games_interaction_tests.rs"]
 mod linked_games;
 #[path="macro_interaction_tests.rs"]
