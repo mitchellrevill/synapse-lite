@@ -40,6 +40,21 @@ fn native_studio_wave_direction_presets_motion_preview_save_and_undo_preserve_so
             lighting_click(hwnd,630.,100.,scale);
             wait_for(||query()["preview"]["current"]==true && query()["preview"]["effects"]==3,"Wave preview")?;
             wait_for(||query()["preview"]["frame"][1]==json!([0,255,0]),"frozen Wave preset colour")?;
+            lighting_click(hwnd,right+100.,580.,scale); // custom gradient panel
+            for (id,text) in [(2103,"0"),(2104,"112233")] {
+                let field=GetDlgItem(hwnd,id);if field.is_null(){return Err("Wave gradient field missing".into());}
+                SendMessageW(field,WM_SETTEXT,0,wide(text).as_ptr() as isize);
+            }
+            lighting_click(hwnd,right+70.,493.,scale);
+            lighting_click(hwnd,right+170.,422.,scale); // next stop
+            let field=GetDlgItem(hwnd,2104);SendMessageW(field,WM_SETTEXT,0,wide("112233").as_ptr() as isize);
+            lighting_click(hwnd,right+70.,493.,scale);
+            wait_for(||query()["preview"]["current"]==true && query()["preview"]["frame"][1]==json!([17,34,51]),"custom Wave preview")?;
+            let field=GetDlgItem(hwnd,2103);SendMessageW(field,WM_SETTEXT,0,wide("101").as_ptr() as isize);
+            lighting_click(hwnd,right+70.,493.,scale);
+            if query()["failed"]!=true {return Err("Invalid Wave gradient position was accepted".into());}
+            let gradient_capture=json!(folder.join("wave-gradient.png").to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,6,&gradient_capture as *const Value as isize);
+            lighting_click(hwnd,right+100.,290.,scale); // back to motion
             let capture=json!(folder.join("wave.png").to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize);
             if std::env::var("SYNAPSE_LITE_STUDIO_VISUAL_HOLD").as_deref()==Ok("1") {std::thread::sleep(Duration::from_secs(20));}
             let output=folder.join("wave.ChromaEffects");let path=json!(output.to_string_lossy());
@@ -48,7 +63,7 @@ fn native_studio_wave_direction_presets_motion_preview_save_and_undo_preserve_so
             let saved:Value=serde_json::from_str(archive.profile_json(0).unwrap()).unwrap();
             let row=saved["layers"].as_array().unwrap().iter().find(|row|row["id"]==id).ok_or("saved Wave missing")?;
             let params=&row["regions"][0]["params"];
-            if params["angle"]!=270 || params["speed"]!=0 || params["width"]!=125 || params["pause"]!=79 || params["cycles"]!=-1 || params["colorStops"][0]["Color"]!=0x00ff00 {return Err(format!("Wave fields were not saved: {params}"));}
+            if params["angle"]!=270 || params["speed"]!=0 || params["width"]!=125 || params["pause"]!=79 || params["cycles"]!=-1 || params["colorStops"][0]["Color"]!=0x112233 || params["colorStops"][1]["Color"]!=0x112233 || params["colorStopsCustom"]!=true {return Err(format!("Wave fields were not saved: {params}"));}
             lighting_click(hwnd,450.,100.,scale);if query()["dirty"]!=true {return Err("Wave speed undo did not restore the previous draft".into());}
             lighting_click(hwnd,520.,100.,scale);if query()["dirty"]!=false {return Err("Wave speed redo did not return to saved state".into());}
             let field=GetDlgItem(hwnd,2106);SendMessageW(field,WM_SETTEXT,0,wide("99").as_ptr() as isize);
@@ -58,7 +73,7 @@ fn native_studio_wave_direction_presets_motion_preview_save_and_undo_preserve_so
             if query()["dirty"]!=false {return Err("Read-only Wave direction mutated the saved draft".into());}
             SendMessageW(hwnd,READ_ONLY_TEST_SET,0,0);
             if !monitor.state().log.is_empty() {return Err("Local Wave authoring made device requests".into());}
-            Ok(json!({"new_wave_layer":true,"source_direction":270,"source_preset":4,"motion":{"speed":0,"width":125,"pause_ms":79},"preview_rgb":[0,255,0],"save_undo_redo":true,"invalid_motion_atomic":true,"readonly_inert":true,"sim_device_requests":0,"physical_discovery_disabled":true}))
+            Ok(json!({"new_wave_layer":true,"source_direction":270,"source_preset":4,"motion":{"speed":0,"width":125,"pause_ms":79},"preview_rgb":[17,34,51],"custom_stops":true,"invalid_stop_refused":true,"save_undo_redo":true,"invalid_motion_atomic":true,"readonly_inert":true,"sim_device_requests":0,"physical_discovery_disabled":true}))
         }})();
         unsafe {let hwnd=WINDOW.load(Ordering::Acquire) as HWND;SendMessageW(hwnd,STUDIO_TEST,5,0);PostMessageW(hwnd,WM_CLOSE,0,0);}
         std::fs::write(folder.join("interaction.json"),serde_json::to_vec_pretty(&match &result {Ok(value)=>value.clone(),Err(error)=>json!({"error":error})}).unwrap()).unwrap();result

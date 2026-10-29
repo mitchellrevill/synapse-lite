@@ -1,5 +1,8 @@
 # Studio Wave authoring checkpoint
 
+Individual custom-stop editing is now available; see
+[Wave gradients](STUDIO-WAVE-GRADIENT.md). Stock picker/drag geometry and the remaining Wave variants are still open.
+
 Layer Actions now includes **Add Wave**. Select LEDs, choose Up/Right/Down/Left,
 one of five recovered gradient presets, or edit speed, width and pause and choose
 Apply Motion. Preview, save, erase membership and undo/redo use the existing Studio
@@ -48,7 +51,7 @@ sandbox auto-review rejection. Existing Studio canvas/chassis/key labels and sto
 palette/widget layout still visibly differ; exact visual acceptance remains open.
 
 Deferred next checks: source stock Wave panel capture and widget measurements;
-custom gradient-stop editing; narrow-width unsigned index instructions; arbitrary
+stock gradient popup/drag handles; narrow-width unsigned index instructions; arbitrary
 angles and split/rotational/finite/input-triggered modes; actual optical output and
 stock import of newly authored Wave. Proceed with independent effects/device work
 instead of repeatedly waiting on those variants. The full implementation goal and

@@ -78,6 +78,9 @@ impl RegionEdit<'_> {
         if let Self::BreathingDuration(value)=self { params.set("duration",Some(&encode(&value)?)); }
         if let Self::Wave(edit,projection)=self {
             if new {for (name,value) in &projection.0 {params.set(name,Some(value));}}
+            if matches!(edit,wave::Edit::Stop(_)) && params.get("colorStops").is_none() {
+                params.set("colorStops",projection.get("colorStops"));
+            }
             edit.apply(params)?;
         }
         Ok(())

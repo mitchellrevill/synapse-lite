@@ -9,15 +9,21 @@ pub enum Control {
     Direction(u32),
     Preset(usize),
     Motion,
+    Gradient,
 }
 #[derive(Default)]
 pub(super) struct Properties {
+    pub(super) gradient_open: bool,
     values: [String; 3],
     angle: Option<SelectedWaveValue>,
     mixed: [bool; 3],
 }
 pub(super) fn refresh(view: &mut View) {
-    view.wave = Properties::default();
+    let gradient_open = view.wave.gradient_open && view.effect() == Some("wave");
+    view.wave = Properties {
+        gradient_open,
+        ..Properties::default()
+    };
     if view.effect() != Some("wave") {
         return;
     }
@@ -51,6 +57,11 @@ pub(super) fn refresh(view: &mut View) {
     }
 }
 pub(super) fn action(state: &mut State, control: Control) {
+    if matches!(control, Control::Gradient) {
+        state.studio.wave.gradient_open = !state.studio.wave.gradient_open;
+        spectrum::refresh(&mut state.studio);
+        return;
+    }
     let view = &mut state.studio;
     let result = (|| -> Result<bool, String> {
         if view.effect() != Some("wave") {
@@ -60,6 +71,7 @@ pub(super) fn action(state: &mut State, control: Control) {
         let selection = view.canvas.selection();
         let draft = view.draft.as_mut().ok_or("Open a composition first")?;
         let result = match control {
+            Control::Gradient => unreachable!(),
             Control::Direction(angle) => {
                 draft.set_wave_property(id, &selection, WaveProperty::Angle, angle)
             }
@@ -92,7 +104,7 @@ pub(super) fn action(state: &mut State, control: Control) {
     }
 }
 pub(super) unsafe fn fields(state: &mut State) {
-    if state.studio.effect() != Some("wave") {
+    if state.studio.effect() != Some("wave") || state.studio.wave.gradient_open {
         return;
     }
     let right = (state.width as f32 / state.scale) as i32 - 250;
@@ -123,6 +135,10 @@ pub(super) fn has_focus(state: &State) -> bool {
         .any(|id| state.fields.get(id) == Some(&focus))
 }
 pub(super) unsafe fn paint(p: &mut Painter, view: &View, right: i32) {
+    if view.wave.gradient_open {
+        spectrum::paint(p, view, right);
+        return;
+    }
     let enabled = view.editable() && view.canvas.count() > 0;
     p.text(
         "DIRECTION",
@@ -214,5 +230,14 @@ pub(super) unsafe fn paint(p: &mut Painter, view: &View, right: i32) {
         220,
         super::Control::Erase,
         enabled,
+    );
+    button(
+        p,
+        "EDIT GRADIENT",
+        right + 10,
+        567,
+        220,
+        super::Control::Wave(Control::Gradient),
+        true,
     );
 }

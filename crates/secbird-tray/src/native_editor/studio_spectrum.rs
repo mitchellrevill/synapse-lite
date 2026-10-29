@@ -49,7 +49,7 @@ impl Properties {
     }
 }
 pub(super) fn refresh(view: &mut View) {
-    if view.effect() != Some("spectrum") {
+    if !matches!(view.effect(), Some("spectrum" | "wave")) {
         view.spectrum = Properties::default();
         return;
     }
@@ -58,15 +58,24 @@ pub(super) fn refresh(view: &mut View) {
     };
     let id = view.selected.as_deref().unwrap();
     let selection = view.canvas.selection();
-    match draft.spectrum_selection_duration(id, &selection) {
-        Ok(value) => view.spectrum.duration = Some(value),
-        Err(error) => {
-            view.spectrum.duration = None;
-            view.status = error.to_string();
-            view.failed = true;
+    let wave = view.effect() == Some("wave");
+    if !wave {
+        match draft.spectrum_selection_duration(id, &selection) {
+            Ok(value) => view.spectrum.duration = Some(value),
+            Err(error) => {
+                view.spectrum.duration = None;
+                view.status = error.to_string();
+                view.failed = true;
+            }
         }
+    } else {
+        view.spectrum.duration = None;
     }
-    match draft.spectrum_selection_gradient(id, &selection) {
+    match if wave {
+        draft.wave_selection_gradient(id, &selection)
+    } else {
+        draft.spectrum_selection_gradient(id, &selection)
+    } {
         Ok(value) => view.spectrum.gradient = Some(value),
         Err(error) => {
             view.spectrum.gradient = None;
@@ -156,19 +165,29 @@ pub(super) fn action(state: &mut State, control: Control) {
     }
     let view = &mut state.studio;
     let result = (|| -> Result<bool, String> {
-        if view.effect() != Some("spectrum") {
-            return Err("Select Spectrum first".into());
+        if !matches!(view.effect(), Some("spectrum" | "wave")) {
+            return Err("Select Spectrum or Wave first".into());
         }
+        let wave = view.effect() == Some("wave");
         let id = view.selected.as_deref().ok_or("Select a layer")?;
         let selection = view.canvas.selection();
         let properties = &view.spectrum;
         let draft = view.draft.as_mut().ok_or("Open a composition first")?;
+        let mut edit_stop = |edit| {
+            if wave {
+                draft.edit_wave_stop(id, &selection, edit)
+            } else {
+                draft.edit_spectrum_stop(id, &selection, edit)
+            }
+        };
         let result = match control {
+            Control::Duration(_) if wave => return Err("Wave has no Spectrum duration".into()),
             Control::Duration(index) => draft.set_spectrum_duration(
                 id,
                 &selection,
                 *SPECTRUM_DURATIONS.get(index).ok_or("Unknown duration")?,
             ),
+            Control::Preset(index) if wave => draft.set_wave_preset(id, &selection, index),
             Control::Preset(index) => draft.set_spectrum_gradient(
                 id,
                 &selection,
@@ -177,28 +196,20 @@ pub(super) fn action(state: &mut State, control: Control) {
             ),
             Control::ApplyStop(none) => {
                 let (position, color) = entered_stop(properties, none)?;
-                draft.edit_spectrum_stop(
-                    id,
-                    &selection,
-                    StopEdit::Set {
-                        index: properties.index,
-                        position,
-                        color,
-                    },
-                )
+                edit_stop(StopEdit::Set {
+                    index: properties.index,
+                    position,
+                    color,
+                })
             }
             Control::Add => {
                 let (position, color) =
                     entered_stop(properties, properties.color.trim().is_empty())?;
-                draft.edit_spectrum_stop(id, &selection, StopEdit::Insert { position, color })
+                edit_stop(StopEdit::Insert { position, color })
             }
-            Control::Delete => draft.edit_spectrum_stop(
-                id,
-                &selection,
-                StopEdit::Delete {
-                    index: properties.index,
-                },
-            ),
+            Control::Delete => edit_stop(StopEdit::Delete {
+                index: properties.index,
+            }),
             Control::Stop(_) => unreachable!(),
         };
         result.map_err(|e| e.to_string())
@@ -206,7 +217,7 @@ pub(super) fn action(state: &mut State, control: Control) {
     match result {
         Ok(changed) => {
             if changed {
-                view.status = "Spectrum updated · save to keep changes".into();
+                view.status = "Gradient updated · save to keep changes".into();
             }
             view.failed = false;
         }
@@ -218,7 +229,8 @@ pub(super) fn action(state: &mut State, control: Control) {
     refresh(view);
 }
 pub(super) unsafe fn fields(state: &mut State) {
-    if state.studio.effect() != Some("spectrum")
+    if !(state.studio.effect() == Some("spectrum")
+        || (state.studio.effect() == Some("wave") && state.studio.wave.gradient_open))
         || state.studio.spectrum.stops().is_none_or(|s| s.is_empty())
     {
         return;
@@ -272,23 +284,35 @@ pub(super) fn has_focus(state: &State) -> bool {
 pub(super) unsafe fn paint(p: &mut Painter, view: &View, right: i32) {
     let enabled = view.editable() && view.canvas.count() > 0;
     let properties = &view.spectrum;
-    let text = match properties.duration {
-        Some(SelectedDuration::Mixed) => "DURATION · MIXED",
-        _ => "DURATION",
-    };
-    p.text(text, right + 10, 246, 230, 28, p.fonts.small, TEXT, DT_LEFT);
-    for (index, label) in ["SLOW", "MEDIUM", "FAST"].iter().enumerate() {
+    if view.effect() == Some("wave") {
         button(
             p,
-            label,
-            right + 10 + index as i32 * 76,
+            "BACK TO MOTION",
+            right + 10,
             278,
-            70,
-            super::Control::Spectrum(Control::Duration(index)),
-            enabled && properties.duration.is_some(),
+            220,
+            super::Control::Wave(wave::Control::Gradient),
+            true,
         );
-        if properties.duration == Some(SelectedDuration::Uniform(SPECTRUM_DURATIONS[index])) {
-            p.fill(right + 10 + index as i32 * 76, 305, 70, 2, GREEN);
+    } else {
+        let text = match properties.duration {
+            Some(SelectedDuration::Mixed) => "DURATION · MIXED",
+            _ => "DURATION",
+        };
+        p.text(text, right + 10, 246, 230, 28, p.fonts.small, TEXT, DT_LEFT);
+        for (index, label) in ["SLOW", "MEDIUM", "FAST"].iter().enumerate() {
+            button(
+                p,
+                label,
+                right + 10 + index as i32 * 76,
+                278,
+                70,
+                super::Control::Spectrum(Control::Duration(index)),
+                enabled && properties.duration.is_some(),
+            );
+            if properties.duration == Some(SelectedDuration::Uniform(SPECTRUM_DURATIONS[index])) {
+                p.fill(right + 10 + index as i32 * 76, 305, 70, 2, GREEN);
+            }
         }
     }
     p.text(

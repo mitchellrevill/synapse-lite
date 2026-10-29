@@ -130,10 +130,12 @@ pub(super) enum Edit {
     Property(WaveProperty, u32),
     Preset(usize),
     Motion(u32, u32, u32),
+    Stop(StopEdit),
 }
 impl Edit {
     pub(super) fn apply(self, params: &mut Object) -> Result<()> {
         match self {
+            Self::Stop(edit) => spectrum::edit_stop(params, edit)?,
             Self::Motion(speed, width, pause) => {
                 for (property, value) in [
                     (WaveProperty::Speed, speed),
@@ -226,6 +228,48 @@ impl Draft {
         validate_layer(&item)?;
         let projection = merged(&item, None, true)?;
         self.edit_regions(id, selection, RegionEdit::Wave(edit, &projection))
+    }
+    pub fn wave_selection_gradient(
+        &self,
+        id: &str,
+        selection: &[LedSelection],
+    ) -> Result<SelectedGradient> {
+        let params = self.wave_params(id, selection)?;
+        let Some(first) = params.first() else {
+            return Ok(SelectedGradient::Empty);
+        };
+        let first = spectrum::gradient(first)?;
+        for params in &params[1..] {
+            if spectrum::gradient(params)? != first {
+                return Ok(SelectedGradient::Mixed);
+            }
+        }
+        Ok(SelectedGradient::Uniform(first))
+    }
+    pub fn edit_wave_stop(
+        &mut self,
+        id: &str,
+        selection: &[LedSelection],
+        edit: StopEdit,
+    ) -> Result<bool> {
+        match edit {
+            StopEdit::Set {
+                position, color, ..
+            }
+            | StopEdit::Insert { position, color } => {
+                spectrum::validate_stop(&GradientStop { position, color })?
+            }
+            StopEdit::Delete { .. } => {}
+        }
+        if !matches!(
+            self.wave_selection_gradient(id, selection)?,
+            SelectedGradient::Uniform(Some(_))
+        ) {
+            return Err(invalid(
+                "choose one uniform Wave gradient before editing stops",
+            ));
+        }
+        self.edit_wave(id, selection, Edit::Stop(edit))
     }
     pub fn set_wave_property(
         &mut self,
@@ -330,7 +374,11 @@ mod tests {
             SelectedWaveValue::Uniform(Some(125))
         );
         let params = draft.wave_params("w", &keys(&[3])).unwrap().remove(0);
-        assert_eq!(serde_json::from_str::<serde_json::Value>(params.get("colorStops").unwrap().get()).unwrap(),serde_json::to_value(wave_preset(0).unwrap()).unwrap());
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(params.get("colorStops").unwrap().get())
+                .unwrap(),
+            serde_json::to_value(wave_preset(0).unwrap()).unwrap()
+        );
         assert_eq!(params.get("cycles").unwrap().get(), "-1");
         assert!(draft.undo().unwrap());
         assert_eq!(draft.json(), PROFILE);
@@ -361,6 +409,195 @@ mod tests {
         let mut draft = Draft::open(&before).unwrap();
         assert!(draft
             .set_wave_property("w", &keys(&[1]), WaveProperty::Angle, 180)
+            .is_err());
+        assert_eq!(draft.json(), before);
+        assert!(!draft.is_dirty());
+    }
+    #[test]
+    fn custom_stops_partition_preserve_raw_values_and_motion_and_history() {
+        let mut draft = Draft::open(PROFILE).unwrap();
+        draft
+            .edit_wave_stop(
+                "w",
+                &keys(&[1]),
+                StopEdit::Set {
+                    index: 0,
+                    position: 40,
+                    color: None,
+                },
+            )
+            .unwrap();
+        assert!(draft.json().contains("1.2300e-7"));
+        assert!(draft.json().contains("9.9900e+100"));
+        let value: serde_json::Value = serde_json::from_str(draft.json()).unwrap();
+        let regions = value["layers"][0]["regions"].as_array().unwrap();
+        let edited = regions
+            .iter()
+            .find(|r| r["devices"][0]["leds"][0]["col"] == 1)
+            .unwrap();
+        assert_eq!(edited["params"]["colorStopsCustom"], true);
+        assert_eq!(edited["params"]["colorStops"][0]["Stop"], 40);
+        assert!(edited["params"]["colorStops"][0].get("Color").is_none());
+        assert_eq!(edited["params"]["width"], 125);
+        assert!(edited["params"].get("duration").is_none());
+        assert_eq!(
+            draft.wave_selection_gradient("w", &keys(&[2])).unwrap(),
+            SelectedGradient::Uniform(Some(vec![
+                GradientStop {
+                    position: 0,
+                    color: Some(1)
+                },
+                GradientStop {
+                    position: 100,
+                    color: Some(2)
+                }
+            ]))
+        );
+        assert_eq!(
+            draft.wave_selection_gradient("w", &keys(&[1, 2])).unwrap(),
+            SelectedGradient::Mixed
+        );
+        draft.undo().unwrap();
+        assert_eq!(draft.json(), PROFILE);
+        draft.redo().unwrap();
+        draft
+            .edit_wave_stop(
+                "w",
+                &keys(&[1]),
+                StopEdit::Insert {
+                    position: 40,
+                    color: Some(0x112233),
+                },
+            )
+            .unwrap();
+        let SelectedGradient::Uniform(Some(stops)) =
+            draft.wave_selection_gradient("w", &keys(&[1])).unwrap()
+        else {
+            panic!()
+        };
+        assert_eq!(
+            stops.iter().map(|s| s.position).collect::<Vec<_>>(),
+            vec![40, 40, 100]
+        );
+        assert_eq!(stops[0].color, None);
+        draft
+            .edit_wave_stop("w", &keys(&[1]), StopEdit::Delete { index: 1 })
+            .unwrap();
+        let before = draft.json().to_owned();
+        assert!(draft
+            .edit_wave_stop("w", &keys(&[1]), StopEdit::Delete { index: 0 })
+            .is_err());
+        assert!(draft
+            .edit_wave_stop(
+                "w",
+                &keys(&[1]),
+                StopEdit::Set {
+                    index: 0,
+                    position: 101,
+                    color: Some(3)
+                }
+            )
+            .is_err());
+        assert!(draft
+            .edit_wave_stop(
+                "w",
+                &keys(&[1]),
+                StopEdit::Set {
+                    index: 0,
+                    position: 50,
+                    color: Some(0x1000000)
+                }
+            )
+            .is_err());
+        assert!(draft
+            .edit_wave_stop("w", &keys(&[1, 2]), StopEdit::Delete { index: 0 })
+            .is_err());
+        assert_eq!(draft.json(), before);
+    }
+    #[test]
+    fn custom_stops_materialize_inherited_gradient_without_spectrum_defaults() {
+        let mut value: serde_json::Value = serde_json::from_str(PROFILE).unwrap();
+        value["layers"][0]["params"]["colorStops"] =
+            serde_json::json!([{"Stop":0,"Color":1},{"Stop":100,"Color":2}]);
+        value["layers"][0]["regions"][0]["params"]
+            .as_object_mut()
+            .unwrap()
+            .remove("colorStops");
+        let mut draft = Draft::open(&value.to_string()).unwrap();
+        draft
+            .edit_wave_stop(
+                "w",
+                &keys(&[1, 3]),
+                StopEdit::Set {
+                    index: 0,
+                    position: 0,
+                    color: Some(0x123456),
+                },
+            )
+            .unwrap();
+        let SelectedGradient::Uniform(Some(stops)) =
+            draft.wave_selection_gradient("w", &keys(&[1, 3])).unwrap()
+        else {
+            panic!()
+        };
+        assert_eq!(stops[0].color, Some(0x123456));
+        let out: serde_json::Value = serde_json::from_str(draft.json()).unwrap();
+        assert_eq!(out["layers"][0]["params"], value["layers"][0]["params"]);
+        assert!(!draft.json().contains("duration"));
+    }
+
+    #[test]
+    fn custom_stop_bounds_and_unverified_modes_refuse_atomically() {
+        let mut draft = Draft::open(PROFILE).unwrap();
+        for index in 0..8 {
+            draft
+                .edit_wave_stop(
+                    "w",
+                    &keys(&[1]),
+                    StopEdit::Insert {
+                        position: index * 10,
+                        color: None,
+                    },
+                )
+                .unwrap();
+        }
+        let before = draft.json().to_owned();
+        assert!(draft
+            .edit_wave_stop(
+                "w",
+                &keys(&[1]),
+                StopEdit::Insert {
+                    position: 90,
+                    color: None
+                }
+            )
+            .is_err());
+        assert!(draft
+            .edit_wave_stop(
+                "w",
+                &keys(&[1]),
+                StopEdit::Set {
+                    index: 10,
+                    position: 50,
+                    color: None
+                }
+            )
+            .is_err());
+        assert_eq!(draft.json(), before);
+        let mut value: serde_json::Value = serde_json::from_str(PROFILE).unwrap();
+        value["layers"][0]["params"]["split"] = true.into();
+        let before = value.to_string();
+        let mut draft = Draft::open(&before).unwrap();
+        assert!(draft
+            .edit_wave_stop(
+                "w",
+                &keys(&[1]),
+                StopEdit::Set {
+                    index: 0,
+                    position: 50,
+                    color: None
+                }
+            )
             .is_err());
         assert_eq!(draft.json(), before);
         assert!(!draft.is_dirty());

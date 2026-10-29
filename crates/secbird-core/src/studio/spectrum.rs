@@ -67,7 +67,7 @@ fn duration(params: &Object) -> u32 {
         .filter(|v| SPECTRUM_DURATIONS.contains(v))
         .unwrap_or(DEFAULT_DURATION)
 }
-fn validate_stop(stop: &GradientStop) -> Result<()> {
+pub(super) fn validate_stop(stop: &GradientStop) -> Result<()> {
     if stop.position > 100 || stop.color.is_some_and(|c| c > 0xffffff) {
         return Err(invalid(
             "gradient stop requires 0..100 percent and RGB24 or None",
@@ -75,7 +75,7 @@ fn validate_stop(stop: &GradientStop) -> Result<()> {
     }
     Ok(())
 }
-fn gradient(params: &Object) -> Result<Option<Vec<GradientStop>>> {
+pub(super) fn gradient(params: &Object) -> Result<Option<Vec<GradientStop>>> {
     let Some(raw) = params.get("colorStops") else {
         return Ok(None);
     };
@@ -131,58 +131,7 @@ impl Edit<'_> {
                 edit,
                 normalize_duration,
             } => {
-                let mut stops = array(
-                    params
-                        .get("colorStops")
-                        .ok_or_else(|| invalid("choose a gradient first"))?,
-                )?;
-                match edit {
-                    StopEdit::Set {
-                        index,
-                        position,
-                        color,
-                    } => {
-                        let raw = stops
-                            .get_mut(index)
-                            .ok_or_else(|| invalid("unknown gradient stop"))?;
-                        let mut stop = Object::parse(raw)?;
-                        stop.set("Stop", Some(&encode(&position)?));
-                        let color = color.map(|c| encode(&c)).transpose()?;
-                        stop.set("Color", color.as_deref());
-                        *raw = encode(&stop)?;
-                    }
-                    StopEdit::Insert { position, color } => {
-                        if stops.len() >= 10 {
-                            return Err(invalid("gradient already has ten stops"));
-                        }
-                        stops.push(encode(&GradientStop { position, color })?);
-                    }
-                    StopEdit::Delete { index } => {
-                        if stops.len() <= 2 || index >= stops.len() {
-                            return Err(invalid("gradient requires at least two stops"));
-                        }
-                        stops.remove(index);
-                    }
-                }
-                // Keep untouched raw stop fields and numeric spellings. Sorting
-                // moves complete records, never reconstructs their unknown fields.
-                let mut keyed = stops
-                    .into_iter()
-                    .map(|raw| {
-                        let stop = Object::parse(&raw)?;
-                        let position: u8 = serde_json::from_str(
-                            stop.get("Stop")
-                                .ok_or_else(|| invalid("missing Stop"))?
-                                .get(),
-                        )
-                        .map_err(invalid)?;
-                        Ok((position, raw))
-                    })
-                    .collect::<Result<Vec<_>>>()?;
-                keyed.sort_by_key(|(position, _)| *position);
-                let stops: Vec<_> = keyed.into_iter().map(|(_, raw)| raw).collect();
-                params.set("colorStops", Some(&encode(&stops)?));
-                params.set("colorStopsCustom", Some(&encode(&true)?));
+                edit_stop(params, edit)?;
                 if new || normalize_duration {
                     params.set("duration", Some(&encode(&duration(params))?));
                 }
@@ -190,6 +139,64 @@ impl Edit<'_> {
         }
         Ok(())
     }
+}
+
+// Shared source gradient mutation, without any effect-specific scalar defaults.
+pub(super) fn edit_stop(params: &mut Object, edit: StopEdit) -> Result<()> {
+    let mut stops = array(
+        params
+            .get("colorStops")
+            .ok_or_else(|| invalid("choose a gradient first"))?,
+    )?;
+    match edit {
+        StopEdit::Set {
+            index,
+            position,
+            color,
+        } => {
+            let raw = stops
+                .get_mut(index)
+                .ok_or_else(|| invalid("unknown gradient stop"))?;
+            let mut stop = Object::parse(raw)?;
+            stop.set("Stop", Some(&encode(&position)?));
+            let color = color.map(|c| encode(&c)).transpose()?;
+            stop.set("Color", color.as_deref());
+            *raw = encode(&stop)?;
+        }
+        StopEdit::Insert { position, color } => {
+            if stops.len() >= 10 {
+                return Err(invalid("gradient already has ten stops"));
+            }
+            stops.push(encode(&GradientStop { position, color })?);
+        }
+        StopEdit::Delete { index } => {
+            if stops.len() <= 2 || index >= stops.len() {
+                return Err(invalid("gradient requires at least two stops"));
+            }
+            stops.remove(index);
+        }
+    }
+    // Keep untouched raw stop fields and numeric spellings. Sorting
+    // moves complete records, never reconstructs their unknown fields.
+    let mut keyed = stops
+        .into_iter()
+        .map(|raw| {
+            let stop = Object::parse(&raw)?;
+            let position: u8 = serde_json::from_str(
+                stop.get("Stop")
+                    .ok_or_else(|| invalid("missing Stop"))?
+                    .get(),
+            )
+            .map_err(invalid)?;
+            Ok((position, raw))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    keyed.sort_by_key(|(position, _)| *position);
+    let stops: Vec<_> = keyed.into_iter().map(|(_, raw)| raw).collect();
+    params.set("colorStops", Some(&encode(&stops)?));
+    params.set("colorStopsCustom", Some(&encode(&true)?));
+
+    Ok(())
 }
 
 impl Draft {
