@@ -354,6 +354,8 @@ struct Body {
     #[serde(default)]
     expected_device: Option<String>,
     #[serde(default)]
+    wheel_control: Option<secbird_core::wheel_controls::WheelControl>,
+    #[serde(default)]
     critical_threshold_percent: Option<u8>,
     #[serde(default)]
     tracking_distance_mm: Option<u8>,
@@ -462,6 +464,12 @@ fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
         let mm=b.tracking_distance_mm.ok_or_else(||Error::InvalidArg("Tracking distance is missing".into()))?;
         let mut store=Store::load(&config_dir().join("profiles.json"))?;
         secbird_core::mouse_sensor::set_tracking_distance(dev,&mut store,expected,mm)?;
+        return Ok(json!({"ok":true,"state":state(engine)}));
+    }
+    if path == "/api/wheel-control" {
+        let dev = engine.devices().iter().find(|dev| dev.key() == b.id)
+            .ok_or_else(|| Error::NotFound("Selected wheel device is not connected".into()))?;
+        wheel_control_post(dev, &b)?;
         return Ok(json!({"ok":true,"state":state(engine)}));
     }
     if path == "/api/sync" {
@@ -1052,6 +1060,27 @@ fn validate_power_identity(body: &Body) -> Result<(), Error> {
     Ok(())
 }
 
+fn wheel_control_post(dev: &Device, body: &Body) -> Result<(), Error> {
+    if body.id.is_empty() || body.expected_device.as_deref() != Some(body.id.as_str()) || dev.key() != body.id {
+        return Err(Error::InvalidArg("Wheel actions require the exact selected device identity".into()));
+    }
+    let control = body.wheel_control.ok_or_else(|| Error::InvalidArg("wheel_control is required".into()))?;
+    let enabled = body.enabled.ok_or_else(|| Error::InvalidArg("enabled must be a boolean".into()))?;
+    dev.set_wheel_control(control, enabled)
+}
+
+fn wheel_controls_json(dev: &Device) -> Value {
+    use secbird_core::wheel_controls::{self, WheelControl};
+    if !wheel_controls::supports(dev) { return json!([]); }
+    json!(WheelControl::ALL.map(|control| {
+        let value = dev.wheel_control(control);
+        json!({"control":control,"title":control.title(),"source_supported":true,
+            "slot":1,"available":value.is_ok(),"writable":value.is_ok() && !dev.is_query_only(),
+            "enabled":value.as_ref().ok(),"error":value.err().map(|e|e.to_string()),
+            "coverage":"source-supported; simulated; physical validation pending"})
+    }))
+}
+
 fn critical_threshold_post(dev: &Device, store: &mut Store, body: &Body) -> Result<Value, Error> {
     validate_power_identity(body)?;
     let percent = body
@@ -1175,6 +1204,7 @@ fn device_json(dev: &Device) -> Value {
             .map(|s| json!({ "active": s.active, "list": s.stages, "max": secbird_core::commands::MAX_DPI_STAGES })),
         "sleep": sleep_json(dev),
         "device_sleep": device_sleep_json(dev),
+        "wheel_controls": wheel_controls_json(dev),
         "critical_threshold": critical_threshold_json(dev),
         "power_settings": power_settings,
         "lighting_settings":lighting_settings,
@@ -1319,6 +1349,34 @@ mod tests {
         let missing=sim.open(196,None).unwrap();
         assert_eq!(critical_threshold_json(&missing)["available"],false);
         assert!(critical_threshold_json(&missing)["error"].is_string());
+    }
+    #[test]
+    fn wheel_capabilities_validate_identity_types_and_keep_controls_independent() {
+        use secbird_core::{sim, Db};
+        let (sim, pid) = sim::preset("basilisk-v3").unwrap();
+        let dev = sim.open(pid, Db::builtin().unwrap().get(pid).cloned()).unwrap();
+        let initial = wheel_controls_json(&dev);
+        assert_eq!(initial.as_array().unwrap().len(), 3);
+        assert!(initial.as_array().unwrap().iter().all(|v| v["writable"] == true));
+        for request in [json!({}), json!({"id":dev.key()}), json!({"id":dev.key(),"expected_device":"other"}),
+            json!({"id":dev.key(),"expected_device":dev.key(),"wheel_control":"mode"})] {
+            let body: Body = serde_json::from_value(request).unwrap();
+            let before = sim.state().log.len();
+            assert!(wheel_control_post(&dev, &body).is_err());
+            assert_eq!(sim.state().log.len(), before);
+        }
+        for bad in [json!({"wheel_control":"unknown"}), json!({"enabled":1}), json!({"enabled":"true"})] {
+            assert!(serde_json::from_value::<Body>(bad).is_err());
+        }
+        let body = serde_json::from_value(json!({"id":dev.key(),"expected_device":dev.key(),"wheel_control":"acceleration","enabled":true})).unwrap();
+        wheel_control_post(&dev, &body).unwrap();
+        assert_eq!(sim.state().wheel_controls, Some([0, 1, 0]));
+        sim.state().active_slot = Some(2);
+        let snapshot = wheel_controls_json(&dev);
+        assert!(snapshot.as_array().unwrap().iter().all(|v| v["available"] == false && v["error"].is_string()));
+        let other = Sim::mouse().open(196, None).unwrap();
+        assert_eq!(wheel_controls_json(&other), json!([]));
+        assert!(wheel_control_post(&other, &body).is_err());
     }
     #[test]
     fn source_power_handlers_persist_device_threshold_and_keep_sleep_out_of_profiles() {

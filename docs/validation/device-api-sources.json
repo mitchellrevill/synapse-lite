@@ -1,0 +1,56 @@
+[
+  {
+    "file": "122-main.9fe4b2154f5bdbcab7d1.js",
+    "bytes": 160823,
+    "sha256": "0f7d32cc3df38dfe150312066810a768ee44227c3c2e0e2168c35cc1a3496498",
+    "authority": "public shipped artifact; static inspection only"
+  },
+  {
+    "file": "153-763.a34404889c2c905e8256.js",
+    "bytes": 2354889,
+    "sha256": "cb256717fc70f4df0db691d4ef7a620eff0fb300feb3d772f04ede26ab9b1d46",
+    "authority": "public shipped artifact; static inspection only"
+  },
+  {
+    "file": "153-main.13212a9fcf9f63d3e397.js",
+    "bytes": 248562,
+    "sha256": "bd9378b78754c01c45d0065baa7a7c99e671bfeddafdfdb54f49c70930df00b3",
+    "authority": "public shipped artifact; static inspection only"
+  },
+  {
+    "file": "164-main.74812b00da458b9eb800.js",
+    "bytes": 159015,
+    "sha256": "855c7cff127e5545b074a109fb1bd1a7a4d6aef01ec14838adf21db03402cae0",
+    "authority": "public shipped artifact; static inspection only"
+  },
+  {
+    "file": "170-7846.8a75e5fe80ffbb4883e1.js",
+    "bytes": 2303481,
+    "sha256": "7f8274eb2c21229ae0f557580e3b7dd8d5f10c69f3fae89fe10fdb4c14af063a",
+    "authority": "public shipped artifact; static inspection only"
+  },
+  {
+    "file": "170-main.6703881a7216b3250128.js",
+    "bytes": 254301,
+    "sha256": "ebff4806fb1fb914789f4f248b43a7a0353bbbfaf9cf98c272e3affb37990f3d",
+    "authority": "public shipped artifact; static inspection only"
+  },
+  {
+    "file": "rzDevice25Linker.aef7d6b63b7e973349f7.js",
+    "bytes": 7120,
+    "sha256": "4c16238aad4fa5f2d4dac5166b39cac358309dd48644dc8190ac657c29361482",
+    "authority": "public shipped artifact; static inspection only"
+  },
+  {
+    "file": "rzDevice25NommoChroma.0dc710b5df0eb86817d4.js",
+    "bytes": 5113,
+    "sha256": "bcc401db58dba55b52c04557a8e96e501f6c3316a55e0e68d5e1f0f1bf20e74d",
+    "authority": "public shipped artifact; static inspection only"
+  },
+  {
+    "file": "rzDevice25NommoPro.3c8e7606bf87ed2c1068.js",
+    "bytes": 5155,
+    "sha256": "6e034a57085b7cac5770b8f65bc9d5e880d04fcb9d858b7cec122d0f16c5ae5f",
+    "authority": "public shipped artifact; static inspection only"
+  }
+]

@@ -56,6 +56,7 @@ pub mod ornata_manifest;
 pub mod ornata_spatial;
 pub mod performance;
 pub mod power;
+pub mod wheel_controls;
 pub mod profile;
 pub mod profile_compat;
 pub mod proto;

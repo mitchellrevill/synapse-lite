@@ -143,6 +143,19 @@ impl Engine {
     }
 
     #[cfg(test)]
+    pub(crate) fn with_simulated_wheel(sim: &secbird_core::sim::Sim) -> Result<Self> {
+        HidApi::disable_device_discovery();
+        let mut engine = Self::from_api(HidApi::new()?);
+        let db = Db::builtin()?;
+        let device = sim.open(0x0099, db.get(0x0099).cloned())
+            .ok_or_else(|| secbird_core::Error::InvalidArg("Simulated wheel mouse did not answer".into()))?;
+        assert!(device.path.as_bytes().starts_with(b"sim:"));
+        engine.devices.push(device);
+        engine.simulated_only = true;
+        Ok(engine)
+    }
+
+    #[cfg(test)]
     pub(crate) fn with_simulated_keyboard(
         sim: &secbird_core::sim::Sim,
         path: std::path::PathBuf,

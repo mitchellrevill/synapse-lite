@@ -40,6 +40,18 @@ impl Device {
     pub fn is_query_only(&self) -> bool {
         self.query_only
     }
+
+    /// Selected wheel SDK getters declare capacity80 for Smart Reel but decode
+    /// two meaningful bytes. Keep this exception local to the explicit adapter.
+    pub(crate) fn get_wheel_register(&self, control: crate::wheel_controls::WheelControl) -> Result<Report> {
+        if !crate::wheel_controls::supports(self) {
+            return Err(Error::Unsupported("Wheel transport is not source-supported".into()));
+        }
+        let command = control.command().get();
+        self.permit_command(command)?;
+        transact_with_response_minimum(self.transport.as_ref(), self.txid, command,
+            control.size(), &[1], READ_RETRIES, 2)
+    }
     fn permit_command(&self, command: Command) -> Result<()> {
         if self.query_only && command.id & 0x80 == 0 {
             return Err(Error::Unsupported(format!(
