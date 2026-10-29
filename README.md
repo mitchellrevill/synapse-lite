@@ -67,6 +67,10 @@ The Lighting [brightness slider and switch](docs/STUDIO-BRIGHTNESS.md) now adjus
 Studio through LIVE brightness without selecting Quick effects or restarting the
 composition. The first accepted Studio frame also releases a previous LIVE0 using
 the configured intent; hardware/optical checks remain open.
+Studio [Breathing](docs/STUDIO-BREATHING.md) now supports deterministic continuous
+playback, two-colour regional editing, source speed presets, None/transparency,
+preview and saved device output. Random, finite and key-triggered variants remain
+explicitly unsupported; imported data is preserved.
 
 ## Attribution
 

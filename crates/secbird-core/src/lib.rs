@@ -11,6 +11,7 @@
 
 pub mod actions;
 pub mod buttons;
+pub mod breathing_lighting;
 pub mod commands;
 #[cfg(windows)]
 pub mod debloat;

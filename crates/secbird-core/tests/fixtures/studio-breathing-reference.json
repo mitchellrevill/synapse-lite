@@ -1,0 +1,659 @@
+{
+  "provenance": "Isolated shipped JS conversion plus independent scalar native-pseudocode reconstruction; no Rust or vendor DLL execution",
+  "native_sha256": "cd9fc2a61ff920b9b73e1f5e27632020e2f8586f443e426a875ad3b042b714fa",
+  "cases": [
+    {
+      "name": "pair_default",
+      "params": {
+        "color": 16711680,
+        "color2": 65280
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 0
+          },
+          {
+            "Stop": 12,
+            "Color": 0
+          },
+          {
+            "Stop": 25,
+            "Color": 16711680
+          },
+          {
+            "Stop": 38,
+            "Color": 16711680
+          },
+          {
+            "Stop": 50,
+            "Color": 0
+          },
+          {
+            "Stop": 62,
+            "Color": 0
+          },
+          {
+            "Stop": 75,
+            "Color": 65280
+          },
+          {
+            "Stop": 88,
+            "Color": 65280
+          },
+          {
+            "Stop": 100,
+            "Color": 0
+          }
+        ],
+        "Pause": 0,
+        "StaticColor": 1677721600
+      },
+      "frames": 350,
+      "pixel_md5": "a789bb82f53e23ab085af35c3a56c294",
+      "samples": [
+        {
+          "frame": 0,
+          "pixel": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 1,
+          "pixel": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 87,
+          "pixel": [
+            255,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 175,
+          "pixel": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 349,
+          "pixel": [
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "name": "first_only",
+      "params": {
+        "color": 1060944,
+        "duration": 6000
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 0
+          },
+          {
+            "Stop": 12,
+            "Color": 0
+          },
+          {
+            "Stop": 25,
+            "Color": 1060944
+          },
+          {
+            "Stop": 38,
+            "Color": 1060944
+          },
+          {
+            "Stop": 50,
+            "Color": 0
+          },
+          {
+            "Stop": 62,
+            "Color": 0
+          },
+          {
+            "Stop": 75,
+            "Color": 1677721600
+          },
+          {
+            "Stop": 88,
+            "Color": 1677721600
+          },
+          {
+            "Stop": 100,
+            "Color": 0
+          }
+        ],
+        "Duration": 6000,
+        "Pause": 0,
+        "StaticColor": 1677721600
+      },
+      "frames": 150,
+      "pixel_md5": "5e675baa91b233a992c931b0dd3aeada",
+      "samples": [
+        {
+          "frame": 0,
+          "pixel": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 1,
+          "pixel": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 37,
+          "pixel": [
+            16,
+            48,
+            80,
+            0
+          ]
+        },
+        {
+          "frame": 75,
+          "pixel": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 149,
+          "pixel": [
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "name": "second_only",
+      "params": {
+        "color2": 8874,
+        "duration": 28000,
+        "playbackStart": "random",
+        "playbackEnd": "never",
+        "cycles": -1
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 0
+          },
+          {
+            "Stop": 12,
+            "Color": 0
+          },
+          {
+            "Stop": 25,
+            "Color": 8874
+          },
+          {
+            "Stop": 38,
+            "Color": 8874
+          },
+          {
+            "Stop": 50,
+            "Color": 0
+          },
+          {
+            "Stop": 62,
+            "Color": 0
+          },
+          {
+            "Stop": 75,
+            "Color": 8874
+          },
+          {
+            "Stop": 88,
+            "Color": 8874
+          },
+          {
+            "Stop": 100,
+            "Color": 0
+          }
+        ],
+        "Duration": 28000,
+        "Cycles": -1,
+        "Pause": 0,
+        "StaticColor": 1677721600
+      },
+      "frames": 700,
+      "pixel_md5": "0a0d7c2e32e1d76946f0d9164c556437",
+      "samples": [
+        {
+          "frame": 0,
+          "pixel": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 1,
+          "pixel": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 175,
+          "pixel": [
+            0,
+            34,
+            170,
+            0
+          ]
+        },
+        {
+          "frame": 350,
+          "pixel": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 699,
+          "pixel": [
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "name": "custom_anchors",
+      "params": {
+        "colorStops": [
+          {
+            "Stop": 20,
+            "Color": 1122867
+          },
+          {
+            "Stop": 80
+          }
+        ],
+        "duration": 2000
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 1122867
+          },
+          {
+            "Stop": 20,
+            "Color": 1122867
+          },
+          {
+            "Stop": 80,
+            "Color": 1677721600
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "Duration": 2000,
+        "Pause": 0,
+        "StaticColor": 1677721600
+      },
+      "frames": 50,
+      "pixel_md5": "ea4aa32a2c0e8877ad9b8ca9398d1e6e",
+      "samples": [
+        {
+          "frame": 0,
+          "pixel": [
+            17,
+            34,
+            51,
+            0
+          ]
+        },
+        {
+          "frame": 1,
+          "pixel": [
+            17,
+            34,
+            51,
+            0
+          ]
+        },
+        {
+          "frame": 12,
+          "pixel": [
+            15,
+            31,
+            47,
+            6
+          ]
+        },
+        {
+          "frame": 25,
+          "pixel": [
+            8,
+            16,
+            24,
+            51
+          ]
+        },
+        {
+          "frame": 49,
+          "pixel": [
+            0,
+            0,
+            0,
+            100
+          ]
+        }
+      ]
+    },
+    {
+      "name": "tiny_two",
+      "params": {
+        "colorStops": [
+          {
+            "Stop": 0,
+            "Color": 65280
+          },
+          {
+            "Stop": 100,
+            "Color": 16711680
+          }
+        ],
+        "duration": 1
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 65280
+          },
+          {
+            "Stop": 100,
+            "Color": 16711680
+          }
+        ],
+        "Duration": 1,
+        "Pause": 0,
+        "StaticColor": 1677721600
+      },
+      "frames": 2,
+      "pixel_md5": "03017c28cb2e9ef0aea18710a954f21d",
+      "samples": [
+        {
+          "frame": 0,
+          "pixel": [
+            0,
+            255,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 1,
+          "pixel": [
+            255,
+            0,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "name": "missing",
+      "params": {},
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 0
+          },
+          {
+            "Stop": 12,
+            "Color": 0
+          },
+          {
+            "Stop": 25,
+            "Color": 1677721600
+          },
+          {
+            "Stop": 38,
+            "Color": 1677721600
+          },
+          {
+            "Stop": 50,
+            "Color": 0
+          },
+          {
+            "Stop": 62,
+            "Color": 0
+          },
+          {
+            "Stop": 75,
+            "Color": 1677721600
+          },
+          {
+            "Stop": 88,
+            "Color": 1677721600
+          },
+          {
+            "Stop": 100,
+            "Color": 0
+          }
+        ],
+        "Pause": 0,
+        "StaticColor": 1677721600
+      },
+      "frames": 350,
+      "pixel_md5": "5586bded588b69e78768fbfcd63bc13c",
+      "samples": [
+        {
+          "frame": 0,
+          "pixel": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 1,
+          "pixel": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 87,
+          "pixel": [
+            0,
+            0,
+            0,
+            100
+          ]
+        },
+        {
+          "frame": 175,
+          "pixel": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 349,
+          "pixel": [
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "name": "zero_duration",
+      "params": {
+        "color": 66051,
+        "color2": 11259375,
+        "duration": 0
+      },
+      "descriptor": {
+        "Mode": 0,
+        "ColorStops": [
+          {
+            "Stop": 0,
+            "Color": 0
+          },
+          {
+            "Stop": 12,
+            "Color": 0
+          },
+          {
+            "Stop": 25,
+            "Color": 66051
+          },
+          {
+            "Stop": 38,
+            "Color": 66051
+          },
+          {
+            "Stop": 50,
+            "Color": 0
+          },
+          {
+            "Stop": 62,
+            "Color": 0
+          },
+          {
+            "Stop": 75,
+            "Color": 11259375
+          },
+          {
+            "Stop": 88,
+            "Color": 11259375
+          },
+          {
+            "Stop": 100,
+            "Color": 0
+          }
+        ],
+        "Duration": 0,
+        "Pause": 0,
+        "StaticColor": 1677721600
+      },
+      "frames": 350,
+      "pixel_md5": "9f8f171229cf41686bd187c370e162b8",
+      "samples": [
+        {
+          "frame": 0,
+          "pixel": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 1,
+          "pixel": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 87,
+          "pixel": [
+            1,
+            2,
+            3,
+            0
+          ]
+        },
+        {
+          "frame": 175,
+          "pixel": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 349,
+          "pixel": [
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "case": "first_only",
+    "base_rgb": [
+      4,
+      16,
+      240
+    ],
+    "frames": 150,
+    "logical_rgb_md5": "8f489554e718c19f451c675c466ae1da",
+    "physical_rgb_md5": "4985598e08002f9bcd83ab1437fb3afe"
+  }
+}

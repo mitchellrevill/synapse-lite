@@ -1,7 +1,8 @@
 # Local Studio animation preview
 
-Open a composition in Chroma Studio and choose **Local Preview**. Static, Spectrum
-and Fire layers now animate the native canvas. Edits and Undo/Redo rebuild the
+Open a composition in Chroma Studio and choose **Local Preview**. Static, Spectrum,
+Fire and deterministic continuous [Breathing](STUDIO-BREATHING.md) layers animate
+the native canvas. Edits and Undo/Redo rebuild the
 preview from the current draft; file data is not changed merely by previewing.
 Stop Preview drops its frame plan. Navigating away stops playback; reopening
 Studio keeps the draft but does not silently restart animation.

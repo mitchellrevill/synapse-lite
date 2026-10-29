@@ -1,14 +1,14 @@
 # Studio layer authoring
 
 Open a local composition, then choose **Layer Actions**. The native editor now
-offers Add Static, Add Spectrum, Add Fire, New Group, Duplicate, Move Up/Down
+offers Add Static, Add Spectrum, Add Fire, Add Breathing, New Group, Duplicate, Move Up/Down
 and Delete. Ctrl+D duplicates and Delete removes the selected item when an edit
 field is not focused. Escape dismisses the menu. All changes participate in the
 existing local undo, redo, save, discard and unsaved-exit workflow.
 
 Adding an effect prepends an empty root layer and clears LED selection. Select
 LEDs and assign properties afterward; adding does not silently light the previous
-selection. Newly added Static/Spectrum/Fire regions work with Local Preview.
+selection. Newly added Static/Spectrum/Fire and [fixed Breathing](STUDIO-BREATHING.md) regions work with Local Preview.
 The preview still sends no hardware frames.
 
 New groups are empty, closed root groups and do not wrap selected layers or

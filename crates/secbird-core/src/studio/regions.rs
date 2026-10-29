@@ -27,18 +27,21 @@ pub enum ColorProperty {
     Static,
     FireHot,
     FireCold,
+    BreathingFirst,
+    BreathingSecond,
 }
 impl ColorProperty {
     fn effect(self) -> (&'static str, u16) {
         match self {
             Self::Static => ("static", 6),
             Self::FireHot | Self::FireCold => ("fire", 8),
+            Self::BreathingFirst | Self::BreathingSecond => ("breathing",5),
         }
     }
     fn field(self) -> &'static str {
         match self {
-            Self::Static | Self::FireHot => "color",
-            Self::FireCold => "color2",
+            Self::Static | Self::FireHot | Self::BreathingFirst => "color",
+            Self::FireCold | Self::BreathingSecond => "color2",
         }
     }
 }
@@ -48,6 +51,7 @@ enum RegionEdit<'a> {
     Erase,
     Color(ColorProperty, Option<u32>),
     Spectrum(spectrum::Edit<'a>, &'a Object),
+    BreathingDuration(u32),
 }
 impl RegionEdit<'_> {
     fn assigns(self) -> bool {
@@ -67,6 +71,7 @@ impl RegionEdit<'_> {
             }
             edit.apply(params, new)?;
         }
+        if let Self::BreathingDuration(value)=self { params.set("duration",Some(&encode(&value)?)); }
         Ok(())
     }
 }
@@ -122,6 +127,12 @@ fn property_color(region: &Object, property: ColorProperty) -> Result<Option<u32
             }
         })
         .transpose()
+}
+fn breathing_color_fields(params: &Object) -> Result<()> {
+    if params.get("colorStops").is_some() || params.get("randomColor").is_some_and(|raw|raw.get()!="false") {
+        return Err(invalid("Breathing custom gradients and random colour editing are not implemented; imported parameters were preserved"));
+    }
+    Ok(())
 }
 fn layer(draft: &Draft, id: &str, property: Option<ColorProperty>) -> Result<Object> {
     let row = draft
@@ -204,6 +215,9 @@ impl Draft {
             return Ok(SelectedColor::Empty);
         }
         let item = layer(self, id, Some(property))?;
+        if property.effect().0=="breathing" {
+            if let Some(raw)=item.get("params") { breathing_color_fields(&Object::parse(raw)?)?; }
+        }
         inventory(self, &selection)?;
         let mut colors: BTreeMap<LedSelection, Option<u32>> = BTreeMap::new();
         for raw in entries(&item, "regions")? {
@@ -220,6 +234,9 @@ impl Draft {
                 }
             }
             if !matching.is_empty() {
+                if property.effect().0=="breathing" {
+                    breathing_color_fields(&Object::parse(region.get("params").ok_or_else(||invalid("region has no params"))?)?)?;
+                }
                 let color = property_color(&region, property)?;
                 for key in matching {
                     if colors.insert(key, color).is_some() {
@@ -272,6 +289,10 @@ impl Draft {
     pub fn erase_leds(&mut self, id: &str, selection: &[LedSelection]) -> Result<bool> {
         self.edit_regions(id, selection, RegionEdit::Erase)
     }
+    pub fn set_breathing_duration(&mut self,id:&str,selection:&[LedSelection],milliseconds:u32) -> Result<bool> {
+        if !crate::breathing_lighting::DURATIONS.contains(&milliseconds) { return Err(invalid("choose a source Breathing duration")); }
+        self.edit_regions(id,selection,RegionEdit::BreathingDuration(milliseconds))
+    }
 
     fn edit_regions(
         &mut self,
@@ -285,11 +306,14 @@ impl Draft {
         }
         let property = match edit {
             RegionEdit::Color(property, _) => Some(property),
-            RegionEdit::Erase | RegionEdit::Spectrum(..) => None,
+            RegionEdit::Erase | RegionEdit::Spectrum(..) | RegionEdit::BreathingDuration(_) => None,
         };
         let item = layer(self, id, property)?;
         if matches!(edit, RegionEdit::Spectrum(..)) {
             spectrum::validate_layer(&item)?;
+        }
+        if matches!(edit,RegionEdit::BreathingDuration(_)) && (item.text("name")?!="breathing" || item.get("value").is_some_and(|value|value.get()!="5")) {
+            return Err(invalid("selected layer is not Studio Breathing5"));
         }
         let available = inventory(self, &selection)?;
         let mut seen = BTreeSet::new();

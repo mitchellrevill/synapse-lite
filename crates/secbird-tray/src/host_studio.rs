@@ -191,6 +191,32 @@ mod tests {
     use std::time::Instant;
     const PROFILE: &str =
         include_str!("../../secbird-core/tests/fixtures/studio-preview-profile.json");
+    #[test]
+    fn breathing_composition_matches_independent150_physical_frames_and1050_mock_outs() {
+        let reference:Value=serde_json::from_str(include_str!("../../secbird-core/tests/fixtures/studio-breathing-reference.json")).unwrap();
+        let mut raw:Value=serde_json::from_str(PROFILE).unwrap();
+        let mut breathing=raw["layers"][0].clone();
+        breathing["id"]="breathing".into();breathing["name"]="breathing".into();breathing["value"]=5.into();
+        breathing["params"]=json!({});breathing["regions"][0]["params"]=json!({"color":0x103050,"duration":6000});
+        let mut base=breathing.clone();base["id"]="base".into();base["name"]="static".into();base["value"]=6.into();base["regions"][0]["params"]=json!({"color":0x0410f0});
+        raw["layers"]=json!([breathing,base]);
+        let draft=Draft::open(&raw.to_string()).unwrap();
+        let mut prepared=program(&draft);let mut bytes=vec![];
+        let (mut device,spy)=test_support::fixture();let mut controls=StreamState::default();
+        let before={let sim=spy.sim.state();(sim.brightness.clone(),sim.effects.clone(),sim.macros.clone(),sim.game_mode)};
+        for _ in 0..150 {
+            let frame=prepared.current_frame().unwrap();bytes.extend(rgb(&frame));
+            let result=controls.submit_frame(&mut device,&frame,Instant::now()+Duration::from_secs(1),||false);
+            assert!(result.completion.error.is_none());assert_eq!(result.completion.accepted_packets,7);
+            let expected=rgb(&frame);let sim=spy.sim.state();
+            assert_eq!(sim.matrix.as_ref().unwrap().2.iter().flatten().copied().collect::<Vec<_>>(),expected);drop(sim);
+            prepared.advance().unwrap();
+        }
+        assert_eq!(format!("{:x}",md5::compute(bytes)),reference["composition"]["physical_rgb_md5"].as_str().unwrap());
+        assert_eq!(spy.state.lock().unwrap().attempts,1050);
+        let after={let sim=spy.sim.state();(sim.brightness.clone(),sim.effects.clone(),sim.macros.clone(),sim.game_mode)};
+        assert_eq!(before,after);assert_eq!(spy.state.lock().unwrap().mode,3);
+    }
 
     pub(super) fn map() -> OrnataSpatialMap {
         let fixture: Value = serde_json::from_str(include_str!(

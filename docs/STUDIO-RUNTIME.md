@@ -10,8 +10,9 @@ acknowledgement. It remains available while another Studio file/apply job is bus
 
 Current physical admission is exactly one connected Ornata V2, interface2, existing
 Driver Mode3 and profile0/region0 CustomFrame8, edition0/default saved geometry with
-an authenticated supported source layout. Existing Static/Spectrum/Fire composition
-layers are supported. A matching catalogue name or artwork cannot enable output.
+an authenticated supported source layout. Static/Spectrum/Fire and deterministic
+continuous [Breathing](STUDIO-BREATHING.md) layers are supported. A matching catalogue
+name or artwork cannot enable output.
 No automatic mode acquisition, input subscription, driver installation or normal-mode
 reset is performed. A conflicting/unknown owner, missing retained brightness policy,
 read-only run, absent worker, changed connection or invalid asset/composition refuses

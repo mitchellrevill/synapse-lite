@@ -63,6 +63,7 @@ pub(super) enum Control {
     Preview,
     ApplyDevice,
     StopDevice,
+    BreathingDuration(usize),
     Erase,
 }
 #[derive(Clone, Copy)]
@@ -276,6 +277,8 @@ impl View {
     fn is_fire(&self) -> bool {
         self.effect() == Some("fire")
     }
+    fn is_breathing(&self) -> bool { self.effect()==Some("breathing") }
+    fn has_two_colors(&self) -> bool { self.is_fire() || self.is_breathing() }
     fn effect(&self) -> Option<&str> {
         self.draft
             .as_ref()?
@@ -290,6 +293,8 @@ impl View {
             ("static", false) => Some(ColorProperty::Static),
             ("fire", false) => Some(ColorProperty::FireHot),
             ("fire", true) => Some(ColorProperty::FireCold),
+            ("breathing", false) => Some(ColorProperty::BreathingFirst),
+            ("breathing", true) => Some(ColorProperty::BreathingSecond),
             _ => None,
         }
     }
@@ -322,11 +327,11 @@ pub(super) fn selection_changed(state: &mut State) {
             view.failed = true;
         }
     }
-    if view.is_fire() {
+    if view.has_two_colors() {
         match view.draft.as_ref().unwrap().selection_color(
             view.selected.as_deref().unwrap(),
             &view.canvas.selection(),
-            ColorProperty::FireCold,
+            view.color_property(true).unwrap(),
         ) {
             Ok(value) => {
                 view.selected_cold = Some(value);
@@ -495,6 +500,7 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
             | Control::ApplyCold
             | Control::ClearColor(_)
             | Control::Erase
+            | Control::BreathingDuration(_)
     );
     if !matches!(control, Control::Layers(_)) { state.studio.layer_menu = false; }
     match control {
@@ -551,6 +557,17 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
         Control::ApplyDevice => output::apply(state),
         Control::StopDevice => unreachable!("handled before busy file operations"),
         Control::Spectrum(control) => spectrum::action(state, control),
+        Control::BreathingDuration(index) => {
+            let result=(|| -> Result<(),String> {
+                let view=&mut state.studio;
+                let duration=*secbird_core::breathing_lighting::DURATIONS.get(index).ok_or("Unknown Breathing speed")?;
+                let id=view.selected.as_deref().ok_or("Select a Breathing layer")?;
+                view.draft.as_mut().ok_or("Open a composition first")?
+                    .set_breathing_duration(id,&view.canvas.selection(),duration).map_err(|e|e.to_string())?;
+                Ok(())
+            })();
+            match result {Ok(())=>{state.studio.status="Breathing speed changed for selected LEDs; save to keep it".into();state.studio.failed=false;},Err(message)=>error(state,message)}
+        }
         Control::Layers(control) => {
             layer_tools::action(state, control);
             ReleaseCapture();
@@ -893,7 +910,7 @@ pub(super) unsafe fn rebuild_fields(state: &mut State) {
             SendMessageW(edit, EM_SETLIMITTEXT, 7, 0);
             SendMessageW(edit, WM_SETFONT, state.fonts.normal as usize, 1);
         }
-        if state.studio.is_fire() {
+        if state.studio.has_two_colors() {
             let text = state.studio.cold.clone();
             state.retained_fields.remove(&COLD);
             state.field(COLD, &text, right + 10, 388, 130);
@@ -1304,10 +1321,10 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
             Control::Erase,
             enabled,
         );
-    } else if view.is_fire() {
+    } else if view.has_two_colors() {
         for (cold, title, value, text, y) in [
-            (false, "HOT", view.selected_color, &view.color, 246),
-            (true, "COLD", view.selected_cold, &view.cold, 349),
+            (false, if view.is_breathing(){"COLOUR 1"}else{"HOT"}, view.selected_color, &view.color, 246),
+            (true, if view.is_breathing(){"COLOUR 2"}else{"COLD"}, view.selected_cold, &view.cold, 349),
         ] {
             let label = match value {
                 Some(SelectedColor::Mixed) => format!("{title} · MIXED"),
@@ -1322,7 +1339,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
             let enabled = view.editable() && view.canvas.count() > 0 && value.is_some();
             button(
                 p,
-                if cold { "APPLY COLD" } else { "APPLY HOT" },
+                if view.is_breathing() {if cold{"APPLY COLOUR 2"}else{"APPLY COLOUR 1"}} else if cold { "APPLY COLD" } else { "APPLY HOT" },
                 right + 10,
                 y + 74,
                 130,
@@ -1365,6 +1382,12 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
             MUTED,
         );
     }
+    if view.is_breathing() {
+        p.text("SPEED · SELECT LEDS",right+10,500,230,25,p.fonts.small,TEXT,DT_LEFT);
+        for (index,title) in ["SLOW","NORMAL","FAST"].iter().enumerate() {
+            button(p,title,right+10+index as i32*77,530,72,Control::BreathingDuration(index),view.editable() && view.canvas.count()>0);
+        }
+    }
     button(
         p,
         "SAVE",
@@ -1383,7 +1406,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         p,
         message,
         right + 10,
-        if view.effect() == Some("spectrum") {
+        if view.is_breathing() { 566 } else if view.effect() == Some("spectrum") {
             590
         } else if view.is_fire() {
             506

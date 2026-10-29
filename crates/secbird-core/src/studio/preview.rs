@@ -13,6 +13,7 @@ enum Generator {
     Static(Pixel),
     Spectrum(SpectrumCycle),
     Fire(FireCycle),
+    Breathing(crate::breathing_lighting::BreathingCycle),
 }
 struct Effect {
     generator: Generator,
@@ -78,12 +79,20 @@ fn color(params: &Object, key: &str) -> Result<Option<u32>> {
         .map(|raw| serde_json::from_str(raw.get()).map_err(invalid))
         .transpose()
 }
+fn gradient(params: &Object) -> Result<Option<Vec<super::GradientStop>>> {
+    if params.get("colorStops").is_none() {return Ok(None);}
+    array_field(params,"colorStops")?.iter().map(|raw|{
+        let stop=Object::parse(raw)?;
+        Ok(super::GradientStop {position:serde_json::from_str(stop.get("Stop").ok_or_else(||invalid("missing gradient Stop"))?.get()).map_err(invalid)?,color:color(&stop,"Color")?})
+    }).collect::<Result<Vec<_>>>().map(Some)
+}
 impl Generator {
     fn bytes(&self) -> usize {
         match self {
             Self::Static(_) => 0,
             Self::Spectrum(cycle) => cycle.storage_bytes(),
             Self::Fire(cycle) => cycle.storage_bytes(),
+            Self::Breathing(cycle) => cycle.storage_bytes(),
         }
     }
 }
@@ -186,6 +195,7 @@ impl Preview {
             "static" => 6,
             "spectrum" => 4,
             "fire" => 8,
+            "breathing" => 5,
             _ => return Err(invalid(format!("preview does not yet implement {name}"))),
         };
         if let Some(value) = item.get("value") {
@@ -233,30 +243,21 @@ impl Preview {
                 params.set(&name, Some(&value));
             }
             let generator = match expected {
+                5 => {
+                    let random=params.get("randomColor").map(|raw|serde_json::from_str::<bool>(raw.get()).map_err(invalid)).transpose()?.unwrap_or(false);
+                    let start=params.get("playbackStart").map(|raw|serde_json::from_str::<String>(raw.get()).map_err(invalid)).transpose()?;
+                    let end=params.get("playbackEnd").map(|raw|serde_json::from_str::<String>(raw.get()).map_err(invalid)).transpose()?;
+                    let cycles=params.get("cycles").map(|raw|serde_json::from_str::<i64>(raw.get()).map_err(invalid)).transpose()?.unwrap_or(0);
+                    if random || start.as_deref().is_some_and(|mode|mode!="random") || end.as_deref().is_some_and(|mode|mode!="never") || ![0,-1].contains(&cycles) {
+                        return Err(invalid("Breathing random, finite-cycle and input-triggered modes are not implemented"));
+                    }
+                    let stops=gradient(&params)?;
+                    let duration=params.get("duration").map(|raw|serde_json::from_str(raw.get()).map_err(invalid)).transpose()?;
+                    Generator::Breathing(crate::breathing_lighting::BreathingCycle::studio(color(&params,"color")?,color(&params,"color2")?,stops.as_deref(),duration)?)
+                }
                 6 => Generator::Static(Pixel::from_studio_color(color(&params, "color")?)?),
                 4 => {
-                    let stops = if params.get("colorStops").is_some() {
-                        Some(
-                            array_field(&params, "colorStops")?
-                                .iter()
-                                .map(|raw| {
-                                    let stop = Object::parse(raw)?;
-                                    let position = serde_json::from_str(
-                                        stop.get("Stop")
-                                            .ok_or_else(|| invalid("missing gradient Stop"))?
-                                            .get(),
-                                    )
-                                    .map_err(invalid)?;
-                                    Ok(super::GradientStop {
-                                        position,
-                                        color: color(&stop, "Color")?,
-                                    })
-                                })
-                                .collect::<Result<Vec<_>>>()?,
-                        )
-                    } else {
-                        None
-                    };
+                    let stops=gradient(&params)?;
                     let duration = params
                         .get("duration")
                         .map(|raw| serde_json::from_str(raw.get()).map_err(invalid))
@@ -323,6 +324,7 @@ impl Preview {
                 Generator::Static(pixel) => self.scratch.fill(*pixel),
                 Generator::Spectrum(cycle) => self.scratch.fill(cycle.next_pixel()),
                 Generator::Fire(cycle) => cycle.next_frame(&mut self.scratch)?,
+                Generator::Breathing(cycle) => self.scratch.fill(cycle.next_pixel()),
             }
             Layer {
                 pixels: &self.scratch,
@@ -368,6 +370,9 @@ impl Preview {
     }
 }
 
+#[cfg(test)]
+#[path="breathing_tests.rs"]
+mod breathing_tests;
 #[cfg(test)]
 mod tests {
     use super::*;

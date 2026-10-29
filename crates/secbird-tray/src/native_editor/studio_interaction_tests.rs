@@ -2,6 +2,66 @@
 use super::*;
 
 #[test]
+#[ignore = "requires private stock export/assets; opens isolated simulated Breathing authoring window"]
+fn native_studio_breathing_colors_speed_preview_save_and_undo_preserve_source() {
+    let input=PathBuf::from(std::env::var_os("SYNAPSE_LITE_STOCK_STUDIO_FILE").expect("select stock export"));
+    let original=std::fs::read(&input).unwrap();
+    let directory=std::env::temp_dir().join(format!("native-studio-breathing-{}-{}",std::process::id(),std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+    std::fs::create_dir_all(&directory).unwrap();let frame=directory.join("frame.json");
+    let _environment=Environment::set(&[("SYNAPSE_LITE_CONFIG_DIR",&directory),("SYNAPSE_LITE_SMOKE_REPORT",&frame),("SYNAPSE_LITE_SMOKE_VIEW",Path::new("studio"))]);
+    let sim=Sim::wireless_mouse();let engine=Engine::with_simulated_mouse(&sim).unwrap();
+    let mut store=Store::load(&directory.join("profiles.json")).unwrap();store.for_device(&engine.devices()[0]);store.save().unwrap();
+    let original_store=std::fs::read(directory.join("profiles.json")).unwrap();
+    let folder=directory.clone();let monitor=sim.clone();let source=input.clone();
+    let controller=std::thread::spawn(move || {
+        let result=(|| -> Result<Value,String> {unsafe {
+            wait_for(||frame.exists(),"Breathing window")?;
+            let hwnd=WINDOW.load(Ordering::Acquire) as HWND;
+            let query=||{let mut value=Value::Null;SendMessageW(hwnd,STUDIO_TEST,2,&mut value as *mut Value as isize);value};
+            wait_for(||query()["pending"]==0,"initial reads")?;
+            monitor.state().log.clear();
+            let path=json!(source.to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,1,&path as *const Value as isize);
+            wait_for(||query()["profiles"]==1 && query()["busy"]==false,"composition load")?;
+            let scale=f64::from(GetDpiForWindow(hwnd).max(96))/96.;
+            let mut client:RECT=std::mem::zeroed();GetClientRect(hwnd,&mut client);
+            let width=f64::from(client.right)/scale;let height=f64::from(client.bottom)/scale;let right=width-250.;
+            lighting_click(hwnd,775.,100.,scale);lighting_click(hwnd,800.,356.,scale);
+            let id=query()["selected"].as_str().ok_or("new Breathing not selected")?.to_owned();
+            if !query()["rows"].as_array().unwrap().iter().any(|row|row["id"]==id && row["title"]=="BREATHING") {return Err("Breathing menu did not create the source-shaped layer".into());}
+            let fit=((width-540.)/960.).min((height-250.)/360.).clamp(0.05,4.);
+            lighting_click(hwnd,width/2.+(67.-480.)*fit,(168.+height)/2.+(76.-180.)*fit,scale);
+            let first=GetDlgItem(hwnd,i32::from(studio_view::COLOR));let second=GetDlgItem(hwnd,i32::from(studio_view::COLD));
+            if first.is_null() || second.is_null() {return Err("Breathing dual colour fields missing".into());}
+            SendMessageW(first,WM_SETTEXT,0,wide("112233").as_ptr() as isize);lighting_click(hwnd,right+70.,333.,scale);
+            let second=GetDlgItem(hwnd,i32::from(studio_view::COLD)); // applying colour1 rebuilds fields
+            SendMessageW(second,WM_SETTEXT,0,wide("AABBCC").as_ptr() as isize);lighting_click(hwnd,right+70.,436.,scale);
+            lighting_click(hwnd,right+200.,543.,scale); // source fast6000ms
+            lighting_click(hwnd,630.,100.,scale);
+            wait_for(||query()["preview"]["current"]==true && query()["preview"]["effects"]==3,"Breathing preview")?;
+            wait_for(||query()["preview"]["frame"][1]==json!([17,34,51]),"first Breathing peak colour")?;
+            let capture=json!(folder.join("breathing.png").to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize);
+            let output=folder.join("breathing.ChromaEffects");let path=json!(output.to_string_lossy());
+            SendMessageW(hwnd,STUDIO_TEST,3,&path as *const Value as isize);wait_for(||query()["busy"]==false && query()["dirty"]==false,"Breathing save")?;
+            let bytes=std::fs::read(output).map_err(|e|e.to_string())?;let archive=secbird_core::studio::Archive::parse(&bytes).map_err(|e|e.to_string())?;
+            let saved:Value=serde_json::from_str(archive.profile_json(0).unwrap()).unwrap();
+            let row=saved["layers"].as_array().unwrap().iter().find(|row|row["id"]==id).ok_or("saved Breathing missing")?;
+            let params=&row["regions"][0]["params"];
+            if params["color"]!=0x112233 || params["color2"]!=0xaabbcc || params["duration"]!=6000 {return Err(format!("Breathing fields were not saved: {params}"));}
+            lighting_click(hwnd,450.,100.,scale);if query()["dirty"]!=true {return Err("Breathing speed undo did not restore the previous draft".into());}
+            lighting_click(hwnd,520.,100.,scale);if query()["dirty"]!=false {return Err("Breathing speed redo did not return to saved state".into());}
+            if !monitor.state().log.is_empty() {return Err("Local Breathing authoring made device requests".into());}
+            Ok(json!({"new_breathing_layer":true,"two_color_fields":true,"source_fast_ms":6000,"peak_rgb":[17,34,51],"save_undo_redo":true,"sim_device_requests":0,"physical_discovery_disabled":true}))
+        }})();
+        unsafe {let hwnd=WINDOW.load(Ordering::Acquire) as HWND;SendMessageW(hwnd,STUDIO_TEST,5,0);PostMessageW(hwnd,WM_CLOSE,0,0);}
+        std::fs::write(folder.join("interaction.json"),serde_json::to_vec_pretty(&match &result {Ok(value)=>value.clone(),Err(error)=>json!({"error":error})}).unwrap()).unwrap();result
+    });
+    let run=run_standalone(Arc::new(Mutex::new(engine)),Some(Duration::from_secs(30)));let result=controller.join().unwrap();
+    assert!(run.is_ok(),"{run:?}");assert!(result.is_ok(),"{result:?}");
+    assert_eq!(std::fs::read(input).unwrap(),original);assert_eq!(std::fs::read(directory.join("profiles.json")).unwrap(),original_store);
+    eprintln!("Breathing native evidence: {}",directory.display());
+}
+
+#[test]
 #[ignore = "requires private stock export and pinned asset; opens isolated simulated Studio playback window"]
 fn native_studio_saved_apply_and_stop_use_shared_worker_without_changing_profiles() {
     let input=PathBuf::from(std::env::var_os("SYNAPSE_LITE_STOCK_STUDIO_FILE").expect("select stock export"));
