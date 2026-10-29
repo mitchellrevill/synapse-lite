@@ -95,7 +95,7 @@ metadata-only persistence, read-only refusal and zero hardware SETs.
 
 No normal user-store migration, new foreground hook, live physical switch or
 input generation was performed. The existing hook supplies the new observations.
-There is no new native Linked Games page yet, so this checkpoint changes no UI
+At this runtime checkpoint there was no native Linked Games page, so it changed no UI
 paint and establishes no pixel-parity claim. Native cards/selection controls,
 source GUID/game-library migration, game artwork/discovery, protected-game and
 sleep/reconnect/real foreground acceptance remain TODOs. Full profile/device,
@@ -104,3 +104,6 @@ privacy, input and three complete-build memory gates stay open.
 Workspace verification:462 core,295 tray,four CLI and one doc test passed; six
 core and39 tray checks remain intentionally ignored. The public evidence keeps
 private process locations and user profile records out of the repository.
+
+The subsequent manual native page is documented in LINKED-GAMES-NATIVE.md.
+Source library/GUID migration, scanning, artwork and full visual acceptance remain open.

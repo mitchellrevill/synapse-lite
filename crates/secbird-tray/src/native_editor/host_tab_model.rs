@@ -92,6 +92,8 @@ impl Session {
         }
     }
 
+    pub fn known(&self,id:&str)->bool {self.saved.order.iter().chain(&self.saved.closed).any(|key|key==id)}
+
     pub fn reconcile(&mut self, connected: &[String]) {
         self.connected = connected
             .iter()

@@ -1,0 +1,60 @@
+{
+  "checkpoint": "native-linked-games-manual-profile-management",
+  "date": "2026-10-29",
+  "source_chunks_sha256": {
+    "1255.b556ae48.chunk.js": "e2358162af969ff3235c32a744465cb9ccae762d053108e77bec144348cde7fc",
+    "9449.8f17b519.chunk.js": "823e7a30acddaa3650be99cf430055fcbd505d39ebfb679685c9878aa7ce70a3"
+  },
+  "rea": {
+    "summary": "ev_f2af42c730a4b24e497c6af304a1955b9e65992110b621852bb0b476648a5fb9",
+    "parent": "ev_5ec63c3b045b2b28dcb03c38141a30ace6ae81bd4c9401c9424d91ed2916d46f",
+    "files": 2,
+    "bytes": 209096,
+    "ast_nodes": 57211,
+    "parse_failures": 0,
+    "semantic_unknowns": 12031,
+    "execution": false
+  },
+  "native_interaction": {
+    "add_bind_unlink_remove": true,
+    "games_devices_views": true,
+    "hardware_sets": 0,
+    "native_file_picker_bypassed": true,
+    "physical_discovery_disabled": true,
+    "profile_choice": "Gaming",
+    "read_only_inert": true,
+    "saved_profiles_byte_equal": true,
+    "tab_close_reopen": true,
+    "worker_read_only_refuses_before_store_creation": true
+  },
+  "visual_review": {
+    "stock_reference": "stock-linked-games-0.jpg",
+    "native_captures": [
+      "games.png",
+      "devices.png",
+      "game-profiles.png"
+    ],
+    "same_dpi_size_state": false,
+    "pixel_parity_claimed": false,
+    "geometry": "source 290x220 tiles, 150px body, 70px footer, 20px gap, 5px radius"
+  },
+  "limits": [
+    "simulated mouse; no physical switch validation",
+    "file picker bypassed for regression; real picker acceptance pending",
+    "game scan, source library/GUID migration and cover-art import pending",
+    "stock toolbar, dialogs, hover/pressed and dropdown styling pending",
+    "non-ASCII path aliases and protected-game switching pending",
+    "complete build memory/privacy/input/profile/device acceptance pending"
+  ],
+  "workspace": {
+    "core_passed": 465,
+    "core_ignored": 6,
+    "tray_passed": 295,
+    "tray_ignored": 40,
+    "cli_passed": 4,
+    "doc_passed": 1
+  },
+  "studio_save_failure_exit_regression": "passed; simulated native window",
+  "optimized_build": "passed",
+  "optimized_native_interaction": "passed; same add/link/unlink/remove/read-only/tab lifecycle assertions"
+}

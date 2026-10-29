@@ -107,3 +107,5 @@ pub fn config_dir() -> std::path::PathBuf {
         .join("synapse-lite")
 }
 pub use hidapi;
+
+pub mod linked_games;

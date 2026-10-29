@@ -7,6 +7,8 @@ const { execFileSync } = require('node:child_process');
 const [cache, output, sharp] = process.argv.slice(2);
 if (!cache || !output || !sharp) throw new Error('Expected <local-cache> <output> <sharp-module>');
 const sources = [
+  ['game-placeholder', 'synapse/profiles/static/media/placeholder_game_icon.17a60ecb.svg___WB_REVISION___459c32f134cab855a327bfe38b520e15', '6f2331c0a16867d9551b659db45a706d7bda559f7e5b9a44103430a4992cc92e'],
+  ['linked-games', 'synapse/assets/imgs/favicon/GAMEPAD.svg___WB_REVISION___e1d447ce1f56269ea4360bc14a236aa3', '30e5ae82c08a102cbfe4f67aa8bb4eba2b866c5678e1527d277e8af9392c100c'],
   ['synapse', 'synapse/dashboard/favicon.svg___WB_REVISION___94ab882339447c137f3c5c03f5eca2d8', '76acb76f772f2696512943817219b912b3246c95a636876fe44dee835f711e14'],
   ['mouse', 'synapse/assets/imgs/favicon/MOUSE.svg___WB_REVISION___883f9809a60cca176c163e0724ca27e6', '7abd0c47857cd07599ad3ac1dd4da90421b72b051278f71bd4aa266d69b28580'],
   ['keyboard', 'synapse/assets/imgs/favicon/KEYBOARD.svg___WB_REVISION___6b5905b6b4286d086ce57874b5127ef3', 'a5c665f592beae2b7cab277af9c1ffc01784f2240497425d2d33841541e51811'],

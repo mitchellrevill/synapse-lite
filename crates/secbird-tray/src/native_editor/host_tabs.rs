@@ -28,6 +28,13 @@ impl View {
     }
 }
 
+fn entries(state:&State)->Vec<&Value> {
+    static LINKED:std::sync::LazyLock<Value>=std::sync::LazyLock::new(||json!({"id":linked_games::ID,"name":"LINKED GAMES","module":"linked-games"}));
+    let mut entries:Vec<_>=state.devices().iter().collect();
+    if state.linked_games.used||state.host_tabs.borrow().session.known(linked_games::ID) {entries.push(&LINKED);}
+    entries
+}
+
 pub(super) fn remember(state: &State) {
     if let Some(id) = &state.selected {
         state
@@ -49,8 +56,7 @@ fn persist(state: &mut State) {
 }
 
 pub(super) fn open(state: &mut State, id: &str) -> bool {
-    let connected: Vec<_> = state
-        .devices()
+    let connected: Vec<_> = entries(state)
         .iter()
         .filter_map(|d| d["id"].as_str().map(str::to_owned))
         .collect();
@@ -119,6 +125,7 @@ fn layout(window: i32, home: i32, widths: &[i32]) -> Layout {
 }
 
 fn title(device: &Value) -> String {
+    if device["module"]=="linked-games" {return "LINKED GAMES".into();}
     // Product UI's transport suffix belongs in the product view, not its host
     // tab. Keep unknown product names rather than guessing their family.
     match device["pid"]
@@ -334,8 +341,8 @@ unsafe fn label(
 }
 
 pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, window: i32) {
-    let ids: Vec<_> = state
-        .devices()
+    let items=entries(state);
+    let ids: Vec<_> = items
         .iter()
         .filter_map(|d| d["id"].as_str().map(str::to_owned))
         .collect();
@@ -343,7 +350,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, window: i32) {
     let order = state.host_tabs.borrow().session.visible();
     let devices: Vec<_> = order
         .iter()
-        .filter_map(|id| state.devices().iter().find(|d| d["id"] == *id))
+        .filter_map(|id| items.iter().find(|d| d["id"] == *id).copied())
         .collect();
     let home_outer = (text_advance(p, "SYNAPSE") + 56.0).clamp(92.0, 242.0);
     // Browser clientWidth rounds the fractional CSS box for host positioning;
@@ -411,7 +418,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, window: i32) {
         let width = widths[index];
         let id = device["id"].as_str().unwrap_or("");
         if x + width > g.start && x < g.start + g.viewport {
-            let icon = if device["pid"] == "025D" {
+            let icon = if device["module"]=="linked-games" {"host-linked-games"} else if device["pid"] == "025D" {
                 "host-keyboard"
             } else {
                 "host-mouse"
