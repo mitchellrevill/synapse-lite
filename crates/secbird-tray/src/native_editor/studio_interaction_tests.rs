@@ -2,6 +2,76 @@
 use super::*;
 
 #[test]
+#[ignore = "requires private stock export/assets; opens isolated simulated Starlight authoring window"]
+fn native_studio_starlight_properties_gradient_save_and_refusal_preserve_source() {
+    let input=PathBuf::from(std::env::var_os("SYNAPSE_LITE_STOCK_STUDIO_FILE").expect("select stock export"));
+    let original=std::fs::read(&input).unwrap();
+    let directory=std::env::temp_dir().join(format!("native-studio-starlight-{}-{}",std::process::id(),std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+    std::fs::create_dir_all(&directory).unwrap();let frame=directory.join("frame.json");
+    let _environment=Environment::set(&[("SYNAPSE_LITE_CONFIG_DIR",&directory),("SYNAPSE_LITE_SMOKE_REPORT",&frame),("SYNAPSE_LITE_SMOKE_VIEW",Path::new("studio"))]);
+    let sim=Sim::wireless_mouse();let engine=Engine::with_simulated_mouse(&sim).unwrap();
+    let mut store=Store::load(&directory.join("profiles.json")).unwrap();store.for_device(&engine.devices()[0]);store.save().unwrap();
+    let original_store=std::fs::read(directory.join("profiles.json")).unwrap();
+    let folder=directory.clone();let monitor=sim.clone();let source=input.clone();
+    let controller=std::thread::spawn(move || {
+        let result=(|| -> Result<Value,String> {unsafe {
+            wait_for(||frame.exists(),"Wave window")?;
+            let hwnd=WINDOW.load(Ordering::Acquire) as HWND;
+            let query=||{let mut value=Value::Null;SendMessageW(hwnd,STUDIO_TEST,2,&mut value as *mut Value as isize);value};
+            wait_for(||query()["pending"]==0,"initial reads")?;
+            monitor.state().log.clear();
+            let path=json!(source.to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,1,&path as *const Value as isize);
+            wait_for(||query()["profiles"]==1 && query()["busy"]==false,"composition load")?;
+            let scale=f64::from(GetDpiForWindow(hwnd).max(96))/96.;
+            let mut client:RECT=std::mem::zeroed();GetClientRect(hwnd,&mut client);
+            let width=f64::from(client.right)/scale;let height=f64::from(client.bottom)/scale;let right=width-250.;
+            lighting_click(hwnd,775.,100.,scale);lighting_click(hwnd,800.,412.,scale);
+            let id=query()["selected"].as_str().ok_or("Starlight not selected")?.to_owned();
+            if !query()["rows"].as_array().unwrap().iter().any(|r|r["id"]==id && r["title"]=="STARLIGHT") {return Err("Starlight layer was not added".into());}
+            let fit=((width-540.)/960.).min((height-250.)/360.).clamp(0.05,4.);
+            lighting_click(hwnd,width/2.+(67.-480.)*fit,(168.+height)/2.+(76.-180.)*fit,scale);
+            lighting_click(hwnd,right+195.,290.,scale); // Fast500 assigns source defaults
+            let density=GetDlgItem(hwnd,2108);if density.is_null(){return Err("Starlight density field missing".into());}
+            SendMessageW(density,WM_SETTEXT,0,wide("7").as_ptr() as isize);lighting_click(hwnd,right+100.,413.,scale);
+            lighting_click(hwnd,right+50.,458.,scale); // random on
+            lighting_click(hwnd,right+100.,503.,scale); // gradient view, controls disabled
+            let history=query()["undo"].clone();lighting_click(hwnd,right+210.,360.,scale); // must not replace gradient while random
+            if query()["undo"]!=history {return Err("Random mode allowed a gradient edit".into());}
+            lighting_click(hwnd,right+100.,290.,scale); // properties
+            lighting_click(hwnd,right+170.,458.,scale); // random off
+            let capture=json!(folder.join("starlight-properties.png").to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize);
+            lighting_click(hwnd,right+100.,503.,scale);lighting_click(hwnd,right+210.,360.,scale);
+            let position=GetDlgItem(hwnd,2103);let color=GetDlgItem(hwnd,2104);if position.is_null()||color.is_null(){return Err("Starlight gradient fields missing".into());}
+            SendMessageW(position,WM_SETTEXT,0,wide("25").as_ptr() as isize);SendMessageW(color,WM_SETTEXT,0,wide("112233").as_ptr() as isize);
+            lighting_click(hwnd,right+70.,493.,scale);lighting_click(hwnd,right+190.,493.,scale); // None
+            let capture=json!(folder.join("starlight-gradient.png").to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize);
+            lighting_click(hwnd,630.,100.,scale);
+            wait_for(||query()["failed"]==true,"unsupported Starlight preview refusal")?;
+            if query()["preview"]["current"]==true {return Err("Starlight falsely presented implemented playback".into());}
+            let output=folder.join("starlight.ChromaEffects");let path=json!(output.to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,3,&path as *const Value as isize);
+            wait_for(||query()["busy"]==false && query()["dirty"]==false,"Starlight save")?;
+            let bytes=std::fs::read(output).map_err(|e|e.to_string())?;let archive=secbird_core::studio::Archive::parse(&bytes).map_err(|e|e.to_string())?;
+            let saved:Value=serde_json::from_str(archive.profile_json(0).unwrap()).unwrap();
+            let row=saved["layers"].as_array().unwrap().iter().find(|r|r["id"]==id).ok_or("saved Starlight missing")?;let params=&row["regions"][0]["params"];
+            if params["duration"]!=500 || params["density"]!=7 || params["randomColor"]!=false || params["colorStopsCustom"]!=true || params["colorStops"][0]["Stop"]!=25 || params["colorStops"][0].get("Color").is_some() || params["colorStops"][1]["Color"]!=0x00ff00 {return Err(format!("Starlight settings were not saved: {params}"));}
+            lighting_click(hwnd,450.,100.,scale);if query()["dirty"]!=true{return Err("Starlight undo failed".into());}lighting_click(hwnd,520.,100.,scale);if query()["dirty"]!=false{return Err("Starlight redo failed".into());}
+            lighting_click(hwnd,right+100.,290.,scale);let field=GetDlgItem(hwnd,2108);SendMessageW(field,WM_SETTEXT,0,wide("11").as_ptr() as isize);lighting_click(hwnd,right+100.,413.,scale);
+            if query()["dirty"]!=false || query()["failed"]!=true{return Err("Invalid Starlight density was accepted".into());}
+            SendMessageW(hwnd,READ_ONLY_TEST_SET,1,0);lighting_click(hwnd,right+20.,290.,scale);if query()["dirty"]!=false{return Err("Readonly Starlight changed".into());}SendMessageW(hwnd,READ_ONLY_TEST_SET,0,0);
+            if !monitor.state().log.is_empty() {return Err("Local Wave authoring made device requests".into());}
+            Ok(json!({"new_starlight_layer":true,"duration_ms":500,"density":7,"random_off":true,"gradient_none_saved":true,"save_undo_redo":true,"invalid_density_atomic":true,"readonly_inert":true,"unsupported_preview_refused":true,"sim_device_requests":0,"physical_discovery_disabled":true}))
+        }})();
+        unsafe {let hwnd=WINDOW.load(Ordering::Acquire) as HWND;SendMessageW(hwnd,STUDIO_TEST,5,0);PostMessageW(hwnd,WM_CLOSE,0,0);}
+        std::fs::write(folder.join("interaction.json"),serde_json::to_vec_pretty(&match &result {Ok(value)=>value.clone(),Err(error)=>json!({"error":error})}).unwrap()).unwrap();result
+    });
+    let run=run_standalone(Arc::new(Mutex::new(engine)),Some(Duration::from_secs(30)));let result=controller.join().unwrap();
+    assert!(run.is_ok(),"{run:?}");assert!(result.is_ok(),"{result:?}");
+    assert_eq!(std::fs::read(input).unwrap(),original);assert_eq!(std::fs::read(directory.join("profiles.json")).unwrap(),original_store);
+    eprintln!("Starlight native evidence: {}",directory.display());
+}
+
+
+#[test]
 #[ignore = "requires private stock export/assets; opens isolated simulated Wave authoring window"]
 fn native_studio_wave_direction_presets_motion_preview_save_and_undo_preserve_source() {
     let input=PathBuf::from(std::env::var_os("SYNAPSE_LITE_STOCK_STUDIO_FILE").expect("select stock export"));

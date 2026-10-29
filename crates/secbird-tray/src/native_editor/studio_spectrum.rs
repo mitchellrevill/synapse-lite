@@ -49,7 +49,7 @@ impl Properties {
     }
 }
 pub(super) fn refresh(view: &mut View) {
-    if !matches!(view.effect(), Some("spectrum" | "wave")) {
+    if !matches!(view.effect(), Some("spectrum" | "wave" | "starlight")) {
         view.spectrum = Properties::default();
         return;
     }
@@ -59,7 +59,8 @@ pub(super) fn refresh(view: &mut View) {
     let id = view.selected.as_deref().unwrap();
     let selection = view.canvas.selection();
     let wave = view.effect() == Some("wave");
-    if !wave {
+    let star = view.effect() == Some("starlight");
+    if !wave && !star {
         match draft.spectrum_selection_duration(id, &selection) {
             Ok(value) => view.spectrum.duration = Some(value),
             Err(error) => {
@@ -73,6 +74,8 @@ pub(super) fn refresh(view: &mut View) {
     }
     match if wave {
         draft.wave_selection_gradient(id, &selection)
+    } else if star {
+        draft.starlight_selection_gradient(id, &selection)
     } else {
         draft.spectrum_selection_gradient(id, &selection)
     } {
@@ -165,10 +168,11 @@ pub(super) fn action(state: &mut State, control: Control) {
     }
     let view = &mut state.studio;
     let result = (|| -> Result<bool, String> {
-        if !matches!(view.effect(), Some("spectrum" | "wave")) {
-            return Err("Select Spectrum or Wave first".into());
+        if !matches!(view.effect(), Some("spectrum" | "wave" | "starlight")) {
+            return Err("Select a gradient effect first".into());
         }
         let wave = view.effect() == Some("wave");
+        let star = view.effect() == Some("starlight");
         let id = view.selected.as_deref().ok_or("Select a layer")?;
         let selection = view.canvas.selection();
         let properties = &view.spectrum;
@@ -176,17 +180,22 @@ pub(super) fn action(state: &mut State, control: Control) {
         let mut edit_stop = |edit| {
             if wave {
                 draft.edit_wave_stop(id, &selection, edit)
+            } else if star {
+                draft.edit_starlight_stop(id, &selection, edit)
             } else {
                 draft.edit_spectrum_stop(id, &selection, edit)
             }
         };
         let result = match control {
-            Control::Duration(_) if wave => return Err("Wave has no Spectrum duration".into()),
+            Control::Duration(_) if wave || star => {
+                return Err("Use this effect's own duration controls".into())
+            }
             Control::Duration(index) => draft.set_spectrum_duration(
                 id,
                 &selection,
                 *SPECTRUM_DURATIONS.get(index).ok_or("Unknown duration")?,
             ),
+            Control::Preset(index) if star => draft.set_starlight_preset(id, &selection, index),
             Control::Preset(index) if wave => draft.set_wave_preset(id, &selection, index),
             Control::Preset(index) => draft.set_spectrum_gradient(
                 id,
@@ -230,7 +239,8 @@ pub(super) fn action(state: &mut State, control: Control) {
 }
 pub(super) unsafe fn fields(state: &mut State) {
     if !(state.studio.effect() == Some("spectrum")
-        || (state.studio.effect() == Some("wave") && state.studio.wave.gradient_open))
+        || (state.studio.effect() == Some("wave") && state.studio.wave.gradient_open)
+        || (state.studio.effect() == Some("starlight") && state.studio.starlight.gradient_open))
         || state.studio.spectrum.stops().is_none_or(|s| s.is_empty())
     {
         return;
@@ -282,9 +292,21 @@ pub(super) fn has_focus(state: &State) -> bool {
             .any(|id| state.fields.get(id).copied() == Some(focus))
 }
 pub(super) unsafe fn paint(p: &mut Painter, view: &View, right: i32) {
-    let enabled = view.editable() && view.canvas.count() > 0;
+    let enabled = view.editable()
+        && view.canvas.count() > 0
+        && (view.effect() != Some("starlight") || starlight::gradient_enabled(view));
     let properties = &view.spectrum;
-    if view.effect() == Some("wave") {
+    if view.effect() == Some("starlight") {
+        button(
+            p,
+            "BACK TO PROPERTIES",
+            right + 10,
+            278,
+            220,
+            super::Control::Starlight(starlight::Control::Gradient),
+            true,
+        );
+    } else if view.effect() == Some("wave") {
         button(
             p,
             "BACK TO MOTION",
@@ -395,7 +417,14 @@ pub(super) unsafe fn paint(p: &mut Painter, view: &View, right: i32) {
         516,
         105,
         super::Control::Spectrum(Control::Add),
-        enabled && count > 0 && count < 10,
+        enabled
+            && count > 0
+            && count
+                < if view.effect() == Some("spectrum") {
+                    10
+                } else {
+                    7
+                },
     );
     button(
         p,

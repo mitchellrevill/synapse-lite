@@ -23,6 +23,7 @@ pub use regions::{
     ColorProperty, GradientStop, LedSelection, SelectedColor, SelectedDuration, SelectedGradient,
     StopEdit, SPECTRUM_DURATIONS,
     WaveProperty, SelectedWaveValue, wave_preset,
+    StarlightProperty, SelectedStarlightValue, STARLIGHT_DURATIONS,
 };
 
 #[path = "preview.rs"]

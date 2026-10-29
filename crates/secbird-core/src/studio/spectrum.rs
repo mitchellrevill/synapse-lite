@@ -131,7 +131,7 @@ impl Edit<'_> {
                 edit,
                 normalize_duration,
             } => {
-                edit_stop(params, edit)?;
+                edit_stop(params, edit, 10)?;
                 if new || normalize_duration {
                     params.set("duration", Some(&encode(&duration(params))?));
                 }
@@ -142,7 +142,7 @@ impl Edit<'_> {
 }
 
 // Shared source gradient mutation, without any effect-specific scalar defaults.
-pub(super) fn edit_stop(params: &mut Object, edit: StopEdit) -> Result<()> {
+pub(super) fn edit_stop(params: &mut Object, edit: StopEdit, limit: usize) -> Result<()> {
     let mut stops = array(
         params
             .get("colorStops")
@@ -164,8 +164,8 @@ pub(super) fn edit_stop(params: &mut Object, edit: StopEdit) -> Result<()> {
             *raw = encode(&stop)?;
         }
         StopEdit::Insert { position, color } => {
-            if stops.len() >= 10 {
-                return Err(invalid("gradient already has ten stops"));
+            if stops.len() >= limit {
+                return Err(invalid(format!("gradient already has {limit} stops")));
             }
             stops.push(encode(&GradientStop { position, color })?);
         }

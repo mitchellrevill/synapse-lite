@@ -1,0 +1,56 @@
+{
+  "date": "2026-10-29",
+  "scope": "Studio Starlight local authoring; animation not implemented",
+  "source_durations_ms": [
+    3000,
+    1700,
+    500
+  ],
+  "source_density_range": [
+    1,
+    10
+  ],
+  "source_default_density": 1,
+  "rea_parent": "ev_2d8646dbabaf5ad9884b20cf31a4b389afee8821ab8a3bfda2bbac3ec114aab5",
+  "rea_source_files": 4,
+  "rea_parse_failures": 0,
+  "controlled_converter_cases": 2,
+  "controlled_converter_native_calls": 0,
+  "native_algorithm_analysis": {
+    "result": "provider_timeout",
+    "procedure": "0x1800601a0",
+    "timeout_ms": 240000,
+    "repeated_after_timeout": false
+  },
+  "core_tests_passed": 458,
+  "core_tests_ignored": 6,
+  "tray_tests_passed": 291,
+  "tray_tests_ignored": 39,
+  "cli_tests_passed": 4,
+  "doc_tests_passed": 1,
+  "optimized_native_studio_checks_passed": 7,
+  "native_saved_duration_ms": 500,
+  "native_saved_density": 7,
+  "native_saved_random": false,
+  "transparent_custom_stop_saved": true,
+  "random_gradient_controls_inert": true,
+  "save_undo_redo_verified": true,
+  "invalid_density_refused": true,
+  "read_only_inert": true,
+  "unsupported_preview_refused": true,
+  "simulated_device_requests": 0,
+  "source_profile_bytes_unchanged": true,
+  "physical_discovery_disabled": true,
+  "status_layout_fix_render_verified": true,
+  "pixel_parity": false,
+  "native_animation_implemented": false,
+  "physical_optical_verified": false,
+  "complete_build_memory_acceptance": false,
+  "optimized_native_starlight_after_layout_fix_passed": true,
+  "maximum_authored_stops": {
+    "starlight": 7,
+    "wave": 7,
+    "spectrum": 10
+  },
+  "optimized_native_studio_after_stop_limit_fix_passed": 7
+}

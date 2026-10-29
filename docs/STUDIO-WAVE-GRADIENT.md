@@ -9,7 +9,7 @@ Editing participates in preview, Undo/Redo, Save and Discard.
 Wave uses its own presets and never writes Spectrum duration defaults. Stop edits
 mark `colorStopsCustom:true`; presets mark it false. None removes `Color` without
 removing the stop or LED membership. Stable sorting retains duplicate positions.
-Insertion refuses at ten stops and deletion refuses at two. Larger admitted
+Insertion refuses at seven stops and deletion refuses at two. Larger admitted
 imported gradients are not truncated.
 
 Only selected memberships change. Unselected memberships, layer parameters,
@@ -65,3 +65,7 @@ Keep these visual TODOs and continue remaining effects and device/input features
 
 No new physical/optical lighting, all-family device coverage, complete privacy
 or complete-build memory acceptance is claimed.
+
+The Starlight source follow-up confirmed shared picker `default:f.dp` with
+`default:f.VD`, where VD is the seven-stop default palette length. Wave now uses
+that seven-stop insertion bound; Spectrum retains its separate ten-stop bound.

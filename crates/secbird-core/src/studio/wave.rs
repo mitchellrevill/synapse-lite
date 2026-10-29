@@ -135,7 +135,7 @@ pub(super) enum Edit {
 impl Edit {
     pub(super) fn apply(self, params: &mut Object) -> Result<()> {
         match self {
-            Self::Stop(edit) => spectrum::edit_stop(params, edit)?,
+            Self::Stop(edit) => spectrum::edit_stop(params, edit, 7)?,
             Self::Motion(speed, width, pause) => {
                 for (property, value) in [
                     (WaveProperty::Speed, speed),
@@ -549,7 +549,7 @@ mod tests {
     #[test]
     fn custom_stop_bounds_and_unverified_modes_refuse_atomically() {
         let mut draft = Draft::open(PROFILE).unwrap();
-        for index in 0..8 {
+        for index in 0..5 {
             draft
                 .edit_wave_stop(
                     "w",
@@ -577,7 +577,7 @@ mod tests {
                 "w",
                 &keys(&[1]),
                 StopEdit::Set {
-                    index: 10,
+                    index: 7,
                     position: 50,
                     color: None
                 }

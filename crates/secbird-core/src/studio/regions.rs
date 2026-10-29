@@ -4,6 +4,9 @@ use std::collections::BTreeMap;
 
 #[path = "spectrum.rs"]
 mod spectrum;
+#[path = "starlight.rs"]
+mod starlight;
+pub use starlight::{StarlightProperty, SelectedStarlightValue, STARLIGHT_DURATIONS};
 #[path = "wave.rs"]
 mod wave;
 pub use wave::{WaveProperty, SelectedWaveValue, wave_preset};
@@ -56,6 +59,7 @@ enum RegionEdit<'a> {
     Spectrum(spectrum::Edit<'a>, &'a Object),
     BreathingDuration(u32),
     Wave(wave::Edit, &'a Object),
+    Starlight(starlight::Edit, &'a Object),
 }
 impl RegionEdit<'_> {
     fn assigns(self) -> bool {
@@ -83,6 +87,7 @@ impl RegionEdit<'_> {
             }
             edit.apply(params)?;
         }
+        if let Self::Starlight(edit,projection)=self {edit.apply(params,projection,new)?;}
         Ok(())
     }
 }
@@ -317,7 +322,7 @@ impl Draft {
         }
         let property = match edit {
             RegionEdit::Color(property, _) => Some(property),
-            RegionEdit::Erase | RegionEdit::Spectrum(..) | RegionEdit::BreathingDuration(_) | RegionEdit::Wave(..) => None,
+            RegionEdit::Erase | RegionEdit::Spectrum(..) | RegionEdit::BreathingDuration(_) | RegionEdit::Wave(..) | RegionEdit::Starlight(..) => None,
         };
         let item = layer(self, id, property)?;
         if matches!(edit, RegionEdit::Spectrum(..)) {
