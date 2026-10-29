@@ -91,6 +91,13 @@ impl Reader {
                     }
                 }
             }
+            if let Some(studio) = value.get_mut("studio") {
+                studio["worker_enabled"] = json!(running);
+                if !running {
+                    studio["worker_stopped"] = json!(!signal.thread_alive());
+                    studio["runtime_error"] = json!("Lighting worker is stopped; cached frames do not prove current playback");
+                }
+            }
         }
         value["worker_actor_generation"] = json!(generation);
         if self
@@ -191,5 +198,18 @@ mod tests {
         );
         assert_eq!(stopped.value["uniform_host"]["accepted_packets"], 2);
         assert_eq!(stopped.value["uniform_host"]["attempted_packets"], 3);
+    }
+    #[test]
+    fn stopped_signal_invalidates_cached_studio_liveness_without_erasing_frame_counts() {
+        let (publisher,reader)=channel();
+        let signal=Signal::running_for_test();
+        publisher.attach_signal(signal.clone());
+        publisher.publish(json!({"one":{"studio":{"state":"applied","worker_enabled":true,"accepted_frames":25,"drained":false}}}));
+        signal.stop_for_test();
+        let stopped=reader.read_device("one").unwrap();
+        assert_eq!(stopped.value["studio"]["worker_enabled"],false);
+        assert_eq!(stopped.value["studio"]["accepted_frames"],25);
+        assert_eq!(stopped.value["studio"]["drained"],false,"a liveness read must not claim batch drain");
+        assert!(stopped.value["studio"]["runtime_error"].is_string());
     }
 }

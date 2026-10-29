@@ -20,7 +20,7 @@ struct Session {
     wave: Option<crate::host_wave::preparation::ReadyWave>,
 }
 #[derive(Default)]
-struct StoreCache {
+pub(super) struct StoreCache {
     path: Option<PathBuf>,
     stamp: Option<(Option<SystemTime>, u64)>,
     store: Option<Store>,
@@ -28,7 +28,7 @@ struct StoreCache {
     reloads: u64,
 }
 impl StoreCache {
-    fn refresh(&mut self, path: &Path) -> std::result::Result<&Store, String> {
+    pub(super) fn refresh(&mut self, path: &Path) -> std::result::Result<&Store, String> {
         let stamp = match std::fs::metadata(path) {
             Ok(m) => Some((m.modified().ok(), m.len())),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => None,
@@ -70,12 +70,12 @@ struct Fault {
 }
 pub(super) struct UniformState {
     pub enabled: bool,
-    alive: Option<std::sync::Arc<crate::uniform_worker::Signal>>,
+    pub(super) alive: Option<std::sync::Arc<crate::uniform_worker::Signal>>,
     epoch: Instant,
     generation: u64,
     sessions: HashMap<String, Session>,
     faults: HashMap<String, Fault>,
-    cache: StoreCache,
+    pub(super) cache: StoreCache,
     pub wake: Option<std::thread::Thread>,
     error: Option<String>,
     #[cfg(test)]
@@ -140,7 +140,7 @@ struct Candidate {
     config: Config,
 }
 impl Engine {
-    fn uniform_path(&self) -> PathBuf {
+    pub(super) fn uniform_path(&self) -> PathBuf {
         #[cfg(test)]
         if let Some(path) = &self.runtime_store_path {
             return path.clone();
@@ -167,6 +167,9 @@ impl Engine {
             (None, Some(_)) => true,
             _ => false,
         };
+        if !enabled || actor_changed {
+            self.invalidate_studio("lighting worker changed or stopped", false);
+        }
         if enabled && actor_changed {
             // A new local worker starts a new playback generation. In particular,
             // a ticket planned just before quiesce must not stay InFlight forever.
@@ -303,7 +306,7 @@ impl Engine {
             self.uniform.invalidate();
         }
     }
-    fn uniform_availability(&self, config: &Config) -> std::result::Result<Availability, String> {
+    pub(super) fn uniform_availability(&self, config: &Config) -> std::result::Result<Availability, String> {
         let mut runtime = self.lighting_runtime.borrow_mut();
         runtime.sample_host();
         let plan = crate::lighting_runtime::plan(
@@ -326,6 +329,7 @@ impl Engine {
     }
     /// Worker-only entry point. No catch-up burst; at most one frame per device.
     pub(crate) fn tick_uniform(&mut self, stopped: &AtomicBool) -> Duration {
+        let studio_wait = self.tick_studio(stopped);
         if !self.uniform_is_enabled() || stopped.load(Ordering::Acquire) {
             return Duration::from_millis(250);
         }
@@ -349,6 +353,7 @@ impl Engine {
                 .filter(|d| d.pid == 605 && d.interface == 2)
             {
                 let key = dev.key();
+                if self.studio_holds(&key) { continue; }
                 let Some(profiles) = store
                     .devices
                     .get(&key)
@@ -383,7 +388,7 @@ impl Engine {
             Err(error) => {
                 state.error = Some(error);
                 self.uniform = state;
-                return Duration::from_millis(250);
+                return studio_wait;
             }
         };
         let active: HashSet<_> = candidates
@@ -392,7 +397,7 @@ impl Engine {
             .map(|c| c.key.clone())
             .collect();
         state.sessions.retain(|key, _| active.contains(key));
-        let mut wait = Duration::from_millis(250);
+        let mut wait = studio_wait;
         let mut refresh_live = false;
         let epoch = state.epoch;
         for candidate in candidates.into_iter().filter(|c| c.opted) {
@@ -639,6 +644,7 @@ impl Engine {
         name: &str,
         config: &mut Config,
     ) {
+        if self.studio_before_brightness(index, config) { return; }
         // Shutdown releases only the existing LIVE policy lease; it never waits
         // for an animation frame, a worker or an exact previous visual phase.
         if self.lighting_runtime.borrow().stopping {
@@ -723,6 +729,7 @@ impl Engine {
         // clears sessions. Public RAM metadata remains sanitized separately.
         let detail = json!({
             "uniform":self.uniform_status(),
+            "studio":self.studio_status(),
             "brightness_policy":self.lighting_runtime.borrow().status(),
             "probe_error":self.lighting_probe_error(),
             "worker_signal":self.uniform.alive.as_ref().map(|signal|signal.metrics())

@@ -13,6 +13,13 @@ mod playback;
 mod spectrum;
 #[path = "studio_layers.rs"]
 mod layer_tools;
+#[path = "studio_output.rs"]
+mod output;
+pub(super) use output::Request as OutputRequest;
+pub(super) fn output_work(engine: &mut Engine, request: OutputRequest) -> Result<Value, String> { output::work(engine, request) }
+pub(super) fn output_control(state: &mut State, control: crate::host_studio::session::Control, reader: crate::lighting_status::Reader, status: Value) { state.studio.output.control=Some(control); state.studio.output.reader=Some(reader); state.studio.output.status=status; }
+pub(super) unsafe fn output_receive(state: &mut State, result: Result<Value,String>) { output::receive(state,result); }
+pub(super) unsafe fn output_tick(state: &mut State) { output::tick(state); }
 pub(super) unsafe fn layer_pointer(state: &mut State, message: u32, lparam: isize) -> bool {
     layer_tools::pointer(state, message, lparam)
 }
@@ -54,6 +61,8 @@ pub(super) enum Control {
     Spectrum(spectrum::Control),
     Layers(layer_tools::Control),
     Preview,
+    ApplyDevice,
+    StopDevice,
     Erase,
 }
 #[derive(Clone, Copy)]
@@ -82,6 +91,7 @@ pub(super) struct View {
     selected_cold: Option<SelectedColor>,
     spectrum: spectrum::Properties,
     playback: playback::Playback,
+    output: output::View,
     dropdown: bool,
     layer_menu: bool,
     profile_scroll: usize,
@@ -454,6 +464,7 @@ pub(super) unsafe fn block_close(state: &mut State) -> bool {
 }
 
 pub(super) unsafe fn action(state: &mut State, control: Control) {
+    if matches!(control, Control::StopDevice) { output::stop(state); redraw(state); return; }
     if matches!(control, Control::Enter) {
         state.studio.open = true;
         state.selected = None;
@@ -464,7 +475,7 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
         redraw(state);
         return;
     }
-    if state.studio.busy || state.studio.dialog {
+    if state.studio.busy || state.studio.dialog || state.studio.output.busy {
         return;
     }
     if !matches!(
@@ -537,6 +548,8 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
         }
         Control::CancelRename => state.studio.renaming = false,
         Control::Preview => playback::toggle(state),
+        Control::ApplyDevice => output::apply(state),
+        Control::StopDevice => unreachable!("handled before busy file operations"),
         Control::Spectrum(control) => spectrum::action(state, control),
         Control::Layers(control) => {
             layer_tools::action(state, control);
@@ -1382,6 +1395,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         if view.failed { 0xfd4949 } else { MUTED },
     );
     layer_tools::paint(state, p);
+    output::paint(state, p);
     if view.dropdown {
         let count = view
             .archive
@@ -1411,10 +1425,15 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
 }
 
 #[cfg(test)]
+pub(super) unsafe fn output_test_dirty_apply(state: &mut State) {
+    action(state,Control::Layers(layer_tools::Control::Duplicate));
+    action(state,Control::ApplyDevice);
+}
+#[cfg(test)]
 pub(super) fn diagnostics(state: &State) -> Value {
     let view = &state.studio;
     json!({"open":view.open,"busy":view.busy,"dialog":view.dialog,"dirty":view.dirty(),"renaming":view.renaming,"status":view.status,"failed":view.failed,"pending":state.pending,"selected_leds":view.canvas.count(),"canvas_notes":view.canvas.notes,"canvas_devices":view.canvas.device_count(),"canvas_selectable_leds":view.canvas.selectable_count(),"color":view.color,
-        "preview":playback::diagnostics(state),"index":view.index,"profiles":view.archive.as_ref().map_or(0,|archive|archive.profile_count()),"selected":view.selected,
+        "preview":playback::diagnostics(state),"device_output":view.output.status,"output_busy":view.output.busy,"output_control_ready":view.output.control.is_some(),"index":view.index,"profiles":view.archive.as_ref().map_or(0,|archive|archive.profile_count()),"selected":view.selected,
         "undo":view.draft.as_ref().map_or(0,Draft::undo_len),"redo":view.draft.as_ref().map_or(0,Draft::redo_len),
         "rows":view.draft.as_ref().map(|draft|draft.layers().iter().map(|row|json!({"id":row.id,"title":row.title,"visible":row.visible})).collect::<Vec<_>>()).unwrap_or_default()})
 }

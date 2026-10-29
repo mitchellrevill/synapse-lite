@@ -57,6 +57,13 @@ Raw proprietary application bundles, recovered fonts/images and private user pro
 
 The [Customize assignment popup](docs/CUSTOMIZE-ASSIGNMENT.md) now supports source-derived drafts, drawers, Mouse Function/Turbo editing and discard flows. Assignment writes remain disabled where protocol identity is unresolved. [Bounded native storage](docs/NATIVE-STORAGE.md) rejects predictable save failures before device mutation. Six [large-profile export-preview measurements](docs/LARGE-PROFILE-RUNTIME.md), each presenting 1,000 synthetic profiles, peaked at 51,798,016 working-set bytes and 34,291,712 sampled private bytes; they are query-only workload evidence. The guarded [host Wave action and worker](docs/HOST-WAVE.md) now combine source math, authenticated spatial mapping and a fresh layout identity GET. Simulated full-cycle, handoff and failure tests pass. A [two-frame physical diagnostic](docs/PHYSICAL-WAVE.md) accepted 14/14 packets with unchanged readable controls; a subsequent [six-run native Wave workload](docs/ACTIVE-WAVE-RUNTIME.md) passed in both directions at 25,632,768 working-set / 10,932,224 sampled private bytes. Optical output, stock cadence and final-build resource acceptance remain unverified.
 
+Studio now has explicit [saved-composition device playback](docs/STUDIO-RUNTIME.md)
+through the existing lighting worker, with selective Quick handoff and a stop control
+that cancels packet admission before waiting on the device mutex. Static/Spectrum/Fire
+on one authenticated Ornata in existing Driver Mode3 are admitted; mode acquisition,
+remaining effects/devices, physical/optical verification and full RAM acceptance remain
+unfinished. Saving or local canvas preview alone never starts device output.
+
 ## Attribution
 
 Secretarybird is by [infinityInfinite and contributors](https://github.com/infinityInfinite/secbird). Its MIT/Apache-2.0 license files and [NOTICE](NOTICE) are preserved. Razer device protocol facts also draw on [OpenRazer](https://github.com/openrazer/openrazer). This is an independent project.

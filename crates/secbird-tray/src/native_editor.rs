@@ -457,6 +457,7 @@ struct Hit {
 
 enum Job {
     Studio(studio_view::Request),
+    StudioOutput(studio_view::OutputRequest),
     SensorRead(String, String),
     CachedLighting(runtime_status::Request),
     Profiles(profile_modal_model::Request),
@@ -518,6 +519,8 @@ struct Reply {
 }
 
 enum WorkerReply {
+    StudioControl(crate::host_studio::session::Control, crate::lighting_status::Reader, Value),
+    StudioOutput(Result<Value, String>),
     Studio(studio_view::Response),
     Sensor((String, String), Result<(Value,mouse_feedback::BindingResult), String>),
     User(Reply),
@@ -537,8 +540,17 @@ fn worker(
         .lock()
         .ok()
         .map(|engine| engine.lighting_status_reader());
+    if let (Ok(engine), Some(reader)) = (engine.lock(), status_reader.as_ref()) {
+        let _ = replies.send(WorkerReply::StudioControl(engine.studio_control(), reader.clone(), engine.studio_status()));
+    }
     for job in jobs {
         let job = match job {
+            Job::StudioOutput(request) => {
+                let result = engine.lock().map_err(|_| "Device worker is unavailable".to_string())
+                    .and_then(|mut engine| studio_view::output_work(&mut engine, request));
+                if replies.send(WorkerReply::StudioOutput(result)).is_err() { break; }
+                continue;
+            }
             Job::Studio(request) => {
                 if replies.send(WorkerReply::Studio(studio_view::work(request))).is_err() {break;}
                 continue;
@@ -679,6 +691,7 @@ fn worker(
                 }
                 Job::CachedLighting(_)
                 | Job::Studio(_)
+                | Job::StudioOutput(_)
                 | Job::SensorRead(..)
                 | Job::Profiles(_)
                 | Job::ImportFile { .. }
@@ -1764,6 +1777,15 @@ impl State {
     unsafe fn collect(&mut self) {
         while let Ok(message) = self.replies.try_recv() {
             let reply = match message {
+                WorkerReply::StudioControl(control, reader, status) => {
+                    studio_view::output_control(self, control, reader, status);
+                    continue;
+                }
+                WorkerReply::StudioOutput(result) => {
+                    self.pending=self.pending.saturating_sub(1);
+                    studio_view::output_receive(self, result);
+                    continue;
+                }
                 WorkerReply::Studio(response) => {
                     self.pending=self.pending.saturating_sub(1);
                     studio_view::receive(self,response);
@@ -2133,6 +2155,10 @@ impl State {
     }
 
     unsafe fn action(&mut self, action: Action) {
+        if matches!(action, Action::Studio(studio_view::Control::StopDevice)) {
+            studio_view::action(self, studio_view::Control::StopDevice);
+            return;
+        }
         if matches!(&action, Action::Device(id) if self.selected.as_ref() == Some(id)) {
             return;
         }
@@ -3631,6 +3657,7 @@ unsafe extern "system" fn window_proc(
                 4=>state.studio.test_decision=Some(lparam as i32),
                 5=>studio_view::reset_test(&mut state),
                 6=>{let value=&*(lparam as *const Value);return studio_view::capture_frame(&mut state,Path::new(value.as_str().unwrap())) as isize;},
+                7=>studio_view::output_test_dirty_apply(&mut state),
                 _=>{},
             }
         }
@@ -4636,6 +4663,7 @@ unsafe extern "system" fn window_proc(
         }
         WM_TIMER if wparam == CACHED_LIGHTING_TIMER => {
             state.request_cached_lighting();
+            studio_view::output_tick(&mut state);
             0
         }
         WM_TIMER if wparam == studio_view::PREVIEW_TIMER => {

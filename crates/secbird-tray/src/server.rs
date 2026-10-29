@@ -437,6 +437,7 @@ fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
         return Ok(json!({"ok":true,"state":state(engine)}));
     }
     if path == "/api/sync" {
+        engine.guard_studio_quick_action("", path)?;
         return sync(engine, &b.color, &b.effect);
     }
     if let Some(answer) = app_post(engine, path, &b) {
@@ -446,6 +447,7 @@ fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
         validate_power_identity(&b)?;
     }
     let target = if b.id.is_empty() { b.pid.to_ascii_uppercase() } else { b.id.clone() };
+    engine.guard_studio_quick_action(&target, path)?;
 
     if path == "/api/lighting-settings" {
         let mut store = Store::load(&config_dir().join("profiles.json"))?;

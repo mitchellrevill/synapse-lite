@@ -130,6 +130,27 @@ impl Default for OutputSession {
     }
 }
 impl OutputSession {
+    /// Numeric simulator fixture only; production apply must authenticate assets.
+    #[cfg(test)]
+    pub(crate) fn synthetic_for_test(device: &Device, connection_epoch: u64) -> Self {
+        let draft = Draft::open(include_str!(
+            "../../../secbird-core/tests/fixtures/studio-preview-profile.json"
+        ))
+        .unwrap();
+        let prepared =
+            PreparedStudio::build(draft.read_snapshot(), crate::host_studio::tests::map(), 1)
+                .unwrap();
+        let mut session = Self::default();
+        session
+            .activate(
+                session.control().apply_intent().unwrap(),
+                device,
+                connection_epoch,
+                prepared,
+            )
+            .unwrap();
+        session
+    }
     pub(crate) fn control(&self) -> Control {
         self.control.clone()
     }
@@ -218,6 +239,14 @@ impl OutputSession {
     }
     pub(crate) fn target_key(&self) -> Option<&str> {
         self.active.as_ref().map(|active| active.key.as_str())
+    }
+    pub(crate) fn stop_requested(&self) -> bool {
+        self.active
+            .as_ref()
+            .is_some_and(|active| self.control.cancelled(active.intent.stop_epoch))
+    }
+    pub(crate) fn is_faulted(&self) -> bool {
+        self.active.as_ref().is_some_and(|active|active.failure.is_some())
     }
 
     pub(crate) fn poll(&mut self, now: Duration, availability: Availability) -> Poll {

@@ -2,8 +2,10 @@
 
 `host_studio` connects the existing Studio compositor to the authenticated Ornata
 logical-to-physical map and the existing seven-packet frame format. This is a
-backend component, not an enabled Apply-to-Hardware feature. Normal startup and
-the native canvas still do not start Studio device output.
+backend component used by the explicit native [Studio output controls](STUDIO-RUNTIME.md).
+Normal startup and local canvas preview do not start Studio device output.
+Applying a saved composition now uses the shared worker under the admission limits
+in that report; hardware/optical validation remains unfinished.
 
 `PreparedStudio` compiles one immutable composition snapshot and retains its
 originating draft identity. Current admission is the compositor's existing single,
@@ -28,7 +30,7 @@ performs no mode, brightness, input, macro, effect or profile mutation. Target
 key/path matching is not an ownership lease, connection-generation proof or fresh
 hardware-state admission.
 
-## Verification
+## Physical-preparation checkpoint verification (`bbc3996`)
 
 Seven scoped tests pass in debug and optimized builds, including the opt-in actual
 export/private-manifest test with a mock device. The regular serial tray suite has
@@ -73,16 +75,16 @@ destroy/exit syntax does not prove callback drain or exclusive ownership. Shutdo
 uses declared Quick/default policy, not restoration of an arbitrary prior RGB frame.
 These source behaviors are documented in private work/studio-output/OWNER-CONTRACT.md.
 
-The session controller below now implements applied revisions, generations,
-completion/drain and partial-transfer fault handling as a tested backend. Live
-output remains a TODO until fresh ownership and connection admission, selective
-Quick/Studio handoff and stop/recovery are connected to the existing worker.
+The session controller below implements applied revisions, generations,
+completion/drain and partial-transfer fault handling. The subsequent
+[worker/native checkpoint](STUDIO-RUNTIME.md) connects policy/owner sampling,
+connection admission, selective Quick/Studio handoff and explicit apply/stop.
 Mode acquisition must coordinate with the input path; copying a normal-mode reset
 on exit would not prove input preservation. Wider devices, remaining effects,
 physical/optical verification and the complete-build 100 MB gate remain open.
 This component does not narrow the full implementation goal.
 
-## Explicit applied-session controller, 29 October 2026
+## Explicit applied-session controller, 29 October 2026 (`caa10bc`)
 
 `host_studio::session::OutputSession` owns one authenticated, compiled composition.
 Its production apply method reads an entry from an immutable `Archive`, creates
@@ -130,7 +132,12 @@ Quick/input controls unchanged. All 258 regular serial tray tests pass; 32 expli
 opt-in tests remain excluded from that regular run. No physical output or GUI change
 was enabled by this checkpoint. See `validation/studio-session.json`.
 
-### Integration TODOs to keep work moving
+### Integration checklist at the session-only checkpoint
+
+The subsequent [worker/native checkpoint](STUDIO-RUNTIME.md) implements selective
+Quick inhibition, explicit native apply/stop, cache reuse, owner/policy sampling and
+handle/worker invalidation. This list records the earlier session-only boundary;
+remaining limits and TODOs are maintained in that newer report.
 
 - Connect the coordinator to the existing single worker and native explicit apply/
   stop actions. Reuse the validated profile cache; do not add another full store.

@@ -2,6 +2,82 @@
 use super::*;
 
 #[test]
+#[ignore = "requires private stock export and pinned asset; opens isolated simulated Studio playback window"]
+fn native_studio_saved_apply_and_stop_use_shared_worker_without_changing_profiles() {
+    let input=PathBuf::from(std::env::var_os("SYNAPSE_LITE_STOCK_STUDIO_FILE").expect("select stock export"));
+    let original=std::fs::read(&input).unwrap();
+    let directory=std::env::temp_dir().join(format!("native-studio-output-{}-{}",std::process::id(),std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+    std::fs::create_dir_all(&directory).unwrap();
+    let frame=directory.join("frame.json");
+    let _environment=Environment::set(&[("SYNAPSE_LITE_CONFIG_DIR",&directory),("SYNAPSE_LITE_SMOKE_REPORT",&frame),("SYNAPSE_LITE_SMOKE_VIEW",Path::new("studio"))]);
+    let (engine,spy)=Engine::with_studio_output_simulator(directory.join("profiles.json"));
+    let key=engine.devices()[0].key();
+    let mut profile=secbird_core::profile_compat::new_native_profile(605,"Default").unwrap();
+    crate::host_uniform::Program::Spectrum.opt_in(&mut profile).unwrap();
+    let mut store=Store::load(&directory.join("profiles.json")).unwrap();
+    store.for_device(&engine.devices()[0]).profiles.insert("Default".into(),profile);
+    store.save().unwrap();
+    let store_before=std::fs::read(directory.join("profiles.json")).unwrap();
+    let engine=Arc::new(Mutex::new(engine));
+    let mut worker=crate::uniform_worker::Worker::start(engine.clone()).unwrap();
+    let observed=engine.clone();
+    let folder=directory.clone();
+    let source=input.clone();
+    let controller=std::thread::spawn(move || {
+        let result=(|| -> Result<Value,String> { unsafe {
+            wait_for(||frame.exists(),"Studio output window")?;
+            let hwnd=WINDOW.load(Ordering::Acquire) as HWND;
+            let query=||{let mut value=Value::Null;SendMessageW(hwnd,STUDIO_TEST,2,&mut value as *mut Value as isize);value};
+            wait_for(||query()["pending"]==0 && query()["output_control_ready"]==true,"device control ready")?;
+            let path=json!(source.to_string_lossy());
+            SendMessageW(hwnd,STUDIO_TEST,1,&path as *const Value as isize);
+            wait_for(||query()["profiles"]==1 && query()["busy"]==false,"saved composition load")?;
+            redraw(hwnd);
+            let scale=f64::from(GetDpiForWindow(hwnd).max(96))/96.0;
+            let apply=position(914.0,100.0,scale);
+            SendMessageW(hwnd,WM_LBUTTONDOWN,1,apply);
+            SendMessageW(hwnd,WM_LBUTTONUP,0,apply);
+            wait_for(||observed.lock().unwrap().studio_status()["accepted_frames"].as_u64().unwrap_or(0)>=3,"Studio frames accepted by shared worker")?;
+            wait_for(||query()["output_busy"]==false,"apply response")?;
+            PostMessageW(hwnd,WM_TIMER,CACHED_LIGHTING_TIMER,0);
+            wait_for(||query()["device_output"]["accepted_frames"].as_u64().unwrap_or(0)>=1,"cached playback status")?;
+            let screenshot=json!(folder.join("studio-playback.png").to_string_lossy());
+            if SendMessageW(hwnd,STUDIO_TEST,6,&screenshot as *const Value as isize)!=1 {return Err("Owned playback render failed".into());}
+            let before_stop=observed.lock().unwrap().studio_status();
+            let stop=position(1048.0,100.0,scale);
+            SendMessageW(hwnd,WM_LBUTTONDOWN,1,stop);
+            SendMessageW(hwnd,WM_LBUTTONUP,0,stop);
+            wait_for(||observed.lock().unwrap().studio_status()["state"]=="stopped","Studio stopped and drained")?;
+            wait_for(||query()["output_busy"]==false,"stop response")?;
+            wait_for(||observed.lock().unwrap().lighting_runtime_status()[&key]["uniform_host"]["accepted_frames"].as_u64().unwrap_or(0)>=1,"saved Quick resumes")?;
+            if observed.lock().unwrap().studio_holds(&key) {return Err("Studio still holds Quick after stop".into());}
+            // Verify that unsaved edits cannot be sent to hardware. Selecting a
+            // root and duplicating it changes only the editor draft.
+            let layer=position(100.0,184.0,scale);
+            SendMessageW(hwnd,WM_LBUTTONDOWN,1,layer);
+            SendMessageW(hwnd,WM_LBUTTONUP,0,layer);
+            // The test action enters the same dispatcher as keyboard/menu use.
+            SendMessageW(hwnd,STUDIO_TEST,7,0);
+            if query()["dirty"]!=true || !query()["status"].as_str().unwrap_or("").contains("Save") {return Err(format!("Dirty apply was not visibly refused: {}",query()));}
+            if observed.lock().unwrap().studio_status()["state"]!="stopped" {return Err("Unexpected apply after stopped output".into());}
+            Ok(json!({"applied_snapshot":before_stop,"shared_worker_native_apply_and_stop":true,"saved_quick_resumed":true,"physical_device_output":false,"source_and_store_bytes_preserved":true}))
+        }})();
+        unsafe {let hwnd=WINDOW.load(Ordering::Acquire) as HWND;SendMessageW(hwnd,STUDIO_TEST,5,0);PostMessageW(hwnd,WM_CLOSE,0,0);}
+        std::fs::write(folder.join("interaction.json"),serde_json::to_vec_pretty(&match &result {Ok(value)=>value.clone(),Err(error)=>json!({"error":error})}).unwrap()).unwrap();
+        result
+    });
+    let run=run_standalone(engine.clone(),Some(Duration::from_secs(30)));
+    let result=controller.join().unwrap();
+    assert!(worker.stop(Duration::from_secs(1)),"simulated worker must join");
+    engine.lock().unwrap().set_uniform_worker(false,None,None);
+    assert!(run.is_ok(),"{run:?}");assert!(result.is_ok(),"{result:?}");
+    assert_eq!(std::fs::read(input).unwrap(),original);
+    assert_eq!(std::fs::read(directory.join("profiles.json")).unwrap(),store_before);
+    assert_eq!(spy.state.lock().unwrap().mode,3);
+    eprintln!("Studio output interaction evidence: {}",directory.display());
+}
+
+#[test]
 #[ignore = "requires an explicitly selected private stock Ornata export; opens isolated simulated window"]
 fn native_studio_actual_stock_export_loads_geometry_and_preserves_profiles() {
     let input = PathBuf::from(

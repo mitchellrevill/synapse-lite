@@ -7,6 +7,7 @@ use crate::lighting_runtime::{Config as LightingConfig, DeviceIo, Runtime as Lig
 use std::time::{Duration, Instant, SystemTime};
 mod source_static;
 mod source_uniform;
+mod source_studio;
 mod lighting_probe;
 mod sensor_runtime;
 #[cfg(test)]
@@ -38,6 +39,7 @@ pub struct Engine {
     relight: HashMap<String, Instant>,
     lighting_runtime: RefCell<LightingRuntime>,
     uniform: source_uniform::UniformState,
+    studio: source_studio::StudioState,
     lighting_probe: RefCell<Option<lighting_probe::Boundary>>,
     lighting_publisher: crate::lighting_status::Publisher,
     lighting_reader: crate::lighting_status::Reader,
@@ -112,6 +114,7 @@ impl Engine {
             relight: HashMap::new(),
             lighting_runtime: RefCell::new(LightingRuntime::default()),
             uniform: source_uniform::UniformState::default(),
+            studio: source_studio::StudioState::default(),
             lighting_probe: RefCell::new(None),
             lighting_publisher,
             lighting_reader,
@@ -346,6 +349,9 @@ impl Engine {
                 continue;
             }
             let key = dev.key();
+            if self.studio_holds(&key) {
+                continue;
+            }
             let profiles = store.for_device(dev);
             let name = profiles.effective(foreground.as_deref()).to_string();
             let color = profiles.profiles[&name].source_static_color(dev.pid);
@@ -504,6 +510,7 @@ impl Engine {
     pub fn rescan(&mut self) -> Vec<String> {
         #[cfg(test)]
         if self.simulated_only { return Vec::new(); }
+        self.invalidate_studio("device handles replaced by rescan", true);
         let before: HashSet<String> = self.devices.iter().map(|d| d.key()).collect();
         let rotation_keys:Vec<_>=self.sensor_rotation.keys().cloned().collect();
         for error in self.shutdown_rotation(){eprintln!("{error}");}
@@ -624,7 +631,9 @@ impl Engine {
             let key = dev.key();
             let mut config = self.lighting_config(dev, &mut store);
             let name = config.profile.clone();
-            let color = store.for_device(dev).profiles[&name].source_static_color(dev.pid);
+            let color = if self.studio_holds(&key) { None } else {
+                store.for_device(dev).profiles[&name].source_static_color(dev.pid)
+            };
             if let Some(color) = color {
                 let previous = self.host_static_results.borrow().get(&key).cloned();
                 let pending = !previous.as_ref().is_some_and(|(p, c, value)| {
@@ -708,7 +717,7 @@ impl Engine {
         self.lighting_reader.clone()
     }
     pub(crate) fn publish_lighting_status(&self, force: bool) {
-        let faulted = self.uniform_publication_faulted();
+        let faulted = self.uniform_publication_faulted() || self.studio.session.is_faulted();
         let observed_at = Instant::now();
         if force || self.lighting_publisher.due(observed_at, faulted) {
             let value = self.lighting_runtime_status();
@@ -745,6 +754,11 @@ impl Engine {
                 }
             }
         }
+        if let Some(key) = self.studio.session.target_key() {
+            if let Some(target) = status.get_mut(key) {
+                target["studio"] = self.studio_status();
+            }
+        }
         status
     }
     /// Release only our live overrides, with bounded attempts and ownership gates.
@@ -754,6 +768,7 @@ impl Engine {
         failures
     }
     fn shutdown_lighting_only(&mut self)->Vec<String> {
+        self.invalidate_studio("lighting runtime shutdown", false);
         if self.measurement_read_only {
             return Vec::new();
         }
@@ -835,7 +850,8 @@ impl Engine {
                     let name = profiles.effective(foreground.as_deref()).to_string();
                     let color = profiles.profiles[&name].source_static_color(dev.pid);
                     let host_gate = self.host_static_gate(&key, store, &name);
-                    profiles.lighting_off |= self.away.is_some() || blocked;
+                    let studio_held = self.studio_holds(&key);
+                    profiles.lighting_off |= self.away.is_some() || blocked || studio_held;
                     let uniform_candidate = crate::host_uniform::Program::from_profile(
                         &profiles.profiles[&name],
                         dev.pid,
@@ -879,8 +895,9 @@ impl Engine {
                             }
                         }
                     }
-                    let uniform_failures =
-                        self.uniform_shadow(&self.devices[index], &mut profiles, &name);
+                    let uniform_failures = if studio_held { Vec::new() } else {
+                        self.uniform_shadow(&self.devices[index], &mut profiles, &name)
+                    };
                     let dev = &mut self.devices[index];
                     let mut failures: Vec<String> = profiles
                         .apply(&name, dev)
