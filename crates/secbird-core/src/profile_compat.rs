@@ -13,6 +13,8 @@ use serde_json::{json, Map, Value};
 use std::collections::BTreeMap;
 
 pub mod gui;
+mod dependencies;
+pub use dependencies::{recover_macro_dependencies,MacroRecoveryReport};
 mod mappings;
 mod settings;
 

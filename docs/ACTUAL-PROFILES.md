@@ -23,7 +23,11 @@ See [migration validation](validation/normal-store-migration.json).
 
 This migrates the captured27October device profiles, not a newly captured live
 account. A mouse Hypershift mapping references a macro absent from the captured
-export. Its reference is retained, but recovery/execution remains unfinished.
+export. On 29 October its stored definition was recovered from a read-only
+IndexedDB copy and attached to a separately validated candidate. The record has
+no cached native events. The candidate remains uninstalled because another
+workspace's Lite process was running; execution is also unfinished. See
+[macro recovery](MACRO-DEPENDENCY-RECOVERY.md).
 Ornata Snap Tap and function-key preference also remain preserved without
 functional replay. Real stock import acceptance, macro bodies, linked programs,
 Studio compositions and complete profile activation/hardware acceptance remain

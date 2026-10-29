@@ -5,6 +5,7 @@ use std::process::ExitCode;
 mod control_probe;
 mod studio_files;
 mod catalog_files;
+mod profile_files;
 
 const USAGE: &str = "\
 Synapse Lite - device controls based on Secretarybird beta
@@ -12,6 +13,9 @@ Synapse Lite - device controls based on Secretarybird beta
 USAGE: secbird [-d PID] <command> [args]
 
 STUDIO FILES (local interchange only; does not apply lighting):
+  profiles recover-macros NATIVE_BACKUP SOURCE_EXPORT EXACT_DEVICE_KEY NEW_OUTPUT
+                            Attach verified referenced macro definitions to a new backup;
+                            does not activate profiles, run macros or install the store
   catalog inspect FILE      Inspect a local Razer catalogue without opening hardware
   studio inspect FILE       List compositions in a JSON-v1 .ChromaEffects file
   studio export INPUT OUTPUT all|NUMBER...
@@ -169,6 +173,10 @@ fn run(mut args: Vec<String>) -> Result<(), Error> {
     if command == "catalog" {
         if selector.is_some() { return Err(Error::InvalidArg("catalog file commands do not use -d".into())); }
         return catalog_files::run(&args[1..]);
+    }
+    if command == "profiles" {
+        if selector.is_some(){return Err(Error::InvalidArg("profiles file commands require an exact stored key, without -d".into()));}
+        return profile_files::run(&args[1..]);
     }
     if command == "update" {
         match secbird_core::update::check()? {

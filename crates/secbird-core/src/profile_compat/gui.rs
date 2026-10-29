@@ -77,7 +77,7 @@ pub fn stored_device_key(store: &Store, target: &str) -> Option<String> {
     peer.filter(|p| store.devices.contains_key(*p))
         .map(str::to_string)
 }
-fn refs(value: &Value, out: &mut BTreeMap<String, String>) {
+pub(super) fn refs(value: &Value, out: &mut BTreeMap<String, String>) {
     match value {
         Value::Object(o) => {
             if let Some(g) = o.get("macroGroup").and_then(Value::as_object) {
@@ -113,7 +113,7 @@ fn envelopes(device: &DeviceProfiles) -> Vec<&Value> {
         .map(|(_, v)| v)
         .collect()
 }
-fn macro_records(device: &DeviceProfiles) -> Result<BTreeMap<String, Value>> {
+pub(super) fn macro_records(device: &DeviceProfiles) -> Result<BTreeMap<String, Value>> {
     let mut out = BTreeMap::new();
     for envelope in envelopes(device) {
         if let Some(a) = envelope.get("macros").and_then(Value::as_array) {
