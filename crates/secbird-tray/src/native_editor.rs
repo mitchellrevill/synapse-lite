@@ -90,13 +90,49 @@ const RUNTIME_TEST_INJECT: u32 = WM_APP + 104;
 #[cfg(test)]
 const RUNTIME_TEST_QUERY: u32 = WM_APP + 105;
 #[cfg(test)]
-const LIGHTING_DROPDOWN_TEST: u32 = WM_APP + 109;
+const LIGHTING_DROPDOWN_TEST: u32 = WM_APP + 110;
 #[cfg(test)]
 const READ_ONLY_TEST_SET: u32 = WM_APP + 106;
 #[cfg(test)]
 const STUDIO_TEST: u32 = WM_APP + 115;
 #[cfg(test)]
 const ASSIGNMENT_TEST_QUERY: u32 = WM_APP + 107;
+
+#[test]
+fn editor_private_messages_have_distinct_ids() {
+    // These all route through the same editor HWND. A collision silently lets
+    // an earlier handler consume another subsystem's message (and its payload).
+    let messages = [
+        ("profile dialog", PROFILE_DIALOG),
+        ("profile rename", PROFILE_RENAME),
+        ("failure dialog", FAILURE_DIALOG),
+        ("profile browse", PROFILE_MODAL_BROWSE),
+        ("profile save", PROFILE_MODAL_SAVE),
+        ("test profile browse", PROFILE_MODAL_TEST_BROWSE),
+        ("test profile save", PROFILE_MODAL_TEST_SAVE),
+        ("test profile open", PROFILE_MODAL_TEST_OPEN),
+        ("test profile query", PROFILE_MODAL_TEST_QUERY),
+        ("test runtime inject", RUNTIME_TEST_INJECT),
+        ("test runtime query", RUNTIME_TEST_QUERY),
+        ("test lighting dropdown", LIGHTING_DROPDOWN_TEST),
+        ("test read only", READ_ONLY_TEST_SET),
+        ("test assignment query", ASSIGNMENT_TEST_QUERY),
+        ("test studio", STUDIO_TEST),
+        ("mouse feedback", mouse_feedback::NOTIFY),
+        ("studio dialog", studio_view::DIALOG),
+        ("studio exit", studio_view::EXIT_REQUEST),
+        ("linked games browse", linked_games::BROWSE),
+        ("test linked games", linked_games::TEST),
+        ("macro browse", macro_view::BROWSE),
+        ("macro input menu", macro_view::INPUT_MENU),
+        ("test macro", macro_view::TEST),
+    ];
+    for (index, (name, id)) in messages.iter().enumerate() {
+        for (other, other_id) in &messages[index + 1..] {
+            assert_ne!(id, other_id, "Editor messages {name} and {other} collide");
+        }
+    }
+}
 const FAILURE_DIALOG: u32 = WM_APP + 93;
 const FAILURE_TITLE: &str = "Synapse Lite - Action failed";
 const PERFORMANCE_REPEAT: usize = 73;
@@ -3963,11 +3999,33 @@ unsafe extern "system" fn window_proc(
     if message == LIGHTING_DROPDOWN_TEST {
         if let Ok(mut state) = (*pointer).try_borrow_mut() {
             *(lparam as *mut Value) = lighting_view::test_dropdown(&mut state, wparam == 1);
+            return 1;
         }
         return 0;
     }
     #[cfg(test)]
     if message == RUNTIME_TEST_QUERY {
+        if wparam == 10 {
+            if (*pointer).try_borrow_mut().is_err() {
+                return 0;
+            }
+            let &(message, wparam, lparam) = &*(lparam as *const (u32, usize, isize));
+            SendMessageW(hwnd, message, wparam, lparam);
+            return 1;
+        }
+        if wparam == 9 {
+            // Sent controller messages can reenter a Win32 call during paint or
+            // field rebuilding. Refuse the whole batch while State is borrowed;
+            // the controller can retry without duplicating a partial click.
+            if (*pointer).try_borrow_mut().is_err() {
+                return 0;
+            }
+            let point = lparam;
+            SendMessageW(hwnd, WM_LBUTTONDOWN, 1, point);
+            SendMessageW(hwnd, WM_LBUTTONUP, 0, point);
+            RedrawWindow(hwnd, null(), null_mut(), RDW_INVALIDATE | RDW_UPDATENOW);
+            return 1;
+        }
         if wparam == 8 {
             // Atomically hover and click the actual close hit target. Keep the
             // user's cursor outside this simulated test window untouched.
@@ -4021,6 +4079,7 @@ unsafe extern "system" fn window_proc(
                 "deferred":state.runtime_feedback_waiting,
                 "failures":state.failures.outstanding(),
                 "pending":state.pending,
+                "queued":state.pending_jobs.len(),
                 "brightness":state.lighting.intent.brightness.as_ref().map(|b|b.value),
                 "status":state.status,"failed":state.failed,
                 "host_tabs":host_tabs::diagnostics(&state),"calibration":calibration_view::diagnostics(&state),"advanced":advanced_view::diagnostics(&state),"mouse_feedback":mouse_feedback::diagnostics(&state)

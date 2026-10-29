@@ -78,19 +78,21 @@ See validation/macro-library.json for the completed build/test evidence.
 
 The regular workspace passes494 core,306 tray,4 CLI and1 documentation checks
 (6 core/47 tray intentionally ignored). The optimized workspace builds. The
-broader optimized native suite passes23 of25 checks with private font access,
-including the macro workflow and all12 Studio checks. Two checks remain failing:
+broader optimized native suite originally passed23 of25 checks with private font access,
+including the macro workflow and all12 Studio checks. That run retained two failures:
 Quick Lighting focused close reports changed file/transport count, and the Wave
-dropdown check unwraps a missing geometry value. Their cause is unresolved; no
-claim of a fully passing native suite or baseline-only failure is made. A first
+dropdown check unwraps a missing geometry value. Their cause was then unresolved; no
+claim of a fully passing native suite or baseline-only failure was made then. A first
 restricted run also failed private-font loading/overlay checks; those two pass
 with font access, without weakening assertions.
 
-TODO diagnostics: isolate the two remaining checks, capture the exact file diff
-and GET/SET trace around focused close, identify which dropdown geometry is
-missing, and compare with the preceding commit under the same assets/DPI. Keep
-the original assertions and preserve the failed evidence. Per the user's
-instruction, continue independent features after recording these blockers.
+Follow-up: both native failures above are resolved in
+[the Lighting regression investigation](NATIVE-LIGHTING-REGRESSIONS.md).
+Focused close measured an earlier Save's pending effect operation; the Wave
+geometry query collided with the mouse-feedback notification message ID.
+The initial corrected optimized native suite passes25/25 with the original assertions
+and private-font checks retained. The historical failed evidence above and in
+validation/macro-library.json remains unchanged.
 
 Existing input/pair rebinding and deletion are described in MACRO-PAIR-EDITING.md.
 Nested references and dependency-preserving interchange are now implemented;

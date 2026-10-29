@@ -316,6 +316,47 @@ unsafe fn lighting_click(hwnd: HWND, x: f64, y: f64, scale: f64) {
     SendMessageW(hwnd, WM_LBUTTONUP, 0, point);
     redraw(hwnd);
 }
+
+unsafe fn native_click(hwnd: HWND, x: f64, y: f64, scale: f64) {
+    let point = position(x, y, scale);
+    wait_for(
+        || SendMessageW(hwnd, RUNTIME_TEST_QUERY, 9, point) == 1,
+        "UI-thread click batch accepted",
+    ).expect("Native click failed");
+}
+
+unsafe fn native_send(hwnd: HWND, message: u32, wparam: usize, lparam: isize) {
+    let request = (message, wparam, lparam);
+    wait_for(
+        || SendMessageW(hwnd, RUNTIME_TEST_QUERY, 10,
+            &request as *const (u32, usize, isize) as isize) == 1,
+        "UI-thread test message accepted",
+    ).expect("Native message failed");
+}
+
+// A synchronous sent message may reenter paint/rebuild while State is borrowed.
+// The test port explicitly acknowledges a snapshot; an unavailable snapshot is
+// never interpreted as absent geometry or an idle worker.
+unsafe fn native_query(hwnd: HWND, message: u32, wparam: usize) -> Result<Value, String> {
+    let mut value = Value::Null;
+    let mut attempts = 0;
+    wait_for(|| {
+        attempts += 1;
+        value = Value::Null;
+        SendMessageW(hwnd, message, wparam, &mut value as *mut Value as isize);
+        value.is_object()
+    }, "Native state snapshot available")?;
+    if attempts > 1 {
+        eprintln!("Native query {message} retried {} busy snapshots", attempts - 1);
+    }
+    Ok(value)
+}
+
+unsafe fn acknowledge_and_drain(hwnd: HWND) -> bool {
+    acknowledge_owned_failure(hwnd);
+    native_query(hwnd, RUNTIME_TEST_QUERY, 0).is_ok_and(|v|
+        v["pending"] == 0 && v["queued"] == 0 && v["failures"] == false)
+}
 unsafe fn edit_text(hwnd: HWND, id: u16) -> Option<String> {
     let edit = GetDlgItem(hwnd, i32::from(id));
     if edit.is_null() || IsWindowVisible(edit) == 0 {
@@ -474,7 +515,7 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                     )
                 };
                 let before = brightness_write_count(&controller_sim);
-                SendMessageW(hwnd, WM_LBUTTONDOWN, 1, point(60.0));
+                native_send(hwnd, WM_LBUTTONDOWN, 1, point(60.0));
                 let thread = GetWindowThreadProcessId(hwnd, null_mut());
                 let mut gui: GUITHREADINFO = std::mem::zeroed();
                 gui.cbSize = std::mem::size_of::<GUITHREADINFO>() as u32;
@@ -482,7 +523,7 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                 if gui.hwndCapture != hwnd {
                     return Err(format!("Brightness press did not capture HWND; client={}x{}, scale={}, source track={:?}, capture={:?}",client.right,client.bottom,scale,lighting_layout::track(shape),gui.hwndCapture));
                 }
-                SendMessageW(hwnd, WM_MOUSEMOVE, 1, point(45.0));
+                native_send(hwnd, WM_MOUSEMOVE, 1, point(45.0));
                 // Inject through the same cached collector, then force the queued
                 // dialog message to run while a real HWND capture is still held.
                 let runtime = json!({"profile":"Fixture","uniform_host":{"profile":"Fixture","state":"faulted","error":"simulated background fault"}});
@@ -490,13 +531,13 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                 let cached_store =
                     std::fs::read(controller_directory.join("profiles.json")).unwrap();
                 let mut before_feedback = Value::Null;
-                SendMessageW(
+                native_send(
                     hwnd,
                     RUNTIME_TEST_QUERY,
                     0,
                     &mut before_feedback as *mut Value as isize,
                 );
-                SendMessageW(
+                native_send(
                     hwnd,
                     RUNTIME_TEST_INJECT,
                     0,
@@ -508,7 +549,7 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                     return Err("Brightness wrote before release".into());
                 }
                 let mut observed = Value::Null;
-                SendMessageW(
+                native_send(
                     hwnd,
                     RUNTIME_TEST_QUERY,
                     0,
@@ -537,8 +578,8 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                 {
                     return Err("Cached status performed device IO or profile persistence".into());
                 }
-                SendMessageW(hwnd, WM_LBUTTONUP, 0, point(45.0));
-                SendMessageW(
+                native_send(hwnd, WM_LBUTTONUP, 0, point(45.0));
+                native_send(
                     hwnd,
                     RUNTIME_TEST_QUERY,
                     0,
@@ -546,7 +587,7 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                 );
                 PostMessageW(hwnd, WM_TIMER, CACHED_LIGHTING_TIMER, 0);
                 wait_for(
-                    || acknowledge_owned_failure(hwnd),
+                    || acknowledge_and_drain(hwnd),
                     "Deferred runtime failure acknowledged after release",
                 )?;
                 wait_for(
@@ -577,13 +618,13 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                 }
                 // User operations reset foreground dedup; an identical background
                 // fault still must stay acknowledged independently of that reset.
-                SendMessageW(
+                native_send(
                     hwnd,
                     RUNTIME_TEST_INJECT,
                     1,
                     &runtime as *const Value as isize,
                 );
-                SendMessageW(
+                native_send(
                     hwnd,
                     RUNTIME_TEST_QUERY,
                     0,
@@ -595,9 +636,9 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                     ));
                 }
                 let after_release = brightness_write_count(&controller_sim);
-                SendMessageW(hwnd, WM_LBUTTONDOWN, 1, point(80.0));
-                SendMessageW(hwnd, WM_CANCELMODE, 0, 0);
-                SendMessageW(hwnd, WM_LBUTTONUP, 0, point(80.0));
+                native_send(hwnd, WM_LBUTTONDOWN, 1, point(80.0));
+                native_send(hwnd, WM_CANCELMODE, 0, 0);
+                native_send(hwnd, WM_LBUTTONUP, 0, point(80.0));
                 std::thread::sleep(Duration::from_millis(80));
                 if brightness_write_count(&controller_sim) != after_release {
                     return Err("Cancelled brightness gesture wrote".into());
@@ -614,10 +655,10 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                     f64::from(client.bottom) / scale,
                 )
                 .ok_or("No palette geometry")?;
-                lighting_click(hwnd, anchor.x + 15.0, anchor.y + 12.0, scale);
+                native_click(hwnd, anchor.x + 15.0, anchor.y + 12.0, scale);
                 let open_edit = |slot: usize| {
                     let swatch = palette.custom_slots[slot];
-                    SendMessageW(
+                    native_send(
                         hwnd,
                         WM_RBUTTONUP,
                         0,
@@ -625,7 +666,7 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                     );
                     redraw(hwnd);
                     let menu = color_editor_layout::context_menu(swatch);
-                    lighting_click(hwnd, menu.x + 20.0, menu.y + 13.0, scale);
+                    native_click(hwnd, menu.x + 20.0, menu.y + 13.0, scale);
                 };
                 open_edit(1);
                 wait_for(
@@ -637,7 +678,7 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                 if edit_text(hwnd, lighting_view::HEX).as_deref() != Some("abcdef") {
                     return Err("HEX message draft not accepted".into());
                 }
-                lighting_click(
+                native_click(
                     hwnd,
                     palette.cancel.x + 40.0,
                     palette.cancel.y + 13.0,
@@ -650,19 +691,19 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                 )?;
                 // Exercise acknowledged failure feedback through a real source control.
                 // The native eyedropper is explicitly unavailable; no capture is started.
-                lighting_click(
+                native_click(
                     hwnd,
                     palette.eyedropper.x + 12.0,
                     palette.eyedropper.y + 12.0,
                     scale,
                 );
                 wait_for(
-                    || acknowledge_owned_failure(hwnd),
+                    || acknowledge_and_drain(hwnd),
                     "Acknowledged native failure dialog",
                 )?;
                 let edit = GetDlgItem(hwnd, i32::from(lighting_view::HEX));
                 SetWindowTextW(edit, wide("a1b2c3").as_ptr());
-                lighting_click(hwnd, palette.save.x + 40.0, palette.save.y + 13.0, scale);
+                native_click(hwnd, palette.save.x + 40.0, palette.save.y + 13.0, scale);
                 wait_for(
                     || {
                         Store::load(&controller_directory.join("profiles.json"))
@@ -686,28 +727,39 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                     },
                     "Saved slot and unchanged opaque slot persisted",
                 )?;
+                // Save first persists the custom slot, then applies its effect.
+                // Disk visibility of the first operation is not worker completion.
+                // Finish/acknowledge that accepted tail before measuring close.
+                wait_for(|| {
+                    acknowledge_and_drain(hwnd)
+                }, "Color Save worker and feedback drained")?;
                 if brightness_write_count(&controller_sim) != after_release {
                     return Err("Color editor unexpectedly changed brightness".into());
                 }
                 // An acknowledged background failure must not prevent closing
                 // while a real color EDIT still owns focus and an unsaved draft.
-                lighting_click(hwnd, anchor.x + 15.0, anchor.y + 12.0, scale);
+                native_click(hwnd, anchor.x + 15.0, anchor.y + 12.0, scale);
                 open_edit(2);
                 wait_for(
                     || edit_text(hwnd, lighting_view::HEX).as_deref() == Some("a1b2c3"),
                     "Color editor reopened before focused close",
                 )?;
                 let focused_fault = json!({"profile":"Fixture","uniform_host":{"profile":"Fixture","error":"simulated focused close fault"}});
+                let unsaved_edit = GetDlgItem(hwnd, i32::from(lighting_view::HEX));
+                SetWindowTextW(unsaved_edit, wide("fedcba").as_ptr());
+                if edit_text(hwnd, lighting_view::HEX).as_deref() != Some("fedcba") {
+                    return Err("Unsaved close draft was not accepted".into());
+                }
                 let before_close_log = controller_sim.state().log.len();
                 let before_close_store =
                     std::fs::read(controller_directory.join("profiles.json")).unwrap();
-                SendMessageW(
+                native_send(
                     hwnd,
                     RUNTIME_TEST_INJECT,
                     2,
                     &focused_fault as *const Value as isize,
                 );
-                SendMessageW(
+                native_send(
                     hwnd,
                     RUNTIME_TEST_QUERY,
                     0,
@@ -726,15 +778,27 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                     },
                     "Editor closed after failure acknowledgement",
                 )?;
+                if IsWindow(unsaved_edit) != 0 || acknowledge_owned_failure(hwnd) {
+                    return Err("Focused editor or its failure dialog survived close".into());
+                }
                 if controller_sim.state().log.len() != before_close_log
                     || std::fs::read(controller_directory.join("profiles.json")).unwrap()
                         != before_close_store
                 {
-                    return Err("Focused close persisted draft or dispatched hardware".into());
+                    let after = std::fs::read(controller_directory.join("profiles.json")).unwrap();
+                    let diagnostic = json!({
+                        "before_store":serde_json::from_slice::<Value>(&before_close_store).unwrap(),
+                        "after_store":serde_json::from_slice::<Value>(&after).unwrap(),
+                        "commands_after_close":format!("{:?}", &controller_sim.state().log[before_close_log..]),
+                        "before_close_feedback":observed,
+                    });
+                    let path = controller_directory.join("focused-close-diagnostic.json");
+                    std::fs::write(&path, serde_json::to_vec_pretty(&diagnostic).unwrap()).unwrap();
+                    return Err(format!("Focused close persisted draft or dispatched hardware: {}",path.display()));
                 }
                 Ok(
                     json!({"native_failure_dialog_acknowledged":true,"transport":"simulated only","physical_discovery_disabled":true,"source_region0_readback_not_modeled":true,
-                "focused_background_failure_close_acknowledged":true,"cached_status_no_hid_or_store_write":true,"background_fault_preserves_capture_and_draft":true,"background_fault_once_across_user_operation":true,"brightness_capture_verified":true,"source_layout_client_css_width":width,"scale":scale,"brightness_no_write_before_release":true,"brightness_release_raw":114,"brightness_cancel_no_write":true,
+                "focused_background_failure_close_acknowledged":true,"unsaved_close_draft":"fedcba","saved_close_slot":"#a1b2c3","focused_edit_destroyed":true,"close_command_delta":0,"close_store_bytes_unchanged":true,"cached_status_no_hid_or_store_write":true,"background_fault_preserves_capture_and_draft":true,"background_fault_once_across_user_operation":true,"brightness_capture_verified":true,"source_layout_client_css_width":width,"scale":scale,"brightness_no_write_before_release":true,"brightness_release_raw":114,"brightness_cancel_no_write":true,
                 "native_edit_draft_switch_isolated":true,"cancelled_color_retained":true,"opaque_slot_preserved":true,
                 "edited_slot_saved":"#a1b2c3","color_actions_did_not_write_brightness":true,
                 "evidence":"actual HWND mouse/EDIT notifications and worker persistence; no OS pointer injection or hardware proof"}),
@@ -792,7 +856,7 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
 
 unsafe fn modal_snapshot(hwnd: HWND) -> Value {
     let mut value = Value::Null;
-    SendMessageW(
+    native_send(
         hwnd,
         PROFILE_MODAL_TEST_QUERY,
         0,
@@ -2009,27 +2073,23 @@ fn native_wave_dropdown_reopens_selected_scrolls_drags_and_toggles_source_direct
                 let hwnd = WINDOW.load(Ordering::Acquire) as HWND;
                 let scale = f64::from(GetDpiForWindow(hwnd).max(96)) / 96.0;
                 let query = |enable: bool| {
-                    let mut value = Value::Null;
-                    SendMessageW(
-                        hwnd,
-                        LIGHTING_DROPDOWN_TEST,
-                        usize::from(enable),
-                        &mut value as *mut Value as isize,
-                    );
-                    value
+                    native_query(hwnd, LIGHTING_DROPDOWN_TEST, usize::from(enable))
                 };
-                let click = |r: &Value| {
-                    lighting_click(
+                let click = |name: &str, r: &Value| -> Result<(), String> {
+                    let coordinate = |field: &str| r[field].as_f64()
+                        .ok_or_else(|| format!("Wave {name}.{field} missing: {r}"));
+                    native_click(
                         hwnd,
-                        r["x"].as_f64().unwrap() + r["width"].as_f64().unwrap() / 2.0,
-                        r["y"].as_f64().unwrap() + r["height"].as_f64().unwrap() / 2.0,
+                        coordinate("x")? + coordinate("width")? / 2.0,
+                        coordinate("y")? + coordinate("height")? / 2.0,
                         scale,
-                    )
+                    );
+                    Ok(())
                 };
-                let initial = query(true);
+                let initial = query(true)?;
                 let log = controller_sim.state().log.len();
-                click(&initial["trigger"]);
-                let opened = query(false);
+                click("initial trigger", &initial["trigger"])?;
+                let opened = query(false)?;
                 if opened["open"] != true || opened["scroll"] != 122.0 {
                     return Err(format!("Wave not auto-visible: {opened}"));
                 }
@@ -2037,45 +2097,45 @@ fn native_wave_dropdown_reopens_selected_scrolls_drags_and_toggles_source_direct
                 let track = &opened["track"];
                 let x = thumb["x"].as_f64().unwrap() + 4.0;
                 let y = thumb["y"].as_f64().unwrap() + 10.0;
-                SendMessageW(hwnd, WM_LBUTTONDOWN, 1, position(x, y, scale));
-                SendMessageW(
+                native_send(hwnd, WM_LBUTTONDOWN, 1, position(x, y, scale));
+                native_send(
                     hwnd,
                     WM_MOUSEMOVE,
                     1,
                     position(x, track["y"].as_f64().unwrap() + 10.0, scale),
                 );
-                SendMessageW(
+                native_send(
                     hwnd,
                     WM_LBUTTONUP,
                     0,
                     position(x, track["y"].as_f64().unwrap() + 10.0, scale),
                 );
                 redraw(hwnd);
-                if query(false)["scroll"] != 0.0 {
+                if query(false)?["scroll"] != 0.0 {
                     return Err("Thumb drag did not reach start".into());
                 }
-                click(&initial["trigger"]);
-                click(&initial["trigger"]);
-                let reopened = query(false);
+                click("close trigger", &initial["trigger"])?;
+                click("reopen trigger", &initial["trigger"])?;
+                let reopened = query(false)?;
                 if reopened["scroll"] != 122.0 {
                     return Err("Reopen did not restore selected-row scroll".into());
                 }
                 // Choose the actual Wave row, which starts 250px into source content.
-                lighting_click(
+                native_click(
                     hwnd,
                     reopened["panel"]["x"].as_f64().unwrap() + 30.0,
                     reopened["panel"]["y"].as_f64().unwrap() + 1.0 + 250.0 - 122.0 + 12.0,
                     scale,
                 );
-                let selected = query(false);
+                let selected = query(false)?;
                 if selected["open"] != false || selected["selected"] != 4 {
                     return Err(format!("Wave row did not select: {selected}"));
                 }
                 // Clicking the already-active right tab must toggle left, per Z_.
-                click(&selected["directions"][1]);
-                let left = query(false);
-                click(&left["directions"][0]);
-                let right = query(false);
+                click("right direction", &selected["directions"][1])?;
+                let left = query(false)?;
+                click("left direction", &left["directions"][0])?;
+                let right = query(false)?;
                 let commands = right["commands"].as_array().unwrap();
                 if commands.len() != 3
                     || commands
@@ -2096,16 +2156,16 @@ fn native_wave_dropdown_reopens_selected_scrolls_drags_and_toggles_source_direct
                 SetWindowPos(hwnd, null_mut(), 0, 0, (1000.0 * scale).round() as i32, (650.0 * scale).round() as i32, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
                 redraw(hwnd);
                 for _ in 0..6 {
-                    SendMessageW(hwnd, WM_MOUSEWHEEL, (-120i16 as u16 as usize) << 16, 0);
+                    native_send(hwnd, WM_MOUSEWHEEL, (-120i16 as u16 as usize) << 16, 0);
                 }
                 redraw(hwnd);
-                let narrow = query(false);
-                click(&narrow["trigger"]);
-                let upward = query(false);
+                let narrow = query(false)?;
+                click("narrow trigger", &narrow["trigger"])?;
+                let upward = query(false)?;
                 if upward["open"] != true || upward["panel"]["y"].as_f64().unwrap() >= upward["trigger"]["y"].as_f64().unwrap() {
                     return Err(format!("Narrow dropdown did not open upwards: {upward}"));
                 }
-                click(&upward["trigger"]);
+                click("upward close trigger", &upward["trigger"])?;
                 if controller_sim.state().log.len() != log
                     || std::fs::read(controller_directory.join("profiles.json")).unwrap() != before
                 {
