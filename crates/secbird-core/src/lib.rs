@@ -55,6 +55,7 @@ pub mod ornata_gaming_indicator;
 pub mod ornata_manifest;
 pub mod ornata_spatial;
 pub mod performance;
+pub mod onboard;
 pub mod power;
 pub mod profile;
 pub mod profile_compat;
