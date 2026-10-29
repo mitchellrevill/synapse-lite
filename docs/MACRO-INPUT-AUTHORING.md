@@ -82,8 +82,9 @@ separately. Windows grouped menus and interim sidebar controls still differ from
 stock: exact menu styling, widgets, layout and full visual acceptance are TODOs.
 The shared approved tabs were not redesigned.
 
-Remaining: editing/rebinding existing key rows, linked-pair editing/deletion,
-recording, remaining events/loops/nested macros, binding and playback settings,
+Existing input/pair rebinding and grouped deletion are now implemented; see
+MACRO-PAIR-EDITING.md. Remaining: null-state/direction/kind conversion, paired
+block reordering, recording, remaining events/loops/nested macros, binding and playback settings,
 macro-only import/export and cache invalidation. Live playback additionally
 requires proved driver routing/ownership, physical-key arbitration and recovery.
 The two broader native failures recorded in MACRO-LIBRARY.md remain unresolved;

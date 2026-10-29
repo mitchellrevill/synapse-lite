@@ -92,7 +92,8 @@ missing, and compare with the preceding commit under the same assets/DPI. Keep
 the original assertions and preserve the failed evidence. Per the user's
 instruction, continue independent features after recording these blockers.
 
-TODO: recording; rebinding existing keyboard/mouse rows; nested macros and loop
+Existing input/pair rebinding and deletion are described in MACRO-PAIR-EDITING.md.
+TODO: recording; null-state/direction conversion; nested macros and loop
 editing; remaining source events and playback settings; key-binding workflow;
 stock macro-only import/export contract; source cache invalidation; exact menus,
 widgets and visual matching. Live activation additionally depends on proved

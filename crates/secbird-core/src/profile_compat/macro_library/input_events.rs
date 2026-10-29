@@ -21,6 +21,9 @@ pub enum Input {Keyboard(String),Mouse(u8)}
 pub enum Gesture {Tap,Down,Up}
 pub const MOUSE_NAMES:[&str;10]=["Left click","Right click","Scroll click","Mouse button 4","Mouse button 5","Double click","Scroll left","Scroll right","Scroll up","Scroll down"];
 const MAX_SOURCE_ID:u64=9_007_199_254_740_991;
+mod editing;
+pub use editing::{selection,Selection,can_rebind};
+pub(super) use editing::{rebind,delete_group};
 
 fn next_id(rows:&[Value])->Result<u64> {
     let mut highest=0;

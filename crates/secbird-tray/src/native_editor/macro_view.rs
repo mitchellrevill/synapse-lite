@@ -42,7 +42,7 @@ pub enum Request {Read,Change(Change),Import(PathBuf)}
 impl Request {pub fn mutates(&self)->bool {!matches!(self,Self::Read)}}
 pub struct Data {library:Library}
 #[derive(Clone)]
-pub enum Control {Open,List,Select(String),New,Duplicate,Delete,Import,Save,Discard,Undo,Redo,Event(usize),AddDelay,ApplyDelay,DeleteEvent,Move(i8),InputMenu,GestureMenu,ChooseInput(Input),ChooseGesture(Gesture),AddInput}
+pub enum Control {Open,List,Select(String),New,Duplicate,Delete,Import,Save,Discard,Undo,Redo,Event(usize),AddDelay,ApplyDelay,DeleteEvent,Move(i8),InputMenu,GestureMenu,ChooseInput(Input),ChooseGesture(Gesture),AddInput,RebindInput}
 #[derive(Default)]
 pub(super) struct View {
     pub used:bool,
@@ -129,6 +129,9 @@ fn commit_fields(state:&mut State)->Result<(),String> {
     }
     Ok(())
 }
+fn sync_input(view:&mut View) {
+    if let Some(group)=view.draft.as_ref().and_then(|d|input_events::selection(&d.entry.events,view.event?).ok()) {view.input=Some(group.input);view.gesture=Some(group.gesture);}
+}
 pub(super) unsafe fn action(state:&mut State,control:Control) {
     if matches!(control,Control::Open){state.macros.used=true;state.action(Action::Device(ID.into()));return;}
     if !active(state)||state.macros.busy{return;}
@@ -138,7 +141,7 @@ pub(super) unsafe fn action(state:&mut State,control:Control) {
         match control {
             Control::Open=>{},Control::List=>state.macros.picker=!state.macros.picker,
             Control::Select(id)=>{if state.macros.dirty(){return Err("Save or discard before switching macros".into());}state.macros.select(Some(id));},
-            Control::Event(index)=>{if mutable{commit_fields(state)?;}state.macros.event=Some(index);state.macros.delay=state.macros.draft.as_ref().and_then(|d|fixed_delay(&d.entry,index)).map(|n|n.to_string()).unwrap_or_default();},
+            Control::Event(index)=>{if mutable{commit_fields(state)?;}state.macros.event=Some(index);state.macros.delay=state.macros.draft.as_ref().and_then(|d|fixed_delay(&d.entry,index)).map(|n|n.to_string()).unwrap_or_default();sync_input(&mut state.macros);},
             Control::New=>{
                 if state.macros.dirty(){return Err("Save or discard the current draft first".into());}
                 let names=state.macros.data.as_ref().map(|d|d.library.entries.iter().map(|e|e.name.as_str()).collect::<Vec<_>>()).unwrap_or_default();
@@ -158,12 +161,13 @@ pub(super) unsafe fn action(state:&mut State,control:Control) {
                 let count=input_events::rows(&d.entry.events,index,&input,gesture).map_err(|e|e.to_string())?.len();
                 local(state,Change::InsertInput{guid,index,input,gesture})?;state.macros.event=Some(index+count-1);state.macros.delay="1000".into();
             },
+            Control::RebindInput=>{commit_fields(state)?;let d=state.macros.draft.as_ref().ok_or("Select a macro")?;let guid=d.entry.guid.clone();let index=state.macros.event.ok_or("Select an input event")?;let input=state.macros.input.clone().ok_or("Choose an input")?;local(state,Change::RebindInput{guid,index,input})?;sync_input(&mut state.macros);},
             Control::Save=>{commit_fields(state)?;let d=state.macros.draft.as_ref().ok_or("Select a macro")?;if d.dirty(){request(state,Request::Change(Change::Replace{guid:d.entry.guid.clone(),expected_revision:d.base_revision.clone(),record:d.entry.encoded_record.clone()}));}},
             Control::Discard=>{state.macros.select(state.macros.selected.clone());state.macros.status="Unsaved macro changes discarded".into();state.macros.failed=false;},
-            Control::Undo|Control::Redo=>{let redo=matches!(control,Control::Redo);let d=state.macros.draft.as_mut().ok_or("Select a macro")?;d.history(redo)?;state.macros.name=d.entry.name.clone();state.macros.delay=state.macros.event.and_then(|i|fixed_delay(&d.entry,i)).map(|n|n.to_string()).unwrap_or("1000".into());},
+            Control::Undo|Control::Redo=>{let redo=matches!(control,Control::Redo);let d=state.macros.draft.as_mut().ok_or("Select a macro")?;d.history(redo)?;state.macros.name=d.entry.name.clone();state.macros.delay=state.macros.event.and_then(|i|fixed_delay(&d.entry,i)).map(|n|n.to_string()).unwrap_or("1000".into());sync_input(&mut state.macros);},
             Control::AddDelay=>{commit_fields(state)?;let d=state.macros.draft.as_ref().ok_or("Select a macro")?;let index=state.macros.event.map_or(d.entry.events.len(),|i|(i+1).min(d.entry.events.len()));let guid=d.entry.guid.clone();let ms=state.macros.delay.trim().parse::<u32>().map_err(|_|"Enter a delay in milliseconds")?;local(state,Change::InsertDelay{guid,index,milliseconds:ms})?;state.macros.event=Some(index);},
             Control::ApplyDelay=>commit_fields(state)?,
-            Control::DeleteEvent=>{let d=state.macros.draft.as_ref().ok_or("Select a macro")?;let index=state.macros.event.ok_or("Select an event")?;local(state,Change::DeleteEvent{guid:d.entry.guid.clone(),index})?;state.macros.event=None;},
+            Control::DeleteEvent=>{let d=state.macros.draft.as_ref().ok_or("Select a macro")?;let index=state.macros.event.ok_or("Select an event")?;let input=d.entry.events.get(index).is_some_and(|event|event["Type"]==1||event["Type"]==2);let change=if input{Change::DeleteInputGroup{guid:d.entry.guid.clone(),index}}else{Change::DeleteEvent{guid:d.entry.guid.clone(),index}};local(state,change)?;state.macros.event=None;},
             Control::Move(direction)=>{commit_fields(state)?;let d=state.macros.draft.as_ref().ok_or("Select a macro")?;let index=state.macros.event.ok_or("Select an event")?;local(state,Change::MoveEvent{guid:d.entry.guid.clone(),index,direction})?;state.macros.event=Some(index.checked_add_signed(direction as isize).ok_or("Invalid event move")?);},
         }Ok(())
     })();
@@ -202,12 +206,17 @@ pub(super) unsafe fn paint(state:&State,p:&mut Painter,width:i32,height:i32) {
     button(p,"DUPLICATE",left+10,240,85,Control::Duplicate,can&&draft.is_some());button(p,"DELETE",left+105,240,85,Control::Delete,can&&draft.is_some_and(|d|!d.entry.referenced));
     p.text("DELAY · MILLISECONDS",left+10,276,180,28,p.fonts.small,TEXT,DT_LEFT);
     button(p,"ADD DELAY",left+10,354,180,Control::AddDelay,can&&draft.is_some());button(p,"APPLY DELAY",left+10,390,180,Control::ApplyDelay,can&&draft.is_some_and(|d|view.event.and_then(|i|fixed_delay(&d.entry,i)).is_some()));
-    button(p,"MOVE UP",left+10,432,85,Control::Move(-1),can&&view.event.is_some());button(p,"DOWN",left+105,432,85,Control::Move(1),can&&view.event.is_some());button(p,"DELETE EVENT",left+10,470,180,Control::DeleteEvent,can&&view.event.is_some());
+    let group=draft.and_then(|d|input_events::selection(&d.entry.events,view.event?).ok());
+    let paired=group.as_ref().is_some_and(|group|group.indices.len()==2);
+    let input_row=draft.is_some_and(|d|view.event.and_then(|i|d.entry.events.get(i)).is_some_and(|event|event["Type"]==1||event["Type"]==2));
+    button(p,"MOVE UP",left+10,432,85,Control::Move(-1),can&&view.event.is_some());button(p,"DOWN",left+105,432,85,Control::Move(1),can&&view.event.is_some());button(p,if paired{"DELETE PAIR"}else{"DELETE EVENT"},left+10,470,180,Control::DeleteEvent,can&&view.event.is_some()&&(!input_row||group.is_some()));
     let input=match &view.input{Some(Input::Mouse(button))=>input_events::MOUSE_NAMES.get(*button as usize).copied().unwrap_or("Choose input"),Some(Input::Keyboard(id))=>input_events::keys().iter().find(|key|&key.id==id).map_or("Choose input",|key|key.name.as_str()),None=>"A"};
     button(p,&format!("INPUT: {input}"),left+10,514,180,Control::InputMenu,can&&draft.is_some());
     let complete_action=matches!(view.input,Some(Input::Mouse(5..=9)));
     let gesture=if complete_action{"Perform action"}else{match view.gesture.unwrap_or(Gesture::Tap){Gesture::Tap=>"Press and release",Gesture::Down=>"Down",Gesture::Up=>"Up"}};
     button(p,gesture,left+10,550,180,Control::GestureMenu,can&&draft.is_some()&&!complete_action);button(p,"ADD INPUT",left+10,586,180,Control::AddInput,can&&draft.is_some());
+    let compatible=group.as_ref().is_some_and(|group|view.input.as_ref().is_some_and(|input|input_events::can_rebind(&group.input,input)));
+    button(p,if paired{"UPDATE PAIR"}else{"UPDATE EVENT"},left+10,622,180,Control::RebindInput,can&&compatible);
     button(p,"UNDO",timeline+10,160,80,Control::Undo,can&&draft.is_some_and(|d|!d.undo.is_empty()));button(p,"REDO",timeline+100,160,80,Control::Redo,can&&draft.is_some_and(|d|!d.redo.is_empty()));
     button(p,"DISCARD",timeline+470,160,100,Control::Discard,can&&view.dirty());button(p,"SAVE",timeline+580,160,100,Control::Save,can&&view.dirty());
     if let Some(d)=draft {
