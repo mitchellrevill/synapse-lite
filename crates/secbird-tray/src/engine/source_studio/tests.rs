@@ -7,6 +7,7 @@ use crate::{
 use secbird_core::lighting::SwitchOffLighting;
 use std::{path::PathBuf, sync::atomic::AtomicU64};
 static NEXT: AtomicU64 = AtomicU64::new(0);
+mod brightness;
 
 struct Fixture {
     engine: Engine,
@@ -306,7 +307,10 @@ fn suppression_and_owner_conflict_stop_output_without_advancing_phase_or_losing_
     f.tick();
     assert_eq!(f.attempts(), 14);
     assert_eq!(f.engine.studio_status()["frame_index"], 2);
-    assert!(f.spy.sim.state().live_brightness[&5]>0,"LIVE brightness resumes only after the fresh Studio frame");
+    assert!(
+        f.spy.sim.state().live_brightness[&5] > 0,
+        "LIVE brightness resumes only after the fresh Studio frame"
+    );
 }
 
 #[test]
@@ -370,7 +374,6 @@ fn conflicting_quick_actions_are_refused_before_io_including_product_id_alias() 
             "/api/off",
             "/api/keys",
             "/api/find-light",
-            "/api/lighting-settings",
             "/api/lighting-control",
             "/api/dimming",
         ] {
@@ -386,6 +389,7 @@ fn conflicting_quick_actions_are_refused_before_io_including_product_id_alias() 
         .engine
         .guard_studio_quick_action(&f.key, "/api/lighting-policy")
         .is_ok());
+    assert!(f.engine.guard_studio_quick_action(&f.key,"/api/lighting-settings").is_ok());
     assert!(f
         .engine
         .guard_studio_quick_action(&f.key, "/api/button")
@@ -416,6 +420,7 @@ fn explicit_actual_archive_apply_uses_existing_worker_and_does_not_enable_reconn
     assert_eq!(f.attempts(), 0);
     f.tick();
     assert_eq!(f.attempts(), 7);
+    assert_eq!(f.spy.sim.state().live_brightness[&5],255,"explicit accepted Studio output applies configured LIVE brightness from a prior LIVE0");
     assert_eq!(
         f.engine.lighting_runtime_status()[&f.key]["studio"]["accepted_frames"],
         1

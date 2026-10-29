@@ -33,8 +33,9 @@ profile activation's lighting projection. Other devices continue their own Quick
 programs. Profile activation still applies its non-lighting settings. Saved Quick
 intent is not overwritten. Explicit conflicting lighting actions, including PID-alias
 requests and global sync, are refused before mutation while Studio holds the target.
-Automatic brightness/idle/display policy continues; interactive brightness changes
-currently require stopping Studio first. This temporary UI limit is explicit below.
+Automatic brightness/idle/display policy continues. Interactive brightness uses a
+separate [Studio brightness path](STUDIO-BRIGHTNESS.md), preserving the composition
+and saved Quick program without a stop/restart.
 
 The existing worker's batch admission encloses the complete synchronous Studio
 transfer. Ordinary worker quiesce closes admission and drains an admitted batch;
@@ -80,8 +81,8 @@ claim follows from these checks. See `validation/studio-worker.json`.
 
 - Validate actual keyboard playback, optical RGB/timing, stop/failure recovery and
   real unplug/sleep/wake. Driver mode acquisition remains tied to input coordination.
-- Allow live brightness editing through a Studio-specific intent path without
-  invoking Quick frame preparation. It currently returns a clear stop-first error.
+- Physically verify live brightness editing, including zero/off/on during playback
+  and suppression, without changing saved brightness, mode or input state.
 - Persist the global Studio selection and its saved archive reference, with verified
   launch/reconnect behavior. Current explicit in-memory output survives editor close
   but is not automatically restored on application restart or reconnect.

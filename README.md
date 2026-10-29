@@ -63,6 +63,10 @@ that cancels packet admission before waiting on the device mutex. Static/Spectru
 on one authenticated Ornata in existing Driver Mode3 are admitted; mode acquisition,
 remaining effects/devices, physical/optical verification and full RAM acceptance remain
 unfinished. Saving or local canvas preview alone never starts device output.
+The Lighting [brightness slider and switch](docs/STUDIO-BRIGHTNESS.md) now adjust
+Studio through LIVE brightness without selecting Quick effects or restarting the
+composition. The first accepted Studio frame also releases a previous LIVE0 using
+the configured intent; hardware/optical checks remain open.
 
 ## Attribution
 

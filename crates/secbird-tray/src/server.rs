@@ -449,6 +449,16 @@ fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
     let target = if b.id.is_empty() { b.pid.to_ascii_uppercase() } else { b.id.clone() };
     engine.guard_studio_quick_action(&target, path)?;
 
+    if path=="/api/lighting-settings" && engine.studio_holds(&target) {
+        if b.expected_device.as_deref()!=Some(target.as_str()) || b.id!=target {
+            return Err(Error::InvalidArg("Studio brightness requires the exact selected device identity".into()));
+        }
+        let profile=b.expected_profile.as_deref().filter(|profile|!profile.is_empty())
+            .ok_or_else(||Error::InvalidArg("Studio brightness profile identity is missing".into()))?;
+        let want=b.lighting_settings.as_ref().ok_or_else(||Error::InvalidArg("lighting_settings is required".into()))?;
+        return engine.set_studio_brightness(&target,profile,want);
+    }
+
     if path == "/api/lighting-settings" {
         let mut store = Store::load(&config_dir().join("profiles.json"))?;
         let dev = engine

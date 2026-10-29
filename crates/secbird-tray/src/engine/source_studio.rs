@@ -1,6 +1,7 @@
 //! Studio uses the existing cooperative lighting worker and profile cache.
 //! No per-frame thread, mode acquisition, automatic reconnect replay or saved
-//! Quick setting mutation. Only the selected target's Quick writers are held.
+//! Quick effect mutation. Only the selected target's Quick writers are held;
+//! explicit brightness edits persist their shared device-profile intent.
 use super::*;
 use crate::{
     host_studio::session::{ApplyIntent, Control, OutputSession, Poll},
@@ -66,6 +67,92 @@ impl Engine {
         status["runtime_error"] = json!(self.studio.error);
         status["automatic_reconnect_replay"] = json!(false);
         status
+    }
+    /// Stage and save brightness intent before the existing LIVE bridge can
+    /// write anything. This path never projects the saved Quick effect or frame.
+    pub(crate) fn set_studio_brightness(
+        &mut self,
+        key: &str,
+        expected_profile: &str,
+        want: &secbird_core::lighting::LightingSettings,
+    ) -> Result<Value> {
+        if self.measurement_read_only || !self.uniform_is_enabled() {
+            return Err(Error::Unsupported(
+                "Studio brightness needs the running writable lighting worker".into(),
+            ));
+        }
+        if !self.studio_holds(key) || self.studio.session.stop_requested() {
+            return Err(Error::InvalidArg(
+                "Studio target changed or is stopping; refresh Lighting".into(),
+            ));
+        }
+        want.validate()?;
+        let brightness = want
+            .brightness
+            .as_ref()
+            .ok_or_else(|| Error::InvalidArg("Studio brightness settings are missing".into()))?;
+        if self.studio.session.is_faulted() && brightness.projected() != 0 {
+            return Err(Error::Unsupported(
+                "Studio output failed; stop or explicitly reapply before raising brightness".into(),
+            ));
+        }
+        if self.lighting_probe_store_snapshot()?.is_some() {
+            return Err(Error::Unsupported(
+                "Studio brightness is unavailable during an isolated lighting measurement".into(),
+            ));
+        }
+        // This Store is a fresh local candidate, not the worker's cached object.
+        // Early refusal and failed save cannot mutate live intent or device state.
+        let mut candidate = self.load_store()?;
+        self.validate_static_context(key, &candidate, expected_profile)?;
+        let device = self
+            .devices
+            .iter()
+            .find(|device| device.key() == key)
+            .ok_or_else(|| Error::NotFound("Studio brightness target disconnected".into()))?;
+        let profiles = candidate.for_device(device);
+        if profiles.active != expected_profile {
+            return Err(Error::InvalidArg(
+                "Studio brightness active profile changed; refresh Lighting".into(),
+            ));
+        }
+        let current = profiles
+            .active()
+            .lighting_settings
+            .as_ref()
+            .ok_or_else(|| {
+                Error::InvalidArg("Studio brightness needs retained source settings".into())
+            })?;
+        if current.brightness.is_none() {
+            return Err(Error::InvalidArg(
+                "Studio brightness baseline is missing; refresh Lighting".into(),
+            ));
+        }
+        if current.switch_off != want.switch_off || current.extra != want.extra {
+            return Err(Error::InvalidArg(
+                "Brightness cannot replace idle/display policy or other settings; refresh Lighting"
+                    .into(),
+            ));
+        }
+        want.store_in_profile(profiles.active_mut())?;
+        secbird_core::profile_compat::clear_source_brightness_baseline(profiles.active_mut());
+        let config =
+            LightingConfig::from_profile(expected_profile, profiles.active(), true, self.away);
+        secbird_core::profile_compat::validate_store_budget(&candidate)?;
+        self.uniform_availability(&config)
+            .map_err(Error::Unsupported)?;
+        // Read-only mode/effect admission; no Quick-frame preflight or rendering.
+        crate::host_uniform::io::preflight(device)?;
+        candidate.save()?;
+        self.studio.prepared = false;
+        self.invalidate_uniform();
+        self.lighting_runtime.borrow_mut().request_configured_live(key);
+        Ok(
+            json!({"execution":"host-studio-brightness","saved":true,"deferred":true,
+            "configured_intent":want,"saved_hardware_unchanged":true,
+            "live_policy_reconcile_pending":true,"accepted_packets":0,"attempted_packets":0,
+            "optically_verified":false}),
+        )
     }
     fn studio_config(&mut self, key: &str) -> std::result::Result<LightingConfig, String> {
         let path = self.uniform_path();
@@ -202,7 +289,6 @@ impl Engine {
                         | "/api/keys"
                         | "/api/find-light"
                         | "/api/dimming"
-                        | "/api/lighting-settings"
                         | "/api/lighting-control"
                 )
         {
@@ -334,14 +420,17 @@ impl Engine {
                     self.studio
                         .session
                         .complete(&ticket, self.studio.epoch.elapsed(), completion);
-                self.studio.prepared = accepted
-                    && complete.is_ok()
-                    && !self.studio.session.is_faulted();
+                self.studio.prepared =
+                    accepted && complete.is_ok() && !self.studio.session.is_faulted();
                 if let Err(error) = complete {
                     self.studio.error = Some(error.to_string());
                 }
                 self.release_stopped_studio();
                 if self.studio.prepared && resume_live {
+                    // Apply/resume is an explicit output action, not merely a
+                    // passive policy observation. A previous LIVE0 must not keep
+                    // newly accepted Studio frames dark indefinitely.
+                    self.lighting_runtime.borrow_mut().request_configured_live(&key);
                     self.refresh_lighting_runtime();
                 }
                 Duration::from_millis(40)
