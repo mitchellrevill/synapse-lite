@@ -2133,3 +2133,59 @@ fn native_wave_dropdown_reopens_selected_scrolls_drags_and_toggles_source_direct
     .unwrap();
     eprintln!("Wave HWND evidence: {}", directory.display());
 }
+
+#[test]
+#[ignore = "opens an isolated simulated dashboard; requires private device-pack assets"]
+fn native_dashboard_uses_lazy_product_art_without_device_or_profile_writes() {
+    let directory = std::env::temp_dir().join(format!("native-dashboard-pack-{}-{}", std::process::id(),
+        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+    std::fs::create_dir_all(&directory).unwrap();
+    let frame = directory.join("frame.json");
+    let _environment = Environment::set(&[
+        ("SYNAPSE_LITE_CONFIG_DIR", &directory),
+        ("SYNAPSE_LITE_SMOKE_REPORT", &frame),
+        ("SYNAPSE_LITE_SMOKE_VIEW", Path::new("dashboard")),
+    ]);
+    let sim = Sim::wireless_mouse();
+    let engine = Engine::with_simulated_mouse(&sim).unwrap();
+    let mut store = Store::load(&directory.join("profiles.json")).unwrap();
+    store.for_device(&engine.devices()[0]); store.save().unwrap();
+    let before = std::fs::read(directory.join("profiles.json")).unwrap();
+    let folder = directory.clone();
+    let observer = sim.clone();
+    let controller = std::thread::spawn(move || {
+        let result = (|| -> Result<Value, String> { unsafe {
+            wait_for(|| std::fs::read(&frame).ok().and_then(|bytes|serde_json::from_slice::<Value>(&bytes).ok())
+                .is_some_and(|value|value["presented"] == true), "dashboard pack frame")?;
+            let value: Value = serde_json::from_slice(&std::fs::read(&frame).map_err(|error|error.to_string())?).unwrap();
+            let art = &value["device_dashboard_artwork"];
+            if art["indexed_images"].as_u64().unwrap_or(0) < 2 || art["cached_entries"] != 1
+                || art["cache"][0]["product_id"] != 196 || art["cache"][0]["loaded"] != true {
+                return Err(format!("Dashboard did not demand-load the exact mouse art: {art}"));
+            }
+            if art["resident_pixel_bytes"].as_u64().unwrap_or(u64::MAX) > 8 * 1024 * 1024 {
+                return Err("Dashboard pixel residency exceeded the budget".into());
+            }
+            observer.state().log.clear();
+            let hwnd = WINDOW.load(Ordering::Acquire) as HWND;
+            for _ in 0..10 { redraw(hwnd); }
+            if !observer.state().log.is_empty() { return Err("Repainting queried/wrote the device".into()); }
+            let hold = std::env::var("SYNAPSE_LITE_DASHBOARD_HOLD_SECONDS").ok()
+                .and_then(|value|value.parse::<u64>().ok()).unwrap_or(0).min(120);
+            for _ in 0..hold { std::thread::sleep(Duration::from_secs(1)); }
+            Ok(json!({"frame":value,"sim_commands_added_by_repaint":0,
+                "physical_discovery_disabled":true,"profile_bytes_unchanged":true}))
+        }})();
+        unsafe { PostMessageW(WINDOW.load(Ordering::Acquire) as HWND, WM_CLOSE, 0, 0); }
+        std::fs::write(folder.join("interaction.json"), serde_json::to_vec_pretty(&match &result {
+            Ok(value)=>value.clone(),Err(error)=>json!({"error":error}),
+        }).unwrap()).unwrap();
+        result
+    });
+    let run = run_standalone(Arc::new(Mutex::new(engine)), Some(Duration::from_secs(150)));
+    let result = controller.join().unwrap();
+    assert!(run.is_ok(), "{run:?}"); assert!(result.is_ok(), "{result:?}");
+    assert_eq!(std::fs::read(directory.join("profiles.json")).unwrap(), before);
+    assert!(WINDOW.load(Ordering::Acquire) == 0);
+    eprintln!("Dashboard pack evidence: {}", directory.display());
+}

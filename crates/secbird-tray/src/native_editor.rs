@@ -65,6 +65,7 @@ mod viewport;
 mod window_frame;
 mod studio_view;
 mod studio_canvas;
+mod device_artwork;
 
 const CLASS: &str = "SynapseLiteNativeEditor";
 const RESPONSE_TIMER: usize = 71;
@@ -966,6 +967,7 @@ struct State {
     assets: PathBuf,
     fonts: Fonts,
     mouse: Option<Bitmap>,
+    device_artwork: RefCell<device_artwork::View>,
     keyboard: Option<Bitmap>,
     keyboard_customize: Option<Bitmap>,
     keyboard_layout: Option<source_layout::SourceLayout>,
@@ -1558,6 +1560,7 @@ impl State {
             "detected_devices": self.devices().len(),
             "loaded_source_fonts": self.fonts.loaded.len(),
             "mouse_artwork": self.mouse.is_some(),
+            "device_dashboard_artwork": self.device_artwork.borrow().snapshot(),
             "keyboard_artwork": self.keyboard.is_some(),
             "keyboard_customize_artwork": self.keyboard_customize.is_some(),
             "keyboard_source_inputs": self.keyboard_layout.as_ref().map(|layout| layout.keys.len()),
@@ -2938,10 +2941,12 @@ unsafe fn paint(state: &mut State, dc: HDC) {
                     && state.keyboard_customize.is_some();
                 let image = if exact_keyboard {
                     state.keyboard_customize.as_ref()
-                } else if keyboard {
+                } else if device["pid"] == "025D" {
                     state.keyboard.as_ref()
-                } else {
+                } else if matches!(device["pid"].as_str(), Some("00C4" | "00C5")) {
                     state.mouse.as_ref()
+                } else {
+                    None
                 };
                 let image_width = if exact_keyboard {
                     730
@@ -3392,12 +3397,20 @@ unsafe fn paint(state: &mut State, dc: HDC) {
             let x = 30 + (index as i32 % 4) * 285;
             let y = 158 + (index as i32 / 4) * 280;
             p.fill(x, y, 260, 250, PANEL);
-            let image = if device["kind"].as_str() == Some("keyboard") {
-                state.keyboard.as_ref()
-            } else {
-                state.mouse.as_ref()
-            };
-            p.image(image, x + 15, y + 20, 230, 160);
+            // Only visible cards demand image residency. Off-screen devices
+            // remain in the catalogue without loading their photographs.
+            if x < width && y < height && y + 250 > 128 {
+                if !state.device_artwork.borrow_mut().draw(&p, device, x + 15, y + 20, 230, 160) {
+                    let default_edition = device.get("edition_id")
+                        .is_none_or(|id|id.is_null() || id.as_u64() == Some(0));
+                    let image = if default_edition { match device["pid"].as_str() {
+                            Some("025D") => state.keyboard.as_ref(),
+                            Some("00C4" | "00C5") => state.mouse.as_ref(),
+                            _ => None,
+                        } } else { None };
+                    p.image(image, x + 15, y + 20, 230, 160);
+                }
+            }
             p.text(
                 device["name"].as_str().unwrap_or("Razer device"),
                 x + 12,
@@ -4805,6 +4818,7 @@ fn run_window(
             smoke_overlay_started: false,
             fonts: Fonts::new(&assets, initial_scale),
             mouse: Bitmap::load(&assets.join("mouse.bmp")),
+            device_artwork: RefCell::new(device_artwork::View::load(assets.join("device-pack"))),
             keyboard: Bitmap::load(&assets.join("keyboard.bmp")),
             keyboard_customize: Bitmap::load(&assets.join("keyboard-customize.bmp")),
             keyboard_layout: source_layout::SourceLayout::load(

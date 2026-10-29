@@ -1,0 +1,45 @@
+{
+  "format": "synapse-lite-native-dashboard-validation-v1",
+  "date": "2026-10-29",
+  "pack_index_sha256": "4b0823b075b8ac0729b12e62d240dbc84a40e72dc7dc0ed59025f34986600b33",
+  "pack_format": "synapse-lite-dashboard-pack-v2",
+  "pack_images": 653,
+  "unique_png_files": 556,
+  "unique_png_bytes": 70240831,
+  "primary_ids_with_edition_zero_artwork": 298,
+  "all_653_native_images_loaded_and_pixel_sampled": true,
+  "pixel_budget_bytes": 8388608,
+  "synthetic_cache_eviction_corruption_alias_edition_and_alpha_tests_passed": true,
+  "native_dashboard": {
+    "presented": true,
+    "matched": true,
+    "visible": true,
+    "width": 1600,
+    "height": 900,
+    "scale": 1.25,
+    "device_dashboard_artwork": {
+      "cache": [
+        {
+          "edition_id": 0,
+          "loaded": true,
+          "pixel_bytes": 1260000,
+          "product_id": 196
+        }
+      ],
+      "cached_entries": 1,
+      "error": null,
+      "indexed_images": 653,
+      "pixel_budget_bytes": 8388608,
+      "resident_pixel_bytes": 1260000
+    }
+  },
+  "sim_commands_added_by_repaint": 0,
+  "physical_discovery_disabled": true,
+  "profile_bytes_unchanged": true,
+  "tray_tests_passed": 237,
+  "tray_tests_opt_in_ignored": 29,
+  "provisioner_tests_passed": 2,
+  "visual_comparison": "TODO: Computer Use app approval timed out; no desktop screenshot inspection completed",
+  "complete_build_ram_gate_verified": false,
+  "all_device_functionality_verified": false
+}
