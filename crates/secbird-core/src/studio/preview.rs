@@ -10,6 +10,7 @@ const COLS: usize = 23;
 const CELLS: usize = ROWS * COLS;
 const MAX_STORAGE: usize = 32 * 1024 * 1024;
 enum Generator {
+    Ambient {rect:super::AmbientRect, blur:u8, bounds:[usize;4]},
     Static(Pixel),
     Spectrum(SpectrumCycle),
     Fire(FireCycle),
@@ -28,6 +29,7 @@ pub struct Preview {
     listed: [bool; CELLS],
     random_state: u32,
     frames: u64,
+    synthetic_ambient: bool,
 }
 
 #[derive(Deserialize)]
@@ -90,9 +92,12 @@ fn gradient(params: &Object) -> Result<Option<Vec<super::GradientStop>>> {
     }).collect::<Result<Vec<_>>>().map(Some)
 }
 impl Generator {
+    fn sample_taps(&self,mask:&[u8])->usize {
+        if let Self::Ambient{blur,..}=self {mask.iter().filter(|m|**m!=0).count()*(2*usize::from(*blur)-1).pow(2)} else {0}
+    }
     fn bytes(&self) -> usize {
         match self {
-            Self::Static(_) => 0,
+            Self::Ambient {..} | Self::Static(_) => 0,
             Self::Spectrum(cycle) => cycle.storage_bytes(),
             Self::Fire(cycle) => cycle.storage_bytes(),
             Self::Breathing(cycle) => cycle.storage_bytes(),
@@ -102,6 +107,14 @@ impl Generator {
 }
 impl Preview {
     pub fn from_snapshot(snapshot: &ReadSnapshot, random_state: u32) -> Result<Self> {
+        Self::build(snapshot, random_state, false)
+    }
+    /// Diagnostic only: deterministic colour bars, no desktop capture. This
+    /// explicit constructor is intentionally never used by physical output.
+    pub fn from_snapshot_synthetic_ambient(snapshot: &ReadSnapshot, random_state:u32) -> Result<Self> {
+        Self::build(snapshot,random_state,true)
+    }
+    fn build(snapshot:&ReadSnapshot,random_state:u32,synthetic_ambient:bool) -> Result<Self> {
         let root = Object::parse(&snapshot.raw)?;
         let devices = array_field(&root, "devices")?;
         if devices.len() != 1 {
@@ -171,6 +184,7 @@ impl Preview {
             listed,
             random_state,
             frames: 0,
+            synthetic_ambient,
         };
         // Match backend applyLayersEffect: reversed roots and reversed children;
         // each layer's own visibility controls generation.
@@ -202,6 +216,8 @@ impl Preview {
             "fire" => 8,
             "breathing" => 5,
             "wave" => 2,
+            "ambient" if self.synthetic_ambient => 11,
+            "ambient" => return Err(invalid("Ambient native screen sampling and projection are unverified; only the explicit synthetic diagnostic is available")),
             _ => return Err(invalid(format!("preview does not yet implement {name}"))),
         };
         if let Some(value) = item.get("value") {
@@ -249,6 +265,23 @@ impl Preview {
                 params.set(&name, Some(&value));
             }
             let generator = match expected {
+                11 => {
+                    let screen=params.text("screen")?;
+                    let rect=if screen=="custom" {
+                        serde_json::from_str::<super::AmbientRect>(params.get("screenRect").ok_or_else(||invalid("Ambient custom region requires screenRect"))?.get()).map_err(invalid)?
+                    } else {
+                        super::AmbientRect::preset(super::AMBIENT_PRESETS.iter().position(|name|*name==screen).ok_or_else(||invalid("unknown Ambient screen region"))?).unwrap()
+                    };
+                    rect.validate()?;
+                    let blur:u8=serde_json::from_str(params.get("blur").ok_or_else(||invalid("Ambient requires explicit blur"))?.get()).map_err(invalid)?;
+                    if !(1..=9).contains(&blur) {return Err(invalid("Ambient blur outside1..9"));}
+                    let points:Vec<_>=mask.iter().enumerate().filter(|(_,m)|**m!=0).map(|(i,_)|(i%COLS,i/COLS)).collect();
+                    let left=points.iter().map(|p|p.0).min().unwrap();
+                    let top=points.iter().map(|p|p.1).min().unwrap();
+                    let right=points.iter().map(|p|p.0).max().unwrap()+1;
+                    let bottom=points.iter().map(|p|p.1).max().unwrap()+1;
+                    Generator::Ambient{rect,blur,bounds:[left,top,right,bottom]}
+                }
                 2 => {
                     let value = |key: &str| -> Result<u32> {
                         serde_json::from_str(params.get(key).ok_or_else(||invalid(format!("Wave needs explicit {key}")))?.get()).map_err(invalid)
@@ -327,6 +360,9 @@ impl Preview {
                 }
                 _ => unreachable!(),
             };
+            if self.effects.iter().map(|e|e.generator.sample_taps(&e.mask)).sum::<usize>() + generator.sample_taps(&mask) > 262144 {
+                return Err(invalid("Ambient diagnostic exceeds262144 sampling taps per frame"));
+            }
             if self.effects.len() >= MAX_LAYERS
                 || self.storage_bytes()
                     + generator.bytes()
@@ -346,9 +382,32 @@ impl Preview {
         Ok(())
     }
     pub fn advance(&mut self) -> Result<()> {
+        if !self.synthetic_ambient {return self.render_frame(None);}
+        let mut synthetic=[0u8;crate::ambient_sampling::TEST_WIDTH*crate::ambient_sampling::TEST_HEIGHT*4];
+        crate::ambient_sampling::synthetic_frame(self.frames,&mut synthetic);
+        let frame=crate::ambient_sampling::DesktopFrame::new(crate::ambient_sampling::TEST_WIDTH,crate::ambient_sampling::TEST_HEIGHT,&synthetic)?;
+        self.render_frame(Some(&frame))
+    }
+    /// Inject a caller-owned synthetic frame. Ordinary runtime plans cannot
+    /// acquire an Ambient generator, even if this method is called.
+    pub fn advance_with_synthetic_frame(&mut self,frame:&crate::ambient_sampling::DesktopFrame<'_>) -> Result<()> {
+        if !self.synthetic_ambient {return Err(invalid("explicit synthetic Ambient plan required"));}
+        self.render_frame(Some(frame))
+    }
+    pub fn is_synthetic_ambient(&self) -> bool {self.synthetic_ambient}
+    fn render_frame(&mut self,frame:Option<&crate::ambient_sampling::DesktopFrame<'_>>) -> Result<()> {
         self.output.fill(Rgb(0, 0, 0));
         for effect in &mut self.effects {
             match &mut effect.generator {
+                Generator::Ambient{rect,blur,bounds} => {
+                    self.scratch.fill(Pixel::EMPTY);
+                    let [left,top,right,bottom]=*bounds;
+                    for y in top..bottom {for x in left..right {
+                        if effect.mask[y*COLS+x]!=0 {
+                            self.scratch[y*COLS+x]=crate::ambient_sampling::project(frame.ok_or_else(||invalid("synthetic frame required"))?,*rect,*blur,[right-left,bottom-top],[x-left,y-top])?;
+                        }
+                    }}
+                }
                 Generator::Static(pixel) => self.scratch.fill(*pixel),
                 Generator::Spectrum(cycle) => self.scratch.fill(cycle.next_pixel()),
                 Generator::Fire(cycle) => cycle.next_frame(&mut self.scratch)?,

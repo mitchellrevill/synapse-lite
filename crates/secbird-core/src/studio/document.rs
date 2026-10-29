@@ -26,6 +26,7 @@ pub use regions::{
     StarlightProperty, SelectedStarlightValue, STARLIGHT_DURATIONS,
     ReactiveProperty, SelectedReactiveValue, REACTIVE_DURATIONS,
     AudioProperty, SelectedAudioValue, audio_preset,
+    AmbientEdit, AmbientProperty, AmbientValue, SelectedAmbientValue, AmbientRect, AMBIENT_PRESETS, AMBIENT_SCALE,
 };
 
 #[path = "preview.rs"]

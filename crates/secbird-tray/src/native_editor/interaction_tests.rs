@@ -2256,6 +2256,8 @@ fn native_dashboard_uses_lazy_product_art_without_device_or_profile_writes() {
 
 #[path="studio_reactive_interaction_tests.rs"]
 mod reactive;
+#[path="studio_ambient_interaction_tests.rs"]
+mod ambient;
 
 #[path="studio_session_interaction_tests.rs"]
 mod studio_session;

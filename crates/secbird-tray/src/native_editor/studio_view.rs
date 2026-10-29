@@ -17,6 +17,8 @@ mod spectrum;
 mod reactive;
 #[path = "studio_audio.rs"]
 mod audio;
+#[path = "studio_ambient.rs"]
+mod ambient;
 #[path = "studio_starlight.rs"]
 mod starlight;
 #[path = "studio_wave.rs"]
@@ -75,6 +77,7 @@ pub(super) enum Control {
     Starlight(starlight::Control),
     Reactive(reactive::Control),
     Audio(audio::Control),
+    Ambient(ambient::Control),
     Layers(layer_tools::Control),
     AddPreset,
     Preview,
@@ -114,6 +117,7 @@ pub(super) struct View {
     starlight: starlight::Properties,
     reactive: reactive::Properties,
     audio: audio::Properties,
+    ambient: ambient::Properties,
     breathing_gradient: bool,
     playback: playback::Playback,
     output: output::View,
@@ -134,6 +138,7 @@ pub(super) enum Request {
     Restore {epoch:u64},
     Remember {epoch:u64,selection:session::Selection},
     Preview {
+        synthetic_ambient: bool,
         epoch: u64,
         generation: u64,
         snapshot: ReadSnapshot,
@@ -177,12 +182,13 @@ pub(super) fn work(request: Request, read_only:bool) -> Response {
         Request::Restore{epoch}=>Response::Restore{epoch,result:session::restore(&secbird_core::config_dir().join("studio-editor.json"))},
         Request::Remember{epoch,selection}=>Response::Remember{epoch,result:session::save(&secbird_core::config_dir().join("studio-editor.json"),selection,read_only)},
         Request::Preview {
+            synthetic_ambient,
             epoch,
             generation,
             snapshot,
             random_state,
         } => {
-            let result = Preview::from_snapshot(&snapshot, random_state)
+            let result = if synthetic_ambient {Preview::from_snapshot_synthetic_ambient(&snapshot, random_state)} else {Preview::from_snapshot(&snapshot, random_state)}
                 .map(Box::new)
                 .map_err(|e| e.to_string());
             Response::Preview {
@@ -340,6 +346,7 @@ pub(super) fn selection_changed(state: &mut State) {
     starlight::refresh(view);
     reactive::refresh(view);
     audio::refresh(view);
+    ambient::refresh(view);
     view.selected_color = None;
     view.selected_cold = None;
     let Some(property) = view.color_property(false) else {
@@ -616,6 +623,7 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
         Control::Starlight(control) => starlight::action(state, control),
         Control::Reactive(control) => reactive::action(state, control),
         Control::Audio(control) => audio::action(state, control),
+        Control::Ambient(control) => ambient::action(state, control),
         Control::BreathingDuration(index) => {
             let result=(|| -> Result<(),String> {
                 let view=&mut state.studio;
@@ -984,6 +992,7 @@ pub(super) unsafe fn rebuild_fields(state: &mut State) {
     starlight::fields(state);
     reactive::fields(state);
     audio::fields(state);
+    ambient::fields(state);
     if state.studio.color_property(false).is_some() {
         let text = state.studio.color.clone();
         let right = (state.width as f32 / state.scale) as i32 - 250;
@@ -1033,6 +1042,7 @@ pub(super) fn command(state: &mut State, id: u16, notification: u16) -> bool {
     if starlight::command(state,id,notification) {return true;}
     if reactive::command(state,id,notification) {return true;}
     if audio::command(state,id,notification) {return true;}
+    if ambient::command(state,id,notification) {return true;}
     if spectrum::command(state, id, notification) {
         return true;
     }
@@ -1061,6 +1071,7 @@ pub(super) fn key(state: &State, key: usize, control: bool, edit: bool) -> Optio
         (13, _) if state.studio.renaming => Some(Control::CommitRename),
         (13, _) if edit && audio::enter(state).is_some() => audio::enter(state).map(Control::Audio),
         (13, _) if edit && reactive::has_focus(state) => Some(Control::Reactive(reactive::Control::Color(false))),
+        (13, _) if edit && ambient::focused_control(state).is_some() => ambient::focused_control(state).map(Control::Ambient),
         (13, _) if edit && starlight::has_focus(state) => Some(Control::Starlight(starlight::Control::Density)),
         (13, _) if edit && wave::has_focus(state) => Some(Control::Wave(wave::Control::Motion)),
         (13, _) if edit && spectrum::has_focus(state) => {
@@ -1224,6 +1235,8 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         p,
         if view.playback.active() {
             "STOP PREVIEW"
+        } else if view.effect()==Some("ambient") {
+            "SYNTHETIC TEST"
         } else {
             "LOCAL PREVIEW"
         },
@@ -1468,6 +1481,8 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         audio::paint(p,view,right);
     } else if view.effect() == Some("reactive") {
         reactive::paint(p,view,right);
+    } else if view.effect() == Some("ambient") {
+        ambient::paint(p,view,right);
     } else if view.effect() == Some("starlight") {
         starlight::paint(p,view,right);
     } else if view.effect() == Some("wave") {
@@ -1510,7 +1525,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         p,
         message,
         right + 10,
-        if view.is_breathing() && !view.breathing_gradient { 566 } else if matches!(view.effect(),Some("breathing"|"spectrum"|"wave"|"starlight"|"reactive"|"audio")) {
+        if view.effect() == Some("ambient") { 614 } else if view.is_breathing() && !view.breathing_gradient { 566 } else if matches!(view.effect(),Some("breathing"|"spectrum"|"wave"|"starlight"|"reactive"|"audio")) {
             590
         } else if view.is_fire() {
             506

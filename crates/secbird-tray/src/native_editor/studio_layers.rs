@@ -143,6 +143,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter) {
         ("Add Starlight",Control::Add(NewEffect::Starlight),true),
         ("Add Reactive",Control::Add(NewEffect::Reactive),true),
         ("Add Audio Meter",Control::Add(NewEffect::Audio),true),
+        ("Add Ambient Awareness",Control::Add(NewEffect::Ambient),true),
     ];
     p.fill(710,116,180,entries.len() as i32*28+4,PANEL);
     // Disabled rows still block the canvas beneath the popup.

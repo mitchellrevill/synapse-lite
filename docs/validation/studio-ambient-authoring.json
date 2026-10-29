@@ -1,0 +1,92 @@
+{
+  "date": "2026-10-29",
+  "base_commit": "e6c21c3",
+  "scope": "Ambient regional authoring and explicitly synthetic local diagnostic; native capture/output unsupported",
+  "source_contract": {
+    "effect_id": 11,
+    "fields": [
+      "screen",
+      "screenRect",
+      "blur"
+    ],
+    "default_screen": "full",
+    "default_blur": 5,
+    "blur_range": [
+      1,
+      9
+    ],
+    "screen_scale": 65535,
+    "edge_strip_fraction": 0.1,
+    "ambient_colour_gradient_speed_controls": false,
+    "studio_evidence": "ev_792cf8d58ede97696189eff45c195daf026574cce69b686f6e05753f7bf573fa",
+    "engine_excerpt_evidence": "ev_ad8d25efd03f536234cbb9a6b8535ab3bbfeb883054ab7b8a84ea05d0d9ac2a2",
+    "semantic_coverage": "partial; static only"
+  },
+  "validation": {
+    "workspace_unit_tests": {
+      "passed": 824,
+      "failed": 0,
+      "ignored": 54
+    },
+    "documentation_tests": {
+      "passed": 1
+    },
+    "ambient_core_tests": {
+      "passed": 6,
+      "failed": 0
+    },
+    "native_hwnd": {
+      "ambient_layer_added": true,
+      "blur9_saved": true,
+      "custom_fractional_rect_saved": true,
+      "desktop_capture": false,
+      "device_requests": 0,
+      "invalid_blur_atomic": true,
+      "nonfinite_rect_atomic": true,
+      "physical_discovery_disabled": true,
+      "read_only_inert": true,
+      "save_undo_redo": true,
+      "synthetic_preview_and_stop": true,
+      "ten_second_deadline_cleanup": true
+    },
+    "native_hwnd_test_seconds": 17.68,
+    "owned_window_render_reviewed": true,
+    "parent_render_omits_native_child_fields": true,
+    "saved_field_values_verified": true,
+    "ambient_tray_tests": {
+      "passed": 2,
+      "failed": 0,
+      "ignored": 1,
+      "checks": [
+        "physical program refuses synthetic Ambient",
+        "pending synthetic completion cannot escape deadline after mode restart"
+      ]
+    },
+    "final_startup_budget_retest": "passed"
+  },
+  "synthetic_contract": {
+    "vendor_equivalent": false,
+    "test_frame_dimensions": [
+      64,
+      36
+    ],
+    "tick_ms": 40,
+    "max_ui_seconds": 10,
+    "max_input_bytes": 8388608,
+    "max_sampling_taps_per_frame": 262144,
+    "physical_admission": false
+  },
+  "environment_notes": [
+    "Initial default sandbox TEMP caused32 unrelated profile-rename failures; full workspace rerun passed with workspace TMP/TEMP.",
+    "A concurrent rebuild could not replace the running workspace test executable; sequential native build and HWND run passed.",
+    "Final-binary HWND retry exceeded the general4s startup wait: owned frame appeared at10s. Test-only startup budget increased to20s, with60s maximum window lifetime; product synthetic deadline remains10s."
+  ],
+  "unverified": [
+    "Native Ambient sampler, projection, blur kernel, alpha/gamma/HDR/timing",
+    "Live capture opt-in lifecycle",
+    "Physical Ambient output and all-device compatibility",
+    "Ambient-specific stock screenshot comparison",
+    "Complete-build three-run memory target"
+  ],
+  "next_diagnostic": "Repair native analysis provider; authenticate DLL SHA cd9fc2a61ff920b9b73e1f5e27632020e2f8586f443e426a875ad3b042b714fa; inspect CAmbienceEffect candidates RVA0x5d890/0x5cf80/0x5d0b0 with synthetic-only capture injection."
+}

@@ -192,6 +192,21 @@ mod tests {
     const PROFILE: &str =
         include_str!("../../secbird-core/tests/fixtures/studio-preview-profile.json");
     #[test]
+    fn ambient_synthetic_diagnostic_never_admits_a_physical_program() {
+        let mut raw:Value=serde_json::from_str(PROFILE).unwrap();
+        raw["layers"][0]["name"]="ambient".into();raw["layers"][0]["value"]=11.into();
+        raw["layers"][0]["params"]=json!({});
+        raw["layers"][0]["regions"][0]["params"]=json!({"screen":"full","blur":5});
+        let draft=Draft::open(&raw.to_string()).unwrap();let snapshot=draft.read_snapshot();
+        assert!(Preview::from_snapshot_synthetic_ambient(&snapshot,1).is_ok());
+        match PreparedStudio::build(snapshot,map(),1) {
+            Err(error)=>assert!(error.to_string().contains("unverified")),
+            Ok(_)=>panic!("synthetic Ambient escaped to physical preparation"),
+        }
+        assert!(!draft.is_dirty());
+    }
+
+    #[test]
     fn breathing_composition_matches_independent150_physical_frames_and1050_mock_outs() {
         let reference:Value=serde_json::from_str(include_str!("../../secbird-core/tests/fixtures/studio-breathing-reference.json")).unwrap();
         let mut raw:Value=serde_json::from_str(PROFILE).unwrap();
