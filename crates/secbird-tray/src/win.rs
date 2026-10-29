@@ -95,6 +95,8 @@ static TASKBAR_CREATED: AtomicU32 = AtomicU32::new(0);
 static TRAY_HWND: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
 
 struct App {
+    shortcuts: crate::global_shortcuts::Runtime,
+    shortcut_sleeping: bool,
     hwnd: HWND,
     icon: HICON,
     /// Shared with the editor's server thread.
@@ -380,6 +382,8 @@ pub fn run() {
         let (installs_tx, installs) = channel();
         APP.with(|cell| {
             *cell.borrow_mut() = Some(App {
+                shortcuts: crate::global_shortcuts::Runtime::new(hwnd),
+                shortcut_sleeping: false,
                 hwnd,
                 icon,
                 engine: Arc::new(Mutex::new(engine)),
@@ -417,6 +421,7 @@ pub fn run() {
         if policy.starts_policies() {
             with_app(|app| app.engine().start_lighting_runtime());
         }
+        if policy.generic_apply(){with_app(|app|{app.shortcuts.publish();app.shortcuts.reload();});}
         // Smoke/serve/native-smoke runs never opt into a scheduling worker.
         if crate::runtime_probe::starts_worker(&arguments) {
             with_app(|app| match crate::uniform_worker::Worker::start(app.engine.clone()) {
@@ -533,9 +538,12 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
         }
         WM_POWERBROADCAST => {
             if wparam as u32 == PBT_APMRESUMEAUTOMATIC {
+                with_app(|app|{app.shortcut_sleeping=false;app.refresh_shortcuts();});
                 log::append("resumed from sleep");
                 schedule_rescan(hwnd, true);
                 start_retries(hwnd);
+            } else if wparam as u32 == PBT_APMSUSPEND {
+                with_app(|app|{app.shortcut_sleeping=true;app.shortcuts.suspend();});
             } else if wparam as u32 == PBT_POWERSETTINGCHANGE {
                 let setting = &*(lparam as *const POWERBROADCAST_SETTING);
                 if same_guid(&setting.PowerSetting, &GUID_CONSOLE_DISPLAY_STATE) {
@@ -556,6 +564,10 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
                 _ => None,
             };
             0
+        }
+        crate::global_shortcuts::RELOAD=>{with_app(|app|app.refresh_shortcuts());0}
+        WM_HOTKEY=>{
+            with_app(|app|{if app.policy.generic_apply()&&!app.locked&&!app.screen_off&&!app.shortcut_sleeping{if let Err(error)=app.shortcuts.dispatch(wparam,lparam){log::append(&error);}}});0
         }
         WM_TIMER if wparam == TIMER_RESCAN => {
             KillTimer(hwnd, TIMER_RESCAN);
@@ -617,7 +629,7 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
         }
         WM_QUERYENDSESSION => TRUE as LRESULT,
         WM_ENDSESSION => {
-            if wparam != 0 { with_app(|app| app.shutdown_lighting()); }
+            if wparam != 0 { with_app(|app|{app.shortcuts.suspend();app.shutdown_lighting();}); }
             0
         }
         WM_CLOSE => {
@@ -626,6 +638,7 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
         }
         WM_DESTROY => {
             with_app(|app| {
+                app.shortcuts.suspend();
                 app.shutdown_lighting();
                 remove_icon(app.hwnd);
             });
@@ -666,6 +679,9 @@ fn schedule_rescan(hwnd: HWND, apply_all: bool) {
 }
 
 impl App {
+    fn refresh_shortcuts(&mut self){
+        if self.policy.generic_apply()&&!self.locked&&!self.screen_off&&!self.shortcut_sleeping{self.shortcuts.resume();}else{self.shortcuts.suspend();}
+    }
     fn engine(&self) -> MutexGuard<'_, Engine> {
         self.engine.lock().unwrap_or_else(|p| p.into_inner())
     }
@@ -789,7 +805,13 @@ impl App {
     /// The lights go down while the PC is locked or its screen is off, if that's set (#48),
     /// and come back after.
     fn set_away(&mut self, locked: bool, screen_off: bool) {
+        let shortcut_changed=self.locked!=locked||self.screen_off!=screen_off;
+        if shortcut_changed {
+            // Establish the dispatch gate before touching other policy work.
+            self.shortcuts.suspend();
+        }
         (self.locked, self.screen_off) = (locked, screen_off);
+        if shortcut_changed {self.refresh_shortcuts();}
         if self.policy.restricted_actions() {
             return;
         }

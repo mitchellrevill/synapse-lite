@@ -43,6 +43,7 @@ mod lighting_view;
 mod image_render;
 mod host_tabs;
 mod linked_games;
+mod shortcuts;
 mod macro_view;
 mod chroma_view;
 mod host_tab_model;
@@ -430,6 +431,7 @@ enum Action {
     Chroma(chroma_view::Control),
     Studio(studio_view::Control),
     LinkedGames(linked_games::Control),
+    Shortcuts(shortcuts::Control),
     MacroLibrary(macro_view::Control),
     Home,
     Device(String),
@@ -509,6 +511,7 @@ enum Job {
     Chroma(chroma_view::Request),
     Studio(studio_view::Request),
     LinkedGames(linked_games::Request),
+    Shortcuts(shortcuts::Request),
     MacroLibrary(macro_view::Request),
     StudioOutput(studio_view::OutputRequest),
     SensorRead(String, String),
@@ -578,6 +581,7 @@ enum WorkerReply {
     StudioOutput(Result<Value, String>),
     Studio(studio_view::Response),
     LinkedGames(Result<linked_games::Data,String>),
+    Shortcuts(Result<shortcuts::Data,String>),
     MacroLibrary(Result<macro_view::Data,String>),
     Sensor((String, String), Result<(Value,mouse_feedback::BindingResult), String>),
     User(Reply),
@@ -613,6 +617,11 @@ fn worker(
                     .and_then(|mut engine|chroma_view::work(&mut engine,request));
                 if replies.send(WorkerReply::Chroma(result)).is_err() { break; }
                 continue;
+            }
+            Job::Shortcuts(request)=>{
+                let context=engine.lock().map_err(|_|"Device engine is busy".to_string()).map(|engine|engine.is_measurement_read_only());
+                let result=context.and_then(|read_only|shortcuts::work(request,read_only));
+                if replies.send(WorkerReply::Shortcuts(result)).is_err(){break;}continue;
             }
             Job::MacroLibrary(request)=>{
                 let context=engine.lock().map_err(|_|"Device worker is unavailable".to_string()).map(|engine|engine.is_measurement_read_only());
@@ -778,6 +787,7 @@ fn worker(
                 | Job::Chroma(_)
                 | Job::CachedLighting(_)
                 | Job::LinkedGames(_)
+                | Job::Shortcuts(_)
                 | Job::MacroLibrary(_)
                 | Job::Studio(_)
                 | Job::StudioOutput(_)
@@ -1007,6 +1017,7 @@ impl Drop for Bitmap {
 
 struct State {
     linked_games:linked_games::View,
+    shortcuts:shortcuts::View,
     macros:macro_view::View,
     chroma: chroma_view::View,
     studio: studio_view::View,
@@ -1889,6 +1900,7 @@ impl State {
                     continue;
                 }
                 WorkerReply::Chroma(result) => {self.pending=self.pending.saturating_sub(1);chroma_view::receive(self,result);continue;}
+                WorkerReply::Shortcuts(result)=>{self.pending=self.pending.saturating_sub(1);shortcuts::receive(self,result);continue;}
                 WorkerReply::LinkedGames(result)=>{self.pending=self.pending.saturating_sub(1);linked_games::receive(self,result);continue;}
                 WorkerReply::MacroLibrary(result)=>{self.pending=self.pending.saturating_sub(1);macro_view::receive(self,result);continue;}
                 WorkerReply::StudioControl(control, reader, status) => {
@@ -1990,7 +2002,7 @@ impl State {
                 );
                 self.notices = reply.notices;
             }
-            if self.selected.is_some() && self.device().is_none() && !linked_games::active(self) && !macro_view::active(self) && !chroma_view::active(self) {
+            if self.selected.is_some() && self.device().is_none() && !linked_games::active(self) && !macro_view::active(self) && !chroma_view::active(self) && !shortcuts::active(self) {
                 self.selected = None;
                 self.buttons.clear();
             }
@@ -2150,6 +2162,7 @@ impl State {
         }
         if chroma_view::active(self) { return; }
         if linked_games::active(self) {linked_games::fields(self);return;}
+        if shortcuts::active(self) {shortcuts::fields(self);return;}
         if macro_view::active(self) {macro_view::fields(self);return;}
         if self.studio.open {
             studio_view::rebuild_fields(self);
@@ -2283,6 +2296,8 @@ impl State {
         }
         let leaving_macro=matches!(&action,Action::Home|Action::Device(_)|Action::Refresh|Action::Close|Action::Studio(studio_view::Control::Enter)|Action::Chroma(chroma_view::Control::Open))||matches!(&action,Action::HostClose(id) if id==macro_view::ID);
         if leaving_macro&&!macro_view::can_leave(self){return;}
+        let leaving_shortcuts=matches!(&action,Action::Home|Action::Device(_)|Action::Refresh|Action::Close|Action::Studio(studio_view::Control::Enter))||matches!(&action,Action::HostClose(id) if id==shortcuts::ID);
+        if leaving_shortcuts&&!shortcuts::can_leave(self,action.clone()){return;}
         if self.restricted_actions
             && !matches!(&action, Action::Close | Action::Minimize | Action::Maximize)
         {
@@ -2319,6 +2334,7 @@ impl State {
             Action::Onboard(control)=>onboard_view::action(self,control),
             Action::Chroma(control) => chroma_view::action(self,control),
             Action::LinkedGames(control)=>linked_games::action(self,control),
+            Action::Shortcuts(control)=>shortcuts::action(self,control),
             Action::MacroLibrary(control)=>macro_view::action(self,control),
             Action::Studio(control) => studio_view::action(self,control),
             Action::Calibration(control) => calibration_view::action(self,control),
@@ -2364,7 +2380,7 @@ impl State {
             }
             Action::Device(id) => {
                 if id==chroma_view::ID && !studio_view::can_leave_to_chroma(self) { return; }
-                if (id==linked_games::ID||id==macro_view::ID) && self.studio.open && studio_view::block_close(self){return;}
+                if (id==linked_games::ID||id==macro_view::ID||id==shortcuts::ID) && self.studio.open && studio_view::block_close(self){return;}
                 self.studio.canvas.cancel();ReleaseCapture();
                 self.studio.open=false;
                 if !host_tabs::open(self, &id) { return; }
@@ -2374,6 +2390,7 @@ impl State {
                 self.profile_actions = false;
                 self.selected = Some(id);
                 if linked_games::active(self){linked_games::request(self,linked_games::Request::Read);}
+                if shortcuts::active(self){shortcuts::request(self,shortcuts::Request::Read);}
                 if macro_view::active(self){macro_view::request(self,macro_view::Request::Read);}
                 self.tab = page;
                 self.profile_open = false;
@@ -2395,6 +2412,7 @@ impl State {
                 calibration_view::request(self,true);
             }
             Action::Refresh if linked_games::active(self)=>linked_games::request(self,linked_games::Request::Read),
+            Action::Refresh if shortcuts::active(self)=>shortcuts::request(self,shortcuts::Request::Read),
             Action::Refresh if macro_view::active(self)=>macro_view::request(self,macro_view::Request::Read),
             Action::Refresh => {mouse_feedback::stop(self);self.calibration.owner=None;self.queue(Job::Rescan);}
             Action::ProfileMenu => {
@@ -2989,7 +3007,7 @@ unsafe fn paint(state: &mut State, dc: HDC) {
         action: Action::Refresh,
     });
     let device = state.device().cloned();
-    let title = if chroma_view::active(state) {"RAZER CHROMA"} else if macro_view::active(state) {"MACRO"} else if linked_games::active(state) {"LINKED GAMES"} else if state.studio.open { "RAZER CHROMA STUDIO" } else { device
+    let title = if shortcuts::active(state) {"GLOBAL SHORTCUTS"} else if chroma_view::active(state) {"RAZER CHROMA"} else if macro_view::active(state) {"MACRO"} else if linked_games::active(state) {"LINKED GAMES"} else if state.studio.open { "RAZER CHROMA STUDIO" } else { device
         .as_ref()
         .and_then(|d| d["name"].as_str())
         .unwrap_or("RAZER SYNAPSE") };
@@ -3019,6 +3037,7 @@ unsafe fn paint(state: &mut State, dc: HDC) {
     p.line(0, 79, width, 0);
     if chroma_view::active(state) {chroma_view::paint(state,&mut p,width,height);
     } else if macro_view::active(state) {macro_view::paint(state,&mut p,width,height);
+    } else if shortcuts::active(state) {shortcuts::paint(state,&mut p,width,height);
     } else if linked_games::active(state) {linked_games::paint(state,&mut p,width,height);
     } else if state.studio.open {
         studio_view::paint(state,&mut p,width,height);
@@ -3570,6 +3589,7 @@ unsafe fn paint(state: &mut State, dc: HDC) {
         p.button("LINKED GAMES",width-440,104,195,Action::LinkedGames(linked_games::Control::Open),false);
         p.button("MACRO",width-640,104,180,Action::MacroLibrary(macro_view::Control::Open),false);
         p.button("CHROMA",width-225,104,195,Action::Chroma(chroma_view::Control::Open),false);
+        p.button("GLOBAL SHORTCUTS",width-880,104,225,Action::Shortcuts(shortcuts::Control::Open),false);
         for (index, device) in state.devices().iter().enumerate() {
             let x = 30 + (index as i32 % 4) * 285;
             let y = 158 + (index as i32 / 4) * 280;
@@ -3638,7 +3658,7 @@ unsafe fn paint(state: &mut State, dc: HDC) {
             }
         }
     }
-    if !state.source_viewport() && !linked_games::active(state) && !macro_view::active(state) {
+    if !state.source_viewport() && !linked_games::active(state) && !macro_view::active(state) && !shortcuts::active(state) {
         p.line(0, height - 35, width, 0);
         p.text(
             &state.status,
@@ -3737,6 +3757,7 @@ unsafe extern "system" fn window_proc(
             if !pointer.is_null() {
                 if let Ok(mut state) = (*pointer).try_borrow_mut() {
                     if !macro_view::can_leave(&mut state){return 0;}
+                    if !shortcuts::can_leave(&mut state,Action::Close){return 0;}
                     if studio_view::block_close(&mut state) {return 0;}
                     mouse_feedback::stop(&mut state);
                     if state.assignment.draft.as_ref().is_some_and(|d| d.dirty) {
@@ -3858,6 +3879,29 @@ unsafe extern "system" fn window_proc(
             2=>{let value=&*(lparam as *const Value);if let Some(path)=value.as_str(){linked_games::request(&mut state,linked_games::Request::Add(path.into()));}},
             3=>*(lparam as *mut Value)=linked_games::diagnostics(&state),
             4=>*(lparam as *mut Value)=host_tabs::diagnostics(&state),
+            _=>{},
+        }}return 0;
+    }
+    if message==shortcuts::MENU||message==shortcuts::FILE {
+        let allowed=(*pointer).try_borrow().is_ok_and(|state|shortcuts::active(&state)&&!state.read_only_smoke&&!state.restricted_actions&&!state.shortcuts.busy);
+        if !allowed{return 0;}
+        if let Ok(mut state)=(*pointer).try_borrow_mut(){state.shortcuts.popup=true;}
+        if message==shortcuts::MENU {
+            let result=shortcuts::menu(hwnd,wparam!=0);
+            if let Ok(mut state)=(*pointer).try_borrow_mut(){state.shortcuts.popup=false;match result{Ok(Some(control))=>state.action(Action::Shortcuts(control)),Ok(None)=>{},Err(error)=>state.error(&error)}}
+        }else{
+            let result=shortcuts::file(hwnd,wparam!=0);
+            if let Ok(mut state)=(*pointer).try_borrow_mut(){state.shortcuts.popup=false;match result{Ok(Some(path))=>{let request=if wparam==0{Some(shortcuts::Request::Import(path))}else{state.shortcuts_export(path)};if let Some(request)=request{shortcuts::request(&mut state,request);}},Ok(None)=>{},Err(error)=>state.error(&error)}}
+        }
+        return 0;
+    }
+    #[cfg(test)]
+    if message==shortcuts::TEST {
+        if let Ok(mut state)=(*pointer).try_borrow_mut(){match wparam{
+            0=>state.action(Action::Shortcuts(shortcuts::Control::Open)),
+            1=>*(lparam as *mut Value)=shortcuts::diagnostics(&state),
+            2=>{let control=&*(lparam as *const shortcuts::Control);state.action(Action::Shortcuts(control.clone()));},
+            3=>{let request=&*(lparam as *const shortcuts::Request);shortcuts::request(&mut state,request.clone());},
             _=>{},
         }}return 0;
     }
@@ -4210,7 +4254,7 @@ unsafe extern "system" fn window_proc(
         }
         return DefWindowProcW(hwnd, message, wparam, lparam);
     };
-    if message==WM_COMMAND && (macro_view::command(&mut state,(wparam&0xffff)as u16,((wparam>>16)&0xffff)as u16) || linked_games::command(&mut state,(wparam&0xffff)as u16,((wparam>>16)&0xffff)as u16) || studio_view::command(&mut state,(wparam&0xffff)as u16,((wparam>>16)&0xffff)as u16)) {return 0;}
+    if message==WM_COMMAND && (shortcuts::command(&mut state,(wparam&0xffff)as u16,((wparam>>16)&0xffff)as u16) || macro_view::command(&mut state,(wparam&0xffff)as u16,((wparam>>16)&0xffff)as u16) || linked_games::command(&mut state,(wparam&0xffff)as u16,((wparam>>16)&0xffff)as u16) || studio_view::command(&mut state,(wparam&0xffff)as u16,((wparam>>16)&0xffff)as u16)) {return 0;}
     if message==WM_MOUSEWHEEL && studio_view::wheel(&mut state,((wparam>>16)as u16 as i16)as i32,
         POINT{x:(lparam as u32&0xffff)as i16 as i32,y:((lparam as u32>>16)&0xffff)as i16 as i32}) {return 0;}
     if studio_view::layer_pointer(&mut state,message,lparam) {return 0;}
@@ -4664,6 +4708,7 @@ unsafe extern "system" fn window_proc(
         }
         WM_MOUSEWHEEL if chroma_view::active(&state) => {chroma_view::wheel(&mut state,(wparam>>16) as u16 as i16);0}
         WM_MOUSEWHEEL if linked_games::active(&state) => {linked_games::wheel(&mut state,(wparam>>16) as u16 as i16);0}
+        WM_MOUSEWHEEL if shortcuts::active(&state) => {shortcuts::action(&mut state,shortcuts::Control::Next(if ((wparam>>16)as u16 as i16)<0{1}else{-1}));0}
         WM_MOUSEWHEEL if macro_view::active(&state) => {macro_view::wheel(&mut state,(wparam>>16) as u16 as i16);0}
         WM_MOUSEWHEEL if state.profile_open => {
             let count = state
@@ -4812,6 +4857,7 @@ unsafe extern "system" fn window_proc(
         }
         WM_KEYDOWN => {
             if wparam == 27 && chroma_view::escape(&mut state) { return 0; }
+            if wparam==27&&shortcuts::modal(&state){shortcuts::action(&mut state,shortcuts::Control::Cancel);return 0;}
             if state.tab==Tab::Advanced&&advanced_view::template_key(&mut state,wparam){return 0;}
             if wparam == 27 && state.assignment.draft.is_some() {
                 let control = if state.assignment.pending.is_some() {
@@ -5028,6 +5074,7 @@ fn run_window(
             .map_err(|e| e.to_string())?;
         let mut state = Box::new(RefCell::new(State {
             linked_games:linked_games::View::default(),
+            shortcuts:shortcuts::View::default(),
             macros:macro_view::View::default(),
             chroma: chroma_view::View::default(),
             studio: studio_view::View::default(),

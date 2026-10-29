@@ -13,6 +13,8 @@ mod wheel;
 mod linked_games;
 #[path="macro_interaction_tests.rs"]
 mod macros;
+#[path="shortcut_interaction_tests.rs"]
+mod shortcuts;
 #[path="studio_interaction_tests.rs"]
 mod studio;
 #[path="chroma_interaction_tests.rs"]
