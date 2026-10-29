@@ -88,13 +88,13 @@ fn native_studio_audio_parameters_gradient_save_history_and_capture_refusal() {
                     SendMessageW(field, WM_SETTEXT, 0, wide(text).as_ptr() as isize);
                     Ok(())
                 };
-                set(2110, "2.25")?;
+                set(2120, "2.25")?;
                 lighting_click(hwnd, right + 65., 328., scale);
-                set(2111, "0.3")?;
+                set(2121, "0.3")?;
                 lighting_click(hwnd, right + 65., 475., scale);
                 lighting_click(hwnd, right + 50., 368., scale);
                 if windows_sys::Win32::UI::Input::KeyboardAndMouse::IsWindowEnabled(GetDlgItem(
-                    hwnd, 2110,
+                    hwnd, 2120,
                 )) != 0
                 {
                     return Err("Auto left Boost enabled".into());
@@ -175,18 +175,18 @@ fn native_studio_audio_parameters_gradient_save_history_and_capture_refusal() {
                     return Err("None saved a colour".into());
                 }
                 lighting_click(hwnd, right + 65., 291., scale);
-                set(2110, "0.3")?;
+                set(2120, "0.3")?;
                 lighting_click(hwnd, right + 65., 328., scale);
                 if query()["dirty"] != false || query()["failed"] != true {
                     return Err("Off-step Boost changed draft".into());
                 }
-                set(2111, "2.1")?;
+                set(2121, "2.1")?;
                 lighting_click(hwnd, right + 65., 475., scale);
                 if query()["dirty"] != false || query()["failed"] != true {
                     return Err("Out-of-range Decay changed draft".into());
                 }
                 SendMessageW(hwnd, READ_ONLY_TEST_SET, 1, 0);
-                set(2111, "1.2")?;
+                set(2121, "1.2")?;
                 lighting_click(hwnd, right + 65., 475., scale);
                 if query()["dirty"] != false {
                     return Err("Read-only Audio changed draft".into());

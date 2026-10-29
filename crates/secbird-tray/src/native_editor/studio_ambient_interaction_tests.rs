@@ -62,7 +62,7 @@ fn native_studio_ambient_region_blur_save_history_and_invalid_values() {
                 let height = f64::from(client.bottom) / scale;
                 let right = width - 250.;
                 lighting_click(hwnd, 775., 100., scale);
-                lighting_click(hwnd, 800., 468., scale);
+                lighting_click(hwnd, 800., 496., scale); // Ambient follows Audio Meter in the combined menu.
                 let id = query()["selected"]
                     .as_str()
                     .ok_or("Ambient layer not selected")?

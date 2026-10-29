@@ -2,8 +2,8 @@
 use super::*;
 use secbird_core::studio::document::{AudioProperty, SelectedAudioValue};
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::EnableWindow;
-const BOOST: u16 = 2110;
-const DECAY: u16 = 2111;
+const BOOST: u16 = 2120;
+const DECAY: u16 = 2121;
 
 #[derive(Clone)]
 pub enum Control {
