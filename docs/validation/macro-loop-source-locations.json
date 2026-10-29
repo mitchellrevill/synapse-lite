@@ -1,0 +1,42 @@
+[
+  {
+    "file": "main.3f4b9604.js",
+    "tag": "create",
+    "sha256": "fd20eeea9ac259a741c5deec4cc23f7e293cb99fa8ed658816af50bbd894941d",
+    "utf16_start": 139138,
+    "utf16_end": 140032,
+    "projection_sha256": "0a7deab5405a38bbc019ee09eafec34f438a5f23a512f3472fe7190210b7279c"
+  },
+  {
+    "file": "main.3f4b9604.js",
+    "tag": "duplicate",
+    "sha256": "fd20eeea9ac259a741c5deec4cc23f7e293cb99fa8ed658816af50bbd894941d",
+    "utf16_start": 144099,
+    "utf16_end": 144807,
+    "projection_sha256": "aa5424a79832acc651491d4fa4fca5a9c84f37dde5f99ee719dfbbf3d0416c05"
+  },
+  {
+    "file": "main.3f4b9604.js",
+    "tag": "update",
+    "sha256": "fd20eeea9ac259a741c5deec4cc23f7e293cb99fa8ed658816af50bbd894941d",
+    "utf16_start": 144808,
+    "utf16_end": 146645,
+    "projection_sha256": "9b7bfaebcb05cb2878f52c28720193c8ba90c70bb29fee9a99b06203814ed39a"
+  },
+  {
+    "file": "main.3f4b9604.js",
+    "tag": "reducer",
+    "sha256": "fd20eeea9ac259a741c5deec4cc23f7e293cb99fa8ed658816af50bbd894941d",
+    "utf16_start": 738459,
+    "utf16_end": 755123,
+    "projection_sha256": "f14a3339aaa7926400a11efeec1d9b754f33ea225522aa8cbde67a587a94ad68"
+  },
+  {
+    "file": "8190.4302afe2.chunk.js",
+    "tag": "repeat-control",
+    "sha256": "b445768b9d9b2761323900e4437b111492e234a94f72e179b6cbcbcda6966403",
+    "utf16_start": 1252419,
+    "utf16_end": 1254619,
+    "projection_sha256": "dc08ac1cba927b058610fc451e41574ba26aca03a127decc30911da806cf7e3f"
+  }
+]

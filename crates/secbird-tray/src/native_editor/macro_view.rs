@@ -5,11 +5,12 @@ use std::{collections::{BTreeMap,VecDeque},io::Read};
 use windows_sys::Win32::{Security::Cryptography::{BCryptGenRandom,BCRYPT_USE_SYSTEM_PREFERRED_RNG},UI::Controls::Dialogs::*};
 use windows_sys::Win32::UI::Controls::EM_SETREADONLY;
 use library::input_events::{self,Input,Gesture};
+use library::loops;
 pub(super) const ID:&str="module:macro";
 pub(super) const BROWSE:u32=WM_APP+172;
 pub(super) const INPUT_MENU:u32=WM_APP+174;
 #[cfg(test)] pub(super) const TEST:u32=WM_APP+173;
-const NAME:u16=2300;const DELAY:u16=2301;
+const NAME:u16=2300;const DELAY:u16=2301;const REPEAT:u16=2302;
 
 struct Draft {
     entry:Entry,
@@ -45,7 +46,7 @@ pub enum Request {Read,Change(Change),Import(PathBuf)}
 impl Request {pub fn mutates(&self)->bool {!matches!(self,Self::Read)}}
 pub struct Data {library:Library}
 #[derive(Clone)]
-pub enum Control {Open,List,Select(String),New,Duplicate,Delete,Import,Save,Discard,Undo,Redo,Event(usize),AddDelay,ApplyDelay,DeleteEvent,Move(i8),InputMenu,GestureMenu,ChooseInput(Input),ChooseGesture(Gesture),ChooseNested(String),AddInput,RebindInput}
+pub enum Control {Open,List,Select(String),New,Duplicate,Delete,Import,Save,Discard,Undo,Redo,Event(usize),AddDelay,ApplyDelay,DeleteEvent,Move(i8),InputMenu,GestureMenu,ChooseInput(Input),ChooseGesture(Gesture),ChooseNested(String),AddInput,RebindInput,MarkLoopStart,WrapLoop,ApplyLoop}
 #[derive(Default)]
 pub(super) struct View {
     pub used:bool,
@@ -56,6 +57,8 @@ pub(super) struct View {
     draft:Option<Draft>,
     name:String,
     delay:String,
+    repeat:String,
+    loop_start:Option<usize>,
     event:Option<usize>,
     picker:bool,
     picker_scroll:usize,
@@ -86,15 +89,17 @@ pub(super) fn work(request:Request,read_only:bool)->Result<Data,String> {
     if let Some(change)=change {store=library::edit(&store,change).map_err(|e|e.to_string())?;store.save().map_err(|e|e.to_string())?;}
     Ok(Data{library:library::read(&store).map_err(|e|e.to_string())?})
 }
+fn loop_pair(view:&View)->Option<loops::Pair> {loops::selection(&view.draft.as_ref()?.entry.events,view.event?).ok()}
+fn sync_loop(view:&mut View) {view.repeat=loop_pair(view).map_or("1".into(),|p|p.repeat.to_string());}
 fn fixed_delay(entry:&Entry,index:usize)->Option<u32> {
     let event=entry.events.get(index)?;if event["Type"]!=0||event["Number"].is_object(){return None;}
     let value=event["Number"].as_f64().or_else(||event["Number"].as_str()?.parse().ok())?;
     let ms=(value*1000.).round();(ms.is_finite()&&ms>=0.&&ms<=3_600_000.).then_some(ms as u32)
 }
 impl View {
-    fn dirty(&self)->bool {self.draft.as_ref().is_some_and(|d|d.dirty()||self.name!=d.entry.name||self.event.and_then(|i|fixed_delay(&d.entry,i)).is_some_and(|ms|self.delay.trim().parse::<u32>().ok()!=Some(ms)))}
+    fn dirty(&self)->bool {self.draft.as_ref().is_some_and(|d|d.dirty()||self.name!=d.entry.name||loop_pair(self).is_some_and(|p|self.repeat.trim().parse::<u32>().ok()!=Some(p.repeat))||self.event.and_then(|i|fixed_delay(&d.entry,i)).is_some_and(|ms|self.delay.trim().parse::<u32>().ok()!=Some(ms)))}
     fn select(&mut self,id:Option<String>) {
-        self.selected=id;self.event=None;self.scroll=0;self.picker=false;
+        self.selected=id;self.event=None;self.loop_start=None;self.repeat="1".into();self.scroll=0;self.picker=false;
         self.draft=self.data.as_ref().and_then(|d|d.library.entries.iter().find(|r|Some(&r.guid)==self.selected.as_ref())).cloned().map(Draft::new);
         self.name=self.draft.as_ref().map_or(String::new(),|d|d.entry.name.clone());self.delay="1000".into();
     }
@@ -125,11 +130,16 @@ fn local(state:&mut State,change:Change)->Result<(),String> {
     let nested=matches!(change,Change::InsertNested{..}|Change::RebindNested{..});
     let context:Vec<_>=if nested {state.macros.data.as_ref().map(|data|data.library.entries.iter().map(|entry|entry.encoded_record.clone()).collect()).unwrap_or_default()}else{vec![]};
     let draft=state.macros.draft.as_mut().ok_or("Create or select a macro first")?;if nested{draft.apply_with_library(change,&context)?;}else{draft.apply(change)?;}
-    state.macros.name=draft.entry.name.clone();state.macros.status="Local macro changes · save to keep them".into();state.macros.failed=false;Ok(())
+    state.macros.name=draft.entry.name.clone();state.macros.loop_start=None;state.macros.status="Local macro changes · save to keep them".into();state.macros.failed=false;Ok(())
 }
-fn commit_fields(state:&mut State)->Result<(),String> {
+fn commit_fields(state:&mut State)->Result<(),String> {commit_fields_with_repeat(state,true)}
+fn commit_fields_with_repeat(state:&mut State,include_repeat:bool)->Result<(),String> {
     let Some(d)=&state.macros.draft else{return Ok(());};let id=d.entry.guid.clone();let old_name=d.entry.name.clone();
     if state.macros.name!=old_name {local(state,Change::Rename{guid:id.clone(),name:state.macros.name.clone()})?;}
+    if let Some(pair)=loop_pair(&state.macros).filter(|_|include_repeat) {
+        let repeat=state.macros.repeat.trim().parse::<u32>().map_err(|_|"Enter a loop repeat from 1 to 99999")?;
+        if repeat!=pair.repeat {let index=state.macros.event.unwrap();local(state,Change::SetLoopRepeat{guid:id.clone(),index,repeat})?;}
+    }
     if let Some(index)=state.macros.event {
         let current=state.macros.draft.as_ref().and_then(|d|fixed_delay(&d.entry,index));
         if let Some(current)=current {let entered=state.macros.delay.trim().parse::<u32>().map_err(|_|"Enter a delay from0 to3600000milliseconds")?;if entered!=current{local(state,Change::SetDelay{guid:id,index,milliseconds:entered})?;}}
@@ -149,7 +159,7 @@ pub(super) unsafe fn action(state:&mut State,control:Control) {
         match control {
             Control::Open=>{},Control::List=>state.macros.picker=!state.macros.picker,
             Control::Select(id)=>{if state.macros.dirty(){return Err("Save or discard before switching macros".into());}state.macros.select(Some(id));state.macros.status="Macro selected".into();state.macros.failed=false;},
-            Control::Event(index)=>{if mutable{commit_fields(state)?;}state.macros.event=Some(index);state.macros.delay=state.macros.draft.as_ref().and_then(|d|fixed_delay(&d.entry,index)).map(|n|n.to_string()).unwrap_or_default();sync_input(&mut state.macros);},
+            Control::Event(index)=>{if mutable{commit_fields(state)?;}state.macros.event=Some(index);state.macros.delay=state.macros.draft.as_ref().and_then(|d|fixed_delay(&d.entry,index)).map(|n|n.to_string()).unwrap_or_default();sync_input(&mut state.macros);sync_loop(&mut state.macros);},
             Control::New=>{
                 if state.macros.dirty(){return Err("Save or discard the current draft first".into());}
                 let names=state.macros.data.as_ref().map(|d|d.library.entries.iter().map(|e|e.name.as_str()).collect::<Vec<_>>()).unwrap_or_default();
@@ -170,12 +180,22 @@ pub(super) unsafe fn action(state:&mut State,control:Control) {
                 local(state,change)?;state.macros.event=Some(index+count-1);state.macros.delay="1000".into();
             },
             Control::RebindInput=>{commit_fields(state)?;let d=state.macros.draft.as_ref().ok_or("Select a macro")?;let guid=d.entry.guid.clone();let index=state.macros.event.ok_or("Select an input event")?;let change=if d.entry.events.get(index).is_some_and(|row|row["Type"]==7)&&state.macros.nested_mode{Change::RebindNested{guid,index,target:state.macros.nested.clone().ok_or("Choose a nested macro")?}}else{Change::RebindInput{guid,index,input:state.macros.input.clone().ok_or("Choose an input")?}};local(state,change)?;sync_input(&mut state.macros);},
+            Control::MarkLoopStart=>{commit_fields(state)?;state.macros.loop_start=Some(state.macros.event.ok_or("Select the first row to repeat")?);state.macros.status="Loop start marked. Select the last row, then Wrap Loop.".into();state.macros.failed=false;},
+            Control::WrapLoop=>{
+                commit_fields_with_repeat(state,false)?;let d=state.macros.draft.as_ref().ok_or("Select a macro")?;
+                let selected=state.macros.event.unwrap_or(d.entry.events.len());let anchor=state.macros.loop_start.unwrap_or(selected);
+                let mut index=anchor.min(selected);let mut end=if selected==d.entry.events.len(){selected}else{anchor.max(selected)+1};
+                if anchor==selected {if let Ok(pair)=loops::selection(&d.entry.events,selected){index=pair.start;end=pair.end+1;}}
+                let repeat=state.macros.repeat.trim().parse::<u32>().map_err(|_|"Enter a loop repeat from 1 to 99999")?;
+                let guid=d.entry.guid.clone();local(state,Change::WrapLoop{guid,index,end,repeat})?;state.macros.event=Some(index);state.macros.loop_start=None;sync_loop(&mut state.macros);
+            },
+            Control::ApplyLoop=>commit_fields(state)?,
             Control::Save=>{commit_fields(state)?;let d=state.macros.draft.as_ref().ok_or("Select a macro")?;if d.dirty(){request(state,Request::Change(Change::Replace{guid:d.entry.guid.clone(),expected_revision:d.base_revision.clone(),record:d.entry.encoded_record.clone()}));}},
             Control::Discard=>{state.macros.select(state.macros.selected.clone());state.macros.status="Unsaved macro changes discarded".into();state.macros.failed=false;},
-            Control::Undo|Control::Redo=>{let redo=matches!(control,Control::Redo);let d=state.macros.draft.as_mut().ok_or("Select a macro")?;d.history(redo)?;state.macros.name=d.entry.name.clone();state.macros.delay=state.macros.event.and_then(|i|fixed_delay(&d.entry,i)).map(|n|n.to_string()).unwrap_or("1000".into());sync_input(&mut state.macros);},
+            Control::Undo|Control::Redo=>{let redo=matches!(control,Control::Redo);let d=state.macros.draft.as_mut().ok_or("Select a macro")?;d.history(redo)?;state.macros.name=d.entry.name.clone();state.macros.delay=state.macros.event.and_then(|i|fixed_delay(&d.entry,i)).map(|n|n.to_string()).unwrap_or("1000".into());state.macros.loop_start=None;sync_input(&mut state.macros);sync_loop(&mut state.macros);},
             Control::AddDelay=>{commit_fields(state)?;let d=state.macros.draft.as_ref().ok_or("Select a macro")?;let index=state.macros.event.map_or(d.entry.events.len(),|i|(i+1).min(d.entry.events.len()));let guid=d.entry.guid.clone();let ms=state.macros.delay.trim().parse::<u32>().map_err(|_|"Enter a delay in milliseconds")?;local(state,Change::InsertDelay{guid,index,milliseconds:ms})?;state.macros.event=Some(index);},
             Control::ApplyDelay=>commit_fields(state)?,
-            Control::DeleteEvent=>{let d=state.macros.draft.as_ref().ok_or("Select a macro")?;let index=state.macros.event.ok_or("Select an event")?;let input=d.entry.events.get(index).is_some_and(|event|event["Type"]==1||event["Type"]==2);let change=if input{Change::DeleteInputGroup{guid:d.entry.guid.clone(),index}}else{Change::DeleteEvent{guid:d.entry.guid.clone(),index}};local(state,change)?;state.macros.event=None;},
+            Control::DeleteEvent=>{let d=state.macros.draft.as_ref().ok_or("Select a macro")?;let index=state.macros.event.ok_or("Select an event")?;let input=d.entry.events.get(index).is_some_and(|event|event["Type"]==1||event["Type"]==2);let change=if input{Change::DeleteInputGroup{guid:d.entry.guid.clone(),index}}else{Change::DeleteEvent{guid:d.entry.guid.clone(),index}};local(state,change)?;state.macros.event=None;state.macros.loop_start=None;sync_loop(&mut state.macros);},
             Control::Move(direction)=>{commit_fields(state)?;let d=state.macros.draft.as_ref().ok_or("Select a macro")?;let index=state.macros.event.ok_or("Select an event")?;local(state,Change::MoveEvent{guid:d.entry.guid.clone(),index,direction})?;state.macros.event=Some(index.checked_add_signed(direction as isize).ok_or("Invalid event move")?);},
         }Ok(())
     })();
@@ -185,15 +205,15 @@ pub(super) unsafe fn action(state:&mut State,control:Control) {
 pub(super) unsafe fn fields(state:&mut State) {
     if state.macros.draft.is_none(){return;}
     let left=((state.width as f32/state.scale)as i32-900).max(10)/2;
-    for (id,text,x,y,w) in [(NAME,state.macros.name.clone(),left+10,196,180),(DELAY,state.macros.delay.clone(),left+10,310,180)] {
+    for (id,text,x,y,w) in [(NAME,state.macros.name.clone(),left+10,196,180),(DELAY,state.macros.delay.clone(),left+10,310,180),(REPEAT,state.macros.repeat.clone(),left+540,198,80)] {
         state.retained_fields.remove(&id);state.field(id,&text,x,y,w);
         if let Some(hwnd)=state.fields.get(&id){SendMessageW(*hwnd,EM_SETLIMITTEXT,if id==NAME{128}else{7},0);SendMessageW(*hwnd,EM_SETREADONLY,(state.read_only_smoke||state.restricted_actions||state.macros.busy) as usize,0);}
     }
 }
 pub(super) fn command(state:&mut State,id:u16,notification:u16)->bool {
-    if !active(state)||notification!=EN_CHANGE as u16||!matches!(id,NAME|DELAY){return false;}
+    if !active(state)||notification!=EN_CHANGE as u16||!matches!(id,NAME|DELAY|REPEAT){return false;}
     if state.read_only_smoke||state.restricted_actions||state.macros.busy{return true;}
-    let text=state.raw_text(id);if id==NAME{state.macros.name=text;}else{state.macros.delay=text;}unsafe{InvalidateRect(state.hwnd,null(),0);}true
+    let text=state.raw_text(id);if id==NAME{state.macros.name=text;}else if id==DELAY{state.macros.delay=text;}else{state.macros.repeat=text;}unsafe{InvalidateRect(state.hwnd,null(),0);}true
 }
 unsafe fn button(p:&mut Painter,text:&str,x:i32,y:i32,width:i32,control:Control,enabled:bool) {
     if enabled{p.button(text,x,y,width,Action::MacroLibrary(control),false);}else{p.fill(x,y,width,28,0x242424);unsafe{p.text(text,x,y,width,28,p.fonts.normal,MUTED,DT_CENTER);}}
@@ -201,7 +221,7 @@ unsafe fn button(p:&mut Painter,text:&str,x:i32,y:i32,width:i32,control:Control,
 fn event_label(value:&Value,library:Option<&Library>)->String {
     if let Some(label)=input_events::label(value){return label;}
     if value["Type"]==7{return format!("Macro · {}",library.and_then(|library|library.entries.iter().find(|entry|value["guid"].as_str()==Some(entry.guid.as_str()))).map_or("Missing definition",|entry|entry.name.as_str()));}
-    match value["Type"].as_u64(){Some(0)if value["Number"].is_object()=>"Random delay".into(),Some(0)=>format!("Delay · {} seconds",value["Number"].as_str().map(|s|s.chars().take(80).collect::<String>()).unwrap_or_else(||value["Number"].to_string())),Some(1)=>"Keyboard function".into(),Some(2)=>"Mouse function".into(),Some(7)=>"Nested macro".into(),Some(6)=>"Loop".into(),_=>"Retained source event".into()}
+    match value["Type"].as_u64(){Some(0)if value["Number"].is_object()=>"Random delay".into(),Some(0)=>format!("Delay · {} seconds",value["Number"].as_str().map(|s|s.chars().take(80).collect::<String>()).unwrap_or_else(||value["Number"].to_string())),Some(1)=>"Keyboard function".into(),Some(2)=>"Mouse function".into(),Some(7)=>"Nested macro".into(),Some(6)=>format!("Loop {} · {} times",match value["LoopEvent"]["State"].as_u64(){Some(0)=>"start",Some(1)=>"end",_=>"boundary (unverified)"},value["Number"].as_str().map(str::to_owned).unwrap_or_else(||value["Number"].to_string())),_=>"Retained source event".into()}
 }
 pub(super) unsafe fn paint(state:&State,p:&mut Painter,width:i32,height:i32) {
     let view=&state.macros;let left=(width-900).max(10)/2;let timeline=left+210;let can=!view.busy&&!state.read_only_smoke&&!state.restricted_actions;let draft=view.draft.as_ref();
@@ -218,7 +238,7 @@ pub(super) unsafe fn paint(state:&State,p:&mut Painter,width:i32,height:i32) {
     let group=draft.and_then(|d|input_events::selection(&d.entry.events,view.event?).ok());
     let paired=group.as_ref().is_some_and(|group|group.indices.len()==2);
     let input_row=draft.is_some_and(|d|view.event.and_then(|i|d.entry.events.get(i)).is_some_and(|event|event["Type"]==1||event["Type"]==2));
-    button(p,"MOVE UP",left+10,432,85,Control::Move(-1),can&&view.event.is_some());button(p,"DOWN",left+105,432,85,Control::Move(1),can&&view.event.is_some());button(p,if paired{"DELETE PAIR"}else{"DELETE EVENT"},left+10,470,180,Control::DeleteEvent,can&&view.event.is_some()&&(!input_row||group.is_some()));
+    button(p,"MOVE UP",left+10,432,85,Control::Move(-1),can&&view.event.is_some());button(p,"DOWN",left+105,432,85,Control::Move(1),can&&view.event.is_some());button(p,if loop_pair(view).is_some(){"DELETE LOOP"}else if paired{"DELETE PAIR"}else{"DELETE EVENT"},left+10,470,180,Control::DeleteEvent,can&&view.event.is_some()&&(!input_row||group.is_some()));
     let input=match &view.input{Some(Input::Mouse(button))=>input_events::MOUSE_NAMES.get(*button as usize).copied().unwrap_or("Choose input"),Some(Input::Keyboard(id))=>input_events::keys().iter().find(|key|&key.id==id).map_or("Choose input",|key|key.name.as_str()),None=>"A"};
     let chosen=if view.nested_mode {format!("MACRO: {}",view.data.as_ref().and_then(|data|data.library.entries.iter().find(|entry|Some(&entry.guid)==view.nested.as_ref())).map_or("Choose macro",|entry|entry.name.as_str()))}else{format!("INPUT: {input}")};
     button(p,&chosen,left+10,514,180,Control::InputMenu,can&&draft.is_some());
@@ -230,9 +250,15 @@ pub(super) unsafe fn paint(state:&State,p:&mut Painter,width:i32,height:i32) {
     button(p,if nested_row{"UPDATE MACRO"}else if paired{"UPDATE PAIR"}else{"UPDATE EVENT"},left+10,622,180,Control::RebindInput,can&&compatible);
     button(p,"UNDO",timeline+10,160,80,Control::Undo,can&&draft.is_some_and(|d|!d.undo.is_empty()));button(p,"REDO",timeline+100,160,80,Control::Redo,can&&draft.is_some_and(|d|!d.redo.is_empty()));
     button(p,"DISCARD",timeline+470,160,100,Control::Discard,can&&view.dirty());button(p,"SAVE",timeline+580,160,100,Control::Save,can&&view.dirty());
+    button(p,"MARK START",timeline+10,198,110,Control::MarkLoopStart,can&&view.event.is_some());
+    button(p,"WRAP LOOP",timeline+130,198,110,Control::WrapLoop,can&&draft.is_some());
+    p.text("REPEAT",timeline+250,198,70,28,p.fonts.small,TEXT,DT_LEFT);
+    button(p,"UPDATE LOOP",timeline+420,198,130,Control::ApplyLoop,can&&loop_pair(view).is_some());
+    if let Some(start)=view.loop_start {p.text(&format!("From row {}",start),timeline+560,198,110,28,p.fonts.small,GREEN,DT_LEFT);}
     if let Some(d)=draft {
+        let topology=loops::pairs(&d.entry.events).unwrap_or_default();let selected_loop=loop_pair(view);
         let visible:Vec<_>=d.entry.events.iter().enumerate().filter(|(_,e)|e["Type"]!="actionBar").collect();
-        for (offset,(index,value)) in visible.into_iter().skip(view.scroll).take(((height-285).max(0)/38) as usize).enumerate(){let y=204+offset as i32*38;let chosen=view.event==Some(index);p.fill(timeline+10,y,670,36,if chosen{0x343434}else{0x151515});p.text(&event_label(value,view.data.as_ref().map(|data|&data.library)),timeline+20,y,650,36,p.fonts.normal,if chosen{GREEN}else{TEXT},DT_LEFT);p.hits.push(Hit{rect:p.rect(timeline+10,y,670,36),action:Action::MacroLibrary(Control::Event(index))});}
+        for (offset,(index,value)) in visible.into_iter().skip(view.scroll).take(((height-323).max(0)/38) as usize).enumerate(){let y=242+offset as i32*38;let chosen=view.event==Some(index)||selected_loop.as_ref().is_some_and(|pair|index==pair.start||index==pair.end);let indent=topology.iter().filter(|pair|pair.start<index&&index<pair.end).count() as i32*16;p.fill(timeline+10,y,670,36,if chosen{0x343434}else{0x151515});p.text(&format!("{} · {}",index,event_label(value,view.data.as_ref().map(|data|&data.library))),timeline+20+indent,y,650-indent,36,p.fonts.normal,if chosen{GREEN}else{TEXT},DT_LEFT);p.hits.push(Hit{rect:p.rect(timeline+10,y,670,36),action:Action::MacroLibrary(Control::Event(index))});}
     } else {p.text("Create a macro or import definitions from a Synapse4 profile export.",timeline+20,220,650,70,p.fonts.normal,MUTED,DT_LEFT|DT_WORDBREAK);}
     let status=if view.status.is_empty(){"Macro playback integration is still in progress."}else{&view.status};p.text(status,30,height-50,width-60,40,p.fonts.normal,if view.failed{0xfd4949}else{MUTED},DT_LEFT|DT_WORDBREAK);
     if let Some(data)=&view.data {if !data.library.missing.is_empty()||data.library.dependency_issues>0{p.text(&format!("{} macro definition(s) missing · {} nested chain(s) need attention",data.library.missing.len(),data.library.dependency_issues),30,height-80,width-60,25,p.fonts.small,MUTED,DT_LEFT);}}
@@ -270,7 +296,7 @@ pub(super) unsafe fn browse(hwnd:HWND)->Result<Option<PathBuf>,String> {
     let end=file.iter().position(|v|*v==0).ok_or("Import path is not terminated")?;Ok(Some(PathBuf::from(String::from_utf16(&file[..end]).map_err(|e|e.to_string())?)))
 }
 #[cfg(test)] pub(super) fn diagnostics(state:&State)->Value {
-    let v=&state.macros;json!({"open":active(state),"busy":v.busy,"menu_open":v.popup,"dirty":v.dirty(),"selected":v.selected,"name":v.name,"delay":v.delay,"event":v.event,"status":v.status,"failed":v.failed,"entries":v.data.as_ref().map(|d|d.library.entries.iter().map(|e|json!({"guid":e.guid,"name":e.name,"referenced":e.referenced})).collect::<Vec<_>>()).unwrap_or_default(),"events":v.draft.as_ref().map(|d|&d.entry.events),"undo":v.draft.as_ref().map_or(0,|d|d.undo.len()),"redo":v.draft.as_ref().map_or(0,|d|d.redo.len())})
+    let v=&state.macros;json!({"open":active(state),"busy":v.busy,"menu_open":v.popup,"dirty":v.dirty(),"selected":v.selected,"name":v.name,"delay":v.delay,"repeat":v.repeat,"loop_start":v.loop_start,"event":v.event,"status":v.status,"failed":v.failed,"entries":v.data.as_ref().map(|d|d.library.entries.iter().map(|e|json!({"guid":e.guid,"name":e.name,"referenced":e.referenced})).collect::<Vec<_>>()).unwrap_or_default(),"events":v.draft.as_ref().map(|d|&d.entry.events),"undo":v.draft.as_ref().map_or(0,|d|d.undo.len()),"redo":v.draft.as_ref().map_or(0,|d|d.redo.len())})
 }
 #[cfg(test)] mod tests {
     use super::*;

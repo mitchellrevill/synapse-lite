@@ -96,8 +96,8 @@ validation/macro-library.json remains unchanged.
 
 Existing input/pair rebinding and deletion are described in MACRO-PAIR-EDITING.md.
 Nested references and dependency-preserving interchange are now implemented;
-see MACRO-NESTED.md. TODO: recording; null-state/direction conversion; loop
-editing; remaining source events and playback settings; key-binding workflow;
+see MACRO-NESTED.md. Paired loop authoring/editing is covered by MACRO-LOOPS.md.
+TODO: recording; null-state/direction conversion; remaining source events and playback settings; key-binding workflow;
 stock macro-only import/export contract; source cache invalidation; exact menus,
 widgets and visual matching. Live activation additionally depends on proved
 selector ownership, routing, cancellation, physical held-key arbitration and

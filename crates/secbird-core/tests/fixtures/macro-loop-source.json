@@ -1,0 +1,356 @@
+{
+  "provenance": "Controlled Node VM replay of recovered O/C/m source helpers; no bundle bootstrap, browser, I/O, native conversion or playback",
+  "cases": [
+    {
+      "highest": 0,
+      "repeat": 1,
+      "events": [
+        {
+          "Type": 6,
+          "Id": 1,
+          "Number": 1,
+          "LoopEvent": {
+            "State": 0
+          },
+          "flag": 0,
+          "selected": false,
+          "isPairing": false
+        },
+        {
+          "Type": 6,
+          "Id": 1,
+          "Number": 1,
+          "LoopEvent": {
+            "State": 1
+          },
+          "flag": 1,
+          "selected": false,
+          "isPairing": false
+        }
+      ],
+      "output": [
+        {
+          "type": "loop",
+          "flag": 0,
+          "repeat": 1
+        },
+        {
+          "type": "loop",
+          "flag": 1
+        }
+      ]
+    },
+    {
+      "highest": 0,
+      "repeat": 2,
+      "events": [
+        {
+          "Type": 6,
+          "Id": 1,
+          "Number": 2,
+          "LoopEvent": {
+            "State": 0
+          },
+          "flag": 0,
+          "selected": false,
+          "isPairing": false
+        },
+        {
+          "Type": 6,
+          "Id": 1,
+          "Number": 2,
+          "LoopEvent": {
+            "State": 1
+          },
+          "flag": 1,
+          "selected": false,
+          "isPairing": false
+        }
+      ],
+      "output": [
+        {
+          "type": "loop",
+          "flag": 0,
+          "repeat": 2
+        },
+        {
+          "type": "loop",
+          "flag": 1
+        }
+      ]
+    },
+    {
+      "highest": 0,
+      "repeat": 99999,
+      "events": [
+        {
+          "Type": 6,
+          "Id": 1,
+          "Number": 99999,
+          "LoopEvent": {
+            "State": 0
+          },
+          "flag": 0,
+          "selected": false,
+          "isPairing": false
+        },
+        {
+          "Type": 6,
+          "Id": 1,
+          "Number": 99999,
+          "LoopEvent": {
+            "State": 1
+          },
+          "flag": 1,
+          "selected": false,
+          "isPairing": false
+        }
+      ],
+      "output": [
+        {
+          "type": "loop",
+          "flag": 0,
+          "repeat": 99999
+        },
+        {
+          "type": "loop",
+          "flag": 1
+        }
+      ]
+    },
+    {
+      "highest": 17,
+      "repeat": 1,
+      "events": [
+        {
+          "Type": 6,
+          "Id": 18,
+          "Number": 1,
+          "LoopEvent": {
+            "State": 0
+          },
+          "flag": 0,
+          "selected": false,
+          "isPairing": false
+        },
+        {
+          "Type": 6,
+          "Id": 18,
+          "Number": 1,
+          "LoopEvent": {
+            "State": 1
+          },
+          "flag": 1,
+          "selected": false,
+          "isPairing": false
+        }
+      ],
+      "output": [
+        {
+          "type": "loop",
+          "flag": 0,
+          "repeat": 1
+        },
+        {
+          "type": "loop",
+          "flag": 1
+        }
+      ]
+    },
+    {
+      "highest": 17,
+      "repeat": 2,
+      "events": [
+        {
+          "Type": 6,
+          "Id": 18,
+          "Number": 2,
+          "LoopEvent": {
+            "State": 0
+          },
+          "flag": 0,
+          "selected": false,
+          "isPairing": false
+        },
+        {
+          "Type": 6,
+          "Id": 18,
+          "Number": 2,
+          "LoopEvent": {
+            "State": 1
+          },
+          "flag": 1,
+          "selected": false,
+          "isPairing": false
+        }
+      ],
+      "output": [
+        {
+          "type": "loop",
+          "flag": 0,
+          "repeat": 2
+        },
+        {
+          "type": "loop",
+          "flag": 1
+        }
+      ]
+    },
+    {
+      "highest": 17,
+      "repeat": 99999,
+      "events": [
+        {
+          "Type": 6,
+          "Id": 18,
+          "Number": 99999,
+          "LoopEvent": {
+            "State": 0
+          },
+          "flag": 0,
+          "selected": false,
+          "isPairing": false
+        },
+        {
+          "Type": 6,
+          "Id": 18,
+          "Number": 99999,
+          "LoopEvent": {
+            "State": 1
+          },
+          "flag": 1,
+          "selected": false,
+          "isPairing": false
+        }
+      ],
+      "output": [
+        {
+          "type": "loop",
+          "flag": 0,
+          "repeat": 99999
+        },
+        {
+          "type": "loop",
+          "flag": 1
+        }
+      ]
+    },
+    {
+      "highest": 9007199254740989,
+      "repeat": 1,
+      "events": [
+        {
+          "Type": 6,
+          "Id": 9007199254740990,
+          "Number": 1,
+          "LoopEvent": {
+            "State": 0
+          },
+          "flag": 0,
+          "selected": false,
+          "isPairing": false
+        },
+        {
+          "Type": 6,
+          "Id": 9007199254740990,
+          "Number": 1,
+          "LoopEvent": {
+            "State": 1
+          },
+          "flag": 1,
+          "selected": false,
+          "isPairing": false
+        }
+      ],
+      "output": [
+        {
+          "type": "loop",
+          "flag": 0,
+          "repeat": 1
+        },
+        {
+          "type": "loop",
+          "flag": 1
+        }
+      ]
+    },
+    {
+      "highest": 9007199254740989,
+      "repeat": 2,
+      "events": [
+        {
+          "Type": 6,
+          "Id": 9007199254740990,
+          "Number": 2,
+          "LoopEvent": {
+            "State": 0
+          },
+          "flag": 0,
+          "selected": false,
+          "isPairing": false
+        },
+        {
+          "Type": 6,
+          "Id": 9007199254740990,
+          "Number": 2,
+          "LoopEvent": {
+            "State": 1
+          },
+          "flag": 1,
+          "selected": false,
+          "isPairing": false
+        }
+      ],
+      "output": [
+        {
+          "type": "loop",
+          "flag": 0,
+          "repeat": 2
+        },
+        {
+          "type": "loop",
+          "flag": 1
+        }
+      ]
+    },
+    {
+      "highest": 9007199254740989,
+      "repeat": 99999,
+      "events": [
+        {
+          "Type": 6,
+          "Id": 9007199254740990,
+          "Number": 99999,
+          "LoopEvent": {
+            "State": 0
+          },
+          "flag": 0,
+          "selected": false,
+          "isPairing": false
+        },
+        {
+          "Type": 6,
+          "Id": 9007199254740990,
+          "Number": 99999,
+          "LoopEvent": {
+            "State": 1
+          },
+          "flag": 1,
+          "selected": false,
+          "isPairing": false
+        }
+      ],
+      "output": [
+        {
+          "type": "loop",
+          "flag": 0,
+          "repeat": 99999
+        },
+        {
+          "type": "loop",
+          "flag": 1
+        }
+      ]
+    }
+  ]
+}

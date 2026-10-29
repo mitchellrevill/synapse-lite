@@ -5,6 +5,7 @@ use serde_json::value::RawValue;
 use std::collections::BTreeSet;
 pub mod input_events;
 pub mod nested;
+pub mod loops;
 use input_events::{Input,Gesture};
 
 const KEY:&str="_synapseLiteMacroLibrary";
@@ -36,6 +37,8 @@ pub enum Change {
     DeleteInputGroup{guid:String,index:usize},
     InsertNested{guid:String,index:usize,target:String},
     RebindNested{guid:String,index:usize,target:String},
+    WrapLoop{guid:String,index:usize,end:usize,repeat:u32},
+    SetLoopRepeat{guid:String,index:usize,repeat:u32},
     DeleteEvent{guid:String,index:usize},
     MoveEvent{guid:String,index:usize,direction:i8},
     SetDelay{guid:String,index:usize,milliseconds:u32},
@@ -201,9 +204,12 @@ pub fn edit(current:&Store,change:Change)->Result<Store> {
             for r in incoming {let id=guid(r)?;if let Some(old)=records.get(&id){if old!=r{return Err(invalid("Import conflicts with an existing macro GUID"));}}else{records.insert(id,r.clone());}propagate(&mut candidate,r)?;}
         }
         other=>{
-            let (id,index)=match &other {Change::InsertDelay{guid,index,..}|Change::InsertInput{guid,index,..}|Change::RebindInput{guid,index,..}|Change::DeleteInputGroup{guid,index}|Change::InsertNested{guid,index,..}|Change::RebindNested{guid,index,..}|Change::DeleteEvent{guid,index}|Change::MoveEvent{guid,index,..}|Change::SetDelay{guid,index,..}=>(guid.clone(),*index),_=>unreachable!()};
+            let (id,index)=match &other {Change::WrapLoop{guid,index,..}|Change::SetLoopRepeat{guid,index,..}|Change::InsertDelay{guid,index,..}|Change::InsertInput{guid,index,..}|Change::RebindInput{guid,index,..}|Change::DeleteInputGroup{guid,index}|Change::InsertNested{guid,index,..}|Change::RebindNested{guid,index,..}|Change::DeleteEvent{guid,index}|Change::MoveEvent{guid,index,..}|Change::SetDelay{guid,index,..}=>(guid.clone(),*index),_=>unreachable!()};
             let original=records.get(&id).ok_or_else(||invalid("Unknown macro"))?;let mut rows=event_rows(original)?;
+            loops::validate(&rows)?;
             match other {
+                Change::WrapLoop{end,repeat,..}=>loops::wrap(&mut rows,index,end,repeat)?,
+                Change::SetLoopRepeat{repeat,..}=>loops::set_repeat(&mut rows,index,repeat)?,
                 Change::InsertDelay{milliseconds,..}=>{if rows.len()>=MAX_EVENTS||index>rows.len(){return Err(invalid("Event insertion exceeds macro bounds"));}rows.insert(index,delay(milliseconds)?);}
                 Change::InsertInput{input,gesture,..}=>{
                     let parsed:Vec<Value>=rows.iter().map(|row|serde_json::from_str(row.get()).map_err(|e|invalid(e.to_string()))).collect::<Result<_>>()?;
@@ -219,10 +225,11 @@ pub fn edit(current:&Store,change:Change)->Result<Store> {
                     if value["Number"].is_object()||value["Number"].is_array(){return Err(invalid("Random/structured delay editing is not implemented; its source data was preserved"));}
                     // Preserve unknown leaves in an explicitly edited delay row.
                     let mut fields:Fields=serde_json::from_str(old.get()).map_err(|e|invalid(e.to_string()))?;let new:Value=serde_json::from_str(delay(milliseconds)?.get()).unwrap();let field=fields.0.iter_mut().find(|(key,_)|key=="Number").ok_or_else(||invalid("Delay has no Number field"))?;field.1=raw(&new["Number"])?;rows[index]=raw(&fields)?;}
-                Change::DeleteEvent{..}=>{if index>=rows.len()||protected(&rows[index]){return Err(invalid("This event cannot be deleted"));}rows.remove(index);}
+                Change::DeleteEvent{..}=>{if index>=rows.len()||protected(&rows[index]){return Err(invalid("This event cannot be deleted"));}if serde_json::from_str::<Value>(rows[index].get()).map_err(|e|invalid(e.to_string()))?["Type"]==6{loops::delete(&mut rows,index)?;}else{rows.remove(index);}}
                 Change::MoveEvent{direction,..}=>{if index>=rows.len(){return Err(invalid("Unknown event"));}let next=index.checked_add_signed(direction as isize).filter(|n|*n<rows.len()).ok_or_else(||invalid("Event move exceeds macro bounds"))?;if ![-1,1].contains(&direction)||protected(&rows[index])||protected(&rows[next]){return Err(invalid("This event cannot be moved"));}rows.swap(index,next);}
                 _=>unreachable!(),
             }
+            loops::validate(&rows)?;
             let r=patch(original,"macroEvents",raw(&rows)?)?;records.insert(id,r.clone());changed=Some(r);
         }
     }
@@ -252,7 +259,7 @@ pub(super) fn definition_store(record:&Value,context:&[Value])->Result<Store> {
 pub fn edit_definition_with_library(record:&Value,change:Change,context:&[Value])->Result<Value> {
     let id=guid(record)?;
     match &change {
-        Change::Rename{guid,..}|Change::InsertDelay{guid,..}|Change::InsertInput{guid,..}|Change::RebindInput{guid,..}|Change::DeleteInputGroup{guid,..}|Change::InsertNested{guid,..}|Change::RebindNested{guid,..}|Change::DeleteEvent{guid,..}|Change::MoveEvent{guid,..}|Change::SetDelay{guid,..} if guid==&id=>{},
+        Change::WrapLoop{guid,..}|Change::SetLoopRepeat{guid,..}|Change::Rename{guid,..}|Change::InsertDelay{guid,..}|Change::InsertInput{guid,..}|Change::RebindInput{guid,..}|Change::DeleteInputGroup{guid,..}|Change::InsertNested{guid,..}|Change::RebindNested{guid,..}|Change::DeleteEvent{guid,..}|Change::MoveEvent{guid,..}|Change::SetDelay{guid,..} if guid==&id=>{},
         _=>return Err(invalid("This operation is not a local definition edit")),
     }
     let isolated=definition_store(record,context)?;
