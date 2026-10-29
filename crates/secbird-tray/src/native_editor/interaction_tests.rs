@@ -3,6 +3,8 @@
 //! process-local config/smoke environment and opens one bounded native window.
 #[path="calibration_interaction_tests.rs"]
 mod calibration;
+#[path="onboard_interaction_tests.rs"]
+mod onboard;
 #[path="advanced_interaction_tests.rs"]
 mod advanced;
 #[path="wheel_interaction_tests.rs"]

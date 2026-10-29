@@ -46,6 +46,7 @@ mod linked_games;
 mod macro_view;
 mod host_tab_model;
 mod calibration_view;
+mod onboard_view;
 mod advanced_view;
 mod wheel_view;
 mod mouse_speed;
@@ -424,6 +425,7 @@ impl Tab {
 
 #[derive(Clone)]
 enum Action {
+    Onboard(onboard_view::Control),
     Studio(studio_view::Control),
     LinkedGames(linked_games::Control),
     MacroLibrary(macro_view::Control),
@@ -501,6 +503,7 @@ struct Hit {
 }
 
 enum Job {
+    Onboard(onboard_view::Request),
     Studio(studio_view::Request),
     LinkedGames(linked_games::Request),
     MacroLibrary(macro_view::Request),
@@ -566,6 +569,7 @@ struct Reply {
 }
 
 enum WorkerReply {
+    Onboard(onboard_view::Request, Result<Value,String>),
     StudioControl(crate::host_studio::session::Control, crate::lighting_status::Reader, Value),
     StudioOutput(Result<Value, String>),
     Studio(studio_view::Response),
@@ -594,6 +598,12 @@ fn worker(
     }
     for job in jobs {
         let job = match job {
+            Job::Onboard(request) => {
+                let result = engine.lock().map_err(|_|"Device worker is unavailable".to_string())
+                    .and_then(|mut engine|onboard_view::work(&mut engine,&request));
+                if replies.send(WorkerReply::Onboard(request,result)).is_err(){break;}
+                continue;
+            }
             Job::MacroLibrary(request)=>{
                 let context=engine.lock().map_err(|_|"Device worker is unavailable".to_string()).map(|engine|engine.is_measurement_read_only());
                 let result=context.and_then(|read_only|macro_view::work(request,read_only));
@@ -754,7 +764,8 @@ fn worker(
                     }
                     server::dispatch(&mut engine, "GET", "/api/state", &[])
                 }
-                Job::CachedLighting(_)
+                Job::Onboard(_)
+                | Job::CachedLighting(_)
                 | Job::LinkedGames(_)
                 | Job::MacroLibrary(_)
                 | Job::Studio(_)
@@ -1038,6 +1049,7 @@ struct State {
     performance_hover_hit: Option<usize>,
     performance_gesture: Option<PerformanceGesture>,
     power_gesture: Option<power_view::Gesture>,
+    onboard: onboard_view::View,
     lighting: lighting_view::View,
     lighting_capture: bool,
     status: String,
@@ -1719,7 +1731,7 @@ impl State {
                 &job,
                 Job::Profiles(profile_modal_model::Request::PreviewExport { .. })
             );
-        if self.restricted_actions && !matches!(&job, Job::Refresh | Job::SensorRead(..) | Job::LinkedGames(linked_games::Request::Read) | Job::MacroLibrary(macro_view::Request::Read) | Job::Studio(studio_view::Request::Restore{..})) && !presentation_preview {
+        if self.restricted_actions && !matches!(&job, Job::Refresh | Job::Onboard(onboard_view::Request { operation: onboard_view::Operation::Read, .. }) | Job::SensorRead(..) | Job::LinkedGames(linked_games::Request::Read) | Job::MacroLibrary(macro_view::Request::Read) | Job::Studio(studio_view::Request::Restore{..})) && !presentation_preview {
             return;
         }
         if self.pending > 0 {
@@ -1732,7 +1744,7 @@ impl State {
         if user_operation && !matches!(&job, Job::Refresh | Job::Rescan) {
             self.failures.new_operation();
         }
-        let sensor_read=matches!(&job,Job::SensorRead(..));
+        let sensor_read=matches!(&job,Job::SensorRead(..)|Job::Onboard(_));
         if self.jobs.send(job).is_ok() {
             self.pending += 1;
             if !sensor_read { self.status = "Working…".into();self.failed = false; }
@@ -1846,6 +1858,11 @@ impl State {
     unsafe fn collect(&mut self) {
         while let Ok(message) = self.replies.try_recv() {
             let reply = match message {
+                WorkerReply::Onboard(request,result)=>{
+                    self.pending=self.pending.saturating_sub(1);
+                    onboard_view::receive(self,request,result);
+                    continue;
+                }
                 WorkerReply::LinkedGames(result)=>{self.pending=self.pending.saturating_sub(1);linked_games::receive(self,result);continue;}
                 WorkerReply::MacroLibrary(result)=>{self.pending=self.pending.saturating_sub(1);macro_view::receive(self,result);continue;}
                 WorkerReply::StudioControl(control, reader, status) => {
@@ -2099,7 +2116,7 @@ impl State {
         for (_, hwnd) in self.fields.drain() {
             DestroyWindow(hwnd);
         }
-        if self.profile_modal.is_some() {
+        if self.profile_modal.is_some() || self.onboard.open {
             self.focus = 0;
             return;
         }
@@ -2270,6 +2287,7 @@ impl State {
             return;
         }
         match action {
+            Action::Onboard(control)=>onboard_view::action(self,control),
             Action::LinkedGames(control)=>linked_games::action(self,control),
             Action::MacroLibrary(control)=>macro_view::action(self,control),
             Action::Studio(control) => studio_view::action(self,control),
@@ -3490,11 +3508,13 @@ unsafe fn paint(state: &mut State, dc: HDC) {
                 ("Duplicate", Action::DuplicateProfile),
                 ("Export", Action::ExportProfile),
             ];
-            p.fill(285, 116, 157, 145, 0);
+            let has_onboard = device["onboard_capabilities"]["slots"] == 1;
+            let menu_height = if has_onboard { 172 } else { 145 };
+            p.fill(285, 116, 157, menu_height, 0);
             p.line(285, 116, 157, BORDER);
-            p.line(285, 260, 157, BORDER);
-            p.fill(285, 116, 1, 145, BORDER);
-            p.fill(441, 116, 1, 145, BORDER);
+            p.line(285, 115 + menu_height, 157, BORDER);
+            p.fill(285, 116, 1, menu_height, BORDER);
+            p.fill(441, 116, 1, menu_height, BORDER);
             let mut y = 117;
             for (index, (label, action)) in rows.into_iter().enumerate() {
                 if index == 2 {
@@ -3507,6 +3527,10 @@ unsafe fn paint(state: &mut State, dc: HDC) {
                     action,
                 });
                 y += 27;
+            }
+            if has_onboard {
+                p.text("Onboard memory",292,y,143,27,p.fonts.normal,TEXT,DT_LEFT);
+                p.hits.push(Hit {rect:p.rect(286,y,155,27),action:Action::Onboard(onboard_view::Control::Open)});
             }
         }
     } else {
@@ -3597,6 +3621,7 @@ unsafe fn paint(state: &mut State, dc: HDC) {
     }
     assignment_view::paint_popup(state, &mut p);
     profile_modal_view::paint(state, &mut p);
+    onboard_view::paint(state, &mut p);
     if p.fonts.source_text.diagnostic().is_some() {
         p.fill(0, height - 24, width, 24, BG);
         p.text(
@@ -4096,7 +4121,7 @@ unsafe extern "system" fn window_proc(
                 "queued":state.pending_jobs.len(),
                 "brightness":state.lighting.intent.brightness.as_ref().map(|b|b.value),
                 "status":state.status,"failed":state.failed,
-                "host_tabs":host_tabs::diagnostics(&state),"calibration":calibration_view::diagnostics(&state),"advanced":advanced_view::diagnostics(&state),"mouse_feedback":mouse_feedback::diagnostics(&state)
+                "onboard":onboard_view::diagnostics(&state),"host_tabs":host_tabs::diagnostics(&state),"calibration":calibration_view::diagnostics(&state),"advanced":advanced_view::diagnostics(&state),"mouse_feedback":mouse_feedback::diagnostics(&state)
             });
         }
         return 0;
@@ -4143,6 +4168,7 @@ unsafe extern "system" fn window_proc(
         POINT{x:(lparam as u32&0xffff)as i16 as i32,y:((lparam as u32>>16)&0xffff)as i16 as i32}) {return 0;}
     if studio_view::layer_pointer(&mut state,message,lparam) {return 0;}
     if studio_canvas::Canvas::pointer(&mut state,message,lparam) {return 0;}
+    if onboard_view::pointer(&mut state,message,lparam,wparam) { return 0; }
     if state.restricted_actions
         && matches!(
             message,
@@ -5005,6 +5031,7 @@ fn run_window(
             performance_hover_hit: None,
             performance_gesture: None,
             power_gesture: None,
+            onboard: onboard_view::View::default(),
             lighting: lighting_view::View::default(),
             lighting_capture: false,
             status: "Reading connected devices…".into(),

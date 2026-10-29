@@ -623,6 +623,16 @@ fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
                 Ok(json!({ "dpi": [x, y] }))
             }
             "/api/polling" => actions::set_polling(dev, &mut store, b.hz).map(|_| json!({})),
+            "/api/onboard-settings" => {
+                validate_power_identity(&b)?;
+                let profile = b.expected_profile.as_deref().ok_or_else(|| Error::InvalidArg("expected_profile is required".into()))?;
+                match b.action.as_str() {
+                    "save" => secbird_core::onboard::save(dev, &mut store, &b.id, profile)?,
+                    "restore" => secbird_core::onboard::restore(dev, &mut store, &b.id, profile)?,
+                    _ => return Err(Error::InvalidArg("Use save or restore for onboard settings".into())),
+                };
+                onboard_device_snapshot(dev, &mut store, profile)
+            }
             "/api/stages" => {
                 let want = secbird_core::DpiStages { active: b.active, stages: b.stages.clone(), ..Default::default() };
                 let sent = actions::set_dpi_stages(dev, &mut store, &want)?;
@@ -785,6 +795,8 @@ fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
     if path == "/api/find-light" {
         engine.pause_frames(b.light.is_some());
     }
+    // Recovery-sensitive onboard operations are never automatically retried.
+    if path == "/api/onboard-settings" { return attempt(engine); }
     match attempt(engine) {
         Err(Error::Hid(_)) | Err(Error::NotFound(_)) | Err(Error::NoReply(_)) => {
             engine.rescan();
@@ -1207,6 +1219,7 @@ fn device_json(dev: &Device) -> Value {
         "wheel_controls": wheel_controls_json(dev),
         "critical_threshold": critical_threshold_json(dev),
         "power_settings": power_settings,
+        "onboard_capabilities": secbird_core::onboard::capabilities(dev),
         "lighting_settings":lighting_settings,
         "lighting_readback":lighting_readback,
         "lighting_settings_origin":lighting_origin,
@@ -1417,4 +1430,28 @@ mod tests {
         assert_eq!(base64(b"foo"), "Zm9v");
         assert_eq!(base64(b"foobar"), "Zm9vYmFy");
     }
+}
+
+/// Explicit worker GET: does not rescan, apply profiles or mutate storage.
+pub(crate) fn onboard_snapshot(engine: &Engine, id: &str, expected_profile: &str) -> Result<Value, Error> {
+    let dev = engine.devices().iter().find(|d|d.key()==id)
+        .ok_or_else(||Error::NotFound("Selected mouse disconnected; reconnect and read again".into()))?;
+    let mut store = Store::load(&config_dir().join("profiles.json"))?;
+    onboard_device_snapshot(dev, &mut store, expected_profile)
+}
+fn onboard_device_snapshot(dev: &Device, store: &mut Store, expected_profile: &str) -> Result<Value, Error> {
+    if store.for_device(dev).active != expected_profile {
+        return Err(Error::InvalidArg("Selected profile changed; reopen onboard memory".into()));
+    }
+    let capabilities = secbird_core::onboard::capabilities(dev);
+    let saved = store.for_device(dev).onboard_settings.clone();
+    let readback = secbird_core::onboard::read(dev);
+    let value = match readback {
+        Ok(raw) => json!({"available":true,"dpi":raw.dpi_pair(),"stages":raw.dpi_stages(),
+            "polling_hz":secbird_core::onboard::polling_hz(raw.polling[1]),
+            "matches_saved":saved.as_ref().map(|r|r.desired.matches_readback(&raw)),"raw":raw}),
+        Err(error) => json!({"available":false,"error":error.to_string()}),
+    };
+    Ok(json!({"id":dev.key(),"profile":expected_profile,"capabilities":capabilities,"readback":value,
+        "recovery":saved,"legacy_button_backup":store.for_device(dev).onboard.is_some()}))
 }

@@ -1,0 +1,269 @@
+{
+  "scope": "Device196 DeathAdder V3 HyperSpeed wired product196/dongle197 shipped middleware static contract; no hardware writes or source execution",
+  "evidence": [
+    {
+      "evidence_id": "ev_a45c8695c9ad755f2f3a66b6894bafe3ba12bfc00796cf0bac075cab49352fb5",
+      "subject_sha256": "16c87ec71430810877c1ab8a489556325b3a34820efb1127dd7deee685087aee",
+      "limitations": [
+        "6120-71416.js: Resource constraint during analyze_javascript_application: Semantic graph for 6120-71416.js exceeds the parent's remaining result budget; static and module facts were retained",
+        "6120-7755.js: Resource constraint during analyze_javascript_application: Semantic graph for 6120-7755.js exceeds the parent's remaining result budget; static and module facts were retained",
+        "6120-96204.js: Resource constraint during analyze_javascript_application: Semantic graph for 6120-96204.js exceeds the parent's remaining result budget; static and module facts were retained",
+        "6120-96571.js: Resource constraint during analyze_javascript_application: Semantic graph for 6120-96571.js exceeds the parent's remaining result budget; static and module facts were retained",
+        "CommonJS and ESM binding relationships were recovered from inert syntax and resolved only within the inventoried artifact container.",
+        "Graph coverage is incomplete; unavailable facts remain explicit and must not be read as absence.",
+        "JavaScript and HTML were parsed as inert text; bundle bootstrap code was never executed.",
+        "Static imports, entrypoints, workers, endpoints, and storage relationships do not prove runtime execution.",
+        "Static paths and relationships may remain unresolved when expressions are dynamic or obfuscated.",
+        "Webpack/Rspack factories were recovered from AST literals; REA did not invoke push handlers or bundle bootstrap code."
+      ]
+    },
+    {
+      "evidence_id": "ev_75665eeb8c255bf53b356c7cdd9ae7ef1b5b9cc18855ae8636391fea91fcbe56",
+      "subject_sha256": "99bbea41866b110345113785cb390236f3124612f1f2dc567393652f8192a894",
+      "limitations": [
+        "CommonJS and ESM binding relationships were recovered from inert syntax and resolved only within the inventoried artifact container.",
+        "JavaScript and HTML were parsed as inert text; bundle bootstrap code was never executed.",
+        "Static imports, entrypoints, workers, endpoints, and storage relationships do not prove runtime execution.",
+        "Static paths and relationships may remain unresolved when expressions are dynamic or obfuscated.",
+        "Webpack/Rspack factories were recovered from AST literals; REA did not invoke push handlers or bundle bootstrap code."
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "file": "main.373bc6c28c6486649d04.js",
+      "sha256": "36aeca60f912ccbff06d43040cf20cc0e954edabbfa04f827b1e228058c98e1b",
+      "bytes": 170070,
+      "locations": [
+        {
+          "term": "OBMSlots:1",
+          "utf16_offset": 148170,
+          "byte_offset": 148170
+        },
+        {
+          "term": "O=[{content:\"125\"}",
+          "utf16_offset": 148863,
+          "byte_offset": 148863
+        },
+        {
+          "term": "productId:196,dongleId:197",
+          "utf16_offset": 147904,
+          "byte_offset": 147904
+        }
+      ]
+    },
+    {
+      "file": "6120.c553d3491acbb7a4bf09.js",
+      "sha256": "df8334aa3021d129893918cecb3c1d14b3727f476c42981bac3fb02f6736b633",
+      "bytes": 2354522,
+      "locations": [
+        {
+          "term": "const l=new Uint8Array([7,4,133])",
+          "utf16_offset": 737142,
+          "byte_offset": 737156
+        },
+        {
+          "term": "p=new Uint8Array([80,4,134])",
+          "utf16_offset": 737272,
+          "byte_offset": 737286
+        },
+        {
+          "term": "E=(e,t,n,o,s=0)",
+          "utf16_offset": 738527,
+          "byte_offset": 738541
+        },
+        {
+          "term": "getProfilePollingRate(e)",
+          "utf16_offset": 798659,
+          "byte_offset": 798673
+        },
+        {
+          "term": "setProfilePollingRate(e,t)",
+          "utf16_offset": 798833,
+          "byte_offset": 798847
+        },
+        {
+          "term": "R=(new Uint8Array([2,0,140])",
+          "utf16_offset": 643725,
+          "byte_offset": 643739
+        },
+        {
+          "term": "RATE_1000Hz:1,RATE_500Hz:2",
+          "utf16_offset": 647119,
+          "byte_offset": 647133
+        },
+        {
+          "term": "this.addProfileDPI=",
+          "utf16_offset": 599552,
+          "byte_offset": 599566
+        },
+        {
+          "term": "1!==e){try{(yield this.setProfileNameStructure",
+          "utf16_offset": 598598,
+          "byte_offset": 598612
+        },
+        {
+          "term": "v[e]+1!==d[e]",
+          "utf16_offset": 1694120,
+          "byte_offset": 1694210
+        },
+        {
+          "term": "getProfileName(e,t,n,o=-1)",
+          "utf16_offset": 831281,
+          "byte_offset": 831295
+        }
+      ]
+    },
+    {
+      "file": "7116.ac7c2dda80be09b9f39e.js",
+      "sha256": "d11de6b3b4627a8af1d231b9a6e8a03640a489d58c27d63171d6d8fc4d31a35a",
+      "bytes": 25921,
+      "locations": [
+        {
+          "term": "0!==o){const e=yield this.getProfileNameStructure",
+          "utf16_offset": 6443,
+          "byte_offset": 6443
+        },
+        {
+          "term": "loadProfilesFromDevice_DPI=",
+          "utf16_offset": 8873,
+          "byte_offset": 8873
+        },
+        {
+          "term": "loadProfilesFromDevice_PollingRate=",
+          "utf16_offset": 9665,
+          "byte_offset": 9665
+        }
+      ]
+    }
+  ],
+  "capabilities": {
+    "product_id": 196,
+    "dongle_id": 197,
+    "onboard_slots": 1,
+    "dpi": true,
+    "polling_rate": true,
+    "macros": false,
+    "brightness": false,
+    "source_dpi_min": 100,
+    "source_dpi_max": 20000,
+    "source_dpi_step": 50,
+    "source_polling_choices": [
+      125,
+      500,
+      1000
+    ],
+    "keyboard_scope": "unverified, not inferred"
+  },
+  "protocol": [
+    {
+      "setting": "active DPI",
+      "get": "04:85",
+      "get_size": 7,
+      "get_args": [
+        1
+      ],
+      "set": "04:05",
+      "set_size": 7,
+      "layout": [
+        "slot",
+        "x_hi",
+        "x_lo",
+        "y_hi",
+        "y_lo",
+        "z_hi",
+        "z_lo"
+      ],
+      "source_z_default": 0,
+      "note": "setDpiLevel(slot,x,y) calls E(...,s=0); getDpiLevel(slot) sends explicit slot. Preserve original z bytes for recovery; desired source projection uses0."
+    },
+    {
+      "setting": "DPI stages",
+      "get": "04:86",
+      "get_size": 80,
+      "get_args": [
+        1
+      ],
+      "set": "04:06",
+      "set_size": "3+7*count",
+      "layout": [
+        "slot",
+        "active_1_based",
+        "count",
+        "rows: id,x_hi,x_lo,y_hi,y_lo,z_hi,z_lo"
+      ],
+      "set_row_id": "0-based",
+      "get_row_id": "1-based; taskRunnerSetDPI compares sentId+1 == readId, and x/y/z exactly",
+      "note": "Engine addProfileDPI writes active DPI before stage table. Source flattened row uses id,x,y,0 and expands x/y/z big endian. Restore original z bytes rather than replacing with defaults."
+    },
+    {
+      "setting": "profile polling",
+      "get": "00:8E",
+      "get_size": 2,
+      "get_args": [
+        1
+      ],
+      "set": "00:0E",
+      "set_size": 2,
+      "layout": [
+        "slot",
+        "standard_period_code"
+      ],
+      "codes": {
+        "1000": 1,
+        "500": 2,
+        "333": 3,
+        "250": 4,
+        "200": 5,
+        "125": 8,
+        "100": 10
+      },
+      "note": "Generic helper chooses profile polling when isObm.yes.pollingRate; only125/500/1000 are product UI choices. This is separate from generic00:05 and highspeed00:40."
+    }
+  ],
+  "slot_metadata": {
+    "get": "05:88",
+    "set": "05:08",
+    "size": 80,
+    "prefix": [
+      "slot",
+      "offset_hi",
+      "offset_lo",
+      "total_size_hi",
+      "total_size_lo"
+    ],
+    "generic_record_bytes": 250,
+    "generic_record_layout": [
+      "guid16",
+      "utf8_name100",
+      "owner128",
+      "reserved6"
+    ],
+    "source_chunks": 64,
+    "single_slot_caveat": "loadProfilesFromDevice skips metadata read for first ARRAY profile (index0); addProfileNameStructure skips metadata write for profile ID1. Do not manufacture a firmware GUID/name/owner record for single slot1; host profile identity is retained separately. Explicit setProfileName can write generic metadata, so skip is workflow behavior, not proven device inability."
+  },
+  "workflow": {
+    "read_order": [
+      "maxProfilesSupported",
+      "numberOfProfiles",
+      "profileIDList",
+      "metadata for profiles after first",
+      "DPI active and stages for each profile",
+      "polling per profile",
+      "button assignments"
+    ],
+    "dpi_write_order": [
+      "setDpiLevel(slot,x,y)",
+      "setDPIStages(slot,active,count,rows)"
+    ],
+    "slot1_live_read_evidence": "taskRunnerSetDPI issues setDpiLevel(1,...) or setDPIStages(1,...), then getDPIStages(1). Direct slot1 performance GET is not skipped by metadata rules."
+  },
+  "unknowns": [
+    "No physical acceptance, firmware mutation, reconnect persistence or firmware reset semantics was observed by this static investigation.",
+    "Generic format metadata is not proof that installed single slot supports editable metadata.",
+    "No source-normalized onboard popup captures were recovered; native modal cannot claim visual parity.",
+    "Source maximum DPI20000 differs from current database26000; keep difference explicit and avoid silently expanding source gate.",
+    "Buttons-only legacy backup lacks raw DPI, stages, polling and complete firmware function bytes; no inferred keyboard/button-family format acceptance.",
+    "Full end-to-end event path and dynamic module resolution coverage remains partial in first REA analysis; supplemental polling/engine static analysis has no resource-limit warning."
+  ]
+}

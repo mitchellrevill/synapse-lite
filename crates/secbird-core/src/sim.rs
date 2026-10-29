@@ -73,6 +73,8 @@ pub struct SimState {
     pub polling_code: u8,
     /// Explicit wheel fixture only: mode, acceleration, Smart Reel.
     pub wheel_controls: Option<[u8; 3]>,
+    /// Opt-in Device196 profile polling bank; no generic-family OBM inference.
+    pub onboard_polling: Option<u8>,
     /// High-speed polling code (`00:C0`), or `None` when the device doesn't have it.
     pub polling_hs: Option<u8>,
     /// DPI stages as the device reports them: `(active, [(x, y)])`.
@@ -144,6 +146,7 @@ impl SimState {
             polling_code: 0x01,
             wheel_controls: None,
             polling_hs: None,
+            onboard_polling: None,
             dpi_stages: None,
             macros: None,
             macro_recyclable: 0,
@@ -388,6 +391,16 @@ impl SimState {
                 (Some(slot), _) => ok(vec![slot]),
                 (None, true) => (NotSupported, vec![]),
                 (None, false) => ok(vec![1]),
+            },
+            c if c == Command::new(0,0x8e) => match self.onboard_polling {
+                Some(code) if size==2 && a[0]==1 => ok(vec![1,code]),
+                _ => (NotSupported,vec![]),
+            },
+            c if c == Command::new(0,0x0e) => match self.onboard_polling {
+                Some(_) if size==2 && a[0]==1 && crate::onboard::polling_hz(a[1]).is_some() => {
+                    self.onboard_polling=Some(a[1]);ok(a[..2].to_vec())
+                },
+                _ => (NotSupported,vec![]),
             },
             c if c == cmd::POLLING.get() => ok(vec![self.polling_code]),
             cmd::POLLING => {

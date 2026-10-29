@@ -111,6 +111,9 @@ pub struct DevicePower {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceProfiles {
+    /// Installed-family register originals; never replayed by profile apply.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub onboard_settings: Option<crate::onboard::Recovery>,
     /// Smart Tracking is device-wide, not part of named profile exports/replay.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sensor_calibration: Option<crate::mouse_sensor::CalibrationPreferences>,
@@ -156,6 +159,7 @@ impl Default for DeviceProfiles {
             profiles: BTreeMap::from([(DEFAULT_PROFILE.into(), Profile::default())]),
             lighting_off: false,
             onboard: None,
+            onboard_settings: None,
             power: None,
         }
     }
@@ -197,6 +201,9 @@ impl DeviceProfiles {
         self.profiles.insert(name.to_string(), profile);
         if self.active == previous { self.active = name.to_string(); }
         if let Some(onboard) = self.onboard.as_mut().filter(|saved| saved.profile == previous) {
+            onboard.profile = name.to_string();
+        }
+        if let Some(onboard) = self.onboard_settings.as_mut().filter(|saved| saved.profile == previous) {
             onboard.profile = name.to_string();
         }
         Ok(())
@@ -388,6 +395,7 @@ impl Store {
                 lighting_off: incoming.lighting_off,
                 // The only copy of what the mouse's slot held before a "Save to mouse".
                 onboard: incoming.onboard.clone(),
+                onboard_settings: incoming.onboard_settings.clone(),
                 power: incoming.power.clone(),
                 sensor_calibration: incoming.sensor_calibration.clone(),
             });
@@ -413,6 +421,12 @@ impl Store {
                 }
             }
 
+            if let Some(incoming_recovery) = incoming.onboard_settings {
+                if target.onboard_settings.as_ref() != Some(&incoming_recovery) {
+                    crate::profile_compat::merge_extensions(&mut target.extra,
+                        BTreeMap::from([("_synapseLiteImported:onboard_settings".into(), serde_json::to_value(incoming_recovery).expect("Recovery serializes"))]));
+                }
+            }
             for (name, profile) in incoming.profiles {
                 let mut unique = name.clone();
                 let mut n = 1;

@@ -567,6 +567,9 @@ pub fn restore_all_buttons(dev: &Device, store: &mut Store) -> Result<usize> {
 /// first (once, so it stays Synapse's or the factory setting), and buttons an earlier save
 /// wrote that this profile doesn't remap go back to it. Returns the slot written.
 pub fn save_buttons_to_mouse(dev: &Device, store: &mut Store) -> Result<u8> {
+    if matches!(dev.pid, 196 | 197) {
+        return Err(crate::Error::Unsupported("Installed mouse button-slot writes are unverified; use the capability-gated onboard settings controls".into()));
+    }
     if dev.buttons().is_empty() {
         return Err(crate::Error::Unsupported(format!(
             "{} keeps no button settings on board",
