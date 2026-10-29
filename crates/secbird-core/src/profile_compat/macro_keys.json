@@ -1,0 +1,1127 @@
+[
+  {
+    "id": "KEY_A",
+    "name": "A",
+    "category": "Alphanumeric",
+    "make_code": 65,
+    "scan_code": 30,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_B",
+    "name": "B",
+    "category": "Alphanumeric",
+    "make_code": 66,
+    "scan_code": 48,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_C",
+    "name": "C",
+    "category": "Alphanumeric",
+    "make_code": 67,
+    "scan_code": 46,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_D",
+    "name": "D",
+    "category": "Alphanumeric",
+    "make_code": 68,
+    "scan_code": 32,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_E",
+    "name": "E",
+    "category": "Alphanumeric",
+    "make_code": 69,
+    "scan_code": 18,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_F",
+    "name": "F",
+    "category": "Alphanumeric",
+    "make_code": 70,
+    "scan_code": 33,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_G",
+    "name": "G",
+    "category": "Alphanumeric",
+    "make_code": 71,
+    "scan_code": 34,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_H",
+    "name": "H",
+    "category": "Alphanumeric",
+    "make_code": 72,
+    "scan_code": 35,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_I",
+    "name": "I",
+    "category": "Alphanumeric",
+    "make_code": 73,
+    "scan_code": 23,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_J",
+    "name": "J",
+    "category": "Alphanumeric",
+    "make_code": 74,
+    "scan_code": 36,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_K",
+    "name": "K",
+    "category": "Alphanumeric",
+    "make_code": 75,
+    "scan_code": 37,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_L",
+    "name": "L",
+    "category": "Alphanumeric",
+    "make_code": 76,
+    "scan_code": 38,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_M",
+    "name": "M",
+    "category": "Alphanumeric",
+    "make_code": 77,
+    "scan_code": 50,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_N",
+    "name": "N",
+    "category": "Alphanumeric",
+    "make_code": 78,
+    "scan_code": 49,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_O",
+    "name": "O",
+    "category": "Alphanumeric",
+    "make_code": 79,
+    "scan_code": 24,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_P",
+    "name": "P",
+    "category": "Alphanumeric",
+    "make_code": 80,
+    "scan_code": 25,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_Q",
+    "name": "Q",
+    "category": "Alphanumeric",
+    "make_code": 81,
+    "scan_code": 16,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_R",
+    "name": "R",
+    "category": "Alphanumeric",
+    "make_code": 82,
+    "scan_code": 19,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_S",
+    "name": "S",
+    "category": "Alphanumeric",
+    "make_code": 83,
+    "scan_code": 31,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_T",
+    "name": "T",
+    "category": "Alphanumeric",
+    "make_code": 84,
+    "scan_code": 20,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_U",
+    "name": "U",
+    "category": "Alphanumeric",
+    "make_code": 85,
+    "scan_code": 22,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_V",
+    "name": "V",
+    "category": "Alphanumeric",
+    "make_code": 86,
+    "scan_code": 47,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_W",
+    "name": "W",
+    "category": "Alphanumeric",
+    "make_code": 87,
+    "scan_code": 17,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_X",
+    "name": "X",
+    "category": "Alphanumeric",
+    "make_code": 88,
+    "scan_code": 45,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_Y",
+    "name": "Y",
+    "category": "Alphanumeric",
+    "make_code": 89,
+    "scan_code": 21,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_Z",
+    "name": "Z",
+    "category": "Alphanumeric",
+    "make_code": 90,
+    "scan_code": 44,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_0",
+    "name": "0",
+    "category": "Alphanumeric",
+    "make_code": 48,
+    "scan_code": 11,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_1",
+    "name": "1",
+    "category": "Alphanumeric",
+    "make_code": 49,
+    "scan_code": 2,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_2",
+    "name": "2",
+    "category": "Alphanumeric",
+    "make_code": 50,
+    "scan_code": 3,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_3",
+    "name": "3",
+    "category": "Alphanumeric",
+    "make_code": 51,
+    "scan_code": 4,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_4",
+    "name": "4",
+    "category": "Alphanumeric",
+    "make_code": 52,
+    "scan_code": 5,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_5",
+    "name": "5",
+    "category": "Alphanumeric",
+    "make_code": 53,
+    "scan_code": 6,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_6",
+    "name": "6",
+    "category": "Alphanumeric",
+    "make_code": 54,
+    "scan_code": 7,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_7",
+    "name": "7",
+    "category": "Alphanumeric",
+    "make_code": 55,
+    "scan_code": 8,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_8",
+    "name": "8",
+    "category": "Alphanumeric",
+    "make_code": 56,
+    "scan_code": 9,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_9",
+    "name": "9",
+    "category": "Alphanumeric",
+    "make_code": 57,
+    "scan_code": 10,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_F1",
+    "name": "F1",
+    "category": "Function",
+    "make_code": 112,
+    "scan_code": 59,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_F2",
+    "name": "F2",
+    "category": "Function",
+    "make_code": 113,
+    "scan_code": 60,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_F3",
+    "name": "F3",
+    "category": "Function",
+    "make_code": 114,
+    "scan_code": 61,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_F4",
+    "name": "F4",
+    "category": "Function",
+    "make_code": 115,
+    "scan_code": 62,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_F5",
+    "name": "F5",
+    "category": "Function",
+    "make_code": 116,
+    "scan_code": 63,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_F6",
+    "name": "F6",
+    "category": "Function",
+    "make_code": 117,
+    "scan_code": 64,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_F7",
+    "name": "F7",
+    "category": "Function",
+    "make_code": 118,
+    "scan_code": 65,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_F8",
+    "name": "F8",
+    "category": "Function",
+    "make_code": 119,
+    "scan_code": 66,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_F9",
+    "name": "F9",
+    "category": "Function",
+    "make_code": 120,
+    "scan_code": 67,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_F10",
+    "name": "F10",
+    "category": "Function",
+    "make_code": 121,
+    "scan_code": 68,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_F11",
+    "name": "F11",
+    "category": "Function",
+    "make_code": 122,
+    "scan_code": 87,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_F12",
+    "name": "F12",
+    "category": "Function",
+    "make_code": 123,
+    "scan_code": 88,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_F13",
+    "name": "F13",
+    "category": "Function",
+    "make_code": 124,
+    "scan_code": 100,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_F14",
+    "name": "F14",
+    "category": "Function",
+    "make_code": 125,
+    "scan_code": 101,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_F15",
+    "name": "F15",
+    "category": "Function",
+    "make_code": 126,
+    "scan_code": 102,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_F16",
+    "name": "F16",
+    "category": "Function",
+    "make_code": 127,
+    "scan_code": 103,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_F17",
+    "name": "F17",
+    "category": "Function",
+    "make_code": 128,
+    "scan_code": 104,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_F18",
+    "name": "F18",
+    "category": "Function",
+    "make_code": 129,
+    "scan_code": 105,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_F19",
+    "name": "F19",
+    "category": "Function",
+    "make_code": 130,
+    "scan_code": 106,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_F20",
+    "name": "F20",
+    "category": "Function",
+    "make_code": 131,
+    "scan_code": 107,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_F21",
+    "name": "F21",
+    "category": "Function",
+    "make_code": 132,
+    "scan_code": 108,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_F22",
+    "name": "F22",
+    "category": "Function",
+    "make_code": 133,
+    "scan_code": 109,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_F23",
+    "name": "F23",
+    "category": "Function",
+    "make_code": 134,
+    "scan_code": 110,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_F24",
+    "name": "F24",
+    "category": "Function",
+    "make_code": 135,
+    "scan_code": 118,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_NUMPAD_NUM_LOCK",
+    "name": "Num Lock",
+    "category": "Numpad",
+    "make_code": 144,
+    "scan_code": 69,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_NUMPAD_0",
+    "name": "Num 0",
+    "category": "Numpad",
+    "make_code": 96,
+    "scan_code": 82,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_NUMPAD_1",
+    "name": "Num 1",
+    "category": "Numpad",
+    "make_code": 97,
+    "scan_code": 79,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_NUMPAD_2",
+    "name": "Num 2",
+    "category": "Numpad",
+    "make_code": 98,
+    "scan_code": 80,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_NUMPAD_3",
+    "name": "Num 3",
+    "category": "Numpad",
+    "make_code": 99,
+    "scan_code": 81,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_NUMPAD_4",
+    "name": "Num 4",
+    "category": "Numpad",
+    "make_code": 100,
+    "scan_code": 75,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_NUMPAD_5",
+    "name": "Num 5",
+    "category": "Numpad",
+    "make_code": 101,
+    "scan_code": 76,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_NUMPAD_6",
+    "name": "Num 6",
+    "category": "Numpad",
+    "make_code": 102,
+    "scan_code": 77,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_NUMPAD_7",
+    "name": "Num 7",
+    "category": "Numpad",
+    "make_code": 103,
+    "scan_code": 71,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_NUMPAD_8",
+    "name": "Num 8",
+    "category": "Numpad",
+    "make_code": 104,
+    "scan_code": 72,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_NUMPAD_9",
+    "name": "Num 9",
+    "category": "Numpad",
+    "make_code": 105,
+    "scan_code": 73,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_NUMPAD_SLASH",
+    "name": "Num /",
+    "category": "Numpad",
+    "make_code": 111,
+    "scan_code": 53,
+    "source_flag": 0,
+    "prefix": 2
+  },
+  {
+    "id": "KEY_NUMPAD_ASTERISK",
+    "name": "Num *",
+    "category": "Numpad",
+    "make_code": 106,
+    "scan_code": 55,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_NUMPAD_DASH",
+    "name": "Num -",
+    "category": "Numpad",
+    "make_code": 109,
+    "scan_code": 74,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_NUMPAD_PLUS",
+    "name": "Num +",
+    "category": "Numpad",
+    "make_code": 107,
+    "scan_code": 78,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_NUMPAD_PERIOD",
+    "name": "Num .",
+    "category": "Numpad",
+    "make_code": 110,
+    "scan_code": 83,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_NUMPAD_ENTER",
+    "name": "Num Enter",
+    "category": "Numpad",
+    "make_code": 13,
+    "scan_code": 28,
+    "source_flag": 1,
+    "prefix": 2
+  },
+  {
+    "id": "KEY_UP_ARROW",
+    "name": "Up",
+    "category": "Navigation",
+    "make_code": 38,
+    "scan_code": 72,
+    "source_flag": 0,
+    "prefix": 2
+  },
+  {
+    "id": "KEY_DOWN_ARROW",
+    "name": "Down",
+    "category": "Navigation",
+    "make_code": 40,
+    "scan_code": 80,
+    "source_flag": 0,
+    "prefix": 2
+  },
+  {
+    "id": "KEY_LEFT_ARROW",
+    "name": "Left",
+    "category": "Navigation",
+    "make_code": 37,
+    "scan_code": 75,
+    "source_flag": 0,
+    "prefix": 2
+  },
+  {
+    "id": "KEY_RIGHT_ARROW",
+    "name": "Right",
+    "category": "Navigation",
+    "make_code": 39,
+    "scan_code": 77,
+    "source_flag": 0,
+    "prefix": 2
+  },
+  {
+    "id": "KEY_UP_DPAD",
+    "name": "Up",
+    "category": "Navigation",
+    "make_code": 38,
+    "scan_code": 72,
+    "source_flag": 0,
+    "prefix": 2
+  },
+  {
+    "id": "KEY_DOWN_DPAD",
+    "name": "Down",
+    "category": "Navigation",
+    "make_code": 40,
+    "scan_code": 80,
+    "source_flag": 0,
+    "prefix": 2
+  },
+  {
+    "id": "KEY_LEFT_DPAD",
+    "name": "Left",
+    "category": "Navigation",
+    "make_code": 37,
+    "scan_code": 75,
+    "source_flag": 0,
+    "prefix": 2
+  },
+  {
+    "id": "KEY_RIGHT_DPAD",
+    "name": "Right",
+    "category": "Navigation",
+    "make_code": 39,
+    "scan_code": 77,
+    "source_flag": 0,
+    "prefix": 2
+  },
+  {
+    "id": "KEY_PAGE_UP",
+    "name": "Page Up",
+    "category": "Navigation",
+    "make_code": 33,
+    "scan_code": 73,
+    "source_flag": 0,
+    "prefix": 2
+  },
+  {
+    "id": "KEY_PAGE_DOWN",
+    "name": "Page Down",
+    "category": "Navigation",
+    "make_code": 34,
+    "scan_code": 81,
+    "source_flag": 0,
+    "prefix": 2
+  },
+  {
+    "id": "KEY_BACKSPACE",
+    "name": "Backspace",
+    "category": "Navigation",
+    "make_code": 8,
+    "scan_code": 14,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_TAB",
+    "name": "Tab",
+    "category": "Navigation",
+    "make_code": 9,
+    "scan_code": 15,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_SPACEBAR",
+    "name": "Space",
+    "category": "Navigation",
+    "make_code": 32,
+    "scan_code": 57,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_ENTER",
+    "name": "Enter",
+    "category": "Navigation",
+    "make_code": 13,
+    "scan_code": 28,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_ESC",
+    "name": "Esc",
+    "category": "Navigation",
+    "make_code": 27,
+    "scan_code": 1,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_INSERT",
+    "name": "Insert",
+    "category": "Navigation",
+    "make_code": 45,
+    "scan_code": 82,
+    "source_flag": 0,
+    "prefix": 2
+  },
+  {
+    "id": "KEY_HOME",
+    "name": "Home",
+    "category": "Navigation",
+    "make_code": 36,
+    "scan_code": 71,
+    "source_flag": 0,
+    "prefix": 2
+  },
+  {
+    "id": "KEY_DELETE",
+    "name": "Delete",
+    "category": "Navigation",
+    "make_code": 46,
+    "scan_code": 83,
+    "source_flag": 0,
+    "prefix": 2
+  },
+  {
+    "id": "KEY_END",
+    "name": "End",
+    "category": "Navigation",
+    "make_code": 35,
+    "scan_code": 79,
+    "source_flag": 0,
+    "prefix": 2
+  },
+  {
+    "id": "KEY_PRINT_SCREEN",
+    "name": "Print Screen",
+    "category": "Navigation",
+    "make_code": 44,
+    "scan_code": 55,
+    "source_flag": 0,
+    "prefix": 2
+  },
+  {
+    "id": "KEY_PAUSE",
+    "name": "Pause",
+    "category": "Navigation",
+    "make_code": 19,
+    "scan_code": 29,
+    "source_flag": 0,
+    "prefix": 4
+  },
+  {
+    "id": "KEY_CANCEL",
+    "name": "Pause",
+    "category": "Navigation",
+    "make_code": 70,
+    "scan_code": 70,
+    "source_flag": 0,
+    "prefix": 2
+  },
+  {
+    "id": "KEY_APPLICATION",
+    "name": "Menu",
+    "category": "Navigation",
+    "make_code": 93,
+    "scan_code": 93,
+    "source_flag": 0,
+    "prefix": 2
+  },
+  {
+    "id": "KEY_LEFT_CTRL",
+    "name": "Ctrl",
+    "category": "Modifiers",
+    "make_code": 17,
+    "scan_code": 29,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_RIGHT_CTRL",
+    "name": "Right Ctrl",
+    "category": "Modifiers",
+    "make_code": 285,
+    "scan_code": 29,
+    "source_flag": 2,
+    "prefix": 2
+  },
+  {
+    "id": "KEY_LEFT_SHIFT",
+    "name": "Shift",
+    "category": "Modifiers",
+    "make_code": 16,
+    "scan_code": 42,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_RIGHT_SHIFT",
+    "name": "Right Shift",
+    "category": "Modifiers",
+    "make_code": 310,
+    "scan_code": 54,
+    "source_flag": 2,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_LEFT_ALT",
+    "name": "Alt",
+    "category": "Modifiers",
+    "make_code": 18,
+    "scan_code": 56,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_RIGHT_ALT",
+    "name": "Right Alt",
+    "category": "Modifiers",
+    "make_code": 312,
+    "scan_code": 56,
+    "source_flag": 2,
+    "prefix": 2
+  },
+  {
+    "id": "KEY_LEFT_GUI",
+    "name": "Windows",
+    "category": "Modifiers",
+    "make_code": 91,
+    "scan_code": 91,
+    "source_flag": 0,
+    "prefix": 2
+  },
+  {
+    "id": "KEY_CAPS_LOCK",
+    "name": "Caps Lock",
+    "category": "Modifiers",
+    "make_code": 20,
+    "scan_code": 58,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_SCROLL_LOCK",
+    "name": "Scroll Lock",
+    "category": "Modifiers",
+    "make_code": 145,
+    "scan_code": 70,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_TILDE",
+    "name": "`",
+    "category": "Symbols",
+    "make_code": 192,
+    "scan_code": 41,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_NON_US_POUND",
+    "name": "#",
+    "category": "Symbols",
+    "make_code": 51,
+    "scan_code": 43,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_HYPEN",
+    "name": "-",
+    "category": "Symbols",
+    "make_code": 189,
+    "scan_code": 12,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_EQUAL",
+    "name": "=",
+    "category": "Symbols",
+    "make_code": 187,
+    "scan_code": 13,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_OPEN_SQUARE_BRACKET",
+    "name": "[",
+    "category": "Symbols",
+    "make_code": 219,
+    "scan_code": 26,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_CLOSE_SQUARE_BRACKET",
+    "name": "]",
+    "category": "Symbols",
+    "make_code": 221,
+    "scan_code": 27,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_BACKSLASH",
+    "name": "\\",
+    "category": "Symbols",
+    "make_code": 220,
+    "scan_code": 43,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_SEMICOLON",
+    "name": ";",
+    "category": "Symbols",
+    "make_code": 186,
+    "scan_code": 39,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_APOSTROPHE",
+    "name": "'",
+    "category": "Symbols",
+    "make_code": 222,
+    "scan_code": 40,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_COMMA",
+    "name": ",",
+    "category": "Symbols",
+    "make_code": 188,
+    "scan_code": 51,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_PERIOD",
+    "name": ".",
+    "category": "Symbols",
+    "make_code": 190,
+    "scan_code": 52,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_SLASH",
+    "name": "/",
+    "category": "Symbols",
+    "make_code": 191,
+    "scan_code": 53,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_MUHENKAN",
+    "name": "KEY_BEFORE_SPACE",
+    "category": "",
+    "make_code": 235,
+    "scan_code": 123,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_HENKAN",
+    "name": "KEY_AFTER_SPACE",
+    "category": "",
+    "make_code": 255,
+    "scan_code": 121,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_KATAKANA_HIRAGANA",
+    "name": "KEY_BEFORE_RIGHT_ALT",
+    "category": "",
+    "make_code": 255,
+    "scan_code": 112,
+    "source_flag": 0,
+    "prefix": 0
+  },
+  {
+    "id": "KEY_NON_US_BACKSLASH",
+    "name": "\\",
+    "category": "",
+    "make_code": 226,
+    "scan_code": 86,
+    "source_flag": 0,
+    "prefix": 0
+  }
+]

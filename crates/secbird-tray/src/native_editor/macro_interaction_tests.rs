@@ -20,19 +20,25 @@ fn native_macro_library_drafts_save_history_conflicts_and_lifecycle() {
             let edit=|id,text:&str|{let field=GetDlgItem(hwnd,id);assert!(!field.is_null(),"missing edit field {id}");SetWindowTextW(field,wide(text).as_ptr());};
             click(350.,100.);wait_for(||query()["entries"].as_array().is_some_and(|a|a.len()==1)&&query()["busy"]==false,"new macro")?;
             let id=query()["selected"].as_str().unwrap().to_owned();let baseline=std::fs::read(&path).map_err(|e|e.to_string())?;
+            click(left+90.,528.);wait_for(||query()["menu_open"]==true,"input chooser open")?;SendMessageW(hwnd,STUDIO_TEST,9,0);wait_for(||query()["menu_open"]==false,"input chooser cancel")?;if query()["dirty"]!=false||std::fs::read(&path).unwrap()!=baseline{return Err("Cancelled input menu changed draft or disk".into());}
             edit(2300,"Night macro");edit(2301,"1250");click(left+90.,368.);
             if query()["dirty"]!=true||query()["events"][1]["Number"]!="1.25"{return Err(format!("Local draft incorrect: {}",query()));}
             if std::fs::read(&path).unwrap()!=baseline{return Err("Unsaved fields reached disk".into());}
+            for choice in [json!({"key":"KEY_RIGHT_CTRL"}),json!({"mouse":1}),json!({"mouse":8})] {
+                SendMessageW(hwnd,super::super::macro_view::TEST,6,&choice as *const Value as isize);click(left+90.,600.);
+            }
+            let authored=query();if authored["events"].as_array().map(Vec::len)!=Some(7)||authored["events"][2]["KeyEvent"]["State"]!=2||authored["events"][3]["KeyEvent"]["State"]!=3||authored["events"][4]["MouseEvent"]["MouseButton"]!=1||authored["events"][6]["MouseEvent"]["MouseButton"]!=8{return Err(format!("Native input authoring incorrect: {authored}"));}
+            if std::fs::read(&path).unwrap()!=baseline{return Err("Input rows reached disk before Save".into());}
             SendMessageW(hwnd,super::super::macro_view::TEST,3,0);SendMessageW(hwnd,WM_CLOSE,0,0);
             if query()["open"]!=true||IsWindow(hwnd)==0{return Err("Dirty draft was closed".into());}
             click(timeline+620.,174.);wait_for(||query()["busy"]==false&&query()["dirty"]==false,"explicit save")?;
             let saved=Store::load(&path).map_err(|e|e.to_string())?;let entries=library::read(&saved).map_err(|e|e.to_string())?.entries;
-            if entries[0].name!="Night macro"||entries[0].guid!=id||entries[0].events[1]["Number"]!="1.25"{return Err("Saved definition differs from draft".into());}
+            if entries[0].name!="Night macro"||entries[0].guid!=id||entries[0].events[1]["Number"]!="1.25"||entries[0].events.len()!=7||json!(entries[0].events)!=authored["events"]{return Err("Saved definition differs from draft".into());}
             click(timeline+40.,174.);if query()["dirty"]!=true{return Err("Undo history lost after save".into());}click(timeline+130.,174.);if query()["dirty"]!=false{return Err("Redo did not return to saved definition".into());}
-            let saved_bytes=std::fs::read(&path).unwrap();edit(2301,"-1");click(left+90.,404.);if query()["failed"]!=true||std::fs::read(&path).unwrap()!=saved_bytes{return Err("Invalid delay was saved".into());}
+            let saved_bytes=std::fs::read(&path).unwrap();click(timeline+90.,220.);edit(2301,"-1");click(left+90.,404.);if query()["failed"]!=true||std::fs::read(&path).unwrap()!=saved_bytes{return Err("Invalid delay was saved".into());}
             SendMessageW(hwnd,super::super::macro_view::TEST,5,0);
-            SendMessageW(hwnd,READ_ONLY_TEST_SET,1,0);click(350.,100.);click(left+90.,368.);click(timeline+620.,174.);if std::fs::read(&path).unwrap()!=saved_bytes{return Err("Read-only controls changed disk".into());}SendMessageW(hwnd,READ_ONLY_TEST_SET,0,0);
-            click(left+45.,254.);wait_for(||query()["entries"].as_array().is_some_and(|a|a.len()==2)&&query()["busy"]==false,"duplicate")?;
+            SendMessageW(hwnd,READ_ONLY_TEST_SET,1,0);redraw(hwnd);click(350.,100.);click(left+90.,368.);click(left+90.,600.);click(timeline+620.,174.);if std::fs::read(&path).unwrap()!=saved_bytes||query()["dirty"]!=false{return Err("Read-only controls changed disk or draft".into());}SendMessageW(hwnd,READ_ONLY_TEST_SET,0,0);redraw(hwnd);
+            click(left+45.,254.);wait_for(||query()["entries"].as_array().is_some_and(|a|a.len()==2)&&query()["busy"]==false,"duplicate").map_err(|error|format!("{error}: {}",query()))?;
             if query()["selected"]==id{return Err("Duplicate reused original GUID".into());}click(left+145.,254.);wait_for(||query()["entries"].as_array().is_some_and(|a|a.len()==1)&&query()["busy"]==false,"delete unused duplicate")?;
             edit(2300,"Local draft");let current=Store::load(&path).map_err(|e|e.to_string())?;let changed=library::edit(&current,library::Change::Rename{guid:id.clone(),name:"External edit".into()}).map_err(|e|e.to_string())?;changed.save().map_err(|e|e.to_string())?;let external=std::fs::read(&path).unwrap();
             click(timeline+620.,174.);wait_for(||query()["busy"]==false&&query()["failed"]==true,"stale save refusal")?;if query()["dirty"]!=true||std::fs::read(&path).unwrap()!=external{return Err("Stale save overwrote external definition".into());}
@@ -43,7 +49,7 @@ fn native_macro_library_drafts_save_history_conflicts_and_lifecycle() {
             wait_for(||query()["entries"].as_array().is_some_and(|a|a.len()==2)&&query()["busy"]==false,"definition import")?;
             let final_value=serde_json::to_value(Store::load(&path).unwrap()).unwrap();if final_value["devices"]!=original_value["devices"]{return Err("Macro library changed device profiles".into());}
             if monitor.state().log.iter().any(|c|c.id&0x80==0){return Err("Macro editor issued a hardware SET".into());}
-            Ok(json!({"drafts_local_until_save":true,"dirty_home_and_close_guard":true,"save_guid_preserved":true,"history_survives_save":true,"invalid_delay_refused":true,"read_only_inert":true,"duplicate_and_delete":true,"stale_save_refused":true,"definition_import_without_profile_import":true,"profiles_preserved":true,"hardware_sets":0,"physical_discovery_disabled":true}))
+            Ok(json!({"input_chooser_open_cancel":true,"input_chooser_selection_bypassed":true,"keyboard_extended_down_up":true,"mouse_pair_and_wheel":true,"authored_rows_saved_exactly":true,"drafts_local_until_save":true,"dirty_home_and_close_guard":true,"save_guid_preserved":true,"history_survives_save":true,"invalid_delay_refused":true,"read_only_inert":true,"duplicate_and_delete":true,"stale_save_refused":true,"definition_import_without_profile_import":true,"profiles_preserved":true,"hardware_sets":0,"physical_discovery_disabled":true}))
         }})();
         unsafe{let hwnd=WINDOW.load(Ordering::Acquire) as HWND;SendMessageW(hwnd,super::super::macro_view::TEST,5,0);PostMessageW(hwnd,WM_CLOSE,0,0);}
         std::fs::write(output.join("interaction.json"),serde_json::to_vec_pretty(&match &result{Ok(v)=>v.clone(),Err(e)=>json!({"error":e})}).unwrap()).unwrap();result

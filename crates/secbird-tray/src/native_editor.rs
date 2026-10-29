@@ -3719,6 +3719,12 @@ unsafe extern "system" fn window_proc(
             3=>state.action(Action::Home),
             4=>{let value=&*(lparam as *const Value);if macro_view::can_leave(&mut state){macro_view::request(&mut state,macro_view::Request::Import(PathBuf::from(value.as_str().unwrap())));}},
             5=>state.action(Action::MacroLibrary(macro_view::Control::Discard)),
+            6=>{
+                use secbird_core::profile_compat::macro_library::input_events::{Input,Gesture};
+                let value=&*(lparam as *const Value);let input=if let Some(key)=value["key"].as_str(){Input::Keyboard(key.into())}else{Input::Mouse(value["mouse"].as_u64().unwrap() as u8)};
+                state.action(Action::MacroLibrary(macro_view::Control::ChooseInput(input)));
+                let gesture=match value["gesture"].as_str(){Some("down")=>Gesture::Down,Some("up")=>Gesture::Up,_=>Gesture::Tap};state.action(Action::MacroLibrary(macro_view::Control::ChooseGesture(gesture)));
+            },
             _=>{},
         }}return 0;
     }
@@ -3740,6 +3746,11 @@ unsafe extern "system" fn window_proc(
     if message==macro_view::BROWSE {
         let allowed=(*pointer).try_borrow().is_ok_and(|state|macro_view::active(&state)&&!state.read_only_smoke&&!state.restricted_actions&&!state.macros.busy);
         if allowed {let result=macro_view::browse(hwnd);if let Ok(mut state)=(*pointer).try_borrow_mut(){if macro_view::can_leave(&mut state){match result {Ok(Some(path))=>macro_view::request(&mut state,macro_view::Request::Import(path)),Ok(None)=>{},Err(error)=>state.error(&error)}}InvalidateRect(hwnd,null(),0);}}
+        return 0;
+    }
+    if message==macro_view::INPUT_MENU {
+        let allowed=(*pointer).try_borrow().is_ok_and(|state|macro_view::active(&state)&&!state.read_only_smoke&&!state.restricted_actions&&!state.macros.busy);
+        if allowed {if let Ok(mut state)=(*pointer).try_borrow_mut(){state.macros.popup=true;}let result=macro_view::choose_input(hwnd,wparam!=0);if let Ok(mut state)=(*pointer).try_borrow_mut(){state.macros.popup=false;match result {Ok(Some(control))=>state.action(Action::MacroLibrary(control)),Ok(None)=>{},Err(error)=>state.error(&error)}}}
         return 0;
     }
     if message==studio_view::EXIT_REQUEST {

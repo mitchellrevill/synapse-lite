@@ -3,6 +3,8 @@ use super::*;
 use serde::{Deserialize,Serialize};
 use serde_json::value::RawValue;
 use std::collections::BTreeSet;
+pub mod input_events;
+use input_events::{Input,Gesture};
 
 const KEY:&str="_synapseLiteMacroLibrary";
 const MAX_MACROS:usize=256;
@@ -28,6 +30,7 @@ pub enum Change {
     Import(Vec<u8>),
     Replace{guid:String,expected_revision:String,record:Value},
     InsertDelay{guid:String,index:usize,milliseconds:u32},
+    InsertInput{guid:String,index:usize,input:Input,gesture:Gesture},
     DeleteEvent{guid:String,index:usize},
     MoveEvent{guid:String,index:usize,direction:i8},
     SetDelay{guid:String,index:usize,milliseconds:u32},
@@ -191,10 +194,16 @@ pub fn edit(current:&Store,change:Change)->Result<Store> {
             for r in incoming {let id=guid(r)?;if let Some(old)=records.get(&id){if old!=r{return Err(invalid("Import conflicts with an existing macro GUID"));}}else{records.insert(id,r.clone());}propagate(&mut candidate,r)?;}
         }
         other=>{
-            let (id,index)=match &other {Change::InsertDelay{guid,index,..}|Change::DeleteEvent{guid,index}|Change::MoveEvent{guid,index,..}|Change::SetDelay{guid,index,..}=>(guid.clone(),*index),_=>unreachable!()};
+            let (id,index)=match &other {Change::InsertDelay{guid,index,..}|Change::InsertInput{guid,index,..}|Change::DeleteEvent{guid,index}|Change::MoveEvent{guid,index,..}|Change::SetDelay{guid,index,..}=>(guid.clone(),*index),_=>unreachable!()};
             let original=records.get(&id).ok_or_else(||invalid("Unknown macro"))?;let mut rows=event_rows(original)?;
             match other {
                 Change::InsertDelay{milliseconds,..}=>{if rows.len()>=MAX_EVENTS||index>rows.len(){return Err(invalid("Event insertion exceeds macro bounds"));}rows.insert(index,delay(milliseconds)?);}
+                Change::InsertInput{input,gesture,..}=>{
+                    let parsed:Vec<Value>=rows.iter().map(|row|serde_json::from_str(row.get()).map_err(|e|invalid(e.to_string()))).collect::<Result<_>>()?;
+                    let added=input_events::rows(&parsed,index,&input,gesture)?;
+                    if index>rows.len()||rows.len()+added.len()>MAX_EVENTS{return Err(invalid("Event insertion exceeds macro bounds"));}
+                    let added=added.iter().map(raw).collect::<Result<Vec<_>>>()?;rows.splice(index..index,added);
+                }
                 Change::SetDelay{milliseconds,..}=>{let old=rows.get(index).ok_or_else(||invalid("Unknown event"))?;let value:Value=serde_json::from_str(old.get()).map_err(|e|invalid(e.to_string()))?;if value["Type"]!=0{return Err(invalid("Select a delay event"));}
                     if value["Number"].is_object()||value["Number"].is_array(){return Err(invalid("Random/structured delay editing is not implemented; its source data was preserved"));}
                     // Preserve unknown leaves in an explicitly edited delay row.
@@ -220,7 +229,7 @@ pub fn revision(record:&Value)->Result<String> {decode_record(record)?;Ok(format
 pub fn edit_definition(record:&Value,change:Change)->Result<Value> {
     let id=guid(record)?;
     match &change {
-        Change::Rename{guid,..}|Change::InsertDelay{guid,..}|Change::DeleteEvent{guid,..}|Change::MoveEvent{guid,..}|Change::SetDelay{guid,..} if guid==&id=>{},
+        Change::Rename{guid,..}|Change::InsertDelay{guid,..}|Change::InsertInput{guid,..}|Change::DeleteEvent{guid,..}|Change::MoveEvent{guid,..}|Change::SetDelay{guid,..} if guid==&id=>{},
         _=>return Err(invalid("This operation is not a local definition edit")),
     }
     let mut isolated=Store::default();isolated.extra.insert(KEY.into(),json!({"version":1,"records":[record]}));

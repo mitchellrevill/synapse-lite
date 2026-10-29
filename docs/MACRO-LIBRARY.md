@@ -7,7 +7,9 @@ Save; Discard abandons them. Leaving or closing a dirty editor is refused with a
 Save/Discard prompt in the page. Undo/Redo retains up to20 snapshots and4MiB of
 serialized record history, including after a successful save.
 
-This checkpoint authors fixed delays in milliseconds, up to one hour. Existing
+The initial library checkpoint authors fixed delays in milliseconds, up to one hour.
+Manual keyboard/mouse events are now available; see MACRO-INPUT-AUTHORING.md.
+Existing
 event rows can be moved or removed, except for the source actionBar row. Other
 source event types remain visible and retained. Random/structured delays and
 definitions carrying an appEngine event cache refuse event edits until their
@@ -90,7 +92,7 @@ missing, and compare with the preceding commit under the same assets/DPI. Keep
 the original assertions and preserve the failed evidence. Per the user's
 instruction, continue independent features after recording these blockers.
 
-TODO: recording; keyboard/mouse/manual event authoring; nested macros and loop
+TODO: recording; rebinding existing keyboard/mouse rows; nested macros and loop
 editing; remaining source events and playback settings; key-binding workflow;
 stock macro-only import/export contract; source cache invalidation; exact menus,
 widgets and visual matching. Live activation additionally depends on proved
