@@ -1619,6 +1619,17 @@ pub(super) unsafe fn capture_frame(state: &mut State, path: &Path) -> bool {
     }
     let old = SelectObject(dc, bitmap);
     super::paint(state, dc);
+    // Native EDIT children are separate windows and are absent from paint().
+    for child in state.fields.values() {
+        let mut bounds: RECT = std::mem::zeroed();
+        GetWindowRect(*child, &mut bounds);
+        let mut point = POINT { x: bounds.left, y: bounds.top };
+        ScreenToClient(state.hwnd, &mut point);
+        let saved = SaveDC(dc);
+        SetViewportOrgEx(dc, point.x, point.y, null_mut());
+        SendMessageW(*child, WM_PRINTCLIENT, dc as usize, (PRF_CLIENT | PRF_ERASEBKGND) as isize);
+        RestoreDC(dc, saved);
+    }
     SelectObject(dc, old);
     let mut image = null_mut();
     let created = gp::GdipCreateBitmapFromHBITMAP(bitmap, null_mut(), &mut image);

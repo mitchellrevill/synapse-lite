@@ -514,6 +514,7 @@ struct Hit {
 }
 
 enum Job {
+    LaunchAssignment(Box<assignment_model::Draft>),
     Onboard(onboard_view::Request),
     Chroma(chroma_view::Request),
     Settings(Option<Value>),
@@ -759,6 +760,12 @@ fn worker(
             let mut failed = false;
             let mut notices = Vec::new();
             let state = match job {
+                Job::LaunchAssignment(draft) => {
+                    if !engine.devices().iter().any(|d| d.key() == draft.context.owner.device) { return Err("Selected device disconnected".into()); }
+                    draft.persist_launch(&secbird_core::config_dir().join("profiles.json"))?;
+                    status = "Launch assignment saved locally; device trigger delivery is unverified".into();
+                    server::dispatch(&mut engine, "GET", "/api/state", &[])
+                }
                 Job::Refresh => server::dispatch(&mut engine, "GET", "/api/state", &[]),
                 Job::Rescan => server::dispatch(&mut engine, "POST", "/api/rescan", b"{}"),
                 Job::Buttons(body) => {
@@ -4126,6 +4133,13 @@ unsafe extern "system" fn window_proc(
     #[cfg(test)]
     if message == ASSIGNMENT_TEST_QUERY {
         if let Ok(mut state) = (*pointer).try_borrow_mut() {
+            if wparam == 4 {
+                let value=&*(lparam as *const Value);
+                assignment_view::action(&mut state,assignment_view::Control::Category(assignment_model::Category::Launch));
+                if let Some(d)=&mut state.assignment.draft { d.launch.path=value.as_str().unwrap().into(); }
+                state.rebuild_fields(); return 0;
+            }
+            if wparam == 5 { assignment_view::action(&mut state,assignment_view::Control::LaunchSave); return 0; }
             if wparam == 2 {
                 *(lparam as *mut Value) = assignment_view::font_diagnostics(&state);
                 return 0;
@@ -4418,6 +4432,10 @@ unsafe extern "system" fn window_proc(
         }
     }
     match message {
+        WM_COMMAND if (wparam & 0xffff) as u16 >= assignment_view::LAUNCH_PATH && (wparam & 0xffff) as u16 <= assignment_view::LAUNCH_ARGUMENTS => {
+            if (wparam >> 16) as u32 == EN_CHANGE { assignment_view::launch_change(&mut state, (wparam & 0xffff) as u16, lparam as HWND); }
+            0
+        }
         WM_COMMAND if (wparam & 0xffff) as u16 == assignment_view::SPEED => {
             let code = (wparam >> 16) as u32;
             if code == EN_CHANGE || code == EN_KILLFOCUS {

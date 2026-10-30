@@ -2277,3 +2277,155 @@ mod studio_presets;
 
 #[path="studio_audio_interaction_tests.rs"]
 mod audio;
+
+#[test]
+#[ignore = "opens a bounded native window with simulated transport only"]
+fn native_launch_assignment_saves_without_device_delivery() {
+    let directory = std::env::temp_dir().join(format!(
+        "synapse-native-assignment-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(&directory).unwrap();
+    let frame = directory.join("frame.json");
+    let _environment = Environment::set(&[
+        ("SYNAPSE_LITE_CONFIG_DIR", &directory),
+        ("SYNAPSE_LITE_SMOKE_REPORT", &frame),
+        ("SYNAPSE_LITE_SMOKE_VIEW", Path::new("keyboard-customize")),
+    ]);
+    let sim = Sim::keyboard();
+    let engine = Engine::with_simulated_keyboard(&sim, directory.join("profiles.json")).unwrap();
+    assert!(engine.event_paths().is_empty());
+    let device = &engine.devices()[0];
+    let mut profile = secbird_core::profile_compat::new_native_profile(605, "Fixture").unwrap();
+    let opaque = json!({"inputID":"KEY_A","inputType":"KeyInput","isHyperShift":false,"outputType":"futureGroup","futureGroup":{"opaque":[7,8],"unknownFlag":true}});
+    profile.extra.get_mut("_synapseLiteSynapse4").unwrap()["decoded"]["mappings"] = json!([opaque]);
+    let mut store = Store::load(&directory.join("profiles.json")).unwrap();
+    let profiles = store.for_device(device);
+    profiles.profiles.clear();
+    profiles.profiles.insert("Fixture".into(), profile);
+    profiles.active = "Fixture".into();
+    store.save().unwrap();
+    let engine = Arc::new(Mutex::new(engine));
+    let controller_sim = sim.clone();
+    let controller_directory = directory.clone();
+    let controller = std::thread::spawn(move || -> Result<Value, String> {
+        let result = (|| -> Result<Value, String> {
+            wait_for(
+                || {
+                    std::fs::read(&frame)
+                        .ok()
+                        .and_then(|b| serde_json::from_slice::<Value>(&b).ok())
+                        .is_some_and(|f| f["matched"] == true && f["presented"] == true)
+                },
+                "Customize native frame",
+            )?;
+            let hwnd = WINDOW.load(Ordering::Acquire) as HWND;
+            unsafe {
+                let mut client: RECT = std::mem::zeroed();
+                GetClientRect(hwnd, &mut client);
+                let scale = f64::from(GetDpiForWindow(hwnd).max(96)) / 96.0;
+                let width = client.right as f64 / scale;
+                let _height = client.bottom as f64 / scale;
+                let layout =
+                    source_layout::SourceLayout::load(&assets_dir().join("keyboard-layout.json"))?;
+                let viewport = source_layout::Viewport {
+                    left: assignment_geometry::keyboard_center(width, false) - 365.0,
+                    top: 154.0,
+                    width: 730.0,
+                    height: 387.0,
+                };
+                let key = layout
+                    .bounds("KEY_A", viewport)
+                    .ok_or("Missing source KEY_A path")?;
+                let before = controller_sim.state().log.len();
+                let _before_store =
+                    std::fs::read(controller_directory.join("profiles.json")).unwrap();
+                let query = || {
+                    let mut value = Value::Null;
+                    SendMessageW(
+                        hwnd,
+                        ASSIGNMENT_TEST_QUERY,
+                        0,
+                        &mut value as *mut Value as isize,
+                    );
+                    value
+                };
+                lighting_click(
+                    hwnd,
+                    (key.left + key.right) / 2.0,
+                    (key.top + key.bottom) / 2.0,
+                    scale,
+                );
+                let mut fonts = Value::Null;
+                SendMessageW(
+                    hwnd,
+                    ASSIGNMENT_TEST_QUERY,
+                    2,
+                    &mut fonts as *mut Value as isize,
+                );
+                if fonts["private_font_files"] != 3
+                    || !fonts["rows"].as_array().is_some_and(|rows| {
+                        rows.len() == 10 && rows.iter().all(|row| row["matches"] == true)
+                    })
+                {
+                    return Err(format!(
+                        "Native source baseline vector check failed: {fonts}"
+                    ));
+                }
+                std::fs::write(
+                    controller_directory.join("font-window-geometry.json"),
+                    serde_json::to_vec_pretty(&fonts).unwrap(),
+                )
+                .unwrap();
+                let target=json!("C:\\Owned fixture\\never-executed.exe");
+                SendMessageW(hwnd,ASSIGNMENT_TEST_QUERY,4,&target as *const Value as isize);
+                let q=query(); if q["category"]!="LAUNCH_PROGRAM" { return Err(format!("Launch category failed: {q}")); }
+                let args=GetDlgItem(hwnd,i32::from(assignment_view::LAUNCH_ARGUMENTS));
+                SetFocus(args); SetWindowTextW(args,wide("--fixture-only").as_ptr());
+                let path=controller_directory.join("launch-program.png"); let path=json!(path.to_string_lossy());
+                SendMessageW(hwnd,STUDIO_TEST,6,&path as *const Value as isize);
+                SendMessageW(hwnd,ASSIGNMENT_TEST_QUERY,5,0);
+                wait_for(|| query()["open"]==false,"saved launch profile snapshot")?;
+                let saved=Store::load(&controller_directory.join("profiles.json")).map_err(|e|e.to_string())?;
+                let profile=&saved.devices.values().next().unwrap().profiles["Fixture"];
+                let rows=&profile.extra["_synapseLiteSynapse4"]["decoded"]["mappings"];
+                if rows[0]["launchGroup"]["arguments"]!="--fixture-only" || rows[0]["futureGroup"]["opaque"]!=json!([7,8]) { return Err(format!("Saved fields lost: {rows}")); }
+                if controller_sim.state().log[before..].iter().any(|c| c.id & 0x80 == 0) { return Err("Save emitted a device write".into()); }
+                PostMessageW(hwnd, WM_CLOSE, 0, 0);
+                Ok(
+                    json!({"launch_saved":true,"arguments_preserved":true,"opaque_fields_preserved":true,"sim_set_commands_added":0,"physical_discovery_disabled":true}),
+                )
+            }
+        })();
+        if result.is_err() {
+            unsafe {
+                let hwnd = WINDOW.load(Ordering::Acquire) as HWND;
+                let mut ignored = Value::Null;
+                SendMessageW(
+                    hwnd,
+                    ASSIGNMENT_TEST_QUERY,
+                    1,
+                    &mut ignored as *mut Value as isize,
+                );
+                PostMessageW(hwnd, WM_CLOSE, 0, 0);
+            }
+        }
+        result
+    });
+    let window = run_window(engine, Some(Duration::from_secs(12)), None);
+    let result = controller
+        .join()
+        .unwrap()
+        .expect("Assignment HWND interaction failed");
+    window.unwrap();
+    std::fs::write(
+        directory.join("interaction.json"),
+        serde_json::to_vec_pretty(&result).unwrap(),
+    )
+    .unwrap();
+    eprintln!("Native assignment evidence: {}", directory.display());
+}

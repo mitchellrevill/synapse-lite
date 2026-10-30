@@ -305,6 +305,7 @@ pub(super) struct Draft {
     pub turbo: bool,
     pub speed: u8,
     pub speed_draft: String,
+    pub launch: Launch,
     pub dirty: bool,
     pub rail_expanded: bool,
     pub rail_scroll: f64,
@@ -363,6 +364,7 @@ impl Draft {
             .filter(|n| (1..=20).contains(n))
             .unwrap_or(7) as u8;
         Self {
+            launch: Launch::read(original_records.first().map(|r| &r["launchGroup"])),
             context,
             input,
             anchor,
@@ -561,6 +563,62 @@ mod tests {
             enabled: true,
         }
     }
+    fn launch_draft() -> Draft {
+        let mut i=input(); i.functions.push("LAUNCH_PROGRAM".into());
+        let mut d=Draft::new(context(json!([
+            {"inputID":"KEY_A","inputType":"KeyInput","outputType":"launchGroup","isHyperShift":false,"futureRow":[9],"launchGroup":{"path":"C:\\old.exe","future":{"keep":true}}},
+            {"inputID":"KEY_A","isHyperShift":true,"outputType":"futureGroup","future":123}
+        ])),i,Anchor::Key("KEY_A".into()),false);
+        d.select(Category::Launch); d
+    }
+    #[test]
+    fn launch_edit_preserves_opaque_fields_and_other_layer_through_backup() {
+        let mut d=launch_draft();
+        d.launch.path="C:\\Tools\\app.exe".into(); d.launch.arguments="--name \"two words\"".into();
+        let next=d.launch_profile().unwrap();
+        let rows=&next["_synapseLiteSynapse4"]["decoded"]["mappings"];
+        assert_eq!(rows[0]["futureRow"],json!([9])); assert_eq!(rows[0]["launchGroup"]["future"]["keep"],true);
+        assert_eq!(rows[1], d.context.mappings.as_ref().unwrap()[1]);
+        let mut store=secbird_core::profile::Store::default();
+        let device=store.profiles_for("025D:SIM",605); device.active="A".into();
+        device.profiles.insert("A".into(),serde_json::from_value(next.clone()).unwrap());
+        let bytes=store.native_bytes().unwrap();
+        let imported=secbird_core::profile_compat::import_document(&bytes).unwrap();
+        assert_eq!(serde_json::to_value(&imported.store.devices["025D:SIM"].profiles["A"]).unwrap(),next);
+        d.launch.website=true; d.launch.url="example.com/path".into();
+        let website=d.launch_profile().unwrap();
+        let g=&website["_synapseLiteSynapse4"]["decoded"]["mappings"][0]["launchGroup"];
+        assert_eq!(g["url"],"https://example.com/path"); assert!(g.get("path").is_none()); assert!(g.get("arguments").is_none());
+        assert_eq!(g["future"]["keep"],true);
+    }
+    #[test]
+    fn launch_stock_profile_export_import_roundtrip() {
+        let mut profile=secbird_core::profile_compat::new_native_profile(605,"Launch fixture").unwrap();
+        profile.extra.get_mut("_synapseLiteSynapse4").unwrap()["decoded"]["mappings"]=json!([]);
+        let ctx=Arc::new(Context::from_device(&json!({"id":"025D:SIM","pid":"025D","active":"Launch fixture","profile":profile})).unwrap());
+        let mut i=input(); i.functions.push("LAUNCH_PROGRAM".into());
+        let mut d=Draft::new(ctx,i,Anchor::Key("KEY_A".into()),false); d.select(Category::Launch);
+        d.launch.website=true; d.launch.url="https://example.invalid/fixture".into();
+        let next=d.launch_profile().unwrap();
+        let mut store=secbird_core::profile::Store::default();
+        let device=store.profiles_for("025D:SIM",605); device.active="Launch fixture".into(); device.profiles.clear();
+        device.profiles.insert("Launch fixture".into(),serde_json::from_value(next.clone()).unwrap());
+        let exported=secbird_core::profile_compat::export_synapse4(&store,"025D:SIM").unwrap();
+        let imported=secbird_core::profile_compat::import_document(&exported.bytes).unwrap();
+        let p=imported.store.devices.values().next().unwrap().profiles.values().next().unwrap();
+        assert_eq!(p.extra["_synapseLiteSynapse4"]["decoded"]["mappings"],next["_synapseLiteSynapse4"]["decoded"]["mappings"]);
+    }
+    #[test]
+    fn launch_rejects_empty_and_ambiguous_and_cancel_is_lossless() {
+        let mut d=launch_draft(); let original=d.context.original_profile.clone();
+        d.launch.path.clear(); assert!(d.launch_profile().is_err());
+        d.launch.path="C:\\app.exe".into();
+        d.original_records[0]["launchGroup"]["arguments"]=json!(["future"]); assert!(d.launch_profile().is_err());
+        d.original_records[0]["launchGroup"].as_object_mut().unwrap().remove("arguments");
+        d.original_records.push(json!({})); assert!(d.launch_profile().is_err());
+        let mut view=View::default(); view.draft=Some(d); view.cancel(); assert!(view.draft.is_none());
+        assert_eq!(original["opaque"],json!({"keep":[1,2]}));
+    }
     #[test]
     fn opaque_originals_survive_preview_edit_and_discard() {
         let raw = json!([{"inputID":"KEY_A","inputType":"KeyInput","isHyperShift":false,"outputType":"futureGroup","futureGroup":{"opaque":[1,2]}}]);
@@ -670,5 +728,60 @@ mod tests {
         current["active"] = json!("A");
         current["profile"]["opaque"] = json!({"changed":true});
         assert!(!ctx.still_current(&current));
+    }
+}
+
+/// Stock MapLaunch uses mutually exclusive path/url. Arguments are a local extension.
+#[derive(Clone, Debug, Default)]
+pub(super) struct Launch { pub website: bool, pub path: String, pub url: String, pub arguments: String }
+impl Launch {
+    fn read(group: Option<&Value>) -> Self {
+        let g = group.unwrap_or(&Value::Null);
+        Self { website: g.get("path").is_none() && g.get("url").is_some(), path: g["path"].as_str().unwrap_or("").into(), url: g["url"].as_str().unwrap_or("").into(), arguments: g["arguments"].as_str().unwrap_or("").into() }
+    }
+    pub fn valid(&self) -> bool {
+        let target = if self.website { &self.url } else { &self.path };
+        !target.trim().is_empty() && !target.contains(['\0','\r','\n']) && !self.arguments.contains('\0')
+    }
+}
+impl Draft {
+    pub fn launch_profile(&self) -> Result<Value, String> {
+        if self.category != Some(Category::Launch) || !self.launch.valid() { return Err("Choose a program or enter a website".into()); }
+        if let Some(group) = self.original_records.first().and_then(|r| r.get("launchGroup")) {
+            if !group.is_object() || ["path", "url", "arguments"].iter().any(|key| group.get(*key).is_some_and(|v| !v.is_string())) {
+                return Err("Unrecognized launch field types are preserved; Save is unavailable".into());
+            }
+        }
+        let mut profile = self.context.original_profile.clone();
+        let mappings = profile["_synapseLiteSynapse4"]["decoded"]["mappings"].as_array_mut().ok_or("Source mapping context is unavailable")?;
+        if self.original_records.len() > 1 { return Err("Ambiguous assignment records are preserved; Save is unavailable".into()); }
+        let mut row = self.original_records.first().cloned().unwrap_or_else(|| json!({}));
+        row["inputID"] = json!(self.input.input_id);
+        row["inputType"] = json!(self.input.input_type);
+        row["isHyperShift"] = json!(self.hyper);
+        row["outputType"] = json!("launchGroup");
+        if !row["launchGroup"].is_object() { row["launchGroup"] = json!({}); }
+        let group = row["launchGroup"].as_object_mut().unwrap();
+        if self.launch.website {
+            group.remove("path"); group.remove("arguments");
+            let url = self.launch.url.trim();
+            group.insert("url".into(), json!(if url.contains("://") { url.to_string() } else { format!("https://{url}") }));
+        } else {
+            group.remove("url"); group.insert("path".into(), json!(self.launch.path));
+            if !self.launch.arguments.is_empty() { group.insert("arguments".into(), json!(self.launch.arguments)); }
+            else { group.remove("arguments"); }
+        }
+        if let Some(i) = mappings.iter().position(|r| r["inputID"].as_str() == Some(&self.input.input_id) && truthy(&r["isHyperShift"]) == self.hyper) { mappings[i] = row; } else { mappings.push(row); }
+        Ok(profile)
+    }
+    pub fn persist_launch(&self, path: &std::path::Path) -> Result<(), String> {
+        let next = self.launch_profile()?;
+        let mut store = secbird_core::profile::Store::load(path).map_err(|e|e.to_string())?;
+        let device = store.devices.get_mut(&self.context.owner.device).ok_or("Saved device missing")?;
+        if device.active != self.context.owner.profile { return Err("Active profile changed; reopen assignment".into()); }
+        let profile = device.profiles.get_mut(&device.active).ok_or("Saved profile missing")?;
+        if serde_json::to_value(&*profile).map_err(|e|e.to_string())? != self.context.original_profile { return Err("Profile changed; reopen assignment".into()); }
+        *profile = serde_json::from_value(next).map_err(|e|e.to_string())?;
+        store.save().map_err(|e|e.to_string())
     }
 }

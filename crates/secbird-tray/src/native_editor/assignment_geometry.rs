@@ -53,6 +53,7 @@ pub(super) fn form(
             }
         }
         Some(Category::Disable) => 59.0,
+        Some(Category::Launch) => 240.0,
         Some(Category::Mouse) => {
             if !allow_turbo {
                 116.0

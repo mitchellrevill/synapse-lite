@@ -5,10 +5,18 @@ use super::assignment_geometry as geo;
 use super::assignment_layout::{self as shell, Rect};
 use super::assignment_model::{self as model, Anchor, Category, Draft, Input, Transition};
 use super::*;
+use windows_sys::Win32::UI::Controls::EM_SETREADONLY;
+use windows_sys::Win32::UI::Input::KeyboardAndMouse::EnableWindow;
 pub(super) const SPEED: u16 = 1600;
+pub(super) const LAUNCH_PATH: u16 = 1601;
+pub(super) const LAUNCH_URL: u16 = 1602;
+pub(super) const LAUNCH_ARGUMENTS: u16 = 1603;
 #[derive(Clone)]
 pub(super) enum Control {
     Block,
+    LaunchMode(bool),
+    LaunchBrowse,
+    LaunchSave,
     Open(Input, Anchor),
     Close,
     Cancel,
@@ -837,6 +845,13 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
                 Role::DefaultValue,
             );
         }
+        Some(Category::Launch) => {
+            let x = f.display.x; let y = f.display.y;
+            button(p, if d.launch.website { "Program" } else { "Selected: Program" }, r(x,y,210.0,25.0), Some(Control::LaunchMode(false)));
+            button(p, "Browse .exe", r(x+120.0,y+30.0,90.0,25.0), if d.launch.website { None } else { Some(Control::LaunchBrowse) });
+            text(p, "Arguments", r(x,y+62.0,210.0,18.0), p.fonts.small, 0x999999, DT_LEFT);
+            button(p, if d.launch.website { "Selected: Website" } else { "Website" }, r(x,y+116.0,210.0,25.0), Some(Control::LaunchMode(true)));
+        }
         Some(Category::Disable) => {}
         Some(Category::Mouse) => {
             border(p, f.dropdown, 0x515151);
@@ -947,10 +962,10 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
         }
     }
     button(p, "CANCEL", f.cancel, Some(Control::Cancel));
-    button(p, "SAVE", f.save, None);
+    button(p, "SAVE", f.save, if d.category == Some(Category::Launch) && d.launch_profile().is_ok() { Some(Control::LaunchSave) } else { None });
     text(
         p,
-        d.save_reason(),
+        if d.category == Some(Category::Launch) { "Saves locally. Device trigger delivery is unverified; Save does not launch anything." } else { d.save_reason() },
         r(f.cancel.x, f.cancel.y + 39.0, 210.0, 85.0),
         p.fonts.small,
         0x999999,
@@ -1178,6 +1193,26 @@ pub(super) unsafe fn action(s: &mut State, c: Control) {
         return;
     }
     match c {
+        Control::LaunchMode(website) => { if let Some(d) = &mut s.assignment.draft { d.launch.website = website; d.dirty = true; } }
+        Control::LaunchBrowse => {
+            use windows_sys::Win32::UI::Controls::Dialogs::*;
+            let mut buffer = vec![0u16; 32768];
+            let filter = wide("Programs\0*.exe\0");
+            let mut ofn: OPENFILENAMEW = std::mem::zeroed();
+            ofn.lStructSize = std::mem::size_of::<OPENFILENAMEW>() as u32;
+            ofn.hwndOwner = s.hwnd; ofn.lpstrFilter = filter.as_ptr(); ofn.lpstrFile = buffer.as_mut_ptr(); ofn.nMaxFile = buffer.len() as u32;
+            ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+            if GetOpenFileNameW(&mut ofn) != 0 {
+                let end = buffer.iter().position(|c| *c == 0).unwrap_or(0);
+                if let Some(d) = &mut s.assignment.draft { d.launch.path = String::from_utf16_lossy(&buffer[..end]); d.dirty = true; }
+            }
+        }
+        Control::LaunchSave => {
+            if s.pending != 0 { return; }
+            if let Some(d) = s.assignment.draft.as_ref().filter(|d| d.launch_profile().is_ok()) {
+                s.queue(Job::LaunchAssignment(Box::new(d.clone())));
+            }
+        }
         Control::Block => {}
         Control::Open(i, a) => {
             if s.assignment
@@ -1451,12 +1486,22 @@ pub(super) unsafe fn rebuild_fields(s: &mut State) -> bool {
         return false;
     }
     s.retained_fields.remove(&SPEED);
+    for id in LAUNCH_PATH..=LAUNCH_ARGUMENTS { s.retained_fields.remove(&id); }
     if s.assignment.pending.is_some() {
         return true;
     }
     if let Some(g) = shell(s) {
         if let Some(d) = &s.assignment.draft {
-            if d.category == Some(Category::Mouse) && d.turbo && d.turbo_available() {
+            if d.category == Some(Category::Launch) {
+                let f = geo::form(g,d.context.owner.pid,d.category,false,true,d.form_scroll);
+                let x=f.display.x as i32; let y=f.display.y as i32;
+                let launch=d.launch.clone();
+                for (id,value,top,width,enabled,readonly) in [(LAUNCH_PATH,launch.path,y+30,115,!launch.website,true),(LAUNCH_ARGUMENTS,launch.arguments,y+82,210,!launch.website,false),(LAUNCH_URL,launch.url,y+146,210,launch.website,false)] {
+                    s.field(id,&value,x,top,width);
+                    if let Some(h)=s.fields.get(&id) { EnableWindow(*h,enabled as i32); SendMessageW(*h,EM_SETREADONLY,readonly as usize,0); SendMessageW(*h,EM_SETLIMITTEXT,32767,0); }
+                }
+            }
+            if let Some(d) = &s.assignment.draft { if d.category == Some(Category::Mouse) && d.turbo && d.turbo_available() {
                 let f = geo::form(
                     g,
                     d.context.owner.pid,
@@ -1490,6 +1535,7 @@ pub(super) unsafe fn rebuild_fields(s: &mut State) -> bool {
                 }
             }
         }
+    }
     }
     true
 }
@@ -1701,4 +1747,12 @@ mod keyboard_selection_tests {
             DeleteDC(dc);
         }
     }
+}
+
+pub(super) unsafe fn launch_change(s: &mut State, id: u16, sender: HWND) {
+    // Initial EDIT creation emits notifications before registration. Ignore them.
+    if s.fields.get(&id) != Some(&sender) || !matches!(id, LAUNCH_URL | LAUNCH_ARGUMENTS) { return; }
+    let value=s.raw_text(id);
+    if let Some(d)=&mut s.assignment.draft { if d.category==Some(Category::Launch) { if id==LAUNCH_URL { d.launch.url=value; } else { d.launch.arguments=value; } d.dirty=true; } }
+    InvalidateRect(s.hwnd,null(),0);
 }
