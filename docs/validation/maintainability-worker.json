@@ -1,0 +1,98 @@
+{
+  "objective": "Maintainability-only extraction of native background jobs and their queue tests",
+  "baseline_commit": "a145805aa1a055a2cfd92086d6d72cde59fca2aa",
+  "exe_sha256": "6d22de079de0a79b5bd437f20c7f97c882c7f51046a9fdcf3f0334a7e5d365f4",
+  "equivalence_check": {
+    "original_operations_and_string_literals_preserved": true,
+    "allowed_changes": [
+      "module path and pub(super) visibility",
+      "formatting and optional trailing commas",
+      "braces around three existing Settings expression closures"
+    ],
+    "added_expression_closure_brace_pairs": 3,
+    "baseline_canonical_tokens_sha256": "3bb7b2d31c47a7ab379e14c5eae34d7405d3a1783a2e525b45eaf7d3eadaf920"
+  },
+  "regular_app_tests": {
+    "passed": 376,
+    "ignored": 78
+  },
+  "strict_clippy": "passed",
+  "native_checks": [
+    "Macro source surface",
+    "Lighting and Studio effect palette",
+    "Linked Games add/link/unlink/remove/tab lifecycle"
+  ],
+  "initial_read_only_checks": [
+    {
+      "Scenario": "dashboard",
+      "StartupToPresentedFrameMilliseconds": 743.6936,
+      "PeakWorkingSetBytes": 42242048,
+      "SampledPeakPrivateBytes": 19767296.0
+    },
+    {
+      "Scenario": "keyboard-lighting",
+      "StartupToPresentedFrameMilliseconds": 771.5356,
+      "PeakWorkingSetBytes": 35237888,
+      "SampledPeakPrivateBytes": 18223104.0
+    },
+    {
+      "Scenario": "chroma",
+      "StartupToPresentedFrameMilliseconds": 770.1432,
+      "PeakWorkingSetBytes": 38907904,
+      "SampledPeakPrivateBytes": 19914752.0
+    }
+  ],
+  "alternating_dashboard_checks": [
+    {
+      "label": "repeat-1-after",
+      "exe_sha256": "6d22de079de0a79b5bd437f20c7f97c882c7f51046a9fdcf3f0334a7e5d365f4",
+      "working_set_peak_bytes": 38944768,
+      "private_peak_bytes": 19972096.0,
+      "startup_ms": 733.0837,
+      "raw_sha256": "5928c0939f5f0fe6c6f19349d69b7a8871ea84f611c6179eb56f6451198e27e5"
+    },
+    {
+      "label": "repeat-1-before",
+      "exe_sha256": "4dfbae6ecbd55274ce9e402b085fe0f969acdc97aff16bd3d96bfc195c3037f2",
+      "working_set_peak_bytes": 38825984,
+      "private_peak_bytes": 19898368.0,
+      "startup_ms": 773.6665,
+      "raw_sha256": "434e23889a298466a19b3c44957b4afb8b09af9b58d302482bda9e9a2166b06a"
+    },
+    {
+      "label": "repeat-2-after",
+      "exe_sha256": "6d22de079de0a79b5bd437f20c7f97c882c7f51046a9fdcf3f0334a7e5d365f4",
+      "working_set_peak_bytes": 38936576,
+      "private_peak_bytes": 19861504.0,
+      "startup_ms": 739.112,
+      "raw_sha256": "2825a4523927cd20b2fc823eb0b288e60264fc7b3a90a93a6f74a7aadaaa1551"
+    },
+    {
+      "label": "repeat-2-before",
+      "exe_sha256": "4dfbae6ecbd55274ce9e402b085fe0f969acdc97aff16bd3d96bfc195c3037f2",
+      "working_set_peak_bytes": 38834176,
+      "private_peak_bytes": 19800064.0,
+      "startup_ms": 736.8264,
+      "raw_sha256": "fe87d3a973e1cb574905f2d620dc2e7ea770aa7b5b41e148ccd06e0b449999e3"
+    }
+  ],
+  "interpretation": "No material performance regression observed in these short checks. Initial Dashboard working-set high-water 42.24 MB; alternating repeats before/after about 38.83/38.94 MB. Private memory stable around 19.8-20.0 MB, startup variation 733-774 ms. No new runtime algorithm, allocation policy, threads, caching or assets. Active-workload equivalence beyond these checks is not claimed.",
+  "profile_integrity": {
+    "before_sha256": "44F9C041C7E6302E503D8492B75F97B1E78248E0ACAFC1A6889011F749849E79",
+    "after_sha256": "44F9C041C7E6302E503D8492B75F97B1E78248E0ACAFC1A6889011F749849E79",
+    "unchanged": true
+  },
+  "source_sha256": {
+    "crates/secbird-tray/src/native_editor.rs": "c38b2b19012758d838283a7fc652d10cb11491cbb9cc6c6b32503d0af8b112f0",
+    "crates/secbird-tray/src/native_editor/device_worker.rs": "778d0dc046792618098911852681ee55d7bce9861ea013eccee0b9ab132f9b14"
+  },
+  "logs_sha256": {
+    "maintainability-worker-tests.log": "fe0c30e6b0e477a7be5cf5d4f7ac79cd61abe9999a17af23bbbe465db220f4f8",
+    "maintainability-worker-clippy.log": "265a7a8004db8b18982977829c101b9bafa9fbed97abb95bebd55c48bf789a8f",
+    "maintainability-worker-macro.log": "e276cedd8b9b7dff13c6dff5f783ba063ef4ef64064d01bfd12d6bfd94f88457",
+    "maintainability-worker-studio.log": "fd09f5b059674a0bcbf2432f1e8d3dc0537e1a40e7d38b59496d95c7c9feaa77",
+    "maintainability-worker-games.log": "275518500b522d1ccfb1679a7ad290a9fbf33a52780ea33cd81b47822adc0646",
+    "maintainability-worker-build.log": "cdfb019de54dc98c7abdfd11323b83a89ea92c7e018f1f25a7d1fe4c1eae6469"
+  },
+  "runtime_raw_sha256": "d9379d04e5a4df5767317c16fa3465bf5a6958c9c35475b37e85b019cb74650f"
+}
