@@ -13,6 +13,8 @@ mod macros;
 mod macro_xml;
 #[path="macro_playback_interaction_tests.rs"]
 mod macro_playback;
+#[path="macro_random_delay_interaction_tests.rs"]
+mod macro_random_delay;
 #[path="studio_interaction_tests.rs"]
 mod studio;
 use super::*;

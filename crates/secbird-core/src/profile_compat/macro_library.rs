@@ -6,6 +6,7 @@ use std::collections::BTreeSet;
 pub mod input_events;
 pub mod nested;
 pub mod host_actions;
+pub mod random_delay;
 pub mod planning;
 pub mod xml;
 use input_events::{Input,Gesture};
@@ -44,6 +45,7 @@ pub enum Change {
     DeleteEvent{guid:String,index:usize},
     MoveEvent{guid:String,index:usize,direction:i8},
     SetDelay{guid:String,index:usize,milliseconds:u32},
+    SetRandomDelay{guid:String,index:usize,min_ms:u32,max_ms:u32},
 }
 fn global(store:&Store)->Result<Vec<Value>> {
     let Some(value)=store.extra.get(KEY) else{return Ok(vec![]);};
@@ -213,7 +215,7 @@ pub fn edit(current:&Store,change:Change)->Result<Store> {
             for r in incoming {let id=guid(r)?;if let Some(old)=records.get(&id){if old!=r{return Err(invalid("Import conflicts with an existing macro GUID"));}}else{records.insert(id,r.clone());}propagate(&mut candidate,r)?;}
         }
         other=>{
-            let (id,index)=match &other {Change::InsertDelay{guid,index,..}|Change::InsertInput{guid,index,..}|Change::RebindInput{guid,index,..}|Change::DeleteInputGroup{guid,index}|Change::InsertNested{guid,index,..}|Change::RebindNested{guid,index,..}|Change::InsertAction{guid,index,..}|Change::SetAction{guid,index,..}|Change::DeleteEvent{guid,index}|Change::MoveEvent{guid,index,..}|Change::SetDelay{guid,index,..}=>(guid.clone(),*index),_=>unreachable!()};
+            let (id,index)=match &other {Change::InsertDelay{guid,index,..}|Change::InsertInput{guid,index,..}|Change::RebindInput{guid,index,..}|Change::DeleteInputGroup{guid,index}|Change::InsertNested{guid,index,..}|Change::RebindNested{guid,index,..}|Change::InsertAction{guid,index,..}|Change::SetAction{guid,index,..}|Change::DeleteEvent{guid,index}|Change::MoveEvent{guid,index,..}|Change::SetRandomDelay{guid,index,..}|Change::SetDelay{guid,index,..}=>(guid.clone(),*index),_=>unreachable!()};
             let original=records.get(&id).ok_or_else(||invalid("Unknown macro"))?;let mut rows=event_rows(original)?;
             match other {
                 Change::InsertDelay{milliseconds,..}=>{if rows.len()>=MAX_EVENTS||index>rows.len(){return Err(invalid("Event insertion exceeds macro bounds"));}rows.insert(index,delay(milliseconds)?);}
@@ -229,6 +231,7 @@ pub fn edit(current:&Store,change:Change)->Result<Store> {
                 Change::RebindNested{target,..}=>{let old=rows.get(index).ok_or_else(||invalid("Select a nested macro event"))?;rows[index]=nested::retarget(old,&target)?;explicit_target=Some(target);}
                 Change::InsertAction{action,..}=>{if rows.len()>=MAX_EVENTS||index>rows.len()||index==0&&rows.first().is_some_and(|row|protected(row)){return Err(invalid("Action insertion exceeds macro bounds"));}rows.insert(index,host_actions::row(&action)?);}
                 Change::SetAction{action,..}=>{let old=rows.get(index).ok_or_else(||invalid("Select a text, command or launch event"))?;rows[index]=host_actions::update(old,&action)?;}
+                Change::SetRandomDelay{min_ms,max_ms,..}=>{let old=rows.get(index).ok_or_else(||invalid("Unknown event"))?;rows[index]=random_delay::update(old,random_delay::Range::new(min_ms,max_ms)?)?;}
                 Change::SetDelay{milliseconds,..}=>{let old=rows.get(index).ok_or_else(||invalid("Unknown event"))?;let value:Value=serde_json::from_str(old.get()).map_err(|e|invalid(e.to_string()))?;if value["Type"]!=0{return Err(invalid("Select a delay event"));}
                     if value["Number"].is_object()||value["Number"].is_array(){return Err(invalid("Random/structured delay editing is not implemented; its source data was preserved"));}
                     // Preserve unknown leaves in an explicitly edited delay row.
@@ -266,7 +269,7 @@ pub(super) fn definition_store(record:&Value,context:&[Value])->Result<Store> {
 pub fn edit_definition_with_library(record:&Value,change:Change,context:&[Value])->Result<Value> {
     let id=guid(record)?;
     match &change {
-        Change::Rename{guid,..}|Change::InsertDelay{guid,..}|Change::InsertInput{guid,..}|Change::RebindInput{guid,..}|Change::DeleteInputGroup{guid,..}|Change::InsertNested{guid,..}|Change::RebindNested{guid,..}|Change::InsertAction{guid,..}|Change::SetAction{guid,..}|Change::DeleteEvent{guid,..}|Change::MoveEvent{guid,..}|Change::SetDelay{guid,..} if guid==&id=>{},
+        Change::Rename{guid,..}|Change::InsertDelay{guid,..}|Change::InsertInput{guid,..}|Change::RebindInput{guid,..}|Change::DeleteInputGroup{guid,..}|Change::InsertNested{guid,..}|Change::RebindNested{guid,..}|Change::InsertAction{guid,..}|Change::SetAction{guid,..}|Change::DeleteEvent{guid,..}|Change::MoveEvent{guid,..}|Change::SetRandomDelay{guid,..}|Change::SetDelay{guid,..} if guid==&id=>{},
         _=>return Err(invalid("This operation is not a local definition edit")),
     }
     let isolated=definition_store(record,context)?;

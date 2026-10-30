@@ -1,4 +1,5 @@
 //! Local compatible macro library and bounded, explicitly saved definition drafts.
+mod random_delay;
 use super::*;
 use secbird_core::{Store,profile_compat::macro_library::{self as library,Change,Entry,Library}};
 use std::{collections::{BTreeMap,VecDeque},io::Read};
@@ -63,6 +64,8 @@ pub(super) struct View {
     draft:Option<Draft>,
     name:String,
     delay:String,
+    range_min:String,
+    range_max:String,
     event:Option<usize>,
     picker:bool,
     picker_scroll:usize,
@@ -116,7 +119,7 @@ fn fixed_delay(entry:&Entry,index:usize)->Option<u32> {
 }
 impl View {
     pub(super) fn playing(&self)->bool {self.playback.is_some()}
-    fn dirty(&self)->bool {self.draft.as_ref().is_some_and(|d|d.dirty()||self.name!=d.entry.name||self.event.and_then(|i|fixed_delay(&d.entry,i)).is_some_and(|ms|self.delay.trim().parse::<u32>().ok()!=Some(ms)))}
+    fn dirty(&self)->bool {self.draft.as_ref().is_some_and(|d|d.dirty()||random_delay::dirty(self)||self.name!=d.entry.name||self.event.and_then(|i|fixed_delay(&d.entry,i)).is_some_and(|ms|self.delay.trim().parse::<u32>().ok()!=Some(ms)))}
     fn select(&mut self,id:Option<String>) {
         self.playback_snapshot=None;self.playback_report=None;
         self.selected=id;self.event=None;self.scroll=0;self.picker=false;
@@ -162,9 +165,11 @@ fn commit_fields(state:&mut State)->Result<(),String> {
         let current=state.macros.draft.as_ref().and_then(|d|fixed_delay(&d.entry,index));
         if let Some(current)=current {let entered=state.macros.delay.trim().parse::<u32>().map_err(|_|"Enter a delay from0 to3600000milliseconds")?;if entered!=current{local(state,Change::SetDelay{guid:id,index,milliseconds:entered})?;}}
     }
+    random_delay::commit(state)?;
     Ok(())
 }
 fn sync_input(view:&mut View) {
+    random_delay::sync(view);
     if let Some(group)=view.draft.as_ref().and_then(|d|input_events::selection(&d.entry.events,view.event?).ok()) {view.input=Some(group.input);view.gesture=Some(group.gesture);view.nested_mode=false;view.nested=None;}
     else if let Some(row)=view.draft.as_ref().and_then(|draft|draft.entry.events.get(view.event?)).filter(|row|row["Type"]==7) {view.nested_mode=true;view.nested=row["guid"].as_str().map(str::to_string);view.input=None;}
 }
@@ -183,7 +188,7 @@ pub(super) unsafe fn action(state:&mut State,control:Control) {
             Control::OpenHost(kind)=>{commit_fields(state)?;form::open(state,kind,None)?;},
             Control::Host(_)=>{},
             Control::Select(id)=>{if state.macros.dirty(){return Err("Save or discard before switching macros".into());}state.macros.select(Some(id));state.macros.status="Macro selected".into();state.macros.failed=false;},
-            Control::Event(index)=>{if mutable{commit_fields(state)?;}state.macros.event=Some(index);state.macros.delay=state.macros.draft.as_ref().and_then(|d|fixed_delay(&d.entry,index)).map(|n|n.to_string()).unwrap_or_default();sync_input(&mut state.macros);},
+            Control::Event(index)=>{if mutable{commit_fields(state)?;}state.macros.event=Some(index);state.macros.delay=state.macros.draft.as_ref().and_then(|d|fixed_delay(&d.entry,index)).map(|n|n.to_string()).unwrap_or("1000".into());sync_input(&mut state.macros);},
             Control::New=>{
                 if state.macros.dirty(){return Err("Save or discard the current draft first".into());}
                 let names=state.macros.data.as_ref().map(|d|d.library.entries.iter().map(|e|e.name.as_str()).collect::<Vec<_>>()).unwrap_or_default();
@@ -221,13 +226,16 @@ pub(super) unsafe fn fields(state:&mut State) {
     if state.macros.form.is_some(){form::fields(state);return;}
     if state.macros.draft.is_none(){return;}
     let left=((state.width as f32/state.scale)as i32-900).max(10)/2;
+    let range_fields=random_delay::fields(state,left);
     for (id,text,x,y,w) in [(NAME,state.macros.name.clone(),left+10,196,180),(DELAY,state.macros.delay.clone(),left+10,310,180)] {
+        if id==DELAY&&range_fields{continue;}
         state.retained_fields.remove(&id);state.field(id,&text,x,y,w);
         if let Some(hwnd)=state.fields.get(&id){SendMessageW(*hwnd,EM_SETLIMITTEXT,if id==NAME{128}else{7},0);SendMessageW(*hwnd,EM_SETREADONLY,(state.read_only_smoke||state.restricted_actions||state.macros.busy||state.macros.playing()) as usize,0);}
     }
 }
 pub(super) fn command(state:&mut State,id:u16,notification:u16)->bool {
     if active(state)&&state.macros.form.is_some(){return form::command(state,id,notification);}
+    if active(state)&&random_delay::command(state,id,notification){return true;}
     if !active(state)||notification!=EN_CHANGE as u16||!matches!(id,NAME|DELAY){return false;}
     if state.read_only_smoke||state.restricted_actions||state.macros.busy||state.macros.playing(){return true;}
     let text=state.raw_text(id);if id==NAME{state.macros.name=text;}else{state.macros.delay=text;}unsafe{InvalidateRect(state.hwnd,null(),0);}true
@@ -236,6 +244,7 @@ unsafe fn button(p:&mut Painter,text:&str,x:i32,y:i32,width:i32,control:Control,
     if enabled{p.button(text,x,y,width,Action::MacroLibrary(control),false);}else{p.fill(x,y,width,28,0x242424);unsafe{p.text(text,x,y,width,28,p.fonts.normal,MUTED,DT_CENTER);}}
 }
 fn event_label(value:&Value,library:Option<&Library>)->String {
+    if let Some(label)=random_delay::label(value){return label;}
     if let Some(label)=host_actions::label(value){return label;}
     if let Some(label)=input_events::label(value){return label;}
     if value["Type"]==7{return format!("Macro · {}",library.and_then(|library|library.entries.iter().find(|entry|value["guid"].as_str()==Some(entry.guid.as_str()))).map_or("Missing definition",|entry|entry.name.as_str()));}
@@ -252,8 +261,8 @@ pub(super) unsafe fn paint(state:&State,p:&mut Painter,width:i32,height:i32) {
     p.text("MY MACROS",width/2-55,87,110,28,p.fonts.normal,GREEN,DT_CENTER);
     p.text("NAME",left+10,162,180,28,p.fonts.small,TEXT,DT_LEFT);
     button(p,"DUPLICATE",left+10,240,85,Control::Duplicate,can&&draft.is_some());button(p,"DELETE",left+105,240,85,Control::Delete,can&&draft.is_some_and(|d|!d.entry.referenced));
-    p.text("DELAY · MILLISECONDS",left+10,276,180,28,p.fonts.small,TEXT,DT_LEFT);
-    button(p,"ADD DELAY",left+10,354,180,Control::AddDelay,can&&draft.is_some());button(p,"APPLY DELAY",left+10,390,180,Control::ApplyDelay,can&&draft.is_some_and(|d|view.event.and_then(|i|fixed_delay(&d.entry,i)).is_some()));
+    p.text(if random_delay::selected(view){"RANGE · MIN / MAX MS"}else{"DELAY · MILLISECONDS"},left+10,276,180,28,p.fonts.small,TEXT,DT_LEFT);
+    button(p,if random_delay::selected(view){"ADD 1000 MS DELAY"}else{"ADD DELAY"},left+10,354,180,Control::AddDelay,can&&draft.is_some());button(p,"APPLY DELAY",left+10,390,180,Control::ApplyDelay,can&&draft.is_some_and(|d|view.event.and_then(|i|fixed_delay(&d.entry,i)).is_some()||random_delay::editable(view)));
     let group=draft.and_then(|d|input_events::selection(&d.entry.events,view.event?).ok());
     let paired=group.as_ref().is_some_and(|group|group.indices.len()==2);
     let input_row=draft.is_some_and(|d|view.event.and_then(|i|d.entry.events.get(i)).is_some_and(|event|event["Type"]==1||event["Type"]==2));
@@ -340,7 +349,7 @@ pub(super) unsafe fn browse_export(hwnd:HWND,pointer:*mut RefCell<State>){
     }
 }
 #[cfg(test)] pub(super) fn diagnostics(state:&State)->Value {
-    let v=&state.macros;json!({"open":active(state),"playback":playback::diagnostics(v),"busy":v.busy,"form":form::diagnostics(v),"menu_open":v.popup,"dirty":v.dirty(),"selected":v.selected,"name":v.name,"delay":v.delay,"event":v.event,"status":v.status,"failed":v.failed,"entries":v.data.as_ref().map(|d|d.library.entries.iter().map(|e|json!({"guid":e.guid,"name":e.name,"referenced":e.referenced})).collect::<Vec<_>>()).unwrap_or_default(),"events":v.draft.as_ref().map(|d|&d.entry.events),"undo":v.draft.as_ref().map_or(0,|d|d.undo.len()),"redo":v.draft.as_ref().map_or(0,|d|d.redo.len())})
+    let v=&state.macros;json!({"open":active(state),"playback":playback::diagnostics(v),"busy":v.busy,"form":form::diagnostics(v),"menu_open":v.popup,"dirty":v.dirty(),"selected":v.selected,"name":v.name,"delay":v.delay,"range_min":v.range_min,"range_max":v.range_max,"event":v.event,"status":v.status,"failed":v.failed,"entries":v.data.as_ref().map(|d|d.library.entries.iter().map(|e|json!({"guid":e.guid,"name":e.name,"referenced":e.referenced})).collect::<Vec<_>>()).unwrap_or_default(),"events":v.draft.as_ref().map(|d|&d.entry.events),"undo":v.draft.as_ref().map_or(0,|d|d.undo.len()),"redo":v.draft.as_ref().map_or(0,|d|d.redo.len())})
 }
 #[cfg(test)] mod tests {
     use super::*;
