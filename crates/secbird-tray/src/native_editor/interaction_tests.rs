@@ -3,6 +3,8 @@
 //! process-local config/smoke environment and opens one bounded native window.
 #[path="calibration_interaction_tests.rs"]
 mod calibration;
+#[path="mouse_assignment_interaction_tests.rs"]
+mod mouse_assignment;
 #[path="advanced_interaction_tests.rs"]
 mod advanced;
 #[path="linked_games_interaction_tests.rs"]
@@ -1532,7 +1534,7 @@ fn native_assignment_source_draft_has_no_device_or_store_writes() {
                 }
                 let source_shell =
                     assignment_layout::shell(height - 42.0, 42.0, x, 36.0, false).unwrap();
-                let source_form = assignment_geometry::form(
+                let _source_form = assignment_geometry::form(
                     source_shell,
                     605,
                     Some(assignment_model::Category::Mouse),
@@ -1540,15 +1542,10 @@ fn native_assignment_source_draft_has_no_device_or_store_writes() {
                     true,
                     0.0,
                 );
-                lighting_click(
-                    hwnd,
-                    source_form.save.x + 50.0,
-                    source_form.save.y + 13.0,
-                    scale,
-                );
-                if query()["open"] != true || query()["pending"] != 0 {
-                    return Err("Disabled Save submitted or dismissed draft".into());
+                if query()["view"]["can_save"] != true {
+                    return Err("Supported local Mouse Function Save was not enabled".into());
                 }
+
 
                 lighting_click(hwnd, x + 265.0, y - 16.0, scale);
                 if query()["prompt"] != true {

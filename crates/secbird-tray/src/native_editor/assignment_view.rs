@@ -12,6 +12,7 @@ pub(super) enum Control {
     Open(Input, Anchor),
     Close,
     Cancel,
+    Save,
     Category(Category),
     Options,
     Option(usize),
@@ -842,7 +843,7 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
             border(p, f.dropdown, 0x515151);
             baseline_text(
                 p,
-                model::MOUSE_ACTIONS[d.mouse_option].1,
+                if d.mouse_choice_confirmed { model::MOUSE_ACTIONS[d.mouse_option].1 } else { "Retained choice unavailable" },
                 r(f.dropdown.x + 10.0, f.dropdown.y, 180.0, 27.0),
                 p.fonts.normal,
                 0xcccccc,
@@ -947,7 +948,7 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
         }
     }
     button(p, "CANCEL", f.cancel, Some(Control::Cancel));
-    button(p, "SAVE", f.save, None);
+    button(p, "SAVE", f.save, (d.can_save() && !s.assignment.saving && s.pending == 0).then_some(Control::Save));
     text(
         p,
         d.save_reason(),
@@ -1112,7 +1113,7 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
             DT_WORDBREAK | DT_CENTER,
         );
         button(p, "DON'T SAVE", g.discard, Some(Control::Discard));
-        button(p, "SAVE", g.save, None);
+        button(p, "SAVE", g.save, s.assignment.draft.as_ref().is_some_and(|d|d.can_save() && !s.assignment.saving && s.pending == 0).then_some(Control::Save));
         image(s, p, "assignment-dialog-close", g.close);
         hit(p, g.close, Control::Dismiss);
     }
@@ -1174,7 +1175,7 @@ fn transition(s: &mut State, next: Transition) {
     }
 }
 pub(super) unsafe fn action(s: &mut State, c: Control) {
-    if s.restricted_actions {
+    if s.restricted_actions || s.assignment.saving {
         return;
     }
     match c {
@@ -1197,6 +1198,17 @@ pub(super) unsafe fn action(s: &mut State, c: Control) {
             }
         }
         Control::Cancel => s.assignment.cancel(),
+        Control::Save => {
+            if s.pending == 0 {
+                if let Some(d) = s.assignment.draft.as_mut().filter(|d| d.turbo && d.turbo_available()) { d.speed_blur(); }
+            }
+            if let Some(d) = s.assignment.draft.as_ref().filter(|d|d.can_save() && s.pending == 0) {
+                let body = json!({"id":d.context.owner.device,"expected_profile":d.context.owner.profile,
+                    "expected_payload":d.context.original_profile,"assignment":d.assignment().unwrap()});
+                s.queue(Job::MouseAssignment(body));
+                s.assignment.saving = s.pending > 0;
+            }
+        }
         Control::Drawer => {
             if let Some(t) = s
                 .assignment
@@ -1451,7 +1463,7 @@ pub(super) unsafe fn rebuild_fields(s: &mut State) -> bool {
         return false;
     }
     s.retained_fields.remove(&SPEED);
-    if s.assignment.pending.is_some() {
+    if s.assignment.pending.is_some() || s.assignment.saving {
         return true;
     }
     if let Some(g) = shell(s) {
@@ -1494,6 +1506,7 @@ pub(super) unsafe fn rebuild_fields(s: &mut State) -> bool {
     true
 }
 pub(super) unsafe fn change(s: &mut State, blur: bool) {
+    if s.assignment.saving { return; }
     let value = s.raw_text(SPEED);
     if let Some(d) = &mut s.assignment.draft {
         if blur {
@@ -1534,7 +1547,7 @@ pub(super) unsafe fn repeat(s: &mut State) {
 
 #[cfg(test)]
 pub(super) fn diagnostics(s: &State) -> Value {
-    json!({"background_ready":s.customize_background.borrow().ready(),"drawer":s.assignment.drawer,"drawer_scroll":s.assignment.drawer_scroll,"drawer_count":visible_inputs(s).len(),"customized_only":s.assignment.customized_only,"filter_open":s.assignment.filter_open,"rail_expanded":s.assignment.draft.as_ref().is_some_and(|d|d.rail_expanded),"rail_scroll":s.assignment.draft.as_ref().map(|d|d.rail_scroll),"source_icons":s.icons.keys().filter(|key|key.starts_with("assignment-")).count()})
+    json!({"can_save":s.assignment.draft.as_ref().is_some_and(|d|d.can_save()),"mouse_option":s.assignment.draft.as_ref().map(|d|d.mouse_option),"saving":s.assignment.saving,"background_ready":s.customize_background.borrow().ready(),"drawer":s.assignment.drawer,"drawer_scroll":s.assignment.drawer_scroll,"drawer_count":visible_inputs(s).len(),"customized_only":s.assignment.customized_only,"filter_open":s.assignment.filter_open,"rail_expanded":s.assignment.draft.as_ref().is_some_and(|d|d.rail_expanded),"rail_scroll":s.assignment.draft.as_ref().map(|d|d.rail_scroll),"source_icons":s.icons.keys().filter(|key|key.starts_with("assignment-")).count()})
 }
 #[cfg(test)]
 pub(super) unsafe fn font_diagnostics(s: &State) -> Value {
@@ -1701,4 +1714,23 @@ mod keyboard_selection_tests {
             DeleteDC(dc);
         }
     }
+}
+
+/// Save completion is the only point at which a queued transition may run.
+pub(super) unsafe fn saved(s: &mut State, result: Result<Value, String>) {
+    s.assignment.saving = false;
+    match result {
+        Err(error) => s.error(&error),
+        Ok(state) => {
+            let pending = s.assignment.pending.take();
+            let external = s.assignment_next.take();
+            s.assignment.cancel();
+            s.state = state;
+            s.status = "Assignment saved locally; hardware delivery unavailable".into();
+            if let Some(next) = pending { transition(s, next); }
+            if let Some(next) = external { s.action(*next); }
+        }
+    }
+    s.rebuild_fields();
+    InvalidateRect(s.hwnd, null(), 0);
 }

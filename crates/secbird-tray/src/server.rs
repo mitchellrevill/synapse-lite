@@ -17,6 +17,8 @@ use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 mod lighting;
+mod mouse_assignment;
+pub(crate) use mouse_assignment::save_mouse_assignment;
 #[cfg(test)]
 mod application_paths_tests;
 #[cfg(test)]

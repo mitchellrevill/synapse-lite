@@ -1,5 +1,10 @@
 # Native Customize assignment popup
 
+**30 October 2026 update:** [Mouse Function local Save/Cancel and profile
+round-trip](MOUSE-FUNCTION-ASSIGNMENTS.md) supersede the disabled-Save statements
+below for supported mouse/key inputs in that category. Delivery remains gated;
+the following paragraphs retain the original reconstruction checkpoint.
+
 The installed Ornata V2 (605/025D) and mouse196 (00C4, with197/00C5 family alias) Customize pages now open a native source-derived assignment popup. Keyboard clicks use the recovered SVG paths. Mouse clicks use the shipped clickable label rows, not approximate regions over the product image. This is an interactive draft editor; assignment Save remains disabled for these devices because Ornata mapping readback and the mouse layer alias are not verified.
 
 The popup uses the existing owner-bound snapshot of the persisted desired profile. Its complete opaque profile and matching source mapping records remain unchanged. Missing source metadata is shown as unknown; absent desired mappings are not hardware readback. A changed device, active profile or retained profile payload received in an ordinary snapshot invalidates an open draft. Opening, editing, cancelling and discarding submit no device job and save no profile.

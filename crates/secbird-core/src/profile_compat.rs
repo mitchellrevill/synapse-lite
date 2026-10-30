@@ -17,6 +17,7 @@ pub mod macro_library;
 mod dependencies;
 pub use dependencies::{recover_macro_dependencies,MacroRecoveryReport};
 mod mappings;
+pub mod mouse_assignment;
 mod settings;
 
 pub(crate) fn source_key_usage(id: &str) -> Option<u8> {
@@ -605,6 +606,7 @@ pub fn export_synapse4(store: &Store, device_key: &str) -> Result<ExportReport> 
             }
         }
         mappings::export(profile, decoded_object, pid)?;
+        mouse_assignment::export_pending(profile, decoded_object, pid)?;
         if pid == 605 {
             settings::export_snap_tap(profile, decoded_object)?;
             settings::export_game_mode(profile, decoded_object)?;

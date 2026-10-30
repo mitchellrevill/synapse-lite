@@ -460,6 +460,7 @@ struct Hit {
 }
 
 enum Job {
+    MouseAssignment(Value),
     Studio(studio_view::Request),
     LinkedGames(linked_games::Request),
     MacroLibrary(macro_view::Request),
@@ -525,6 +526,7 @@ struct Reply {
 }
 
 enum WorkerReply {
+    MouseAssignment(Result<Value, String>),
     StudioControl(crate::host_studio::session::Control, crate::lighting_status::Reader, Value),
     StudioOutput(Result<Value, String>),
     Studio(studio_view::Response),
@@ -553,6 +555,13 @@ fn worker(
     }
     for job in jobs {
         let job = match job {
+            Job::MouseAssignment(body) => {
+                let result = engine.lock().map_err(|_|"Device worker unavailable".to_string()).and_then(|mut engine| {
+                    server::save_mouse_assignment(&mut engine, &body).map_err(|e|e.to_string())
+                });
+                if replies.send(WorkerReply::MouseAssignment(result)).is_err() { break; }
+                continue;
+            }
             Job::MacroLibrary(request)=>{
                 let context=engine.lock().map_err(|_|"Device worker is unavailable".to_string()).map(|engine|engine.is_measurement_read_only());
                 let result=context.and_then(|read_only|macro_view::work(request,read_only));
@@ -713,7 +722,8 @@ fn worker(
                     }
                     server::dispatch(&mut engine, "GET", "/api/state", &[])
                 }
-                Job::CachedLighting(_)
+                Job::MouseAssignment(_)
+                | Job::CachedLighting(_)
                 | Job::LinkedGames(_)
                 | Job::MacroLibrary(_)
                 | Job::Studio(_)
@@ -1805,6 +1815,11 @@ impl State {
     unsafe fn collect(&mut self) {
         while let Ok(message) = self.replies.try_recv() {
             let reply = match message {
+                WorkerReply::MouseAssignment(result) => {
+                    self.pending = self.pending.saturating_sub(1);
+                    assignment_view::saved(self, result);
+                    continue;
+                }
                 WorkerReply::LinkedGames(result)=>{self.pending=self.pending.saturating_sub(1);linked_games::receive(self,result);continue;}
                 WorkerReply::MacroLibrary(result)=>{self.pending=self.pending.saturating_sub(1);macro_view::receive(self,result);continue;}
                 WorkerReply::StudioControl(control, reader, status) => {
@@ -2191,6 +2206,7 @@ impl State {
             studio_view::action(self, studio_view::Control::StopDevice);
             return;
         }
+        if self.assignment.saving { return; }
         if matches!(&action, Action::Device(id) if self.selected.as_ref() == Some(id)) {
             return;
         }
@@ -3629,6 +3645,7 @@ unsafe extern "system" fn window_proc(
             let pointer = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut RefCell<State>;
             if !pointer.is_null() {
                 if let Ok(mut state) = (*pointer).try_borrow_mut() {
+                    if state.assignment.saving { return 0; }
                     if !macro_view::can_leave(&mut state){return 0;}
                     if studio_view::block_close(&mut state) {return 0;}
                     mouse_feedback::stop(&mut state);

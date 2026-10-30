@@ -258,9 +258,11 @@ impl Context {
             return None;
         }
         let original_profile = device["profile"].clone();
-        let mappings = original_profile["_synapseLiteSynapse4"]["decoded"]["mappings"]
-            .as_array()
-            .cloned();
+        let source = &original_profile["_synapseLiteSynapse4"];
+        let mappings = (source["decoded"]["mappings"].is_array() || source["pendingMouseAssignments"].is_array())
+            .then(|| serde_json::from_value::<secbird_core::Profile>(original_profile.clone()).ok()
+                .and_then(|profile| secbird_core::profile_compat::mouse_assignment::effective_mappings(&profile, pid).ok()))
+            .flatten();
         Some(Self {
             owner: Owner {
                 device: device["id"].as_str()?.into(),
@@ -302,6 +304,7 @@ pub(super) struct Draft {
     pub category: Option<Category>,
     pub original_records: Vec<Value>,
     pub mouse_option: usize,
+    pub mouse_choice_confirmed: bool,
     pub turbo: bool,
     pub speed: u8,
     pub speed_draft: String,
@@ -353,10 +356,11 @@ impl Draft {
             None
         };
         let mouse = original_records.first().map(|r| &r["mouseGroup"]);
-        let mouse_option = mouse
+        let recovered_choice = mouse
             .and_then(|v| v["mouseAssignment"].as_str())
-            .and_then(|id| MOUSE_ACTIONS.iter().position(|(v, _)| *v == id))
-            .unwrap_or(0);
+            .and_then(|id| MOUSE_ACTIONS.iter().position(|(v, _)| *v == id));
+        let mouse_option = recovered_choice.unwrap_or(0);
+        let mouse_choice_confirmed = category != Some(Category::Mouse) || recovered_choice.is_some();
         let turbo = mouse.is_some_and(|v| v["turboMode"]["isTurbo"] == true);
         let speed = mouse
             .and_then(|v| v["turboMode"]["keysPerSecond"].as_u64())
@@ -371,6 +375,7 @@ impl Draft {
             category,
             original_records,
             mouse_option,
+            mouse_choice_confirmed,
             turbo,
             speed,
             speed_draft: speed.to_string(),
@@ -403,10 +408,12 @@ impl Draft {
         );
         if initial.category == Some(category) {
             self.mouse_option = initial.mouse_option;
+            self.mouse_choice_confirmed = initial.mouse_choice_confirmed;
             self.turbo = initial.turbo;
             self.speed = initial.speed;
         } else {
             self.mouse_option = 0;
+            self.mouse_choice_confirmed = true;
             self.turbo = false;
             self.speed = 7;
         }
@@ -415,6 +422,7 @@ impl Draft {
     pub fn select_mouse(&mut self, index: usize) {
         if index < MOUSE_ACTIONS.len() {
             self.mouse_option = index;
+            self.mouse_choice_confirmed = true;
             self.dirty = true;
             self.options_open = false;
         }
@@ -473,11 +481,30 @@ impl Draft {
         let n = self.speed_draft.parse::<i32>().unwrap_or(0).clamp(1, 20) as u8;
         self.set_speed(n);
     }
+    pub fn assignment(&self) -> Result<secbird_core::profile_compat::mouse_assignment::Assignment, String> {
+        use secbird_core::profile_compat::mouse_assignment::{Assignment, Choice};
+        if self.category != Some(Category::Mouse) || !self.input.enabled || !self.categories.contains(&Category::Mouse) {
+            return Err("Select a supported Mouse Function first".into());
+        }
+        if !self.mouse_choice_confirmed { return Err("Select a supported dropdown choice before replacing the retained mouse assignment".into()); }
+        let assignment = Assignment {
+            input_id: self.input.input_id.clone(), input_type: self.input.input_type.clone(), hyper: self.hyper,
+            choice: Choice::parse(MOUSE_ACTIONS.get(self.mouse_option).ok_or("Unknown mouse choice")?.0).map_err(|e|e.to_string())?,
+            turbo: if self.turbo && self.turbo_available() {Some(self.speed)} else {None},
+        };
+        assignment.validate(self.context.owner.pid).map_err(|e|e.to_string())?;
+        let mut profile: secbird_core::Profile = serde_json::from_value(self.context.original_profile.clone()).map_err(|e|e.to_string())?;
+        secbird_core::profile_compat::mouse_assignment::set_pending(&mut profile, self.context.owner.pid, &self.context.owner.profile, assignment.clone()).map_err(|e|e.to_string())?;
+        Ok(assignment)
+    }
+    pub fn can_save(&self) -> bool { self.dirty && self.assignment().is_ok() }
     pub fn save_reason(&self) -> &'static str {
-        if self.context.owner.pid == 605 {
-            "Saving assignments is unavailable: Ornata mapping readback is unsupported. No command will be sent."
+        if self.category == Some(Category::Mouse) && !self.mouse_choice_confirmed {
+            "The retained mouse choice is unavailable. Select a dropdown choice to replace it; Cancel keeps the original."
+        } else if self.category == Some(Category::Mouse) {
+            "Save stores this profile's desired assignment locally. Hardware delivery is unavailable; no input or device command is sent."
         } else {
-            "Saving assignments is unavailable: the installed mouse layer mapping has not been verified. No command will be sent."
+            "Saving this assignment category is unavailable. The original mapping is preserved."
         }
     }
     pub fn provenance(&self) -> &'static str {
@@ -498,6 +525,7 @@ pub(super) enum Transition {
 }
 #[derive(Default)]
 pub(super) struct View {
+    pub saving: bool,
     pub draft: Option<Draft>,
     pub drawer: bool,
     pub drawer_scroll: f64,
@@ -671,4 +699,30 @@ mod tests {
         current["profile"]["opaque"] = json!({"changed":true});
         assert!(!ctx.still_current(&current));
     }
+    #[test]
+    fn missing_source_stays_unknown_until_explicit_mouse_authoring() {
+        let raw = json!({"id":"00C4:SIM","pid":"00C4","active":"Default","profile":{"future":{"keep":true}}});
+        let ctx = Arc::new(Context::from_device(&raw).unwrap());
+        assert!(ctx.mappings.is_none());
+        let mut draft = Draft::new(ctx.clone(), mouse_inputs().remove(1), Anchor::Mouse(1), false);
+        assert_eq!(draft.category, None);
+        assert!(!draft.can_save());
+        draft.select(Category::Mouse);
+        draft.select_mouse(3);
+        assert!(draft.can_save());
+        assert_eq!(ctx.original_profile, raw["profile"]);
+    }
+    #[test]
+    fn unknown_mouse_choice_needs_explicit_selection_before_save() {
+        let ctx=context(json!([{"inputID":"KEY_A","inputType":"KeyInput","isHyperShift":false,"outputType":"mouseGroup","mouseGroup":{"mouseAssignment":"FutureChoice","future":{"keep":true}}}]));
+        let mut d=Draft::new(ctx.clone(),input(),Anchor::Key("KEY_A".into()),false);
+        assert_eq!(d.category,Some(Category::Mouse));
+        assert!(!d.mouse_choice_confirmed);
+        d.toggle_turbo();d.set_speed(9);
+        assert!(!d.can_save());
+        d.select_mouse(3);
+        assert!(d.can_save());
+        assert_eq!(ctx.original_profile["_synapseLiteSynapse4"]["decoded"]["mappings"][0]["mouseGroup"]["mouseAssignment"],"FutureChoice");
+    }
+
 }

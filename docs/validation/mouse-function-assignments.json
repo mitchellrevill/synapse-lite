@@ -1,0 +1,127 @@
+{
+  "feature": "native Customize Mouse Function local authoring",
+  "date": "2026-10-30",
+  "captured_shared_base": "7b99930f9c63e659f1bcf3a51d9d9ca6a456904e",
+  "review_base": "6149f7a9422ae93322365ed12df46ab681dc40a8",
+  "branch": "feat/batch4-mouse-function-review-20261030",
+  "regular_tests": {
+    "core_passed": 521,
+    "core_ignored": 6,
+    "tray_passed": 309,
+    "tray_ignored": 48,
+    "cli_passed": 4,
+    "serial": true
+  },
+  "native_tests": {
+    "new_mouse_workflow_passed": 1,
+    "existing_assignment_regressions_passed": 2,
+    "simulated_only": true,
+    "automatic_workflow_seconds": 1.87
+  },
+  "new_checks": {
+    "core": 7,
+    "tray_model": 2,
+    "tray_backend": 1,
+    "native_workflow": 1
+  },
+  "release_build": {
+    "workspace": true,
+    "jobs": 1,
+    "passed": true
+  },
+  "source_supported_choices": [
+    "Click",
+    "Menu",
+    "ScrollButton",
+    "DoubleClick",
+    "ScrollUp",
+    "ScrollDown",
+    "Previous",
+    "Next",
+    "ScrollLeft",
+    "ScrollRight"
+  ],
+  "preservation": {
+    "original_source_payload_retained": true,
+    "opaque_mapping_group_turbo_leaves_retained": true,
+    "native_buttons_replay_unchanged": true,
+    "unrelated_profiles_layers_retained": true,
+    "unknown_mouse_choice_requires_explicit_selection": true
+  },
+  "visual": {
+    "native_capture": "mouse-function-native.png",
+    "native_width": 2048,
+    "native_height": 1104,
+    "native_scale": 1.25,
+    "stock_capture": "stock-mouse-function-reference.jpg",
+    "stock_width": 2048,
+    "stock_height": 1104,
+    "stock_dpi": "unknown",
+    "same_device_state": false,
+    "pixel_parity_proven": false,
+    "assessment": "Source shell/category/dropdown/Turbo/button geometry reused. Native capture visibly exposes local-only Save status. Stock is Ornata/Left Click; native is mouse/Double Click. Different DPI/device/state prevents pixel-parity acceptance. Existing mouse label clipping and GDI text differences remain outside this change."
+  },
+  "retained_failures": {
+    "first_full_run": {
+      "core_passed": 489,
+      "core_failed": 32,
+      "reason": "Access denied while atomically saving temporary files in the restricted process temp folder; rerun with owned workspace temp outside the restriction passed."
+    },
+    "first_native_workflow": {
+      "business_checks_passed": true,
+      "manual_ack_required": true,
+      "reason": "New test omitted acknowledgment of expected stale-save error dialog. Only identified fixture process dialog was closed. Harness corrected; automatic rerun passes."
+    }
+  },
+  "safety": {
+    "physical_discovery": false,
+    "physical_input_interception_or_injection": false,
+    "driver_routing_changed": false,
+    "normal_profile_writes": false,
+    "other_lite_instances_stopped": false,
+    "clipboard_access": false,
+    "canonical_checkout_edited": false,
+    "parent_checkout_edited": false,
+    "assignment_simulated_device_sets": 0
+  },
+  "remaining": [
+    "Live assignment routing and hardware acceptance",
+    "Held-input/Turbo scheduling and ownership, terminal completion/cancellation, unplug/sleep/profile-switch/crash recovery",
+    "Capability-gated conditional extras and unsupported media/dial/controller identities",
+    "Matched device/state/DPI visual comparison; exact hover/focus/help states",
+    "Stock live re-import acceptance",
+    "Three complete-build working-set/private-memory runs below 100000000 bytes"
+  ],
+  "logs": {
+    "workspace-tests.log": "6047a1e1382957c60b2f2772aa666df6d4c8574a4aa8469f9e26ba2465b0431a",
+    "workspace-tests-owned-temp.log": "27ec53dbaaa2d5ab6b791b22f3398ff71e29a035978a5f5fb86ffa3189d43893",
+    "native-mouse-function.log": "e19e5ec71cb296cfde46bfb61e7fc1c47a37615b9270c9a6d6df8fe020ebd12c",
+    "native-mouse-function-automatic.log": "b56c67a3fc523e56e73c9ab0e6068b64d4037182b4e3d8a5a65cd46174de80e0",
+    "native-assignment-regressions.log": "c12ceda6c2815931cd82bab871b0a06dbaf3708e7f7478471aeb68201d9dbb6b",
+    "release-build.log": "4d0f3a2664c1d74efaaf10b63169c279deb1034bfa324b5fda2710806a240371",
+    "tray-tests-final.log": "133326e21cb64cf9d0adc5440d98a5bde46a6663fa7c529ca6dd2814152ecacc",
+    "native-mouse-function-final.log": "5af6e0e3677c811a9965ce7069057deef301768491acbe9f22197d432af77287",
+    "native-assignment-final.log": "f1979dae71e8b3a77b8d6993475a16aba2c70345c1975d402aa000e33dd366e1",
+    "release-build-final.log": "e7f78708289ba1a65f3c9f4df8c5c35bd5feddfd7150fb13a864e74fdfeb4c78"
+  },
+  "binary_sha256": {
+    "secbird.exe": "5774a822766b75caf36121b1b9be3b5fb9fc8b3892d4cab68fb5688d27c7c7dd",
+    "secbird-tray.exe": "3e5f27c8457fe5fa6573895fedf1186e967b94a9d2d73d931bc754785f005c7e"
+  },
+  "changed_rust_sha256": {
+    "crates/secbird-core/src/profile_compat.rs": "e8d636c50a1f81f7d626ce20e635ab6f02bc5ffca3a1ad98c7866e7b90c04062",
+    "crates/secbird-core/src/profile_compat/mouse_assignment.rs": "e2b4bc650ed3c07805d3b7af1f97953273b066e857bd3f01cea9d0a4556d0f1e",
+    "crates/secbird-core/src/profile_compat/mouse_assignment/tests.rs": "e7ab0893a17397b2e640f837acd5add8961da5acee2a5047f692e825bf30f48b",
+    "crates/secbird-tray/src/native_editor.rs": "a29f2b84b34ac462a490d4ef478bbf6e3dd83552ae9509949059ac1767f21dcd",
+    "crates/secbird-tray/src/native_editor/assignment_model.rs": "ae58fc74a5699d6908e85002a83ac32310902b6f9579ff11e0e79423795b4565",
+    "crates/secbird-tray/src/native_editor/assignment_view.rs": "2d58e8bd380868f7da224b910a6cfe08e9902fd6b799f5db3b56850fe26cab0c",
+    "crates/secbird-tray/src/native_editor/interaction_tests.rs": "106f3bbefb7e80455359993306352aeec9203f88f03ec2438aae2467f981d474",
+    "crates/secbird-tray/src/native_editor/mouse_assignment_interaction_tests.rs": "3456144049bea32a7a61519e7e49042db700be9daae64c6f758b0a973ef14b02",
+    "crates/secbird-tray/src/server.rs": "8535c5c3f5c38a5f064792072fc7ab908d5392cc21c4c4c5c3e6ba13dea5a186",
+    "crates/secbird-tray/src/server/mouse_assignment.rs": "907151c52c581f97376a02a9330af4a59f17161d5662359de29f0003662a455d"
+  },
+  "screenshots_sha256": {
+    "mouse-function-native.png": "d14732ad1616f796c9a13867bc13a3703dc264e23a0389b650530810a3e91ec4",
+    "stock-mouse-function-reference.jpg": "e5b5c20625ba9982d9010a0822bdb45d43cb6971a7fdd39ca5f1d058b4e09b9d"
+  }
+}
