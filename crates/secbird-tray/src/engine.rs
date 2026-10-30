@@ -609,7 +609,7 @@ impl Engine {
         Store::load(&config_dir().join("profiles.json"))
     }
 
-    fn profile_store_path(&self)->std::path::PathBuf {
+    pub(crate) fn profile_store_path(&self)->std::path::PathBuf {
         #[cfg(test)]
         if let Some(path)=&self.runtime_store_path {return path.clone();}
         config_dir().join("profiles.json")

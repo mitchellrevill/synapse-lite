@@ -669,6 +669,7 @@ fn worker(
             }
             Job::Settings(body) => {
                 let result=engine.lock().map_err(|_|"Device worker is unavailable".to_string()).and_then(|mut engine| {
+                    if let Some(value)=body.as_ref().filter(|value|value["key"].as_str().is_some_and(|k|k.starts_with("store_"))) {return settings_view::store_work(&engine,value);}
                     if let Some(value)=body.as_ref().filter(|value|value["key"]=="lighting_control") {
                         if engine.is_measurement_read_only(){return Err("Read-only mode refuses lighting ownership changes".into());}
                         let snapshot=server::dispatch(&mut engine,"GET","/api/state",&[]).map_err(|e|e.to_string())?;
