@@ -147,12 +147,18 @@ impl PreparedStudio {
         })
     }
 
+    // TODO: expose prepared-scene diagnostics; this accessor is verified by fixture tests.
+    #[allow(dead_code)]
     pub(crate) fn identity(&self) -> LayoutIdentity {
         self.map.provenance().identity
     }
+    // TODO: expose prepared-scene diagnostics; this accessor is verified by fixture tests.
+    #[allow(dead_code)]
     pub(crate) fn placement_id(&self) -> &str {
         self.preview.device_id()
     }
+    // TODO: expose prepared-scene diagnostics; this accessor is verified by fixture tests.
+    #[allow(dead_code)]
     pub(crate) fn matches_draft(&self, draft: &Draft) -> bool {
         draft.matches_snapshot(&self.snapshot)
     }
@@ -162,6 +168,8 @@ impl PreparedStudio {
     pub(crate) fn frame_interval(&self) -> Duration {
         Duration::from_millis(40)
     }
+    // TODO: expose prepared-scene diagnostics; this accessor is verified by fixture tests.
+    #[allow(dead_code)]
     pub(crate) fn final_random_state(&self) -> u32 {
         self.preview.final_random_state()
     }
@@ -176,6 +184,8 @@ impl PreparedStudio {
     pub(crate) fn advance(&mut self) -> Result<()> {
         self.preview.advance()
     }
+    // TODO: expose prepared-scene diagnostics; this accessor is verified by fixture tests.
+    #[allow(dead_code)]
     pub(crate) fn storage_bytes(&self) -> usize {
         self.preview.storage_bytes()
             + self.snapshot.json().len()

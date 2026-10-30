@@ -123,6 +123,7 @@ impl Device {
 
 impl Canvas {
     /// Count each shared geometry allocation once, regardless of placements.
+    #[cfg(test)]
     pub fn asset_snapshot(&self) -> Value {
         let mut seen = BTreeSet::new();
         let mut bytes = 0usize;

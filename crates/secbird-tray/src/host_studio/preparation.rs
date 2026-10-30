@@ -7,6 +7,9 @@ use secbird_core::{
 use serde_json::{json, Value};
 use std::{path::Path, time::Instant};
 
+// TODO: expose read-only preparation metadata in local diagnostics. Production consumes
+// the authenticated prepared scene; these retained fields are covered by fixture tests.
+#[allow(dead_code)]
 pub(crate) struct ReadyStudio {
     prepared: PreparedStudio,
     target_key: String,
@@ -21,22 +24,32 @@ impl ReadyStudio {
     pub(crate) fn into_prepared(self) -> PreparedStudio {
         self.prepared
     }
+    // TODO: connect this fixture-verified preparation diagnostic to the local report.
+    #[allow(dead_code)]
     pub(crate) fn prepared(&self) -> &PreparedStudio {
         &self.prepared
     }
+    // TODO: connect this fixture-verified preparation diagnostic to the local report.
+    #[allow(dead_code)]
     pub(crate) fn prepared_mut(&mut self) -> &mut PreparedStudio {
         &mut self.prepared
     }
     /// Identity binding only; not a fresh control/owner/connection-generation check.
+    // TODO: connect this fixture-verified preparation diagnostic to the local report.
+    #[allow(dead_code)]
     pub(crate) fn matches_target(&self, device: &Device) -> bool {
         device.pid == 605
             && device.interface == 2
             && device.key() == self.target_key
             && device.path.as_bytes() == self.target_path
     }
+    // TODO: connect this fixture-verified preparation diagnostic to the local report.
+    #[allow(dead_code)]
     pub(crate) fn observation_started_at(&self) -> Instant {
         self.started
     }
+    // TODO: connect this fixture-verified preparation diagnostic to the local report.
+    #[allow(dead_code)]
     pub(crate) fn metadata_at(&self, now: Instant) -> Value {
         json!({"layout_id":self.observed.layout_id(),"edition_id":self.observed.edition_id(),
             "firmware_id":self.observed.firmware_id(),"identity_declared_size":self.observed.declared_size(),

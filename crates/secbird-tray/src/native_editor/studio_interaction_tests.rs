@@ -286,7 +286,7 @@ fn native_studio_breathing_colors_speed_preview_save_and_undo_preserve_source() 
             lighting_click(hwnd,630.,100.,scale);wait_for(||query()["preview"]["current"]==true&&query()["preview"]["frame"][1]==json!([171,205,239]),"custom Breathing first gradient pixel")?;
             lighting_click(hwnd,630.,100.,scale);
             SendMessageW(hwnd,STUDIO_TEST,3,&path as *const Value as isize);wait_for(||query()["pending"]==0&&query()["dirty"]==false,"custom Breathing save").map_err(|e|format!("{e}: {}",query()))?;
-            let saved=secbird_core::studio::Archive::parse(&std::fs::read(&path.as_str().unwrap()).map_err(|e|e.to_string())?).map_err(|e|e.to_string())?;
+            let saved=secbird_core::studio::Archive::parse(&std::fs::read(path.as_str().unwrap()).map_err(|e|e.to_string())?).map_err(|e|e.to_string())?;
             let saved:Value=serde_json::from_str(saved.profile_json(0).unwrap()).unwrap();let row=saved["layers"].as_array().unwrap().iter().find(|r|r["id"]==id).unwrap();let params=&row["regions"][0]["params"];
             if params["colorStops"][0]["Color"]!=0xabcdef||params["colorStops"][1]["Color"]!=0xabcdef||params["colorStops"].as_array().unwrap().len()!=9||params["duration"]!=6000||params["color"]!=0x112233||params["color2"]!=0xaabbcc{return Err(format!("Custom Breathing save mismatch: {params}"));}
             lighting_click(hwnd,450.,100.,scale);if query()["dirty"]!=true{return Err("Custom gradient Undo failed".into());}lighting_click(hwnd,520.,100.,scale);if query()["dirty"]!=false{return Err("Custom gradient Redo failed".into());}

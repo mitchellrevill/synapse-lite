@@ -764,7 +764,7 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
         }
         Control::BreathingGradient => {
             if state.studio.is_breathing() {
-                state.studio.breathing_gradient=!state.studio.breathing_gradient;
+                state.studio.breathing_gradient = !state.studio.breathing_gradient;
                 selection_changed(state);
             }
         }
@@ -1072,16 +1072,18 @@ pub(super) unsafe fn dialog(hwnd: HWND, pointer: *mut RefCell<State>, kind: usiz
     if kind == 2 {
         #[cfg(test)]
         let decision = (*pointer).borrow_mut().studio.test_decision.take();
-        #[cfg(not(test))]
-        let decision: Option<i32> = None;
-        let choice = decision.unwrap_or_else(|| {
+        let confirm = || {
             MessageBoxW(
                 hwnd,
                 wide("Save changes to this Studio composition library?\nChoose No to discard all unsaved composition and layer changes.").as_ptr(),
                 wide("Chroma Studio").as_ptr(),
                 MB_YESNOCANCEL | MB_ICONQUESTION,
             )
-        });
+        };
+        #[cfg(test)]
+        let choice = decision.unwrap_or_else(confirm);
+        #[cfg(not(test))]
+        let choice = confirm();
         let mut state = (*pointer).borrow_mut();
         state.studio.dialog = false;
         if state.studio.epoch != epoch {
@@ -1581,9 +1583,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         p,
         if view.renaming {
             "APPLY NAME"
-        } else {
-            if selected.is_some_and(|row| row.kind == Kind::Group) { "RENAME GROUP" } else { "RENAME LAYER" }
-        },
+        } else if selected.is_some_and(|row| row.kind == Kind::Group) { "RENAME GROUP" } else { "RENAME LAYER" },
         right + 10,
         180,
         150,
@@ -1782,7 +1782,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
             let title = &view.titles[index];
             let y = 116 + (index - view.profile_scroll) as i32 * 28;
             p.text(
-                &title,
+                title,
                 52,
                 y,
                 254,
@@ -1928,6 +1928,20 @@ unsafe fn quick_selection_dialog(hwnd: HWND, pointer: *mut RefCell<State>) {
 #[cfg(test)]
 pub(super) unsafe fn remap_fixture_test(state:&mut State){remap::fixture(state);}
 
+pub(super) fn wheel_picking(state:&State)->bool {state.studio.effect()==Some("wheel") && state.studio.wheel.picking && state.studio.editable()}
+pub(super) fn wheel_center(state:&mut State,x:u16,y:u16) {wheel::center(state,x,y);}
+pub(super) unsafe fn wheel_pointer(state:&mut State,message:u32,lparam:isize)->bool {wheel::pointer(state,message,lparam)}
+
+pub(super) fn wheel_geometry(state:&State)->Option<secbird_core::studio::document::WheelGeometry> {if state.studio.effect()!=Some("wheel") {return None;}state.studio.draft.as_ref()?.wheel_geometry(state.studio.selected.as_deref()?).ok()}
+pub(super) fn tidal_center_active(state:&State)->bool {tidal::center_active(&state.studio)}
+pub(super) fn tidal_center(state:&State)->Option<(u16,u16)> {tidal::center(&state.studio)}
+pub(super) fn place_tidal_center(state:&mut State,x:f64,y:f64) {
+    if !x.is_finite() || !y.is_finite() || !(0.0..=10000.0).contains(&x) || !(0.0..=10000.0).contains(&y) {
+        error(state,"Center point must be inside the 10000-pixel Studio canvas");return;
+    }
+    tidal::action(state,tidal::Control::Place(x.round() as u16,y.round() as u16));
+}
+
 #[cfg(test)]
 mod integration_contract_tests {
     use super::*;
@@ -1947,18 +1961,4 @@ mod integration_contract_tests {
         assert_ne!(TEST_EFFECT_POSITION,TEST_REMAP);
         assert!(![NAME,COLOR,COLD,POSITION,STOP_COLOR].contains(&ZOOM));
     }
-}
-
-pub(super) fn wheel_picking(state:&State)->bool {state.studio.effect()==Some("wheel") && state.studio.wheel.picking && state.studio.editable()}
-pub(super) fn wheel_center(state:&mut State,x:u16,y:u16) {wheel::center(state,x,y);}
-pub(super) unsafe fn wheel_pointer(state:&mut State,message:u32,lparam:isize)->bool {wheel::pointer(state,message,lparam)}
-
-pub(super) fn wheel_geometry(state:&State)->Option<secbird_core::studio::document::WheelGeometry> {if state.studio.effect()!=Some("wheel") {return None;}state.studio.draft.as_ref()?.wheel_geometry(state.studio.selected.as_deref()?).ok()}
-pub(super) fn tidal_center_active(state:&State)->bool {tidal::center_active(&state.studio)}
-pub(super) fn tidal_center(state:&State)->Option<(u16,u16)> {tidal::center(&state.studio)}
-pub(super) fn place_tidal_center(state:&mut State,x:f64,y:f64) {
-    if !x.is_finite() || !y.is_finite() || !(0.0..=10000.0).contains(&x) || !(0.0..=10000.0).contains(&y) {
-        error(state,"Center point must be inside the 10000-pixel Studio canvas");return;
-    }
-    tidal::action(state,tidal::Control::Place(x.round() as u16,y.round() as u16));
 }

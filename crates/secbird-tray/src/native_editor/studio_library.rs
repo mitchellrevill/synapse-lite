@@ -380,15 +380,18 @@ pub(super) unsafe fn dialog(hwnd: HWND, pointer: *mut RefCell<State>, kind: usiz
         state.studio.epoch
     };
     // No mutable State borrow spans a native modal call.
-    let result = (|| -> Result<Option<(Option<PathBuf>, Option<Vec<usize>>)>, String> {
+    type FileSelection = (Option<PathBuf>, Option<Vec<usize>>);
+    let result = (|| -> Result<Option<FileSelection>, String> {
         match kind {
             4 => {
                 let title = (*pointer).borrow().studio.title().to_owned();
                 #[cfg(test)]
                 let decision = (*pointer).borrow_mut().studio.test_decision.take();
+                let confirm=||MessageBoxW(hwnd,wide(&format!("Delete composition ‘{title}’?\nThis removes it from this library when saved.")).as_ptr(),wide("Delete composition").as_ptr(),MB_YESNO|MB_ICONWARNING|MB_DEFBUTTON2);
+                #[cfg(test)]
+                let accepted=decision.unwrap_or_else(confirm);
                 #[cfg(not(test))]
-                let decision: Option<i32> = None;
-                let accepted=decision.unwrap_or_else(||MessageBoxW(hwnd,wide(&format!("Delete composition ‘{title}’?\nThis removes it from this library when saved.")).as_ptr(),wide("Delete composition").as_ptr(),MB_YESNO|MB_ICONWARNING|MB_DEFBUTTON2));
+                let accepted=confirm();
                 Ok((accepted == IDYES).then_some((None, None)))
             }
             5 => Ok(choose(hwnd, false, "")?.map(|path| (Some(path), None))),
@@ -504,9 +507,7 @@ mod tests {
     use super::*;
     fn view() -> View {
         let archive=Arc::new(Archive::parse(br#"{"version":1,"opaque":9007199254740993123,"profiles":[{"id":"original","title":"Desk","devices":[],"layers":[]}]}"#).unwrap());
-        let mut view = View::default();
-        view.baseline = Some(archive.clone());
-        view.archive = Some(archive);
+        let mut view = View { baseline: Some(archive.clone()), archive: Some(archive), ..Default::default() };
         view.profile(0).unwrap();
         view
     }

@@ -222,13 +222,8 @@ mod ambient_lifecycle_tests {
     }
     #[test]
     fn pending_synthetic_completion_cannot_escape_its_deadline_after_mode_restart() {
-        let mut playback=Playback::default();
-        playback.generation=7;
-        playback.pending=true;
-        playback.pending_synthetic=true;
         // Stop during compile, then restart an ordinary preview on the same snapshot.
-        playback.synthetic_started=None;
-        playback.requested=true;
+        let mut playback=Playback {generation:7,pending:true,pending_synthetic:true,synthetic_started:None,requested:true,..Default::default()};
         assert!(!playback.settle_pending(7));
         assert!(!playback.pending);
         // New ordinary compile remains pending when an older generation finishes.
