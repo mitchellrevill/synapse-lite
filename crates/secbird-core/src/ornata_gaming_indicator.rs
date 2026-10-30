@@ -103,8 +103,8 @@ mod tests {
     }
     #[test]
     fn indicator_decoder_does_not_accept_wrong_led_unknown_state_or_padding() {
-        assert_eq!(decode(&[0, 8, 0]).unwrap(), false);
-        assert_eq!(decode(&[0, 8, 1]).unwrap(), true);
+        assert!(!decode(&[0, 8, 0]).unwrap());
+        assert!(decode(&[0, 8, 1]).unwrap());
         for bytes in [
             &[0, 8][..],
             &[0, 5, 1],

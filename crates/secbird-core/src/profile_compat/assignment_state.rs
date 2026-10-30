@@ -189,69 +189,6 @@ fn local_rows(profile: &Profile) -> Result<Vec<Value>> {
     }
     Ok(rows)
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn retiring_mouse_overlay_preserves_removed_hypershift_record_and_other_intent() {
-        let mut profile = super::super::new_native_profile(605, "Fixture").unwrap();
-        profile.extra.get_mut(SOURCE).unwrap()["decoded"]["mappings"] = json!([
-            {"inputID":"KEY_A","inputType":"KeyInput","isHyperShift":false,"outputType":"hyperShiftGroup","opaque":1},
-            {"inputID":"KEY_A","inputType":"KeyInput","isHyperShift":true,"outputType":"futureGroup","futureGroup":{"keep":17}},
-            {"inputID":"KEY_B","inputType":"KeyInput","isHyperShift":true,"outputType":"futureGroup","futureGroup":{"other":19}}
-        ]);
-        for input in ["KEY_A", "KEY_B"] {
-            mouse_assignment::set_pending(
-                &mut profile,
-                605,
-                "Fixture",
-                mouse_assignment::Assignment {
-                    input_id: input.into(),
-                    input_type: "KeyInput".into(),
-                    hyper: false,
-                    choice: mouse_assignment::Choice::Click,
-                    turbo: None,
-                },
-            )
-            .unwrap();
-        }
-        let other = profile.extra[SOURCE]["pendingMouseAssignments"][1].clone();
-        let prepared = prepare_input(&profile, 605, "Fixture", "KEY_A").unwrap();
-        assert_eq!(
-            prepared.extra[SOURCE]["pendingMouseAssignments"],
-            json!([other])
-        );
-        assert_eq!(
-            prepared.extra[SOURCE]["retiredAssignmentRecords"][0]["futureGroup"],
-            json!({"keep":17})
-        );
-        let rows = effective_mappings(&prepared, 605).unwrap();
-        assert!(!rows.iter().any(|r| same(r, "KEY_A", true)));
-        assert_eq!(
-            rows.iter().find(|r| same(r, "KEY_B", true)).unwrap()["futureGroup"],
-            json!({"other":19})
-        );
-        assert_eq!(
-            profile.extra[SOURCE]["decoded"]["mappings"][1]["futureGroup"],
-            json!({"keep":17})
-        );
-    }
-    #[test]
-    fn malformed_local_and_source_ownership_refuse_without_mutation() {
-        for rows in [
-            json!({"future":true}),
-            json!([{"inputID":"KEY_A","inputType":"KeyInput","isHyperShift":"false","outputType":"disableGroup"}]),
-            json!([{"inputID":"KEY_A","inputType":"KeyInput","isHyperShift":false,"outputType":"futureGroup"}]),
-        ] {
-            let mut profile = super::super::new_native_profile(605, "Fixture").unwrap();
-            profile.extra.insert(LOCAL.into(), rows);
-            let before = profile.clone();
-            assert!(prepare_input(&profile, 605, "Fixture", "KEY_A").is_err());
-            assert_eq!(profile, before);
-        }
-    }
-}
 pub fn effective_mappings(profile: &Profile, pid: u16) -> Result<Vec<Value>> {
     let mut records = mouse_assignment::effective_mappings(profile, pid)?;
     for local in local_rows(profile)? {
@@ -499,4 +436,67 @@ pub(super) fn export_local(
         rows.insert(position.min(rows.len()), row);
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn retiring_mouse_overlay_preserves_removed_hypershift_record_and_other_intent() {
+        let mut profile = super::super::new_native_profile(605, "Fixture").unwrap();
+        profile.extra.get_mut(SOURCE).unwrap()["decoded"]["mappings"] = json!([
+            {"inputID":"KEY_A","inputType":"KeyInput","isHyperShift":false,"outputType":"hyperShiftGroup","opaque":1},
+            {"inputID":"KEY_A","inputType":"KeyInput","isHyperShift":true,"outputType":"futureGroup","futureGroup":{"keep":17}},
+            {"inputID":"KEY_B","inputType":"KeyInput","isHyperShift":true,"outputType":"futureGroup","futureGroup":{"other":19}}
+        ]);
+        for input in ["KEY_A", "KEY_B"] {
+            mouse_assignment::set_pending(
+                &mut profile,
+                605,
+                "Fixture",
+                mouse_assignment::Assignment {
+                    input_id: input.into(),
+                    input_type: "KeyInput".into(),
+                    hyper: false,
+                    choice: mouse_assignment::Choice::Click,
+                    turbo: None,
+                },
+            )
+            .unwrap();
+        }
+        let other = profile.extra[SOURCE]["pendingMouseAssignments"][1].clone();
+        let prepared = prepare_input(&profile, 605, "Fixture", "KEY_A").unwrap();
+        assert_eq!(
+            prepared.extra[SOURCE]["pendingMouseAssignments"],
+            json!([other])
+        );
+        assert_eq!(
+            prepared.extra[SOURCE]["retiredAssignmentRecords"][0]["futureGroup"],
+            json!({"keep":17})
+        );
+        let rows = effective_mappings(&prepared, 605).unwrap();
+        assert!(!rows.iter().any(|r| same(r, "KEY_A", true)));
+        assert_eq!(
+            rows.iter().find(|r| same(r, "KEY_B", true)).unwrap()["futureGroup"],
+            json!({"other":19})
+        );
+        assert_eq!(
+            profile.extra[SOURCE]["decoded"]["mappings"][1]["futureGroup"],
+            json!({"keep":17})
+        );
+    }
+    #[test]
+    fn malformed_local_and_source_ownership_refuse_without_mutation() {
+        for rows in [
+            json!({"future":true}),
+            json!([{"inputID":"KEY_A","inputType":"KeyInput","isHyperShift":"false","outputType":"disableGroup"}]),
+            json!([{"inputID":"KEY_A","inputType":"KeyInput","isHyperShift":false,"outputType":"futureGroup"}]),
+        ] {
+            let mut profile = super::super::new_native_profile(605, "Fixture").unwrap();
+            profile.extra.insert(LOCAL.into(), rows);
+            let before = profile.clone();
+            assert!(prepare_input(&profile, 605, "Fixture", "KEY_A").is_err());
+            assert_eq!(profile, before);
+        }
+    }
 }

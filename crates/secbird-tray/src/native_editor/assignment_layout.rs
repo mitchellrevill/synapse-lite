@@ -109,6 +109,7 @@ pub(super) fn popup_left(
 /// Normal non-two-tap callback positioning. The parent must supply the actual
 /// key anchor. The source config-wrapper includes mouse label rows as well as
 /// keyboard SVG keys; command-dial and panel transitions have additional source states.
+#[cfg(test)]
 pub(super) fn popup_inline_top(
     from_panel: bool,
     within_config_wrapper: bool,

@@ -22,6 +22,7 @@ impl ReadyWave {
     }
     /// Conservative monotonic timestamp: before the identity query starts,
     /// not after asset authentication finishes. It is not a portable wall time.
+    #[cfg(test)]
     pub(crate) fn observation_started_at(&self) -> Instant {
         self.observation_started
     }
@@ -224,8 +225,7 @@ mod tests {
         ));
         std::fs::write(&path.0, b"{}").unwrap();
         let error = prepare(&device, Program::Right, &path.0)
-            .err()
-            .expect("untrusted asset rejected");
+            .expect_err("untrusted asset rejected");
         assert!(error.to_string().contains("SHA256"));
         assert_eq!(state.lock().unwrap().commands, vec![EDITION, EDITION]);
         assert_eq!(state.lock().unwrap().reads, 2);

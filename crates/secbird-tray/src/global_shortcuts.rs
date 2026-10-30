@@ -205,7 +205,7 @@ mod tests {
     static COMMAND: AtomicU32 = AtomicU32::new(0);
     unsafe extern "system" fn proc(hwnd: HWND, message: u32, w: usize, l: isize) -> isize {
         if message == WM_APPCOMMAND {
-            COMMAND.store(((l as u32 >> 16) & 0xfff) as u32, Ordering::SeqCst);
+            COMMAND.store((l as u32 >> 16) & 0xfff, Ordering::SeqCst);
             return 1;
         }
         DefWindowProcW(hwnd, message, w, l)

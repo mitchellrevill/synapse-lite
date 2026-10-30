@@ -522,7 +522,7 @@ const ASSIGNMENT_SAVED_STATUS:&str="Assignment saved locally; hardware delivery 
 
 enum Job {
     DeviceInformation(String),
-    LocalAssignment(assignment_model::Draft),
+    LocalAssignment(Box<assignment_model::Draft>),
     Onboard(onboard_view::Request),
     Chroma(chroma_view::Request),
     Settings(Option<Value>),
@@ -2806,7 +2806,7 @@ impl State {
                     #[cfg(not(test))]
                     PostMessageW(self.hwnd, PROFILE_MODAL_SAVE, 0, 0);
                     #[cfg(test)]
-                    if !self.smoke_requested.is_some() {
+                    if self.smoke_requested.is_none() {
                         PostMessageW(self.hwnd, PROFILE_MODAL_SAVE, 0, 0);
                     }
                 }
@@ -2884,6 +2884,8 @@ impl Painter<'_> {
         FillRect(self.dc, &self.rect(x, y, width, height), brush);
         DeleteObject(brush);
     }
+    // GDI text wrapper preserves the source rectangle, font, color and alignment arguments.
+    #[allow(clippy::too_many_arguments)]
     unsafe fn text(
         &self,
         text: &str,
@@ -3009,7 +3011,7 @@ impl Painter<'_> {
         }
         let dc = CreateCompatibleDC(self.dc);
         let old = SelectObject(dc, image.handle);
-        SetStretchBltMode(self.dc, HALFTONE as i32);
+        SetStretchBltMode(self.dc, HALFTONE);
         SetBrushOrgEx(self.dc, 0, 0, null_mut());
         StretchBlt(
             self.dc,
@@ -3681,8 +3683,8 @@ unsafe fn paint(state: &mut State, dc: HDC) {
             p.fill(x, y, 260, 250, PANEL);
             // Only visible cards demand image residency. Off-screen devices
             // remain in the catalogue without loading their photographs.
-            if x < width && y < height && y + 250 > 128 {
-                if !state.device_artwork.borrow_mut().draw(&p, device, x + 15, y + 20, 230, 160) {
+            if x < width && y < height && y + 250 > 128
+                && !state.device_artwork.borrow_mut().draw(&p, device, x + 15, y + 20, 230, 160) {
                     let default_edition = device.get("edition_id")
                         .is_none_or(|id|id.is_null() || id.as_u64() == Some(0));
                     let image = if default_edition { match device["pid"].as_str() {
@@ -3692,7 +3694,6 @@ unsafe fn paint(state: &mut State, dc: HDC) {
                         } } else { None };
                     p.image(image, x + 15, y + 20, 230, 160);
                 }
-            }
             p.text(
                 device["name"].as_str().unwrap_or("Razer device"),
                 x + 12,
@@ -5612,7 +5613,7 @@ fn run_window(
                     continue;
                 }
             }
-            if IsDialogMessageW(hwnd, &mut message) == 0 {
+            if IsDialogMessageW(hwnd, &message) == 0 {
                 TranslateMessage(&message);
                 DispatchMessageW(&message);
             }

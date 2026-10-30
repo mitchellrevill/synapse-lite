@@ -282,6 +282,7 @@ fn validate_store_for(store: &Store, kind: ProbeKind) -> Result<(String, String)
 }
 
 /// Uses cached state only. No identity, profile name or source payload is emitted.
+#[cfg(test)]
 pub(crate) fn readiness(runtime: &Value, expected_profile: &str) -> Value {
     readiness_for(ProbeKind::Uniform, runtime, expected_profile)
 }
@@ -396,6 +397,7 @@ pub(crate) fn readiness_for(kind: ProbeKind, runtime: &Value, expected_profile: 
 }
 
 /// A previously valid cached frame is insufficient after observation stalls.
+#[cfg(test)]
 pub(crate) fn fresh_readiness(runtime: &Value, profile: &str, age_ms: Option<u64>) -> Value {
     fresh_readiness_for(ProbeKind::Uniform, runtime, profile, age_ms)
 }

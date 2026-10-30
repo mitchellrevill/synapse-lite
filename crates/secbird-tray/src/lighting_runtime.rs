@@ -108,7 +108,7 @@ impl Config {
             let saved = u8::try_from(baseline.get("saved_raw")?.as_u64()?).ok()?;
             let live = u8::try_from(baseline.get("live_raw")?.as_u64()?).ok()?;
             let retained = if saved != 0 { saved } else { live };
-            let projected = ((u16::from(retained) * 100 + 254) / 255) as u8;
+            let projected = (u16::from(retained) * 100).div_ceil(255) as u8;
             let brightness = brightness?;
             (brightness.enabled == (live != 0) && brightness.value == projected).then_some(live)
         })();
@@ -390,6 +390,7 @@ impl Session {
     }
 }
 
+#[derive(Default)]
 pub(crate) struct Runtime {
     sessions: BTreeMap<String, Session>,
     pub running: bool,
@@ -398,19 +399,6 @@ pub(crate) struct Runtime {
     idle_clock: IdleClock,
     #[cfg(test)]
     pub test_environment: Option<Environment>,
-}
-impl Default for Runtime {
-    fn default() -> Self {
-        Self {
-            sessions: BTreeMap::new(),
-            running: false,
-            stopping: false,
-            environment: Environment::default(),
-            idle_clock: IdleClock::default(),
-            #[cfg(test)]
-            test_environment: None,
-        }
-    }
 }
 impl Runtime {
     pub fn start(&mut self) {

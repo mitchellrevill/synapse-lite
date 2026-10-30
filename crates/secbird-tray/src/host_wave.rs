@@ -9,11 +9,14 @@ use secbird_core::{
     effects::Effect,
     ornata_frame::PreparedOrnataFrame,
     ornata_manifest::AuthenticatedLayout,
-    ornata_spatial::{LayoutIdentity, OrnataSpatialMap, LOGICAL_PIXELS, PHYSICAL_PIXELS},
+    ornata_spatial::{OrnataSpatialMap, LOGICAL_PIXELS, PHYSICAL_PIXELS},
     wave_lighting::{CardinalDirection, WaveCycle, WaveRegion},
     Error, Profile, Result, Rgb,
 };
 use serde_json::{json, Value};
+#[cfg(test)]
+use secbird_core::ornata_spatial::LayoutIdentity;
+#[cfg(test)]
 use std::time::Duration;
 
 pub(crate) mod preparation;
@@ -169,6 +172,7 @@ impl PreparedWave {
     pub(crate) fn program(&self) -> Program {
         self.program
     }
+    #[cfg(test)]
     pub(crate) fn identity(&self) -> LayoutIdentity {
         self.map.provenance().identity
     }
@@ -176,6 +180,7 @@ impl PreparedWave {
         self.cycle.frame_count()
     }
     /// Source sample interval, not a promise about achieved USB cadence.
+    #[cfg(test)]
     pub(crate) fn frame_interval(&self) -> Duration {
         self.cycle.frame_interval()
     }

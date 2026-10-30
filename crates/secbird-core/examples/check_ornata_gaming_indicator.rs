@@ -64,7 +64,7 @@ fn sample(write: bool) -> Result<Value, Box<dyn std::error::Error>> {
     let changed = device
         .set_ornata_gaming_indicator(!baseline)
         .and_then(|_| device.ornata_gaming_indicator())
-        .map(|on| on == !baseline);
+        .map(|on| on != baseline);
     let restored = recovery.restore();
     let final_mode = device.ornata_mode_readback().ok().map(|mode| mode.mode());
     Ok(

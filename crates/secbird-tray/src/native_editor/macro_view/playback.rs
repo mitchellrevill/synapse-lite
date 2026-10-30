@@ -67,32 +67,6 @@ fn remember_transition(pending: &mut Option<Box<Action>>, next: &Action) {
         *pending = Some(Box::new(next.clone()));
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn close_survives_navigation_while_macro_drains() {
-        let mut pending = None;
-        remember_transition(&mut pending, &Action::Device("first".into()));
-        remember_transition(&mut pending, &Action::Home);
-        assert!(matches!(pending.as_deref(), Some(Action::Home)));
-        remember_transition(&mut pending, &Action::Close);
-        for next in [
-            Action::Home,
-            Action::Refresh,
-            Action::Device("second".into()),
-            Action::Close,
-        ] {
-            remember_transition(&mut pending, &next);
-            assert!(
-                matches!(pending.as_deref(), Some(Action::Close)),
-                "Closing must survive later queued navigation"
-            );
-        }
-    }
-}
 pub(in crate::native_editor) unsafe fn block_close(state: &mut State) -> bool {
     transition(state, &Action::Close)
 }
@@ -196,7 +170,34 @@ pub(in crate::native_editor) unsafe fn tick(state: &mut State) {
     }
     InvalidateRect(state.hwnd, null(), 0);
 }
+#[cfg(test)]
 pub(super) fn diagnostics(view: &View) -> Value {
     json!({"active":view.playing(),"snapshot":view.playback_snapshot.as_ref().map(|s|json!({"total":s.total,"completed":s.completed,"source_row":s.source_row,"launches":s.launches,"stopping":s.stopping})),
         "report":view.playback_report.as_ref().map(|r|json!({"outcome":match r.outcome{worker::Outcome::Finished=>"finished",worker::Outcome::Stopped=>"stopped",worker::Outcome::Failed(_)=>"failed"},"launches":r.launches,"completed":r.completed,"uncertain":r.uncertain})),"transition_pending":view.playback_next.is_some()})
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn close_survives_navigation_while_macro_drains() {
+        let mut pending = None;
+        remember_transition(&mut pending, &Action::Device("first".into()));
+        remember_transition(&mut pending, &Action::Home);
+        assert!(matches!(pending.as_deref(), Some(Action::Home)));
+        remember_transition(&mut pending, &Action::Close);
+        for next in [
+            Action::Home,
+            Action::Refresh,
+            Action::Device("second".into()),
+            Action::Close,
+        ] {
+            remember_transition(&mut pending, &next);
+            assert!(
+                matches!(pending.as_deref(), Some(Action::Close)),
+                "Closing must survive later queued navigation"
+            );
+        }
+    }
 }

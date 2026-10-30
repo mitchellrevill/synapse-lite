@@ -619,7 +619,7 @@ mod tests {
             }
             if state.fail_set_after_change {
                 state.fail_set_after_change = false;
-                return Err(io::Error::new(io::ErrorKind::Other, "ambiguous completion"));
+                return Err(io::Error::other("ambiguous completion"));
             }
             Ok(())
         }

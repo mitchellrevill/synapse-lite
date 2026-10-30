@@ -2003,7 +2003,7 @@ fn native_assignment_mouse_labels_and_drawer_have_source_hit_targets() {
                 SendMessageW(hwnd, WM_MBUTTONDOWN, 0, (tx as u32 | (ty as u32)<<16) as isize);
                 redraw(hwnd);redraw(hwnd);
                 let closed = host();
-                if !closed["selected"].is_null() || closed["order"].as_array().unwrap().len()!=0
+                if !closed["selected"].is_null() || !closed["order"].as_array().unwrap().is_empty()
                     || closed["device_count"]!=1 || closed["cards"].as_array().unwrap().len()!=1 {
                     return Err(format!("Closing view removed device or auto-reopened tab: {closed}"));
                 }
@@ -2020,7 +2020,7 @@ fn native_assignment_mouse_labels_and_drawer_have_source_hit_targets() {
                 let mut close_button=Value::Null;
                 SendMessageW(hwnd,RUNTIME_TEST_QUERY,8,&mut close_button as *mut Value as isize);
                 redraw(hwnd);
-                if !host()["selected"].is_null() || host()["order"].as_array().unwrap().len()!=0 {
+                if !host()["selected"].is_null() || !host()["order"].as_array().unwrap().is_empty() {
                     return Err("Visible source close button did not close view".into());
                 }
                 shortcut(84,true);
@@ -2493,7 +2493,7 @@ fn local_assignment_worker_persists_without_device_delivery() {
     let mut draft=Draft::new(ctx,input,Anchor::Key("KEY_A".into()),false); draft.select(Category::Disable);
     let before=sim.state().log.len();
     let (tx,rx)=mpsc::channel(); let (replies,answers)=mpsc::channel();
-    tx.send(Job::LocalAssignment(draft)).unwrap(); drop(tx);
+    tx.send(Job::LocalAssignment(Box::new(draft))).unwrap(); drop(tx);
     worker(Arc::new(Mutex::new(engine)),rx,replies);
     let results=answers.try_iter().filter_map(|r|if let WorkerReply::User(reply)=r {Some((reply.failed,reply.status))}else{None}).collect::<Vec<_>>();
     assert!(results.iter().any(|(failed,status)| !failed && status.contains("saved locally")),"{results:?}");

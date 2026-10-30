@@ -122,7 +122,7 @@ fn sync_loop(view:&mut View) {view.repeat=loop_pair(view).map_or("1".into(),|p|p
 fn fixed_delay(entry:&Entry,index:usize)->Option<u32> {
     let event=entry.events.get(index)?;if event["Type"]!=0||event["Number"].is_object(){return None;}
     let value=event["Number"].as_f64().or_else(||event["Number"].as_str()?.parse().ok())?;
-    let ms=(value*1000.).round();(ms.is_finite()&&ms>=0.&&ms<=3_600_000.).then_some(ms as u32)
+    let ms=(value*1000.).round();(ms.is_finite()&&(0. ..=3_600_000.).contains(&ms)).then_some(ms as u32)
 }
 impl View {
     pub(super) fn playing(&self)->bool {self.playback.is_some()}
@@ -203,7 +203,7 @@ pub(super) unsafe fn action(state:&mut State,control:Control) {
                 if SetTimer(state.hwnd,RECORD_TIMER,100,None)==0{return Err("Could not monitor focused recording".into());}state.macros.recording=Some((Default::default(),std::time::Instant::now()));SetFocus(state.hwnd);state.macros.status="RECORDING · type here / click timeline · Stop to keep · Esc cancels".into();},
             Control::StopRecording=>stop_recording(state,false),
             Control::CancelRecording=>stop_recording(state,true),
-            Control::Open=>{},Control::List=>state.macros.picker=!state.macros.picker,
+            Control::Open=>{},Control::List=>state.macros.picker = !state.macros.picker,
             Control::Play=>playback::start(state)?,Control::Stop=>{},
             Control::OpenHost(kind)=>{commit_fields(state)?;form::open(state,kind,None)?;},
             Control::Host(_)=>{},
@@ -217,7 +217,8 @@ pub(super) unsafe fn action(state:&mut State,control:Control) {
             Control::Duplicate=>{if state.macros.dirty(){return Err("Save or discard the current draft first".into());}let d=state.macros.draft.as_ref().ok_or("Select a macro")?;let original=d.entry.guid.clone();let title=format!("{} Copy",d.entry.name);let id=identity()?;state.macros.pending_selection=Some(id.clone());request(state,Request::Change(Change::Duplicate{guid:original,new_guid:id,name:title}));},
             Control::Delete=>{if state.macros.dirty(){return Err("Save or discard the current draft first".into());}let id=state.macros.selected.clone().ok_or("Select a macro")?;request(state,Request::Change(Change::Delete(id)));},
             Control::Import=>{if state.macros.dirty(){return Err("Save or discard the current draft first".into());}PostMessageW(state.hwnd,BROWSE,0,0);},
-            Control::Export=>{if state.macros.dirty(){return Err("Save or discard the current draft before exporting".into());}if state.macros.draft.is_none(){return Err("Select a macro".into());}PostMessageW(state.hwnd,EXPORT_BROWSE,0,0);},
+            Control::Export=>{if state.macros.dirty(){return Err("Save or discard the current draft before exporting".into());}
+            if state.macros.draft.is_none(){return Err("Select a macro".into());}PostMessageW(state.hwnd,EXPORT_BROWSE,0,0);},
             Control::InputMenu=>{PostMessageW(state.hwnd,INPUT_MENU,0,0);},
             Control::GestureMenu=>{PostMessageW(state.hwnd,INPUT_MENU,1,0);},
             Control::ChooseInput(input)=>{state.macros.input=Some(input);state.macros.gesture=Some(Gesture::Tap);state.macros.nested_mode=false;state.macros.nested=None;},
@@ -269,7 +270,8 @@ pub(super) fn command(state:&mut State,id:u16,notification:u16)->bool {
     if active(state)&&random_delay::command(state,id,notification){return true;}
     if !active(state)||notification!=EN_CHANGE as u16||!matches!(id,NAME|DELAY|REPEAT){return false;}
     if state.read_only_smoke||state.restricted_actions||state.macros.busy||state.macros.playing()||state.macros.recording.is_some(){return true;}
-    let text=state.raw_text(id);if id==NAME{state.macros.name=text;}else if id==DELAY{state.macros.delay=text;}else{state.macros.repeat=text;}unsafe{InvalidateRect(state.hwnd,null(),0);}true
+    let text=state.raw_text(id);if id==NAME{state.macros.name=text;}else if id==DELAY{state.macros.delay=text;}else{state.macros.repeat=text;}
+    unsafe{InvalidateRect(state.hwnd,null(),0);}true
 }
 unsafe fn button(p:&mut Painter,text:&str,x:i32,y:i32,width:i32,control:Control,enabled:bool) {
     if enabled{p.button(text,x,y,width,Action::MacroLibrary(control),false);}else{p.fill(x,y,width,28,0x242424);unsafe{p.text(text,x,y,width,28,p.fonts.normal,MUTED,DT_CENTER);}}
@@ -388,16 +390,6 @@ pub(super) unsafe fn browse_export(hwnd:HWND,pointer:*mut RefCell<State>){
 #[cfg(test)] pub(super) fn diagnostics(state:&State)->Value {
     let v=&state.macros;json!({"open":active(state),"playback":playback::diagnostics(v),"recording":v.recording.is_some(),"busy":v.busy,"form":form::diagnostics(v),"menu_open":v.popup,"dirty":v.dirty(),"selected":v.selected,"name":v.name,"delay":v.delay,"range_min":v.range_min,"range_max":v.range_max,"repeat":v.repeat,"loop_start":v.loop_start,"event":v.event,"status":v.status,"failed":v.failed,"entries":v.data.as_ref().map(|d|d.library.entries.iter().map(|e|json!({"guid":e.guid,"name":e.name,"referenced":e.referenced})).collect::<Vec<_>>()).unwrap_or_default(),"events":v.draft.as_ref().map(|d|&d.entry.events),"undo":v.draft.as_ref().map_or(0,|d|d.undo.len()),"redo":v.draft.as_ref().map_or(0,|d|d.redo.len())})
 }
-#[cfg(test)] mod tests {
-    use super::*;
-    #[test] fn local_history_is_bounded_and_keeps_reference_context() {
-        let store=library::edit(&Store::default(),Change::Create{guid:"history".into(),name:"Original".into()}).unwrap();
-        let mut entry=library::read(&store).unwrap().entries.remove(0);entry.referenced=true;let mut draft=Draft::new(entry);
-        for n in 0..40 {draft.apply(Change::Rename{guid:"history".into(),name:format!("Edit {n}")}).unwrap();}
-        assert_eq!(draft.undo.len(),20);assert!(draft.dirty());draft.history(false).unwrap();assert_eq!(draft.entry.name,"Edit 38");assert!(draft.entry.referenced);draft.history(true).unwrap();assert_eq!(draft.entry.name,"Edit 39");assert!(draft.entry.referenced);
-        draft.history(false).unwrap();draft.apply(Change::Rename{guid:"history".into(),name:"Branch".into()}).unwrap();assert!(draft.redo.is_empty());assert!(draft.undo.iter().chain(&draft.redo).map(String::len).sum::<usize>()<=4*1024*1024);
-    }
-}
 
 const RECORD_TIMER:usize=0x5243;
 pub(super) fn stop_recording(state:&mut State,cancel:bool) {
@@ -433,4 +425,14 @@ pub(super) unsafe fn record_message(state:&mut State,message:u32,wparam:usize,lp
     }else{None};
     if let Some(input)=input {let down=matches!(message,WM_KEYDOWN|WM_SYSKEYDOWN|WM_LBUTTONDOWN|WM_RBUTTONDOWN|WM_MBUTTONDOWN|WM_XBUTTONDOWN);let (r,start)=state.macros.recording.as_mut().unwrap();let result=r.capture(start.elapsed().as_millis() as u64,input,if down{Gesture::Down}else{Gesture::Up});if result.is_err(){stop_recording(state,false);InvalidateRect(state.hwnd,null(),0);}return true;}
     false
+}
+#[cfg(test)] mod tests {
+    use super::*;
+    #[test] fn local_history_is_bounded_and_keeps_reference_context() {
+        let store=library::edit(&Store::default(),Change::Create{guid:"history".into(),name:"Original".into()}).unwrap();
+        let mut entry=library::read(&store).unwrap().entries.remove(0);entry.referenced=true;let mut draft=Draft::new(entry);
+        for n in 0..40 {draft.apply(Change::Rename{guid:"history".into(),name:format!("Edit {n}")}).unwrap();}
+        assert_eq!(draft.undo.len(),20);assert!(draft.dirty());draft.history(false).unwrap();assert_eq!(draft.entry.name,"Edit 38");assert!(draft.entry.referenced);draft.history(true).unwrap();assert_eq!(draft.entry.name,"Edit 39");assert!(draft.entry.referenced);
+        draft.history(false).unwrap();draft.apply(Change::Rename{guid:"history".into(),name:"Branch".into()}).unwrap();assert!(draft.redo.is_empty());assert!(draft.undo.iter().chain(&draft.redo).map(String::len).sum::<usize>()<=4*1024*1024);
+    }
 }

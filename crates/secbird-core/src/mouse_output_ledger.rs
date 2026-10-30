@@ -878,8 +878,7 @@ mod tests {
 
     #[test]
     fn ticket_exhaustion_never_wraps_or_consumes_the_queued_impulse() {
-        let mut ledger = Ledger::default();
-        ledger.next_ticket = u64::MAX;
+        let mut ledger = Ledger { next_ticket: u64::MAX, ..Ledger::default() };
         let input = wheel(1024, 120);
         ledger.impulse(input).unwrap();
         assert_eq!(ledger.next_command(), Err(Failure::TicketExhausted));

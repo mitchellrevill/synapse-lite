@@ -260,6 +260,8 @@ unsafe fn surface(
     gp::GdipDeleteGraphics(graphics);
 }
 
+// Keep the source-matching drawing parameters explicit; grouping them would churn geometry call sites.
+#[allow(clippy::too_many_arguments)]
 unsafe fn label(
     p: &mut Painter<'_>,
     state: &State,

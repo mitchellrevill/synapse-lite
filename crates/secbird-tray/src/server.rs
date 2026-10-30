@@ -17,6 +17,7 @@ use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 mod lighting;
+#[cfg(test)]
 mod mouse_assignment;
 #[cfg(test)]
 mod application_paths_tests;
@@ -637,7 +638,7 @@ fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
             .ok_or_else(|| Error::NotFound(format!("device {target}")))?;
         let response = lighting::effect(dev, &mut store, &b, gate, worker_ready, &mut trace);
         match &response {
-            Ok(_) if matches!(b.source_effect_id, Some(2 | 3 | 4)) => {
+            Ok(_) if matches!(b.source_effect_id, Some(2..=4)) => {
                 let profiles = store
                     .devices
                     .get(&target)
@@ -1095,7 +1096,7 @@ fn state(engine: &Engine) -> Value {
         "query_only_device_handles": engine.is_measurement_read_only() && engine.devices().iter().all(Device::is_query_only),
         "devices": engine.devices().iter().map(|dev|{
             let mut device=device_json(dev);
-            device["lighting_runtime"]=runtime.get(&dev.key()).cloned().unwrap_or(Value::Null);
+            device["lighting_runtime"]=runtime.get(dev.key()).cloned().unwrap_or(Value::Null);
             device["chroma_quick"]=chroma_quick_capabilities(dev,engine.uniform_is_enabled());
             device
         }).collect::<Vec<_>>(),

@@ -1242,12 +1242,11 @@ pub(super) unsafe fn open_at(s: &mut State, point: POINT) -> bool {
     };
     if let Some((i, a)) = found {
         action(s, Control::Open(i, a));
-    } else if s.assignment.draft.is_some() {
-        if shell(s).is_none_or(|g| !geo::contains(g.popup, x, y) && !geo::contains(g.header, x, y))
+    } else if s.assignment.draft.is_some()
+        && shell(s).is_none_or(|g| !geo::contains(g.popup, x, y) && !geo::contains(g.header, x, y))
         {
             action(s, Control::Close);
         }
-    }
     true
 }
 fn transition(s: &mut State, next: Transition) {
@@ -1314,7 +1313,7 @@ pub(super) unsafe fn action(s: &mut State, c: Control) {
             if let Some(d)=&mut s.assignment.draft {if d.turbo && d.turbo_available(){d.speed_blur();}}
             if let Some(d)=s.assignment.draft.as_ref().filter(|d|d.can_save()).cloned() {
                 if s.device().is_none_or(|v|!d.context.still_current(v)){s.error("Profile changed; reopen assignment");return;}
-                s.queue(Job::LocalAssignment(d));
+                s.queue(Job::LocalAssignment(Box::new(d)));
                 s.assignment.saving=s.pending>0;
             }
         }
@@ -1381,7 +1380,7 @@ pub(super) unsafe fn action(s: &mut State, c: Control) {
             if let Some(d) = &mut s.assignment.draft {
                 if d.category==Some(Category::Sensitivity) {
                     if let Some((id,_))=d.sensitivity_options().get(i) {d.sensitivity.assignment=(*id).into();d.dirty=true;d.options_open=false;}
-                } else {if d.category == Some(Category::Keyboard) {d.select_keyboard_option(i);} else {d.select_option(i);}}
+                } else if d.category == Some(Category::Keyboard) {d.select_keyboard_option(i);} else {d.select_option(i);}
             }
         }
         Control::SaveSensitivity => {
@@ -1599,11 +1598,11 @@ pub(super) unsafe fn rebuild_fields(s: &mut State) -> bool {
                 let f = draft_form(g, d, d.form_scroll);
                 let values = d.dpi_text.clone();
                 let independent = d.sensitivity.independent;
-                for axis in 0..if independent { 2 } else { 1 } {
+                for (axis, value) in values.iter().enumerate().take(if independent { 2 } else { 1 }) {
                     let b = dpi_box(f, axis);
                     if b.y >= g.body.y && b.y + b.height < g.body.y + g.body.height {
                         let id = if axis == 0 { DPI_X } else { DPI_Y };
-                        s.field(id, &values[axis], b.x as i32, b.y as i32, b.width as i32);
+                        s.field(id, value, b.x as i32, b.y as i32, b.width as i32);
                         if let Some(hwnd) = s.fields.get(&id) {
                             SendMessageW(*hwnd, EM_SETLIMITTEXT, 5, 0);
                         }
@@ -1741,7 +1740,7 @@ pub(super) unsafe fn render_fixture(s: &mut State) -> Value {
     let mut info:BITMAPINFO=std::mem::zeroed();
     info.bmiHeader.biSize=std::mem::size_of::<BITMAPINFOHEADER>() as u32;
     info.bmiHeader.biWidth=s.width;
-    info.bmiHeader.biHeight=-s.height;
+    info.bmiHeader.biHeight = -s.height;
     info.bmiHeader.biPlanes=1;
     info.bmiHeader.biBitCount=32;
     info.bmiHeader.biCompression=BI_RGB;
@@ -1878,78 +1877,6 @@ pub(super) unsafe fn font_diagnostics(s: &State) -> Value {
     GetClientRect(s.hwnd, &mut client);
     ClientToScreen(s.hwnd, &mut origin);
     json!({"scale":s.scale,"private_font_files":s.fonts.loaded.len(),"rows":rows,"window_geometry":{"outer_width_px":outer.right-outer.left,"outer_height_px":outer.bottom-outer.top,"client_width_px":client.right,"client_height_px":client.bottom,"client_inset_x_px":origin.x-outer.left,"client_inset_y_px":origin.y-outer.top}})
-}
-
-#[cfg(test)]
-mod keyboard_selection_tests {
-    use super::*;
-
-    #[test]
-    fn selected_path_matches_physical_key_pixels_at_each_display_scale() {
-        // Synthetic key corners, spanning the keyboard, independent of private assets.
-        let fixture = serde_json::json!({
-            "product_id": 605, "edition_id": 0, "layout_id": 6,
-            "view_box": [0, 0, 730, 387], "source_sha256": "0".repeat(64),
-            "keys": [
-                {"buttonKey":"esc", "inputID":"ESC", "isEnabled":true,
-                 "d":"M68 95H93V120H68Z"},
-                {"buttonKey":"a", "inputID":"A", "isEnabled":true,
-                 "d":"M114 182H139V207H114Z"},
-                {"buttonKey":"num", "inputID":"NUM", "isEnabled":true,
-                 "d":"M637 209H662V260H637Z"}
-            ]
-        });
-        let layout =
-            source_layout::SourceLayout::from_slice(&serde_json::to_vec(&fixture).unwrap())
-                .unwrap();
-        unsafe {
-            let dc = CreateCompatibleDC(std::ptr::null_mut());
-            assert!(!dc.is_null());
-            for scale in [1.0, 1.25, 1.5, 2.0] {
-                for (width, drawer, scroll_x, scroll_y) in
-                    [(1280.0, false, 0.0, 0.0), (1000.0, true, 73.0, 41.0)]
-                {
-                    let viewport = source_layout::Viewport {
-                        left: geo::keyboard_center(width, drawer) - 365.0 - scroll_x,
-                        top: 154.0 - scroll_y,
-                        width: 730.0,
-                        height: 387.0,
-                    };
-                    for (id, x, y) in [
-                        ("ESC", 68.0, 95.0),
-                        ("A", 114.0, 182.0),
-                        ("NUM", 637.0, 209.0),
-                    ] {
-                        // The same point in the image and logical hitmap must be
-                        // the first physical GDI point of the selection outline.
-                        let hit = layout
-                            .hit_test(
-                                source_layout::Point {
-                                    x: viewport.left + x + 12.0,
-                                    y: viewport.top + y + 12.0,
-                                },
-                                viewport,
-                            )
-                            .unwrap();
-                        assert_eq!(hit.input_id, id);
-                        assert!(trace_keyboard_selection(&layout, dc, id, viewport, scale));
-                        let count = GetPath(dc, std::ptr::null_mut(), std::ptr::null_mut(), 0);
-                        assert!(count > 0);
-                        let mut points = vec![POINT { x: 0, y: 0 }; count as usize];
-                        let mut types = vec![0u8; count as usize];
-                        assert_eq!(
-                            GetPath(dc, points.as_mut_ptr(), types.as_mut_ptr(), count),
-                            count
-                        );
-                        assert_eq!(points[0].x, ((viewport.left + x) * scale).round() as i32);
-                        assert_eq!(points[0].y, ((viewport.top + y) * scale).round() as i32);
-                        AbortPath(dc);
-                    }
-                }
-            }
-            DeleteDC(dc);
-        }
-    }
 }
 
 fn draft_form(g: shell::Shell, d: &Draft, scroll: f64) -> geo::Form {
@@ -2207,4 +2134,76 @@ pub(super) fn sensitivity_diagnostics(s: &State) -> Value {
         Some(json!({"name":name,"x":(h.rect.left+h.rect.right)/2,"y":(h.rect.top+h.rect.bottom)/2}))
     }).collect::<Vec<_>>();
     json!({"hits":rows,"draft":s.assignment.draft.as_ref().map(|d|&d.sensitivity),"category":s.assignment.draft.as_ref().and_then(|d|d.category).map(|c|c.key()),"pending":s.pending,"open":s.assignment.draft.is_some(),"restricted":s.restricted_actions})
+}
+
+#[cfg(test)]
+mod keyboard_selection_tests {
+    use super::*;
+
+    #[test]
+    fn selected_path_matches_physical_key_pixels_at_each_display_scale() {
+        // Synthetic key corners, spanning the keyboard, independent of private assets.
+        let fixture = serde_json::json!({
+            "product_id": 605, "edition_id": 0, "layout_id": 6,
+            "view_box": [0, 0, 730, 387], "source_sha256": "0".repeat(64),
+            "keys": [
+                {"buttonKey":"esc", "inputID":"ESC", "isEnabled":true,
+                 "d":"M68 95H93V120H68Z"},
+                {"buttonKey":"a", "inputID":"A", "isEnabled":true,
+                 "d":"M114 182H139V207H114Z"},
+                {"buttonKey":"num", "inputID":"NUM", "isEnabled":true,
+                 "d":"M637 209H662V260H637Z"}
+            ]
+        });
+        let layout =
+            source_layout::SourceLayout::from_slice(&serde_json::to_vec(&fixture).unwrap())
+                .unwrap();
+        unsafe {
+            let dc = CreateCompatibleDC(std::ptr::null_mut());
+            assert!(!dc.is_null());
+            for scale in [1.0, 1.25, 1.5, 2.0] {
+                for (width, drawer, scroll_x, scroll_y) in
+                    [(1280.0, false, 0.0, 0.0), (1000.0, true, 73.0, 41.0)]
+                {
+                    let viewport = source_layout::Viewport {
+                        left: geo::keyboard_center(width, drawer) - 365.0 - scroll_x,
+                        top: 154.0 - scroll_y,
+                        width: 730.0,
+                        height: 387.0,
+                    };
+                    for (id, x, y) in [
+                        ("ESC", 68.0, 95.0),
+                        ("A", 114.0, 182.0),
+                        ("NUM", 637.0, 209.0),
+                    ] {
+                        // The same point in the image and logical hitmap must be
+                        // the first physical GDI point of the selection outline.
+                        let hit = layout
+                            .hit_test(
+                                source_layout::Point {
+                                    x: viewport.left + x + 12.0,
+                                    y: viewport.top + y + 12.0,
+                                },
+                                viewport,
+                            )
+                            .unwrap();
+                        assert_eq!(hit.input_id, id);
+                        assert!(trace_keyboard_selection(&layout, dc, id, viewport, scale));
+                        let count = GetPath(dc, std::ptr::null_mut(), std::ptr::null_mut(), 0);
+                        assert!(count > 0);
+                        let mut points = vec![POINT { x: 0, y: 0 }; count as usize];
+                        let mut types = vec![0u8; count as usize];
+                        assert_eq!(
+                            GetPath(dc, points.as_mut_ptr(), types.as_mut_ptr(), count),
+                            count
+                        );
+                        assert_eq!(points[0].x, ((viewport.left + x) * scale).round() as i32);
+                        assert_eq!(points[0].y, ((viewport.top + y) * scale).round() as i32);
+                        AbortPath(dc);
+                    }
+                }
+            }
+            DeleteDC(dc);
+        }
+    }
 }

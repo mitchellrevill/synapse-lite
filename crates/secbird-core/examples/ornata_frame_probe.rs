@@ -102,7 +102,7 @@ impl Capture {
     /// Pure preflight: a failed/missing observation refuses before frame OUT.
     fn preflight_errors(&self) -> Vec<String> {
         let mut errors = self.errors.clone();
-        if !self.mode.as_ref().is_some_and(|m| m.mode() == 3) {
+        if self.mode.as_ref().is_none_or(|m| m.mode() != 3) {
             errors
                 .push("Fresh Driver_Mode3 readback is required; no mode change is allowed".into());
         }

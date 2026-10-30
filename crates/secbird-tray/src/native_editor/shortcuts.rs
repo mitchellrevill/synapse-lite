@@ -573,6 +573,8 @@ unsafe fn button(
 }
 // The shared button-label painter deliberately uses DT_SINGLELINE. Explanations
 // on this page need wrapping without changing other source-derived pages.
+// Keep the source-matching drawing parameters explicit; grouping them would churn geometry call sites.
+#[allow(clippy::too_many_arguments)]
 unsafe fn paragraph(
     p: &Painter,
     text: &str,
