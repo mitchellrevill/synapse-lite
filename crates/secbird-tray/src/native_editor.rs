@@ -802,7 +802,7 @@ fn worker(
                         buttons = Some(answer);
                     }
                     if !failed {
-                        status = "Settings applied".into();
+                        status = if path == "/api/sensitivity-draft" {"Sensitivity draft saved locally; device assignment unchanged"} else {"Settings applied"}.into();
                     }
                     server::dispatch(&mut engine, "GET", "/api/state", &[])
                 }
@@ -4130,6 +4130,7 @@ unsafe extern "system" fn window_proc(
                 *(lparam as *mut Value) = assignment_view::font_diagnostics(&state);
                 return 0;
             }
+            if wparam == 4 {*(lparam as *mut Value)=assignment_view::sensitivity_diagnostics(&state);return 0;}
             if wparam == 3 {
                 *(lparam as *mut Value) = json!({"width":state.width,"height":state.height,"scale":state.scale,"hit_count":state.hits.len()});
                 return 0;
@@ -4418,6 +4419,11 @@ unsafe extern "system" fn window_proc(
         }
     }
     match message {
+        WM_COMMAND if matches!((wparam & 0xffff) as u16, assignment_view::DPI_X | assignment_view::DPI_Y) => {
+            let code=(wparam >> 16) as u32;
+            if code == EN_CHANGE || code == EN_KILLFOCUS {assignment_view::dpi_change(&mut state,(wparam & 0xffff) as u16,code == EN_KILLFOCUS);}
+            0
+        }
         WM_COMMAND if (wparam & 0xffff) as u16 == assignment_view::SPEED => {
             let code = (wparam >> 16) as u32;
             if code == EN_CHANGE || code == EN_KILLFOCUS {
@@ -4733,7 +4739,8 @@ unsafe extern "system" fn window_proc(
             } else if let Some(Action::Assignment(assignment_view::Control::Step(delta))) = action {
                 assignment_view::begin_step(&mut state, delta);
             } else if let Some(Action::Assignment(
-                control @ (assignment_view::Control::Slider(_)
+                control @ (assignment_view::Control::DpiSlider(_, _)
+                | assignment_view::Control::Slider(_)
                 | assignment_view::Control::RailThumb(_)
                 | assignment_view::Control::DrawerThumb(_)
                 | assignment_view::Control::FormThumb(_)
@@ -5429,6 +5436,7 @@ fn run_window(
                 }
             }
             let control_id = GetDlgCtrlID(message.hwnd) as u16;
+            if matches!(control_id, assignment_view::DPI_X | assignment_view::DPI_Y) && message.message == WM_KEYDOWN && matches!(message.wParam,13 | 27) {SetFocus(hwnd);continue;}
             if control_id == assignment_view::SPEED {
                 if message.message == WM_KEYDOWN && matches!(message.wParam, 13 | 27) {
                     SetFocus(hwnd);

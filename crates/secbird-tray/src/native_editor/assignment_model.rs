@@ -1,4 +1,4 @@
-//! Source Customize draft state. No transport, profile save or mapping translation.
+//! Source Customize draft state. Device delivery remains gated; sensitivity intent can be saved locally.
 //! Source:605 key popup1270/MapMouse and196 groupList; see source spec hashes.
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -250,6 +250,7 @@ pub(super) struct Context {
     pub owner: Owner,
     pub original_profile: Value,
     pub mappings: Option<Vec<Value>>,
+    pub sensitivity_range: Option<secbird_core::db::DpiRange>,
 }
 impl Context {
     pub fn from_device(device: &Value) -> Option<Self> {
@@ -267,6 +268,15 @@ impl Context {
                 profile: device["active"].as_str()?.into(),
                 pid,
             },
+            sensitivity_range: (|| {
+                let v = &device["sensitivity_assignment"];
+                let range = secbird_core::db::DpiRange {
+                    min: u16::try_from(v["min"].as_u64()?).ok()?,
+                    max: u16::try_from(v["max"].as_u64()?).ok()?,
+                    step: u16::try_from(v["step"].as_u64()?).ok()?,
+                };
+                (range.min > 0 && range.min <= range.max && range.step > 0).then_some(range)
+            })(),
             original_profile,
             mappings,
         })
@@ -301,6 +311,8 @@ pub(super) struct Draft {
     pub categories: Vec<Category>,
     pub category: Option<Category>,
     pub original_records: Vec<Value>,
+    pub sensitivity: secbird_core::sensitivity_assignment::Intent,
+    pub dpi_text: [String; 2],
     pub mouse_option: usize,
     pub turbo: bool,
     pub speed: u8,
@@ -331,7 +343,7 @@ impl Draft {
             })
             .cloned()
             .collect::<Vec<_>>();
-        let category = if context.mappings.is_none() {
+        let mut category = if context.mappings.is_none() {
             None
         } else if original_records.is_empty() {
             Some(Category::Default)
@@ -362,6 +374,44 @@ impl Draft {
             .and_then(|v| v["turboMode"]["keysPerSecond"].as_u64())
             .filter(|n| (1..=20).contains(n))
             .unwrap_or(7) as u8;
+        let mut sensitivity = secbird_core::sensitivity_assignment::Intent {
+            input: input.input_id.clone(),
+            hyper,
+            assignment: if input.input_id == "DKM_SB_03" {
+                "DPI_Up"
+            } else {
+                "DPI_Clutch"
+            }
+            .into(),
+            x: 800,
+            y: 800,
+            independent: false,
+        };
+        if let Some(group) = original_records
+            .first()
+            .filter(|r| r["outputType"] == "sensitivityGroup")
+            .map(|r| &r["sensitivityGroup"])
+        {
+            if let Ok(intent) = serde_json::from_value::<secbird_core::sensitivity_assignment::Intent>(
+                json!({"input":input.input_id,"hyper":hyper,"sensitivityAssignment":group["sensitivityAssignment"],"x":group["x"].as_u64().unwrap_or(800),"y":group["y"].as_u64().unwrap_or(800),"independent":group["independent"].as_bool().unwrap_or(false)}),
+            ) {
+                sensitivity = intent;
+            }
+        }
+        if let Some(saved) = context.original_profile[secbird_core::sensitivity_assignment::DRAFTS]
+            .as_array()
+            .and_then(|rows| {
+                rows.iter()
+                    .find(|r| r["input"] == input.input_id && r["hyper"] == hyper)
+            })
+            .and_then(|v| serde_json::from_value(v.clone()).ok())
+        {
+            sensitivity = saved;
+            if input.functions.iter().any(|f| f == "SENSITIVITY") {
+                category = Some(Category::Sensitivity);
+            }
+        }
+        let dpi_text = [sensitivity.x.to_string(), sensitivity.y.to_string()];
         Self {
             context,
             input,
@@ -370,6 +420,8 @@ impl Draft {
             categories,
             category,
             original_records,
+            sensitivity,
+            dpi_text,
             mouse_option,
             turbo,
             speed,
@@ -410,7 +462,68 @@ impl Draft {
             self.turbo = false;
             self.speed = 7;
         }
+        self.sensitivity = initial.sensitivity;
+        self.dpi_text = initial.dpi_text;
         self.speed_draft = self.speed.to_string();
+    }
+    pub fn sensitivity_options(&self) -> Vec<(&'static str, &'static str)> {
+        secbird_core::sensitivity_assignment::OPTIONS
+            .into_iter()
+            .filter(|(id, _)| {
+                let mut i = self.sensitivity.clone();
+                i.assignment = (*id).into();
+                i.allowed(self.context.owner.pid)
+            })
+            .collect()
+    }
+    pub fn dpi_change(&mut self, axis: usize, text: &str, blur: bool) {
+        if axis > 1 || (axis == 1 && !self.sensitivity.independent) {
+            return;
+        }
+        if !blur {
+            if text.len() <= 5 && text.bytes().all(|b| b.is_ascii_digit()) {
+                self.dpi_text[axis] = text.into();
+                self.dirty = true;
+            }
+            return;
+        }
+        let Some(range) = &self.context.sensitivity_range else {
+            return;
+        };
+        let previous = if axis == 0 {
+            self.sensitivity.x
+        } else {
+            self.sensitivity.y
+        };
+        // Stock clutch numeric input has no stepDPI prop: clamp integers, don't round.
+        let value = self.dpi_text[axis]
+            .parse::<u32>()
+            .unwrap_or(previous as u32)
+            .clamp(range.min as u32, range.max as u32) as u16;
+        if axis == 0 {
+            self.sensitivity.x = value;
+            if !self.sensitivity.independent {
+                self.sensitivity.y = value;
+            }
+        } else {
+            self.sensitivity.y = value;
+        }
+        self.dpi_text = [
+            self.sensitivity.x.to_string(),
+            self.sensitivity.y.to_string(),
+        ];
+    }
+    pub fn sensitivity_valid(&self) -> bool {
+        self.category == Some(Category::Sensitivity)
+            && self
+                .context
+                .sensitivity_range
+                .as_ref()
+                .is_some_and(|range| {
+                    self.sensitivity
+                        .validate(self.context.owner.pid, range)
+                        .is_ok()
+                })
     }
     pub fn select_mouse(&mut self, index: usize) {
         if index < MOUSE_ACTIONS.len() {
@@ -512,6 +625,7 @@ pub(super) struct View {
     pub drawer_grab: Option<f64>,
     pub form_grab: Option<f64>,
     pub options_grab: Option<f64>,
+    pub dpi_drag: Option<(super::assignment_layout::Rect, usize)>,
     pub speed_drag: bool,
     pub spinner: Option<i8>,
 }
@@ -670,5 +784,61 @@ mod tests {
         current["active"] = json!("A");
         current["profile"]["opaque"] = json!({"changed":true});
         assert!(!ctx.still_current(&current));
+    }
+}
+
+#[cfg(test)]
+mod sensitivity_tests {
+    use super::*;
+    #[test]
+    fn clutch_numeric_bounds_filters_and_reopen_pending_intent() {
+        let device = json!({"id":"00C4:SIM","pid":"00C4","active":"A","sensitivity_assignment":{"min":100,"max":26000,"step":50},"profile":{"_synapseLiteSynapse4":{"decoded":{"mappings":[]}}}});
+        let ctx = Arc::new(Context::from_device(&device).unwrap());
+        let mut d = Draft::new(ctx, mouse_inputs().remove(5), Anchor::Mouse(5), false);
+        d.select(Category::Sensitivity);
+        assert_eq!(d.sensitivity_options().len(), 6);
+        d.dpi_change(0, "401", false);
+        d.dpi_change(0, "", true);
+        assert_eq!((d.sensitivity.x, d.sensitivity.y), (401, 401));
+        d.dpi_change(0, "99999", false);
+        d.dpi_change(0, "", true);
+        assert_eq!(d.sensitivity.x, 26000);
+        d.dpi_change(0, "1e3", false);
+        assert_eq!(d.dpi_text[0], "26000");
+        d.dpi_change(0, "", false);
+        d.dpi_change(0, "", true);
+        assert_eq!(d.sensitivity.x, 26000);
+        let mut saved = device.clone();
+        saved["profile"][secbird_core::sensitivity_assignment::DRAFTS] = json!([d.sensitivity]);
+        let reopened = Draft::new(
+            Arc::new(Context::from_device(&saved).unwrap()),
+            d.input.clone(),
+            Anchor::Mouse(5),
+            false,
+        );
+        assert_eq!(reopened.category, Some(Category::Sensitivity));
+        assert_eq!(reopened.sensitivity.x, 26000);
+        assert!(!reopened.dirty);
+        let cycle = Draft::new(
+            Arc::new(Context::from_device(&device).unwrap()),
+            mouse_inputs().remove(7),
+            Anchor::Mouse(7),
+            false,
+        );
+        assert_eq!(
+            cycle
+                .sensitivity_options()
+                .iter()
+                .map(|(id, _)| *id)
+                .collect::<Vec<_>>(),
+            vec!["DPI_Up", "DPI_Down", "DPI_CycleUp", "DPI_CycleDown"]
+        );
+        let hyper = Draft::new(
+            Arc::new(Context::from_device(&device).unwrap()),
+            d.input,
+            Anchor::Mouse(5),
+            true,
+        );
+        assert_eq!(hyper.sensitivity_options().len(), 5);
     }
 }

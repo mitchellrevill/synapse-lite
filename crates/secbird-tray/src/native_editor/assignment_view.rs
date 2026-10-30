@@ -1,4 +1,4 @@
-//! Installed Customize popup projection. This module never submits a device job.
+//! Installed Customize popup projection. Sensitivity saves only inert local draft intent.
 //! Positions come from assignment_layout + inert shipped CSS/font replay.
 use super::assignment_fonts::Role;
 use super::assignment_geometry as geo;
@@ -6,9 +6,15 @@ use super::assignment_layout::{self as shell, Rect};
 use super::assignment_model::{self as model, Anchor, Category, Draft, Input, Transition};
 use super::*;
 pub(super) const SPEED: u16 = 1600;
+pub(super) const DPI_X: u16 = 1601;
+pub(super) const DPI_Y: u16 = 1602;
 #[derive(Clone)]
 pub(super) enum Control {
     Block,
+    SaveSensitivity,
+    Independent,
+    DpiSlider(Rect, usize),
+    Performance,
     Open(Input, Anchor),
     Close,
     Cancel,
@@ -241,7 +247,7 @@ unsafe fn rounded(p: &Painter, r: Rect, background: u32, stroke: u32, radius: f6
 }
 unsafe fn button(p: &mut Painter, t: &str, r: Rect, control: Option<Control>) {
     let enabled = control.is_some();
-    let save = t == "SAVE";
+    let save = t == "SAVE" || t == "SAVE DRAFT";
     let opacity = if enabled { 1.0 } else { 0.3 };
     let bg = performance_view::faded(if save { GREEN } else { 0x707070 }, 0x111111, opacity);
     let fg = performance_view::faded(if save { 0 } else { 0xffffff }, 0x111111, opacity);
@@ -372,12 +378,16 @@ unsafe fn trace_keyboard_selection(
     viewport: source_layout::Viewport,
     scale: f64,
 ) -> bool {
-    layout.trace_key_path(dc, input_id, source_layout::Viewport {
-        left: viewport.left * scale,
-        top: viewport.top * scale,
-        width: viewport.width * scale,
-        height: viewport.height * scale,
-    })
+    layout.trace_key_path(
+        dc,
+        input_id,
+        source_layout::Viewport {
+            left: viewport.left * scale,
+            top: viewport.top * scale,
+            width: viewport.width * scale,
+            height: viewport.height * scale,
+        },
+    )
 }
 
 pub(super) unsafe fn paint_customize(s: &State, p: &mut Painter) -> bool {
@@ -389,8 +399,18 @@ pub(super) unsafe fn paint_customize(s: &State, p: &mut Painter) -> bool {
     IntersectClipRect(p.dc, 0, p.px(128), s.width, s.height);
     let center = geo::keyboard_center(w, s.assignment.drawer) - s.assignment.scroll_x;
     let width = (w - if s.assignment.drawer { 230.0 } else { 0.0 }).clamp(770.0, 1220.0);
-    let background = r(center - width / 2.0, 148.0 - s.assignment.scroll_y, width, 340.0);
-    s.customize_background.borrow_mut().draw(p.dc, box_px(p, background), background, p.scale as f64);
+    let background = r(
+        center - width / 2.0,
+        148.0 - s.assignment.scroll_y,
+        width,
+        340.0,
+    );
+    s.customize_background.borrow_mut().draw(
+        p.dc,
+        box_px(p, background),
+        background,
+        p.scale as f64,
+    );
     if s.device().is_some_and(|d| d["pid"] == "025D") {
         let v = viewport(s);
         if s.keyboard_customize.is_none() || s.keyboard_layout.is_none() {
@@ -802,14 +822,7 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
         "assignment-close",
         r(g.close.x + 8.0, g.close.y + 8.0, 20.0, 20.0),
     );
-    let f = geo::form(
-        g,
-        d.context.owner.pid,
-        d.category,
-        d.turbo,
-        d.turbo_available(),
-        d.form_scroll,
-    );
+    let f = draft_form(g, d, d.form_scroll);
     let saved = SaveDC(p.dc);
     let b = box_px(p, g.body);
     IntersectClipRect(p.dc, b.left, b.top, b.right, b.bottom);
@@ -838,6 +851,7 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
             );
         }
         Some(Category::Disable) => {}
+        Some(Category::Sensitivity) => sensitivity_body(s, p, d, f),
         Some(Category::Mouse) => {
             border(p, f.dropdown, 0x515151);
             baseline_text(
@@ -947,10 +961,24 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
         }
     }
     button(p, "CANCEL", f.cancel, Some(Control::Cancel));
-    button(p, "SAVE", f.save, None);
+    button(
+        p,
+        if d.category == Some(Category::Sensitivity) {
+            "SAVE DRAFT"
+        } else {
+            "SAVE"
+        },
+        f.save,
+        (d.sensitivity_valid() && s.pending == 0 && !s.restricted_actions)
+            .then_some(Control::SaveSensitivity),
+    );
     text(
         p,
-        d.save_reason(),
+        if d.category == Some(Category::Sensitivity) {
+            "Saved locally only. Device assignment delivery is unverified; no input behavior changes."
+        } else {
+            d.save_reason()
+        },
         r(f.cancel.x, f.cancel.y + 39.0, 210.0, 85.0),
         p.fonts.small,
         0x999999,
@@ -1009,7 +1037,7 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
         hit(p, bar.thumb, Control::FormThumb(bar.thumb.y));
     }
     if d.options_open {
-        let panel = geo::options(f.dropdown, dimensions(s).1);
+        let panel = options_rect(d, f.dropdown, dimensions(s).1);
         fill(p, panel, 0);
         border(p, panel, 0x515151);
         let saved = SaveDC(p.dc);
@@ -1018,16 +1046,32 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
         for (i, row) in geo::option_rows(panel, d.options_scroll)
             .into_iter()
             .enumerate()
+            .take(if d.category == Some(Category::Sensitivity) {
+                d.sensitivity_options().len()
+            } else {
+                10
+            })
         {
             if hover(s, row) {
                 fill(p, row, 0x393939);
             }
             baseline_text(
                 p,
-                model::MOUSE_ACTIONS[i].1,
+                if d.category == Some(Category::Sensitivity) {
+                    d.sensitivity_options()[i].1
+                } else {
+                    model::MOUSE_ACTIONS[i].1
+                },
                 r(row.x + 10.0, row.y, row.width - 20.0, row.height),
                 p.fonts.normal,
-                if i == d.mouse_option { GREEN } else { 0xcccccc },
+                if (d.category == Some(Category::Sensitivity)
+                    && d.sensitivity_options()[i].0 == d.sensitivity.assignment)
+                    || (d.category != Some(Category::Sensitivity) && i == d.mouse_option)
+                {
+                    GREEN
+                } else {
+                    0xcccccc
+                },
                 DT_SINGLELINE | DT_VCENTER,
                 Role::Options,
             );
@@ -1041,7 +1085,11 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
                 panel.width - 2.0,
                 panel.height - 2.0,
             ),
-            250.0,
+            if d.category == Some(Category::Sensitivity) {
+                d.sensitivity_options().len() as f64 * 25.0
+            } else {
+                250.0
+            },
             d.options_scroll,
             8.0,
         ) {
@@ -1242,8 +1290,46 @@ pub(super) unsafe fn action(s: &mut State, c: Control) {
         }
         Control::Option(i) => {
             if let Some(d) = &mut s.assignment.draft {
-                d.select_mouse(i);
+                if d.category == Some(Category::Sensitivity) {
+                    if let Some((id, _)) = d.sensitivity_options().get(i) {
+                        d.sensitivity.assignment = (*id).into();
+                        d.dirty = true;
+                        d.options_open = false;
+                    }
+                } else {
+                    d.select_mouse(i);
+                }
             }
+        }
+        Control::SaveSensitivity => {
+            if let Some(d) = &mut s.assignment.draft {
+                d.dpi_change(0, "", true);
+                d.dpi_change(1, "", true);
+                if d.sensitivity_valid() {
+                    let body = json!({"id":d.context.owner.device,"expected_device":d.context.owner.device,"expected_profile":d.context.owner.profile,"expected_profile_data":d.context.original_profile,"sensitivity_draft":d.sensitivity});
+                    s.queue(Job::Action("/api/sensitivity-draft", body));
+                }
+            }
+        }
+        Control::Independent => {
+            if let Some(d) = &mut s.assignment.draft {
+                d.sensitivity.independent = !d.sensitivity.independent;
+                if !d.sensitivity.independent {
+                    d.sensitivity.y = d.sensitivity.x;
+                }
+                d.dpi_text = [d.sensitivity.x.to_string(), d.sensitivity.y.to_string()];
+                d.dirty = true;
+            }
+        }
+        Control::DpiSlider(track, axis) => {
+            s.assignment.dpi_drag = Some((track, axis));
+            SetCapture(s.hwnd);
+            if let Some((x, _)) = s.assignment.hover {
+                set_dpi_slider(s, track, axis, x);
+            }
+        }
+        Control::Performance => {
+            s.action(Action::Tab(Tab::Performance));
         }
         Control::Turbo => {
             if let Some(d) = &mut s.assignment.draft {
@@ -1293,22 +1379,15 @@ fn set_slider(s: &mut State, track: Rect, x: f64) {
 pub(super) unsafe fn pointer(s: &mut State, p: POINT) {
     let (x, y) = (p.x as f64 / s.scale as f64, p.y as f64 / s.scale as f64);
     s.assignment.hover = Some((x, y));
+    if let Some((track, axis)) = s.assignment.dpi_drag {
+        set_dpi_slider(s, track, axis, x);
+        s.rebuild_fields();
+    }
     if let Some(g) = shell(s) {
         if let Some(grab) = s.assignment.options_grab {
             let height = dimensions(s).1;
             let d = s.assignment.draft.as_mut().unwrap();
-            let panel = geo::options(
-                geo::form(
-                    g,
-                    d.context.owner.pid,
-                    d.category,
-                    d.turbo,
-                    d.turbo_available(),
-                    d.form_scroll,
-                )
-                .dropdown,
-                height,
-            );
+            let panel = geo::options(draft_form(g, d, d.form_scroll).dropdown, height);
             if let Some(bar) = geo::scrollbar(
                 r(
                     panel.x + 1.0,
@@ -1316,7 +1395,11 @@ pub(super) unsafe fn pointer(s: &mut State, p: POINT) {
                     panel.width - 2.0,
                     panel.height - 2.0,
                 ),
-                250.0,
+                if d.category == Some(Category::Sensitivity) {
+                    d.sensitivity_options().len() as f64 * 25.0
+                } else {
+                    250.0
+                },
                 d.options_scroll,
                 8.0,
             ) {
@@ -1331,26 +1414,12 @@ pub(super) unsafe fn pointer(s: &mut State, p: POINT) {
             }
         } else if s.assignment.speed_drag {
             let d = s.assignment.draft.as_ref().unwrap();
-            let f = geo::form(
-                g,
-                d.context.owner.pid,
-                d.category,
-                d.turbo,
-                d.turbo_available(),
-                d.form_scroll,
-            );
+            let f = draft_form(g, d, d.form_scroll);
             set_slider(s, f.track, x);
             s.rebuild_fields();
         } else if let Some(grab) = s.assignment.form_grab {
             let d = s.assignment.draft.as_mut().unwrap();
-            let f = geo::form(
-                g,
-                d.context.owner.pid,
-                d.category,
-                d.turbo,
-                d.turbo_available(),
-                0.0,
-            );
+            let f = draft_form(g, d, 0.0);
             if let Some(bar) = geo::scrollbar(
                 g.body,
                 (f.bottom + 124.0 - g.body.y).max(g.body.height),
@@ -1386,6 +1455,7 @@ pub(super) unsafe fn release(s: &mut State) -> bool {
         | s.assignment.drawer_grab.take().is_some()
         | s.assignment.options_grab.take().is_some()
         | s.assignment.form_grab.take().is_some()
+        | s.assignment.dpi_drag.take().is_some()
         | std::mem::take(&mut s.assignment.speed_drag)
         | s.assignment.spinner.take().is_some();
     if active {
@@ -1401,37 +1471,23 @@ pub(super) unsafe fn wheel(s: &mut State, delta: f64) {
         let d = s.assignment.draft.as_mut().unwrap();
         if d.options_open
             && geo::contains(
-                geo::options(
-                    geo::form(
-                        g,
-                        d.context.owner.pid,
-                        d.category,
-                        d.turbo,
-                        d.turbo_available(),
-                        d.form_scroll,
-                    )
-                    .dropdown,
-                    h,
-                ),
+                geo::options(draft_form(g, d, d.form_scroll).dropdown, h),
                 x,
                 y,
             )
         {
-            d.options_scroll = (d.options_scroll - delta * 25.0).clamp(0.0, 72.0);
+            d.options_scroll = if d.category == Some(Category::Sensitivity) {
+                0.0
+            } else {
+                (d.options_scroll - delta * 25.0).clamp(0.0, 72.0)
+            };
         } else if geo::contains(g.rail, x, y) {
             d.rail_scroll = (d.rail_scroll - delta * 40.0).clamp(
                 0.0,
                 (d.categories.len() as f64 * 40.0 - g.rail.height).max(0.0),
             );
         } else if geo::contains(g.body, x, y) {
-            let f = geo::form(
-                g,
-                d.context.owner.pid,
-                d.category,
-                d.turbo,
-                d.turbo_available(),
-                0.0,
-            );
+            let f = draft_form(g, d, 0.0);
             d.form_scroll = (d.form_scroll - delta * 40.0).clamp(
                 0.0,
                 (f.bottom + 124.0 - (g.body.y + g.body.height)).max(0.0),
@@ -1451,11 +1507,32 @@ pub(super) unsafe fn rebuild_fields(s: &mut State) -> bool {
         return false;
     }
     s.retained_fields.remove(&SPEED);
+    s.retained_fields.remove(&DPI_X);
+    s.retained_fields.remove(&DPI_Y);
     if s.assignment.pending.is_some() {
         return true;
     }
     if let Some(g) = shell(s) {
         if let Some(d) = &s.assignment.draft {
+            if d.category == Some(Category::Sensitivity)
+                && d.sensitivity.assignment == "DPI_Clutch"
+                && d.context.sensitivity_range.is_some()
+            {
+                let f = draft_form(g, d, d.form_scroll);
+                let values = d.dpi_text.clone();
+                let independent = d.sensitivity.independent;
+                for axis in 0..if independent { 2 } else { 1 } {
+                    let b = dpi_box(f, axis);
+                    if b.y >= g.body.y && b.y + b.height < g.body.y + g.body.height {
+                        let id = if axis == 0 { DPI_X } else { DPI_Y };
+                        s.field(id, &values[axis], b.x as i32, b.y as i32, b.width as i32);
+                        if let Some(hwnd) = s.fields.get(&id) {
+                            SendMessageW(*hwnd, EM_SETLIMITTEXT, 5, 0);
+                        }
+                    }
+                }
+            }
+            let d = s.assignment.draft.as_ref().unwrap();
             if d.category == Some(Category::Mouse) && d.turbo && d.turbo_available() {
                 let f = geo::form(
                     g,
@@ -1579,8 +1656,13 @@ pub(super) unsafe fn font_diagnostics(s: &State) -> Value {
             // The linked bridge's pixel/metric test validates that renderer;
             // here exercise the real assignment call site and its font state.
             let emitted = baseline_text(
-                &painter, "A", r(0.0, 0.0, 200.0, height), font,
-                0xcccccc, DT_SINGLELINE, role,
+                &painter,
+                "A",
+                r(0.0, 0.0, 200.0, height),
+                font,
+                0xcccccc,
+                DT_SINGLELINE,
+                role,
             );
             let metrics = s.fonts.source_text.metrics();
             let expected = (source_baseline * s.scale as f64).round() as i32;
@@ -1664,34 +1746,48 @@ mod keyboard_selection_tests {
                  "d":"M637 209H662V260H637Z"}
             ]
         });
-        let layout = source_layout::SourceLayout::from_slice(
-            &serde_json::to_vec(&fixture).unwrap(),
-        ).unwrap();
+        let layout =
+            source_layout::SourceLayout::from_slice(&serde_json::to_vec(&fixture).unwrap())
+                .unwrap();
         unsafe {
             let dc = CreateCompatibleDC(std::ptr::null_mut());
             assert!(!dc.is_null());
             for scale in [1.0, 1.25, 1.5, 2.0] {
-                for (width, drawer, scroll_x, scroll_y) in [
-                    (1280.0, false, 0.0, 0.0),
-                    (1000.0, true, 73.0, 41.0),
-                ] {
+                for (width, drawer, scroll_x, scroll_y) in
+                    [(1280.0, false, 0.0, 0.0), (1000.0, true, 73.0, 41.0)]
+                {
                     let viewport = source_layout::Viewport {
                         left: geo::keyboard_center(width, drawer) - 365.0 - scroll_x,
-                        top: 154.0 - scroll_y, width: 730.0, height: 387.0,
+                        top: 154.0 - scroll_y,
+                        width: 730.0,
+                        height: 387.0,
                     };
-                    for (id, x, y) in [("ESC", 68.0, 95.0), ("A", 114.0, 182.0), ("NUM", 637.0, 209.0)] {
+                    for (id, x, y) in [
+                        ("ESC", 68.0, 95.0),
+                        ("A", 114.0, 182.0),
+                        ("NUM", 637.0, 209.0),
+                    ] {
                         // The same point in the image and logical hitmap must be
                         // the first physical GDI point of the selection outline.
-                        let hit = layout.hit_test(source_layout::Point {
-                            x: viewport.left + x + 12.0, y: viewport.top + y + 12.0,
-                        }, viewport).unwrap();
+                        let hit = layout
+                            .hit_test(
+                                source_layout::Point {
+                                    x: viewport.left + x + 12.0,
+                                    y: viewport.top + y + 12.0,
+                                },
+                                viewport,
+                            )
+                            .unwrap();
                         assert_eq!(hit.input_id, id);
                         assert!(trace_keyboard_selection(&layout, dc, id, viewport, scale));
                         let count = GetPath(dc, std::ptr::null_mut(), std::ptr::null_mut(), 0);
                         assert!(count > 0);
                         let mut points = vec![POINT { x: 0, y: 0 }; count as usize];
                         let mut types = vec![0u8; count as usize];
-                        assert_eq!(GetPath(dc, points.as_mut_ptr(), types.as_mut_ptr(), count), count);
+                        assert_eq!(
+                            GetPath(dc, points.as_mut_ptr(), types.as_mut_ptr(), count),
+                            count
+                        );
                         assert_eq!(points[0].x, ((viewport.left + x) * scale).round() as i32);
                         assert_eq!(points[0].y, ((viewport.top + y) * scale).round() as i32);
                         AbortPath(dc);
@@ -1701,4 +1797,261 @@ mod keyboard_selection_tests {
             DeleteDC(dc);
         }
     }
+}
+
+fn draft_form(g: shell::Shell, d: &Draft, scroll: f64) -> geo::Form {
+    let mut f = geo::form(
+        g,
+        d.context.owner.pid,
+        d.category,
+        d.turbo,
+        d.turbo_available(),
+        scroll,
+    );
+    if d.category == Some(Category::Sensitivity) {
+        let foot = if d.context.sensitivity_range.is_none() {
+            185.0
+        } else if d.sensitivity.assignment == "DPI_Clutch" {
+            if d.sensitivity.independent {
+                285.0
+            } else {
+                235.0
+            }
+        } else {
+            245.0
+        };
+        f.cancel.y = g.body.y - scroll + foot;
+        f.save.y = f.cancel.y;
+        f.bottom = f.cancel.y + 27.0;
+    }
+    f
+}
+fn options_rect(d: &Draft, dropdown: Rect, height: f64) -> Rect {
+    let mut panel = geo::options(dropdown, height);
+    if d.category == Some(Category::Sensitivity) {
+        panel.height = (d.sensitivity_options().len() as f64 * 25.0 + 2.0).min(180.0);
+    }
+    panel
+}
+fn dpi_box(f: geo::Form, axis: usize) -> Rect {
+    r(
+        f.dropdown.x + if axis == 0 { 50.0 } else { 137.0 },
+        f.dropdown.y + 39.0,
+        if axis == 0 { 60.0 } else { 70.0 },
+        25.0,
+    )
+}
+fn dpi_track(f: geo::Form, axis: usize) -> Rect {
+    r(
+        f.dropdown.x,
+        f.dropdown.y + 115.0 + axis as f64 * 50.0,
+        210.0,
+        6.0,
+    )
+}
+fn set_dpi_slider(s: &mut State, track: Rect, axis: usize, x: f64) {
+    let Some(d) = &mut s.assignment.draft else {
+        return;
+    };
+    let Some(range) = &d.context.sensitivity_range else {
+        return;
+    };
+    if range.step == 0 || range.min > range.max {
+        return;
+    }
+    let raw = range.min as f64
+        + ((x - track.x - 8.0) / (track.width - 16.0)).clamp(0.0, 1.0)
+            * (range.max - range.min) as f64;
+    let value = ((raw / range.step as f64).round() as u32 * range.step as u32)
+        .clamp(range.min as u32, range.max as u32) as u16;
+    d.dpi_text[axis] = value.to_string();
+    d.dpi_change(axis, "", true);
+    d.dirty = true;
+}
+pub(super) unsafe fn dpi_change(s: &mut State, id: u16, blur: bool) {
+    let axis = usize::from(id == DPI_Y);
+    let value = s.raw_text(id);
+    if let Some(d) = &mut s.assignment.draft {
+        d.dpi_change(axis, &value, blur);
+        if !blur && d.dpi_text[axis] != value {
+            if let Some(h) = s.fields.get(&id) {
+                SetWindowTextW(*h, wide(&d.dpi_text[axis]).as_ptr());
+            }
+        }
+    }
+    if blur {
+        s.rebuild_fields();
+    }
+    InvalidateRect(s.hwnd, null(), 0);
+}
+unsafe fn sensitivity_body(s: &State, p: &mut Painter, d: &Draft, f: geo::Form) {
+    if d.context.sensitivity_range.is_none() {
+        text(p,"Sensitivity controls are unavailable for this device.",r(f.display.x,f.display.y,210.0,105.0),p.fonts.normal,0x999999,DT_WORDBREAK);
+        return;
+    }
+    border(p, f.dropdown, 0x515151);
+    let label = secbird_core::sensitivity_assignment::OPTIONS
+        .iter()
+        .find(|(id, _)| *id == d.sensitivity.assignment)
+        .map_or("Unknown sensitivity assignment", |(_, label)| *label);
+    text(
+        p,
+        label,
+        r(f.dropdown.x + 10.0, f.dropdown.y, 180.0, 27.0),
+        p.fonts.normal,
+        0xcccccc,
+        DT_VCENTER | DT_SINGLELINE,
+    );
+    image(
+        s,
+        p,
+        "expand",
+        r(f.dropdown.x + 190.0, f.dropdown.y + 8.0, 10.0, 10.0),
+    );
+    hit(p, f.dropdown, Control::Options);
+    if d.sensitivity.assignment == "DPI_Clutch" {
+        text(
+            p,
+            "DPI",
+            r(f.dropdown.x, f.dropdown.y + 40.0, 35.0, 25.0),
+            p.fonts.normal,
+            0xcccccc,
+            DT_SINGLELINE | DT_VCENTER,
+        );
+        let check = r(f.dropdown.x, f.dropdown.y + 78.0, 210.0, 20.0);
+        checkbox(
+            p,
+            r(check.x, check.y, 20.0, 20.0),
+            d.sensitivity.independent,
+            hover(s, check),
+        );
+        text(
+            p,
+            "Enable X-Y",
+            r(check.x + 30.0, check.y, 180.0, 20.0),
+            p.fonts.normal,
+            0xcccccc,
+            DT_SINGLELINE | DT_VCENTER,
+        );
+        hit(p, check, Control::Independent);
+        let range = d.context.sensitivity_range.as_ref().unwrap();
+        for axis in 0..if d.sensitivity.independent { 2 } else { 1 } {
+            let b = dpi_box(f, axis);
+            border(p, b, 0x515151);
+            if d.sensitivity.independent {
+                text(
+                    p,
+                    if axis == 0 { "X" } else { "Y" },
+                    r(b.x - 15.0, b.y, 15.0, 25.0),
+                    p.fonts.small,
+                    0xcccccc,
+                    DT_VCENTER | DT_SINGLELINE,
+                );
+            }
+            let track = dpi_track(f, axis);
+            fill(p, track, 0x515151);
+            let value = if axis == 0 {
+                d.sensitivity.x
+            } else {
+                d.sensitivity.y
+            };
+            let fraction =
+                (value as f64 - range.min as f64) / (range.max - range.min).max(1) as f64;
+            rounded(
+                p,
+                r(
+                    track.x + 8.0 + fraction.clamp(0.0, 1.0) * (track.width - 16.0) - 8.0,
+                    track.y - 5.0,
+                    16.0,
+                    16.0,
+                ),
+                GREEN,
+                GREEN,
+                8.0,
+            );
+            text(
+                p,
+                &range.min.to_string(),
+                r(track.x, track.y + 17.0, 60.0, 14.0),
+                p.fonts.small,
+                0x999999,
+                DT_SINGLELINE,
+            );
+            text(
+                p,
+                &range.max.to_string(),
+                r(track.x + 150.0, track.y + 17.0, 60.0, 14.0),
+                p.fonts.small,
+                0x999999,
+                DT_SINGLELINE | DT_RIGHT,
+            );
+            hit(
+                p,
+                r(track.x, track.y - 5.0, track.width, 16.0),
+                Control::DpiSlider(track, axis),
+            );
+        }
+    } else if d.sensitivity.assignment == "DPI_OnTheFly" {
+        text(p,"Hold the assigned button and scroll to adjust sensitivity. Runtime delivery is not yet available.",r(f.dropdown.x,f.dropdown.y+37.0,210.0,100.0),p.fonts.normal,0x999999,DT_WORDBREAK);
+    } else {
+        let profile = &d.context.original_profile;
+        let stages = profile["performance"]["stages"].as_array().or_else(|| {
+            profile["_synapseLiteSynapse4"]["decoded"]["dpiStages"]["stages"].as_array()
+        });
+        let mut rows = Vec::new();
+        if let Some(stages) = stages {
+            for (i, stage) in stages.iter().filter(|r| r["visible"] != false).enumerate() {
+                let x = stage["x"].as_u64().unwrap_or(0);
+                let y = stage["y"].as_u64().unwrap_or(x);
+                rows.push(if x == y {
+                    format!("Stage {} - {}", i + 1, x)
+                } else {
+                    format!("Stage {} - X:{} Y:{}", i + 1, x, y)
+                });
+            }
+        }
+        if rows.is_empty() {
+            rows.push("Desired sensitivity stages unavailable".into());
+        }
+        text(
+            p,
+            &rows.join("\n"),
+            r(f.dropdown.x, f.dropdown.y + 37.0, 210.0, 100.0),
+            p.fonts.normal,
+            0x999999,
+            DT_WORDBREAK,
+        );
+        text(
+            p,
+            "Configure Sensitivity Settings",
+            r(f.dropdown.x, f.dropdown.y + 143.0, 210.0, 32.0),
+            p.fonts.normal,
+            0xcccccc,
+            DT_WORDBREAK,
+        );
+        hit(
+            p,
+            r(f.dropdown.x, f.dropdown.y + 143.0, 210.0, 32.0),
+            Control::Performance,
+        );
+    }
+}
+
+#[cfg(test)]
+pub(super) fn sensitivity_diagnostics(s: &State) -> Value {
+    let rows=s.hits.iter().filter_map(|h| {
+        if let Action::Tab(tab)=h.action {return Some(json!({"name":format!("tab:{}",tab.title()),"x":(h.rect.left+h.rect.right)/2,"y":(h.rect.top+h.rect.bottom)/2}));}
+        let Action::Assignment(c)=&h.action else {return None;};
+        let name=match c {
+            Control::Open(input,_)=>format!("open:{}",input.input_id),
+            Control::Category(c)=>format!("category:{}",c.key()),
+            Control::DpiSlider(_,axis)=>format!("slider:{axis}"),
+            Control::Options=>"options".into(), Control::Option(i)=>format!("option:{i}"),
+            Control::SaveSensitivity=>"save".into(),Control::Independent=>"xy".into(),
+            Control::Cancel=>"cancel".into(),Control::Performance=>"performance".into(),
+            _=>return None,
+        };
+        Some(json!({"name":name,"x":(h.rect.left+h.rect.right)/2,"y":(h.rect.top+h.rect.bottom)/2}))
+    }).collect::<Vec<_>>();
+    json!({"hits":rows,"draft":s.assignment.draft.as_ref().map(|d|&d.sensitivity),"category":s.assignment.draft.as_ref().and_then(|d|d.category).map(|c|c.key()),"pending":s.pending,"open":s.assignment.draft.is_some(),"restricted":s.restricted_actions})
 }

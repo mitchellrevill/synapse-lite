@@ -362,6 +362,10 @@ struct Body {
     #[serde(default)]
     tracking_distance_mm: Option<u8>,
     #[serde(default)]
+    sensitivity_draft: Option<secbird_core::sensitivity_assignment::Intent>,
+    #[serde(default)]
+    expected_profile_data: Option<Value>,
+    #[serde(default)]
     dynamic_sensitivity: Option<secbird_core::dynamic_sensitivity::DynamicSensitivity>,
     #[serde(default)]
     rotation: Option<secbird_core::dynamic_sensitivity::Rotation>,
@@ -445,6 +449,21 @@ fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
     let b: Body = serde_json::from_slice(body).map_err(|e| Error::InvalidArg(e.to_string()))?;
     if matches!(path, "/api/device-sleep" | "/api/critical-threshold" | "/api/calibration-tracking" | "/api/dynamic-sensitivity" | "/api/sensor-rotation") {
         validate_mouse_connection(engine, &b)?;
+    }
+    if path == "/api/sensitivity-draft" {
+        if b.id.is_empty() || b.expected_device.as_deref() != Some(&b.id) {
+            return Err(Error::InvalidArg("Sensitivity draft requires the selected device identity".into()));
+        }
+        let dev = engine.devices().iter().find(|d| d.key() == b.id)
+            .ok_or_else(|| Error::InvalidArg("Selected mouse disconnected".into()))?;
+        let range = dev.spec.as_ref().and_then(|s| s.dpi.as_ref())
+            .ok_or_else(|| Error::Unsupported("Device DPI capability unavailable".into()))?;
+        let profile = b.expected_profile.as_deref().ok_or_else(|| Error::InvalidArg("Profile identity missing".into()))?;
+        let expected = b.expected_profile_data.as_ref().ok_or_else(|| Error::InvalidArg("Profile snapshot missing".into()))?;
+        let intent = b.sensitivity_draft.as_ref().ok_or_else(|| Error::InvalidArg("Sensitivity draft missing".into()))?;
+        let mut store = Store::load(&config_dir().join("profiles.json"))?;
+        secbird_core::sensitivity_assignment::save_draft(&mut store, &b.id, profile, dev.pid, range, expected, intent)?;
+        return Ok(json!({"ok":true,"delivery":"local draft only; no device assignment applied","state":state(engine)}));
     }
     if path=="/api/profile" && b.action=="paths" && (b.id.is_empty() || b.expected_device.as_deref()!=Some(&b.id) || !engine.devices().iter().any(|dev|dev.key()==b.id)) {return Err(Error::InvalidArg("Executable links require the selected device identity".into()));}
     if path=="/api/sensor-rotation" {
@@ -1281,6 +1300,7 @@ fn device_json(dev: &Device) -> Value {
         "id": dev.key(),
         "connection_id": dev.connection_id(),
         "power_status": power_status,
+        "sensitivity_assignment": dpi_range.filter(|_| matches!(dev.pid,196|197)).map(|r| json!({"min":r.min,"max":r.max,"step":r.step,"xy":true,"delivery":"draft-only"})),
         "pid": format!("{:04X}", dev.pid),
         "name": dev.name(),
         "kind": kind,

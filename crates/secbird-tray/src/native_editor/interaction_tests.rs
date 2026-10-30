@@ -21,6 +21,8 @@ mod studio;
 mod chroma;
 #[path="settings_interaction_tests.rs"]
 mod settings;
+#[path="sensitivity_interaction_tests.rs"]
+mod sensitivity;
 use super::*;
 use secbird_core::{commands as cmd, sim::Sim, Store};
 use std::time::Instant;

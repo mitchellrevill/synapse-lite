@@ -40,6 +40,7 @@ pub mod mouse_symbolic_bridge;
 pub mod mouse_sensor;
 pub mod dynamic_sensitivity;
 pub mod sensor_curve;
+pub mod sensitivity_assignment;
 #[cfg(windows)]
 pub mod sensor_rotation;
 #[cfg(windows)]
