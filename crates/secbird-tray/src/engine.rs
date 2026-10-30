@@ -40,6 +40,8 @@ pub struct Engine {
     away: Option<u8>,
     /// Devices that didn't answer [`Engine::lights_back`], and until when to keep trying.
     relight: HashMap<String, Instant>,
+    /// Legacy devices that missed a dimming write; retries expire after 30 seconds.
+    dim: HashMap<String, Instant>,
     lighting_runtime: RefCell<LightingRuntime>,
     uniform: source_uniform::UniformState,
     studio: source_studio::StudioState,
@@ -67,7 +69,7 @@ pub struct Battery {
 /// A connected Razer product that can't be controlled (yet), shown so it isn't silently missing.
 /// Why a wireless device we know is quiet, most often: it sleeps until a keypress (#37).
 const ASLEEP: &str = "Not answering. Asleep? Press a key or move it";
-const BLUETOOTH: &str = "Connected over Bluetooth, which can't be controlled yet. Use the cable or the USB receiver";
+const BLUETOOTH: &str = "Connected over Bluetooth and not answering. Use the cable or the USB receiver";
 
 pub struct Unsupported {
     pub pid: u16,
@@ -116,6 +118,7 @@ impl Engine {
             frames_paused_until: None,
             away: None,
             relight: HashMap::new(),
+            dim: HashMap::new(),
             lighting_runtime: RefCell::new(LightingRuntime::default()),
             uniform: source_uniform::UniformState::default(),
             studio: source_studio::StudioState::default(),
@@ -444,16 +447,34 @@ impl Engine {
     /// power cycle brings the lights back. Also call it after a rescan while away, for
     /// devices that just arrived. Devices with the older lighting commands are left lit.
     pub fn lights_away(&mut self, percent: u8) {
-        if self.measurement_read_only {
-            return;
-        }
+        if self.measurement_read_only { return; }
         self.away = Some(percent);
         self.relight.clear();
         self.refresh_lighting_runtime();
-        self.each_zone(|dev, led| {
+        let missed = self.each_zone(|dev, led| {
             let saved = dev.brightness(led)?;
             dev.set_brightness_live(led, (saved as u32 * percent as u32 / 100) as u8)
         });
+        let until = Instant::now() + Duration::from_secs(30);
+        self.dim = missed.into_iter().map(|key| (key, until)).collect();
+    }
+
+    /// Retry only failed legacy dimming writes. Source-managed devices continue
+    /// through each_zone's existing ownership and shutdown gates.
+    pub fn retry_lights_away(&mut self) {
+        if self.measurement_read_only || self.dim.is_empty() { return; }
+        let Some(percent) = self.away else { self.dim.clear(); return; };
+        let now = Instant::now();
+        self.dim.retain(|_, until| now < *until);
+        if self.dim.is_empty() { return; }
+        let missed = self.each_zone(|dev, led| {
+            if !self.dim.contains_key(&dev.key()) { return Ok(()); }
+            let saved = dev.brightness(led)?;
+            dev.set_brightness_live(led, (saved as u32 * percent as u32 / 100) as u8)
+        });
+        let done: Vec<String> = self.dim.keys().filter(|key| !missed.contains(key)
+            && self.devices.iter().any(|dev| dev.key() == **key)).cloned().collect();
+        for key in done { self.dim.remove(&key); }
     }
 
     /// Back from [`Engine::lights_away`]: the saved brightness again, read from the device
@@ -466,6 +487,7 @@ impl Engine {
         if self.away.take().is_none() {
             return Vec::new();
         }
+        self.dim.clear();
         self.refresh_lighting_runtime();
         let missed = self.each_zone(|dev, led| dev.set_brightness_live(led, dev.brightness(led)?));
         let until = Instant::now() + RELIGHT_FOR;
@@ -1192,6 +1214,40 @@ mod lighting_runtime_tests {
             let _ = std::fs::remove_dir(&self.folder);
         }
     }
+    #[test]
+    fn legacy_away_retry_recovers_expires_and_respects_read_only() {
+        let (sim, _) = secbird_core::sim::preset("basilisk-v3").unwrap();
+        let mut engine = Engine::with_simulated_wheel(&sim).unwrap();
+        engine.runtime_store_path = Some(std::env::temp_dir().join(format!(
+            "away-retry-{}", std::process::id())).join("profiles.json"));
+        let leds: Vec<u8> = engine.devices[0].spec.as_ref().unwrap().leds.iter().map(|led| led.id).collect();
+        sim.state().leds = leds.clone();
+        for led in &leds { sim.state().brightness.insert(*led, 200); }
+        let saved = sim.state().brightness.clone();
+        sim.state().available = false;
+        engine.lights_away(50);
+        assert_eq!(engine.dim.len(), 1);
+        sim.state().available = true;
+        engine.retry_lights_away();
+        assert!(engine.dim.is_empty());
+        assert_eq!(sim.state().brightness, saved);
+        assert!(leds.iter().all(|led| sim.state().live_brightness[led] < 200));
+
+        sim.state().available = false;
+        engine.lights_away(50);
+        sim.state().available = true;
+        for until in engine.dim.values_mut() { *until = Instant::now() - Duration::from_secs(1); }
+        let before = sim.state().log.len();
+        engine.retry_lights_away();
+        assert!(engine.dim.is_empty());
+        assert_eq!(sim.state().log.len(), before);
+
+        engine.dim.insert(engine.devices[0].key(), Instant::now() + Duration::from_secs(30));
+        engine.measurement_read_only = true;
+        engine.retry_lights_away();
+        assert_eq!(sim.state().log.len(), before);
+    }
+
     #[test]
     fn engine_composes_global_dim_blocks_frames_and_releases_on_shutdown_without_effect_writes() {
         let mut f = Fixture::new();

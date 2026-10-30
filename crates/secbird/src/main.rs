@@ -52,7 +52,7 @@ DEVICE:
                             Read up to LIMIT hook selectors on interface N (1..64)
                             in a supervised child; no hooks or input writes
   dock-test <red|spectrum|battery|off>
-                            Test: set a Mouse Dock Pro's own light once (#39)
+                            Test: set a mouse dock's own light once (#39)
 
 SETTINGS (saved to the active profile):
   dpi [X[xY]]               Show or set DPI (e.g. 1600 or 1600x800)
@@ -304,7 +304,7 @@ Download: {}", r.version, secbird_core::update::CURRENT, r.url),
                 }
                 Some(spec) => println!("{pid:04X}  {}  (connected but not answering{})", spec.name, NOT_ANSWERING_HINT),
                 None => match db.bluetooth_name(pid) {
-                    Some(name) => println!("{pid:04X}  {name}  (connected over Bluetooth, which can't be controlled yet; use the cable or the USB receiver)"),
+                    Some(name) => println!("{pid:04X}  {name}  (connected over Bluetooth, not answering; use the cable or the USB receiver, and please share `secbird report`)"),
                     None => println!("{pid:04X}  Unknown Razer device  (connected, not answering; please share `secbird report`)"),
                 },
             }
@@ -805,7 +805,11 @@ fn key_cmd(dev: &Device, store: &mut Store, rest: &[String]) -> Result<(), Error
     let unsupported = || {
         use secbird_core::Kind;
         match dev.spec.as_ref().map(|s| s.kind) {
-            Some(Kind::Keyboard | Kind::Keypad | Kind::Laptop) | None => Error::Unsupported(format!(
+            Some(Kind::Keyboard | Kind::Keypad | Kind::Laptop) => Error::Unsupported(format!(
+                "key remapping isn't supported on {} yet: it doesn't take Razer's remap commands",
+                dev.name()
+            )),
+            None => Error::Unsupported(format!(
                 "{} doesn't answer key remapping commands; please send `secbird report` in a GitHub issue",
                 dev.name()
             )),
@@ -869,7 +873,7 @@ fn dock_test(devices: &[Device], what: Option<&str>) -> Result<(), Error> {
         Some("off") => &[1, DOCK_LED, 0x00, 0, 0, 0],
         _ => return Err(Error::InvalidArg("usage: dock-test red|spectrum|battery|off".into())),
     };
-    let dock = devices.iter().find(|d| d.is_mouse_dock()).ok_or_else(|| Error::NotFound("a Mouse Dock Pro".into()))?;
+    let dock = devices.iter().find(|d| d.is_mouse_dock()).ok_or_else(|| Error::NotFound("a mouse dock".into()))?;
     let command = secbird_core::commands::MATRIX_EFFECT;
     match dock.transact_as(DOCK_TXID, command, args.len() as u8, args) {
         Ok(_) => println!("The dock accepted {command} with txid {DOCK_TXID:02X}. Did its light change?"),

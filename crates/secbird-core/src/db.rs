@@ -96,6 +96,10 @@ pub struct DeviceSpec {
     pub lighting: Lighting,
     #[serde(default)]
     pub leds: Vec<Led>,
+    /// Effect names that were tested on this model but did not work correctly.
+    /// Used by the editor and enforced before sending lighting commands.
+    #[serde(default)]
+    pub unsupported_effects: Vec<String>,
     #[serde(default)]
     pub matrix: Option<Matrix>,
     #[serde(default)]
@@ -108,9 +112,10 @@ pub struct DeviceSpec {
 }
 
 /// Bluetooth ids and the product each belongs to, from Synapse's AvailableDevices.json
-/// (`bleId`), leaving out ids that are also the cable or receiver id. Synapse reaches these
-/// over Bluetooth GATT, not the HID reports Secretarybird sends, so they can't be controlled
-/// yet (#10, #51).
+/// (`bleId`), leaving out ids that are also the cable or receiver id. Synapse 4 reaches some
+/// of these over its own GATT service; OpenRazer reaches the Orochi V2 over Bluetooth with
+/// the usual feature reports, which Secretarybird tries under the descriptor's report id
+/// (#10, #51, see `crate::transport::NumberedReport`).
 const BLUETOOTH: &[(u16, u16)] = &[
     (0x0061, 0x0062), (0x0076, 0x0080), (0x0082, 0x0083), (0x008E, 0x007C), (0x0092, 0x008F),
     (0x009B, 0x009A), (0x009D, 0x009C), (0x00A9, 0x00A7), (0x00AC, 0x00AA), (0x00B1, 0x00AF),
@@ -174,6 +179,22 @@ impl Db {
         Some(format!("{name} (Bluetooth)"))
     }
 
+    /// The entry for `pid`, or for a Bluetooth id its product's entry renamed, so a mouse
+    /// that answers over Bluetooth keeps its DPI range and lighting zones.
+    pub fn spec(&self, pid: u16) -> Option<DeviceSpec> {
+        if let Some(spec) = self.get(pid) {
+            return Some(spec.clone());
+        }
+        let product = BLUETOOTH.iter().find(|b| b.0 == pid)?.1;
+        let mut spec = self.get(product)?.clone();
+        spec.name = self.bluetooth_name(pid)?;
+        spec.pid = pid;
+        spec.interface = None;
+        spec.wireless = true;
+        spec.source = "bluetooth".into();
+        Some(spec)
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = &DeviceSpec> {
         self.specs.values()
     }
@@ -220,6 +241,14 @@ mod tests {
         assert_eq!(db.bluetooth_name(0x00E1).as_deref(), Some("Razer device (Bluetooth)"));
         assert_eq!(db.bluetooth_name(0x007C), None);
         assert!(BLUETOOTH.iter().all(|b| db.get(b.0).is_none()), "a Bluetooth id is also in devices.json");
+
+        // Over Bluetooth a mouse keeps its product's settings, under its own id and name.
+        let bt = db.spec(0x008E).unwrap();
+        let wired = db.get(0x007C).unwrap();
+        assert_eq!((bt.pid, bt.name.as_str(), bt.wireless), (0x008E, "DeathAdder V2 Pro (Bluetooth)", true));
+        assert_eq!((bt.dpi.is_some(), bt.leds.len()), (wired.dpi.is_some(), wired.leds.len()));
+        assert!(db.spec(0x00E1).is_none(), "product not in the database");
+        assert_eq!(db.spec(0x007C).unwrap().name, wired.name);
     }
 
     #[test]
@@ -228,6 +257,18 @@ mod tests {
         let spec = db.get(0x0099).expect("Basilisk V3 entry");
         assert_eq!(spec.interface, Some(3));
         assert_eq!(spec.dpi.as_ref().unwrap().max, 26000);
+    }
+
+    #[test]
+    fn basilisk_v4_hyperspeed_has_one_underglow_zone() {
+        let db = Db::builtin().unwrap();
+        for pid in [0x00EA, 0x00EB] {
+            let spec = db.get(pid).expect("Basilisk V4 HyperSpeed");
+            assert_eq!(spec.leds.len(), 1, "PID {pid:04X}: exactly one RGB zone");
+            assert_eq!(spec.leds[0].name, "underglow");
+            assert_eq!(spec.leds[0].id, 10);
+            assert_eq!(spec.unsupported_effects, ["reactive", "starlight"]);
+        }
     }
 
     #[test]
