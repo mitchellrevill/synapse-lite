@@ -6,11 +6,16 @@ mod control_probe;
 mod studio_files;
 mod catalog_files;
 mod profile_files;
+mod linked_game_files;
 
 const USAGE: &str = "\
 Synapse Lite - device controls based on Secretarybird beta
 
 USAGE: secbird [-d PID] <command> [args]
+
+  linked-games preview BACKUP SOURCE SELECTIONS
+  linked-games prepare BACKUP SOURCE SELECTIONS NEW_OUTPUT
+                            Offline explicit GUID migration; never installs the store
 
 STUDIO FILES (local interchange only; does not apply lighting):
   profiles recover-macros NATIVE_BACKUP SOURCE_EXPORT EXACT_DEVICE_KEY NEW_OUTPUT
@@ -171,6 +176,10 @@ fn run(mut args: Vec<String>) -> Result<(), Error> {
     if command == "studio" {
         if selector.is_some() { return Err(Error::InvalidArg("studio file commands do not use -d".into())); }
         return studio_files::run(&args[1..]);
+    }
+    if command == "linked-games" {
+        if selector.is_some() { return Err(Error::InvalidArg("Linked Games file commands do not use -d".into())); }
+        return linked_game_files::run(&args[1..]);
     }
     if command == "catalog" {
         if selector.is_some() { return Err(Error::InvalidArg("catalog file commands do not use -d".into())); }

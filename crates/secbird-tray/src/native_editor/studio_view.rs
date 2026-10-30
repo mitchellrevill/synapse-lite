@@ -86,6 +86,7 @@ enum Next {
     Open,
     Profile(usize),
     Close,
+    LinkedGames,
 }
 
 #[derive(Default)]
@@ -464,6 +465,10 @@ unsafe fn proceed(state: &mut State, next: Next) {
             selection_changed(state);
             remember(state);
         }
+        Next::LinkedGames => {
+            state.studio.open = false;
+            state.action(Action::Device(linked_games::ID.into()));
+        }
         Next::Close => {
             PostMessageW(state.hwnd, WM_CLOSE, 0, 0);
         }
@@ -497,6 +502,17 @@ fn finish_name(state: &mut State) -> bool {
             false
         }
     }
+}
+/// Save/discard/cancel keeps the requested module as the continuation.
+pub(super) unsafe fn leave_to_linked_games(state: &mut State) -> bool {
+    if !finish_name(state) || state.studio.busy || state.studio.dialog {
+        return true;
+    }
+    if state.studio.dirty() {
+        transition(state, Next::LinkedGames);
+        return true;
+    }
+    false
 }
 pub(super) unsafe fn block_close(state: &mut State) -> bool {
     if !finish_name(state) {

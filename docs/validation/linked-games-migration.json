@@ -1,0 +1,54 @@
+{
+  "base": "6149f7a9422ae93322365ed12df46ab681dc40a8",
+  "source_evidence": "linked-games-native.json retained REA IDs and SHA256; unexecuted 9449 chunk computedSelectedProfile and relocate code",
+  "core_tests": {
+    "passed": 4,
+    "filter": "linked_games"
+  },
+  "cli_tests": {
+    "passed": 1,
+    "filter": "linked_game_files"
+  },
+  "native_tests": {
+    "passed": 2,
+    "names": [
+      "native_linked_games_add_bind_unlink_remove_and_tab_lifecycle_preserve_settings",
+      "native_studio_edits_save_failure_and_exit_recovery"
+    ],
+    "new_assertions": [
+      "cancel navigation preserves dirty Studio",
+      "discard continues automatically to Linked Games"
+    ],
+    "simulated_only": true,
+    "no_device_sets": true,
+    "file_picker_bypassed": true
+  },
+  "visual_review": {
+    "capture": "outputs/validation/after-studio-discard.png",
+    "source": "stock-linked-games-0.jpg",
+    "native_size": [
+      1600,
+      900
+    ],
+    "source_size": [
+      2048,
+      1104
+    ],
+    "pixel_parity": false,
+    "observations": "Linked Games visible after discard. Existing toolbar shape, scale, search treatment and missing artwork remain interim; source screenshot has populated catalogue, test ends empty."
+  },
+  "remaining": [
+    "native import preview/picker and alias editor",
+    "source global snapshot discovery/database decoding",
+    "container-only device identity mapping",
+    "matched-DPI visual parity",
+    "live-device switching",
+    "complete-build RAM acceptance"
+  ],
+  "optimized_build": {
+    "command": "cargo build --release -p secbird -p secbird-tray -j 1",
+    "passed": true,
+    "private_temp_directory_required": true,
+    "complete_build_memory_acceptance": false
+  }
+}

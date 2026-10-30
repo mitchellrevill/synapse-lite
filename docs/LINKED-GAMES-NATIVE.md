@@ -27,9 +27,9 @@ mode before opening a store. Failed work retains the displayed data and reports 
 error through the existing close/save acknowledgement flow.
 
 The module reuses the approved tab surface and lifecycle without changing its
-styling. Opening from dirty Studio uses the existing Save/Discard gate; after that
-close completes, opening Linked Games may require a second click. Continuing the
-requested navigation automatically is a TODO. No silent Studio discard is intended.
+styling. Opening from dirty Studio uses the existing Save/Discard gate; Save or Discard continues directly to Linked Games. Cancel, save failure and
+invalid rename retain Studio and cancel navigation. Busy Studio refuses navigation
+until its current work finishes. No silent Studio discard is intended.
 
 ## Source and visual evidence
 
@@ -76,3 +76,52 @@ Workspace validation:465 core,295 tray,four CLI and one doc test pass; six core
 and40 tray checks remain intentionally ignored. The native Linked Games flow and
 Studio save-failure/exit recovery checks pass separately with simulated hardware.
 The optimized workspace build and optimized native Linked Games interaction also pass.
+
+
+## Explicit global migration checkpoint (2026-10-30)
+
+`secbird linked-games preview BACKUP SOURCE SELECTIONS` performs an offline preview.
+`secbird linked-games prepare BACKUP SOURCE SELECTIONS NEW_OUTPUT` creates a new
+candidate backup with exclusive creation; it never installs or overwrites a store.
+Both commands dispatch before hardware discovery. Inputs are bounded to 2 MiB.
+Review the reported game/device/profile associations before preparing a candidate.
+Installing that candidate remains a separate explicit user action.
+
+SOURCE is a retained source reducer snapshot containing `gameList` and
+`linkedGames` arrays, not a Synapse profile export or a live database. Selections
+are a JSON array such as:
+
+```json
+[{"game_id":"SOURCE-GAME-ID","device_key":"00C4:SERIAL","profile_guid":"SOURCE-GUID","local_path":"C:\\Games\\Game.exe","aliases":["D:\\Games\\Game.exe"]}]
+```
+
+The source game ID, serial device identity, and profileID association must match.
+The selected device must contain exactly one saved profile with that source GUID.
+Names are never used as identity and active profiles are unchanged. Container-only
+and PID-only source associations remain retained but cannot be activated by this
+migration. The whole source snapshot (including unselected associations, artwork,
+location and unknown metadata) is retained under `_synapseLiteLinkedGamesSource`;
+selected game records also retain `sourceGame`. No artwork URL is fetched.
+At most 16 explicit executable aliases per game are accepted. Bind, unlink, remove,
+and binding display consider all aliases; catalogue-wide collisions are refused.
+
+Source basis: retained, unexecuted `9449.8f17b519.chunk.js`, SHA-256 and REA IDs
+above. `computedSelectedProfile` compares `gameID`, PID, serial/container identity
+and `profileID` to profile `guid`; relocate uses game `location` and user-picked
+executable paths. These observations do not establish installed database schema
+or source foreground matching behavior. No expensive REA producer was repeated.
+
+Remaining: native import preview/picker and alias editor UI; automatic discovery of
+source global snapshots; container-only identity mapping; cover-art rendering;
+matched-DPI source parity and live-device switching acceptance. Existing executable
+picker remains manual. No complete-build RAM or overall parity acceptance claimed.
+
+Verification for this migration checkpoint: four Linked Games core tests, one
+offline CLI test, and both simulated native Linked Games and Studio save-failure/exit
+recovery tests pass. New native assertions cover Cancel and Discard continuation.
+A screenshot after Discard was reviewed against the retained stock screenshot;
+1600x900 empty native state versus 2048x1104 populated stock is not pixel parity.
+Detailed evidence is in validation/linked-games-migration.json.
+
+The optimized CLI and tray build passes with a private workspace TEMP/TMP and
+unique Cargo target directory, jobs=1. No full-build RAM acceptance was measured.

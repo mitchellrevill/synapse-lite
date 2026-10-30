@@ -1006,6 +1006,11 @@ fn native_studio_edits_save_failure_and_exit_recovery() {
                     query()["dirty"] == true && query()["rows"][0]["title"] == "Unsaved work",
                     "navigation lost Studio draft",
                 )?;
+                SendMessageW(hwnd, STUDIO_TEST, 4, IDCANCEL as isize);
+                SendMessageW(hwnd, super::super::linked_games::TEST, 1, 0);
+                std::thread::sleep(Duration::from_millis(100));
+                check(query()["open"] == true && query()["dirty"] == true,
+                    "cancel Linked Games navigation lost Studio draft")?;
                 // An invalid in-progress rename must be recoverable even if hidden.
                 click(right + 60.0, 193.0);
                 let edit = GetDlgItem(hwnd, i32::from(studio_view::NAME));

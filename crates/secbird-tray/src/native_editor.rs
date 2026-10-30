@@ -2269,7 +2269,8 @@ impl State {
                 self.rebuild_fields();
             }
             Action::Device(id) => {
-                if (id==linked_games::ID||id==macro_view::ID) && self.studio.open && studio_view::block_close(self){return;}
+                if id==linked_games::ID && self.studio.open && studio_view::leave_to_linked_games(self){return;}
+                if id==macro_view::ID && self.studio.open && studio_view::block_close(self){return;}
                 self.studio.canvas.cancel();ReleaseCapture();
                 self.studio.open=false;
                 if !host_tabs::open(self, &id) { return; }
