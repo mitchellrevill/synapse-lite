@@ -1432,7 +1432,7 @@ unsafe fn is_razer(lparam: LPARAM) -> bool {
 
 
 /// Put text on the clipboard. False if another program holds it.
-fn set_clipboard(text: &str) -> bool {
+pub(crate) fn set_clipboard(text: &str) -> bool {
     use windows_sys::Win32::System::DataExchange::{CloseClipboard, EmptyClipboard, OpenClipboard, SetClipboardData};
     use windows_sys::Win32::System::Memory::{GlobalAlloc, GlobalLock, GlobalUnlock, GMEM_MOVEABLE};
     const CF_UNICODETEXT: u32 = 13;
