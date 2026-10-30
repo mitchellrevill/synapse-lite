@@ -13,6 +13,7 @@ Synapse Lite - device controls based on Secretarybird beta
 USAGE: secbird [-d PID] <command> [args]
 
 STUDIO FILES (local interchange only; does not apply lighting):
+  profiles inspect-archive FILE  Inspect stored ZIP members; no conversion or activation
   profiles recover-macros NATIVE_BACKUP SOURCE_EXPORT EXACT_DEVICE_KEY NEW_OUTPUT
                             Attach verified referenced macro definitions to a new backup;
                             does not activate profiles, run macros or install the store
