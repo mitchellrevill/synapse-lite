@@ -103,6 +103,19 @@ impl Device {
 }
 
 impl Canvas {
+    /// Count each shared geometry allocation once, regardless of placements.
+    pub fn asset_snapshot(&self) -> Value {
+        let mut seen = BTreeSet::new();
+        let mut bytes = 0usize;
+        for device in &self.devices {
+            if seen.insert(Arc::as_ptr(&device.geometry) as usize) {
+                bytes += device.geometry.storage_bytes();
+            }
+        }
+        json!({"resident_layouts":seen.len(), "geometry_capacity_bytes":bytes,
+            "geometry_budget_bytes":8*1024*1024, "placement_count":self.devices.len()})
+    }
+
     pub fn can_preview(&self) -> bool {
         self.devices.len() == 1 && self.notes.is_empty()
             && self.devices[0].placement.product==605 && self.devices[0].placement.edition==0
@@ -676,6 +689,10 @@ mod tests {
         let (folder,placement)=generic_fixture();let placements:Vec<_>=(0..32).map(|i|{let mut p=placement.clone();p["id"]=json!(format!("device-{i}"));p}).collect();
         let canvas=Canvas::load(&json!({"devices":placements}).to_string(),&folder);assert_eq!(canvas.devices.len(),32);assert!(canvas.notes.is_empty());
         for device in &canvas.devices {assert!(Arc::ptr_eq(&canvas.devices[0].geometry,&device.geometry));}
+        let assets = canvas.asset_snapshot();
+        assert_eq!(assets["resident_layouts"], 1);
+        assert_eq!(assets["geometry_capacity_bytes"], canvas.devices[0].geometry.storage_bytes());
+        assert_eq!(assets["placement_count"], 32);
         let oversized=vec![placement;33];let refused=Canvas::load(&json!({"devices":oversized}).to_string(),&folder);assert!(refused.devices.is_empty());assert_eq!(refused.notes.len(),1);
     }
 
