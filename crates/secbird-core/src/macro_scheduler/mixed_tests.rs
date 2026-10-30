@@ -35,6 +35,97 @@ fn context(token: u128, unit: u16, modifiers: u32) -> NativeContext {
         source_unit: Some(unit),
     }
 }
+
+#[test]
+fn source_keyboard_fields_reach_packets_and_owned_cleanup_without_double_translation() {
+    let events = vec![
+        json!({"type":"keyboard","scancode":30,"flag":0,"modifiers":0x430,"unitId":3}),
+        json!({"type":"keyboard","scancode":32,"flag":2,"modifiers":0,"unitId":3}),
+        json!({"type":"keyboard","scancode":32,"flag":3,"modifiers":0,"unitId":3}),
+        json!({"type":"keyboard","scancode":30,"flag":1,"modifiers":0x430,"unitId":3}),
+    ];
+    let mut s = scheduler(events.clone());
+    let a = take(&mut s, 0);
+    assert!(
+        matches!(a.packet(), InputPacket::Keyboard(p) if p.unit_id==3 && p.make_code==30 && p.extra_information==0x181)
+    );
+    deliver(&mut s, a, 0);
+    let d = take(&mut s, 10);
+    assert!(
+        matches!(d.packet(), InputPacket::Keyboard(p) if p.unit_id==3 && p.make_code==32 && p.flags==2 && p.extra_information==0)
+    );
+    deliver(&mut s, d, 10);
+    let d_up = take(&mut s, 20);
+    assert!(
+        matches!(d_up.packet(), InputPacket::Keyboard(p) if p.flags==3 && p.extra_information==0)
+    );
+    deliver(&mut s, d_up, 20);
+    let a_up = take(&mut s, 30);
+    assert!(
+        matches!(a_up.packet(), InputPacket::Keyboard(p) if p.flags==1 && p.extra_information==0x181)
+    );
+    deliver(&mut s, a_up, 30);
+    assert_eq!(s.poll(ms(30)).unwrap(), Poll::Finished);
+
+    // A late uncertain down after Stop must retain the source metadata for up.
+    let mut s = scheduler(events);
+    let a = take(&mut s, 0);
+    s.dispatch_started(a.ticket()).unwrap();
+    s.stop();
+    s.complete(a.ticket(), Completion::Uncertain, ms(1))
+        .unwrap();
+    let up = take(&mut s, 1);
+    assert!(
+        matches!(up.packet(), InputPacket::Keyboard(p) if p.make_code==30 && p.flags==1 && p.extra_information==0x181)
+    );
+    deliver(&mut s, up, 2);
+    assert_eq!(s.possibly_held_count(), 0);
+    assert_eq!(s.poll(ms(2)).unwrap(), stopped(true, true));
+}
+
+#[test]
+fn mismatched_source_keyboard_route_or_release_metadata_refuses_entire_run() {
+    for (down, up) in [(0x400, 0), (0, 0x400)] {
+        let run = plan(vec![
+            button(1),
+            json!({"type":"keyboard","scancode":30,"flag":0,"modifiers":down,"unitId":3}),
+            json!({"type":"keyboard","scancode":30,"flag":1,"modifiers":up,"unitId":3}),
+            button(2),
+        ]);
+        assert!(matches!(
+            Scheduler::with_contexts(&run, contexts(), owner(1)),
+            Err(Error::InvalidSequence)
+        ));
+    }
+    for unit in [0, 4, u16::MAX] {
+        let run = plan(vec![
+            json!({"type":"keyboard","scancode":30,"flag":0,"unitId":unit}),
+            json!({"type":"keyboard","scancode":30,"flag":1,"unitId":unit}),
+        ]);
+        assert!(matches!(
+            Scheduler::with_contexts(&run, contexts(), owner(1)),
+            Err(Error::InvalidSequence)
+        ));
+    }
+}
+
+#[test]
+fn equivalent_translated_source_metadata_and_sequential_changes_are_supported() {
+    let mut s = scheduler(vec![
+        json!({"type":"keyboard","scancode":30,"flag":0,"modifiers":0}),
+        json!({"type":"keyboard","scancode":30,"flag":1,"modifiers":0x80000000u32}),
+        json!({"type":"keyboard","scancode":30,"flag":0,"modifiers":0x400}),
+        json!({"type":"keyboard","scancode":30,"flag":1,"modifiers":0x400}),
+    ]);
+    for (index, expected) in [0, 0, 1, 1].into_iter().enumerate() {
+        let command = take(&mut s, index as u64 * 10);
+        assert!(
+            matches!(command.packet(),InputPacket::Keyboard(p) if p.extra_information==expected)
+        );
+        deliver(&mut s, command, index as u64 * 10);
+    }
+    assert_eq!(s.poll(ms(30)).unwrap(), Poll::Finished);
+}
 fn contexts() -> Contexts {
     Contexts {
         keyboard: Some(context(17, 3, 0x100)),

@@ -412,6 +412,8 @@ mod tests {
                     scancode: 1,
                     flag: 0,
                     transition: Transition::Down,
+                    modifiers: None,
+                    unit_id: None,
                 },
                 BridgeError::NotMouse,
             ),

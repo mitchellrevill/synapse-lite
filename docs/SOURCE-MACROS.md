@@ -3,7 +3,8 @@
 The separate [saved GUI definition bridge](MACRO-DEFINITION-PLANNING.md) now
 projects supported editor records into this native planner, verifies matching
 source caches, and provides local file inspection. This module's parser and
-runtime gaps remain unchanged; no live input adapter is enabled.
+runtime gaps remain unresolved; no live input adapter is enabled. Optional native
+keyboard fields now follow the [field contract](NATIVE-KEYBOARD-FIELDS.md).
 
 **29 October addition:** a separate bounded scheduler now joins admitted one-pass
 keyboard plans with packet planning and the output ledger under simulated
@@ -22,7 +23,7 @@ The planner accepts only these native source events:
 | Event | Accepted fields | Interpretation |
 |---|---|---|
 |delay|type, ms|Integer u32 milliseconds; zero remains an actual event.|
-|keyboard|type, scancode, flag|Native u16 scan code retained; Explicit flags0/1 ordinary down/up,2/3 E0 down/up,4/5 E1 down/up. Mixed-prefix6/7 and other flags, plus optional modifier/unit/timer fields, are unsupported. No prefix inference or HID/VK conversion.|
+|keyboard|type, scancode, flag; optional modifiers, unitId|Native u16 scan code retained; explicit flags0/1 ordinary down/up,2/3 E0 down/up,4/5 E1 down/up. Optional modifiers is u32 and unitId is u16; absence and explicit zero remain distinct. Mixed-prefix6/7, other flags and timer fields are unsupported. No prefix inference or HID/VK conversion.|
 |mouse button|type, id|Single transition: left1/2, right4/8, middle16/32, button4 64/128, button5 256/512.|
 |mouse wheel|type, id, data|Vertical1024 or horizontal2048; raw120→+120, raw65416→−120. Both raw bits and signed delta remain available.|
 

@@ -378,6 +378,10 @@ pub enum Event {
         scancode: u16,
         flag: u16,
         transition: Transition,
+        /// Explicit native metadata; omission is distinct from an explicit zero.
+        modifiers: Option<u32>,
+        /// Source UnitId, never inferred from an endpoint or device label.
+        unit_id: Option<u16>,
     },
     MouseButton {
         id: u16,
@@ -547,7 +551,9 @@ mod tests {
             Event::Keyboard {
                 scancode: 29,
                 flag: 0,
-                transition: Transition::Down
+                transition: Transition::Down,
+                modifiers: None,
+                unit_id: None,
             }
         );
         assert_eq!(
@@ -555,7 +561,9 @@ mod tests {
             Event::Keyboard {
                 scancode: 29,
                 flag: 1,
-                transition: Transition::Up
+                transition: Transition::Up,
+                modifiers: None,
+                unit_id: None,
             }
         );
         assert_eq!(
@@ -563,7 +571,9 @@ mod tests {
             Event::Keyboard {
                 scancode: 57373,
                 flag: 0,
-                transition: Transition::Down
+                transition: Transition::Down,
+                modifiers: None,
+                unit_id: None,
             }
         );
         assert_eq!(p.source_keyboard_gap_before_us(1), Some(10_000));
@@ -691,7 +701,9 @@ mod tests {
                 &[Event::Keyboard {
                     scancode,
                     flag,
-                    transition
+                    transition,
+                    modifiers: None,
+                    unit_id: None,
                 }]
             );
         }
@@ -733,6 +745,70 @@ mod tests {
         let raw = SourceJson::parse(text, Limits::default()).unwrap();
         assert_eq!(raw.original_json(), text);
         assert_eq!(plan(text), Err(PlanError::DuplicateJsonKey));
+    }
+
+    #[test]
+    fn native_keyboard_optional_fields_preserve_absence_zero_and_full_width() {
+        for (extra, modifiers, unit_id) in [
+            (json!({}), None, None),
+            (json!({"modifiers":0,"unitId":0}), Some(0), Some(0)),
+            (
+                json!({"modifiers":u32::MAX,"unitId":u16::MAX}),
+                Some(u32::MAX),
+                Some(u16::MAX),
+            ),
+        ] {
+            let mut row = json!({"type":"keyboard","scancode":29,"flag":2});
+            row.as_object_mut()
+                .unwrap()
+                .extend(extra.as_object().unwrap().clone());
+            let text = json!([row]).to_string();
+            let raw = SourceJson::parse(&text, Limits::default()).unwrap();
+            assert_eq!(raw.original_json(), text);
+            assert_eq!(
+                plan(&text).unwrap().events(),
+                &[Event::Keyboard {
+                    scancode: 29,
+                    flag: 2,
+                    transition: Transition::Down,
+                    modifiers,
+                    unit_id
+                }]
+            );
+        }
+    }
+
+    #[test]
+    fn native_keyboard_optional_fields_refuse_invalid_values_and_duplicates() {
+        for (field, maximum) in [("modifiers", u32::MAX as u64), ("unitId", u16::MAX as u64)] {
+            for value in [
+                Value::Null,
+                json!(true),
+                json!("0"),
+                json!(-1),
+                json!(1.5),
+                json!(maximum + 1),
+            ] {
+                let mut row = json!({"type":"keyboard","scancode":30,"flag":0});
+                row[field] = value;
+                assert!(
+                    matches!(plan(&json!([row]).to_string()), Err(PlanError::InvalidField { event:Some(0), field:bad }) if bad==field)
+                );
+            }
+            let text = format!(
+                r#"[{{"type":"keyboard","scancode":30,"flag":0,"{field}":0,"{field}":1}}]"#
+            );
+            assert_eq!(plan(&text), Err(PlanError::DuplicateJsonKey));
+        }
+        for field in ["delayInMs", "releaseAfterMs", "unit_id", "future"] {
+            let mut row =
+                json!({"type":"keyboard","scancode":30,"flag":0,"modifiers":0,"unitId":0});
+            row[field] = json!(0);
+            assert!(matches!(
+                plan(&json!([row]).to_string()),
+                Err(PlanError::UnsupportedField { .. })
+            ));
+        }
     }
 
     #[test]
@@ -950,7 +1026,11 @@ fn decode_event(index: usize, value: &Value) -> Result<Event, PlanError> {
             ))
         }
         "keyboard" => {
-            fields(at, object, &["type", "scancode", "flag"])?;
+            fields(
+                at,
+                object,
+                &["type", "scancode", "flag", "modifiers", "unitId"],
+            )?;
             let scancode = integer(at, object, "scancode", u16::MAX as u64)? as u16;
             let flag = integer(at, object, "flag", u16::MAX as u64)? as u16;
             let transition = match flag {
@@ -962,6 +1042,14 @@ fn decode_event(index: usize, value: &Value) -> Result<Event, PlanError> {
                 scancode,
                 flag,
                 transition,
+                modifiers: object
+                    .get("modifiers")
+                    .map(|_| integer(at, object, "modifiers", u32::MAX as u64).map(|n| n as u32))
+                    .transpose()?,
+                unit_id: object
+                    .get("unitId")
+                    .map(|_| integer(at, object, "unitId", u16::MAX as u64).map(|n| n as u16))
+                    .transpose()?,
             })
         }
         "mouse" => {

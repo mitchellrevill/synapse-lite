@@ -8,7 +8,10 @@ use crate::{
     rzcontrol_packet::{InputPacket, KeyboardInput, MouseInput},
     source_macro::{Event, SymbolicPlan, Transition},
 };
-use std::{collections::BTreeSet, time::Duration};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    time::Duration,
+};
 
 const MAX_STEPS: usize = 512;
 
@@ -174,7 +177,7 @@ impl Scheduler {
             return Err(Error::Budget);
         }
         let mut steps = Vec::with_capacity(plan.events().len());
-        let mut keys = BTreeSet::new();
+        let mut keys = BTreeMap::new();
         let mut buttons = BTreeSet::new();
         for (index, event) in plan.events().iter().copied().enumerate() {
             let step = match event {
@@ -206,7 +209,14 @@ impl Scheduler {
                         return Err(Error::InvalidSequence);
                     }
                     let key = (template.make_code, template.flags);
-                    if (down && !keys.insert(key)) || (!down && !keys.remove(&key)) {
+                    if down {
+                        if keys.insert(key, template).is_some() {
+                            return Err(Error::InvalidSequence);
+                        }
+                    } else if keys.remove(&key) != Some(template) {
+                        // The ledger releases the original down's exact native
+                        // metadata. Refuse a different requested up atomically,
+                        // before this run can produce any output.
                         return Err(Error::InvalidSequence);
                     }
                     if keys.len() > keyboard::MAX_KEYS {

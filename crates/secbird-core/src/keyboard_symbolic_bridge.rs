@@ -94,8 +94,9 @@ impl ExplicitNativeKeyboard {
         }
     }
 
-    /// Optional unit/modifiers are explicit caller inputs. The source parser
-    /// still rejects those extra action fields rather than silently dropping them.
+    /// Explicit source fields take precedence over caller-supplied fallback
+    /// fields. Packet planning still checks the resolved source UnitId against
+    /// routing; no source value is replaced with an endpoint's UnitId.
     pub fn from_source_event(
         event: Event,
         modifiers: u32,
@@ -106,12 +107,19 @@ impl ExplicitNativeKeyboard {
                 scancode,
                 flag,
                 transition,
+                modifiers: event_modifiers,
+                unit_id,
             } => {
                 let flags = NativeKeyFlags::new(flag)?;
                 if flags.transition() != transition {
                     return Err(BridgeError::InconsistentTransition);
                 }
-                Ok(Self::new(scancode, flags, modifiers, source_unit))
+                Ok(Self::new(
+                    scancode,
+                    flags,
+                    event_modifiers.unwrap_or(modifiers),
+                    unit_id.or(source_unit),
+                ))
             }
             _ => Err(BridgeError::NotKeyboard),
         }
@@ -451,7 +459,9 @@ mod tests {
                 Event::Keyboard {
                     scancode: 29,
                     flag: 3,
-                    transition: Transition::Down
+                    transition: Transition::Down,
+                    modifiers: None,
+                    unit_id: None,
                 },
                 0,
                 None
@@ -469,6 +479,8 @@ mod tests {
                     scancode: 29,
                     flag,
                     transition,
+                    modifiers: None,
+                    unit_id: None,
                 },
                 0,
                 None,
@@ -495,5 +507,75 @@ mod tests {
             ),
             (0x1d, 5, 0x50, Some(2))
         );
+    }
+
+    #[test]
+    fn source_native_fields_override_fallbacks_including_explicit_zero() {
+        for (modifiers, unit) in [(0, 0), (0x430, 7), (u32::MAX, u16::MAX)] {
+            let source = Event::Keyboard {
+                scancode: 30,
+                flag: 0,
+                transition: Transition::Down,
+                modifiers: Some(modifiers),
+                unit_id: Some(unit),
+            };
+            let native =
+                ExplicitNativeKeyboard::from_source_event(source, 0x100, Some(99)).unwrap();
+            assert_eq!(native.modifiers(), modifiers);
+            assert_eq!(native.source_unit(), Some(unit));
+            let plan = plan_keyboard_packets(native, identity(unit)).unwrap();
+            assert_eq!(
+                plan.source_unit_provenance(),
+                SourceUnitProvenance::Explicit(unit)
+            );
+            assert_eq!(
+                InputPacket::from_bytes(plan.first_packet()).unwrap(),
+                InputPacket::Keyboard(KeyboardInput {
+                    unit_id: unit,
+                    make_code: 30,
+                    flags: 0,
+                    reserved: 0,
+                    extra_information: translate_driver_metadata_mask(modifiers)
+                })
+            );
+        }
+    }
+
+    #[test]
+    fn explicit_source_unit_cannot_be_replaced_with_routing_or_fallback_unit() {
+        let native = ExplicitNativeKeyboard::from_source_event(
+            Event::Keyboard {
+                scancode: 30,
+                flag: 0,
+                transition: Transition::Down,
+                modifiers: None,
+                unit_id: Some(0),
+            },
+            0x400,
+            Some(7),
+        )
+        .unwrap();
+        assert_eq!(native.modifiers(), 0x400);
+        assert_eq!(
+            plan_keyboard_packets(native, identity(7)),
+            Err(BridgeError::UnitIdConflict {
+                source: 0,
+                routing: 7
+            })
+        );
+        let native = ExplicitNativeKeyboard::from_source_event(
+            Event::Keyboard {
+                scancode: 30,
+                flag: 0,
+                transition: Transition::Down,
+                modifiers: Some(0),
+                unit_id: None,
+            },
+            0x400,
+            Some(7),
+        )
+        .unwrap();
+        assert_eq!(native.modifiers(), 0);
+        assert_eq!(native.source_unit(), Some(7));
     }
 }
