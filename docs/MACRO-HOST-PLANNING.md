@@ -50,9 +50,10 @@ c64e539437b50da2b1f2e4155d8cbb0fb1c3e1ebaad894caf509bad97e9857f9:
 
 Static decompilation establishes these branches, not live timing, clipboard/paste
 semantics or child-process completion. Historical4.0.827 addresses are not reused.
-Fallback0x18011b736, path-check semantics, start-hidden option layout, current-user
-versus elevated token policy and dispatch callback completion need further native
-analysis before a Rust executor can reproduce the full contract.
+Subsequent [native backend work](NATIVE-HOST-LAUNCH.md) recovers fallback0x18011b736,
+path checks, default launch options and the temporary working directory. Live
+Synapse callback timing, elevated-token policy variants, inter-event scheduling
+and clipboard/paste still need verification before complete macro execution.
 
 ## Remaining work
 
@@ -62,7 +63,9 @@ checks pass and both release binaries build. This includes six new core checks
 and one saved-file CLI check. See [validation and artifact hashes](validation/macro-host-planning.json).
 No normal app, imported command, clipboard or input action was run.
 
-Implement explicit host-action execution, completion-driven sequencing, cancel
+The [native process-launch backend](NATIVE-HOST-LAUNCH.md) now implements explicit
+launch attempts and scoped cancellation/handle cleanup with owned fixtures.
+It is not connected to macro activation. Complete host-action sequencing, cancel
 before dispatch, process-handle cleanup, clipboard ownership and paste/recovery.
 Do not kill a launched user's application on macro Stop merely to claim rollback.
 Verify only owned benign process fixtures before user-command playback. Mixed

@@ -1,0 +1,121 @@
+{
+  "date": "2026-10-30",
+  "unit": "Explicit native host process-launch backend",
+  "status": "verified_backend_macro_integration_pending",
+  "artifacts": [
+    {
+      "path": "target/release/secbird.exe",
+      "bytes": 1489920,
+      "sha256": "f3cc9e9ed8af74361239d087f4145d4f02529938d519495c4cb2672db22fa47c"
+    },
+    {
+      "path": "target/release/secbird-tray.exe",
+      "bytes": 3325952,
+      "sha256": "e67148e64341b4447d44b0f462872627616ba60d29effe7b2d30a28a37f44b38"
+    },
+    {
+      "path": "target/release/examples/host-launch-fixture.exe",
+      "bytes": 129024,
+      "sha256": "8a947049f1d874e5eb422c9761426554392c231dd11335f66c49693ab39256b3"
+    },
+    {
+      "path": "crates/secbird-core/src/native_host_launch.rs",
+      "bytes": 6448,
+      "sha256": "9758a9051921272236c75c69d6e96b14b7510582fd3c0c12aaaa0d9d921b12bc"
+    },
+    {
+      "path": "crates/secbird-core/src/native_host_launch/windows.rs",
+      "bytes": 7590,
+      "sha256": "7ddfcff6ae3e9403551c1a4255fe30b84249abb39e5712f419a8ba2298414fda"
+    },
+    {
+      "path": "crates/secbird-core/src/native_host_launch/tests.rs",
+      "bytes": 12413,
+      "sha256": "5318b506b7ec23f08c09bd8118c0ec57015e7ad08b0d83923198faa855a7b616"
+    },
+    {
+      "path": "crates/secbird-core/examples/host-launch-fixture.rs",
+      "bytes": 606,
+      "sha256": "42ac5e28542e6898d55e0f40199d8b02d3007fab7a326fe38ae55bf83b21fa73"
+    }
+  ],
+  "logs": [
+    {
+      "name": "native-host-launch-final-core.log",
+      "sha256": "4396ca41a3699f6af3f7fcd3959aef0be9949c876a44163237d6459b5bd3fe16",
+      "results": [
+        "test result: ok. 585 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out; finished in 5.59s"
+      ],
+      "build_finished": false
+    },
+    {
+      "name": "native-host-launch-app-tests.log",
+      "sha256": "42ac5b5de4065509dc4d2ba5f450c54edd25e2ceeedb38336dfad7351721a8d7",
+      "results": [
+        "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s",
+        "test result: ok. 308 passed; 0 failed; 48 ignored; 0 measured; 0 filtered out; finished in 9.43s"
+      ],
+      "build_finished": false
+    },
+    {
+      "name": "native-host-launch-marker-final.log",
+      "sha256": "37e3a0e70bafc3cef7e6062baa758b2a689556f761a3ea003f89162f7dbac5d2",
+      "results": [
+        "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 584 filtered out; finished in 0.85s"
+      ],
+      "build_finished": true
+    },
+    {
+      "name": "native-host-launch-marker-build-final.log",
+      "sha256": "515cdf8b0114ee8e5329e77425e7c0a112c1f5e3ee5e9825405eef4a871cd2c5",
+      "results": [],
+      "build_finished": true
+    }
+  ],
+  "native_sha256": "c64e539437b50da2b1f2e4155d8cbb0fb1c3e1ebaad894caf509bad97e9857f9",
+  "final_optimized_fixture_handle_counts": {
+    "before": 132,
+    "after": 132
+  },
+  "checks": {
+    "core_passed": 585,
+    "core_ignored": 9,
+    "cli_passed": 9,
+    "native_app_passed": 308,
+    "native_app_ignored": 48,
+    "optimized_backend_passed": 10,
+    "new_pure_tests": 7,
+    "explicit_owned_fixture_tests": 3,
+    "final_optimized_fixture_launches": 7,
+    "working_directory_result_marker": 42,
+    "source_contracts": [
+      "GetTempPathW(260) child directory; source overflow/failure fallback",
+      "GetFileAttributesW preflight",
+      "CreateProcessW and whole/split ShellExecuteExW routes",
+      "Source error2/3 retry, Unicode command boundaries, no argv requoting",
+      "Stop-before-start, no duplicate dispatch, no retry after Stop, no false Cancelled after success",
+      "Direct creation in MTA without COM, incompatible shell COM failure",
+      "Process/thread handles close; test-only duplicate observes authoritative fixture exit"
+    ]
+  },
+  "initial_findings": [
+    "Eager COM setup changed cold parent handle count130 to142. Initialization now occurs only on shell fallback; final direct fixture count is unchanged.",
+    "Final native helper query proved GetTempPathW rather than inherited working directory. Corrected before commit and verified through distinct child exit marker.",
+    "PID lookup alone could miss an already-exited child. Test-only duplicated handles now prove exit results; production retains none."
+  ],
+  "side_effects": {
+    "normal_app_started": false,
+    "imported_commands_or_websites_run": false,
+    "personal_programs_run": false,
+    "input_sent": false,
+    "stock_services_changed": false,
+    "hardware_devices_changed": false
+  },
+  "remaining": [
+    "Macro worker sequencing/admission/drain and Play/Stop UI integration",
+    "Clipboard/paste ownership and recovery",
+    "Actual mixed-input routing/exclusivity/physical arbitration",
+    "Arbitrary file associations, visible-window and UAC/security-context variants",
+    "Catalogue-wide API/hardware coverage and three complete-build sub100MB runs"
+  ]
+}
