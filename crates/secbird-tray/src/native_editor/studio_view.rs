@@ -320,6 +320,12 @@ pub(super) fn work(request: Request, read_only:bool) -> Response {
     }
 }
 
+pub(super) fn navigation_library(state: &State) -> Option<(PathBuf, Vec<(String, String)>)> {
+    let view = &state.studio;
+    if view.dirty() || view.busy || view.dialog {return None;}
+    let archive = view.baseline.as_ref()?;
+    Some((view.path.clone()?, super::assignment_navigation::effect_choices(archive)))
+}
 impl View {
     fn dirty(&self) -> bool {
         self.library_dirty || self.draft.as_ref().is_some_and(Draft::is_dirty)

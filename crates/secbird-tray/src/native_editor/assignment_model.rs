@@ -252,6 +252,7 @@ pub(super) struct Context {
     pub original_profile: Value,
     pub mappings: Option<Vec<Value>>,
     pub sensitivity_range: Option<secbird_core::db::DpiRange>,
+    pub navigation: Option<super::assignment_navigation::Catalog>,
 }
 impl Context {
     pub fn from_device(device: &Value) -> Option<Self> {
@@ -279,6 +280,7 @@ impl Context {
                 };
                 (range.min > 0 && range.min <= range.max && range.step > 0).then_some(range)
             })(),
+            navigation: super::assignment_navigation::Catalog::from_device(device),
             original_profile,
             mappings,
         })
@@ -307,6 +309,7 @@ pub(super) enum Anchor {
 #[derive(Clone, Debug)]
 pub(super) struct Draft {
     pub keyboard: keyboard::Setting,
+    pub navigation: super::assignment_navigation::Navigation,
     pub keyboard_group_menu: bool,
     pub keyboard_error: Option<String>,
     pub context: Arc<Context>,
@@ -431,6 +434,7 @@ impl Draft {
         let keyboard = keyboard_result.and_then(Result::ok).unwrap_or_default();
         let (turbo, speed) = if category == Some(Category::Keyboard) {(keyboard.turbo, keyboard.speed)} else {(turbo,speed)};
         Self {
+            navigation: super::assignment_navigation::Navigation::read(original_records.first().filter(|r|r["outputType"]=="profileNavigationGroup").map(|r|&r["profileNavigationGroup"])),
             keyboard,
             keyboard_group_menu: false,
             keyboard_error,
@@ -509,6 +513,8 @@ impl Draft {
         self.dpi_text = initial.dpi_text;
         self.speed_draft = self.speed.to_string();
         self.launch = initial.launch;
+        self.navigation = initial.navigation;
+        if category == Category::Profile && initial.category != Some(category) {self.dirty = true;}
         if category == Category::Media {self.dirty = true;}
         if matches!(category,Category::Default | Category::Disable) {self.dirty = initial.category != Some(category);}
         self.keyboard = initial.keyboard;
@@ -520,6 +526,9 @@ impl Draft {
         }
     }
     pub fn option_labels(&self) -> Vec<String> {
+        if self.category == Some(Category::Profile) {
+            return self.context.navigation.as_ref().map(|c|if self.navigation.effects_menu {c.effects.iter().map(|(_,name)|name.clone()).collect()} else {c.targets().into_iter().map(|(guid,name)|if guid.is_some(){name}else{format!("{name} (identity unavailable)")}).collect()}).unwrap_or_default();
+        }
         if self.category == Some(Category::Sensitivity) {return self.sensitivity_options().iter().map(|(_,label)|label.to_string()).collect();}
         if self.category == Some(Category::Keyboard) {
             if self.keyboard_group_menu { keyboard::GROUPS.iter().map(|s|s.to_string()).collect() }
@@ -713,6 +722,14 @@ impl Draft {
         match self.category {Some(Category::Windows)=>secbird_core::profile_compat::windows_shortcuts::CHOICES,Some(Category::Media)=>&secbird_core::profile_compat::multimedia::CHOICES,_=>&MOUSE_ACTIONS}
     }
     pub fn selected_option(&self) -> Option<usize> {
+        if self.category == Some(Category::Profile) {
+            let catalog = self.context.navigation.as_ref()?;
+            return if self.navigation.effects_menu {
+                catalog.effects.iter().position(|(id,_)|Some(id)==self.navigation.effect.as_ref())
+            } else {
+                catalog.targets().iter().position(|(id,_)|id.is_some() && id==&self.navigation.guid)
+            };
+        }
         match self.category {Some(Category::Windows)=>self.windows_option,Some(Category::Media)=>self.media_option,_=>Some(self.mouse_option)}
     }
     pub fn can_save_windows(&self) -> bool {
@@ -721,6 +738,7 @@ impl Draft {
             && secbird_core::profile_compat::windows_shortcuts::validate_input(self.context.owner.pid,&self.input.input_id,&self.input.input_type).is_ok()
     }
     pub fn select_option(&mut self, index: usize) {
+        if self.category == Some(Category::Profile) {self.navigation_option(index); return;}
         if self.category == Some(Category::Windows) {
             if index < self.options().len() {self.windows_option=Some(index);self.dirty=true;self.options_open=false;}
         } else { self.select_mouse(index); }
@@ -777,10 +795,12 @@ impl Draft {
         self.input.enabled && self.dirty && self.category.is_some_and(|category|self.categories.contains(&category) && match category {
             Category::Keyboard=>self.keyboard_profile().is_ok(), Category::Mouse=>self.assignment().is_ok(),
             Category::Media=>self.media_valid(), Category::Windows=>self.can_save_windows(),
+            Category::Profile=>self.navigation_profile().is_ok(),
             Category::Launch=>self.launch_profile().is_ok(), Category::Default | Category::Disable=>true, _=>false,
         })
     }
     pub fn save_reason(&self) -> &'static str {
+        if self.category == Some(Category::Profile) {return "Saves locally. Profile and linked lighting activation require verified input routing and recovery.";}
         if self.category == Some(Category::Media) {return "Saves locally; device and host output are unavailable.";}
         if self.category == Some(Category::Windows) {return "Saves locally; Windows shortcut execution is unavailable.";}
         if self.category == Some(Category::Launch) {return "Saves locally. Device trigger delivery is unverified; Save does not launch anything.";}

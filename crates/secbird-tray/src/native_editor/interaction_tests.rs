@@ -43,6 +43,8 @@ mod keyboard_assignments;
 mod multimedia;
 #[path="sensitivity_interaction_tests.rs"]
 mod sensitivity;
+#[path="profile_navigation_interaction_tests.rs"]
+mod profile_navigation;
 use super::*;
 use secbird_core::{commands as cmd, sim::Sim, Store};
 use std::time::Instant;

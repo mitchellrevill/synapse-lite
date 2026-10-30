@@ -32,6 +32,7 @@ mod assignment_geometry;
 mod assignment_fonts;
 mod assignment_layout;
 mod assignment_model;
+mod assignment_navigation;
 mod assignment_backend;
 mod assignment_view;
 mod color_editor_layout;
