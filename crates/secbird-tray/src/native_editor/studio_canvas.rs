@@ -269,6 +269,36 @@ impl Canvas {
             && point.x < width - 250.0
             && point.y >= 168.0
             && point.y < height - 50.0;
+        if message == WM_RBUTTONUP && inside {
+            let Some(world) = canvas.screen_to_world(point, width, height) else { return false; };
+            let hit = canvas.hit(world);
+            let on_device = canvas.devices.iter().any(|device| {
+                let local = device.local(world);
+                let b = device.geometry.view_box;
+                local.x >= b[0] && local.x <= b[0] + b[2]
+                    && local.y >= b[1] && local.y <= b[1] + b[3]
+            });
+            if !on_device { return false; }
+            // No output request is sent: the current backend cannot prove exact
+            // restoration of host animation state or exclusive ownership.
+            studio_view::identify_unavailable(state);
+            InvalidateRect(state.hwnd, null(), 0);
+            let menu = CreatePopupMenu();
+            if !menu.is_null() {
+                AppendMenuW(menu, MF_STRING | MF_GRAYED, 1, wide("Identify Device").as_ptr());
+                if hit.is_some() { AppendMenuW(menu, MF_STRING | MF_GRAYED, 2, wide("Identify LED").as_ptr()); }
+                AppendMenuW(menu, MF_SEPARATOR, 0, null());
+                AppendMenuW(menu, MF_STRING | MF_GRAYED, 3,
+                    wide("Unavailable: ownership / restoration unverified").as_ptr());
+                let mut cursor: POINT = std::mem::zeroed();
+                if GetCursorPos(&mut cursor) != 0 {
+                    TrackPopupMenu(menu, TPM_RETURNCMD | TPM_NONOTIFY,
+                        cursor.x, cursor.y, 0, state.hwnd, null());
+                }
+                DestroyMenu(menu);
+            }
+            return true;
+        }
         match message {
             WM_LBUTTONDOWN if inside => {
                 let Some(world) = canvas.screen_to_world(point, width, height) else {
