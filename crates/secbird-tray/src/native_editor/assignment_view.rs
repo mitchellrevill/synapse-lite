@@ -16,6 +16,10 @@ pub(super) const LAUNCH_ARGUMENTS: u16 = 1603;
 #[derive(Clone)]
 pub(super) enum Control {
     Block,
+    NavigationAction(usize),
+    NavigationTargets,
+    NavigationEffects,
+    NavigationLink,
     LaunchMode(bool),
     LaunchBrowse,
     SaveSensitivity,
@@ -53,6 +57,14 @@ fn r(x: f64, y: f64, width: f64, height: f64) -> Rect {
         width,
         height,
     }
+}
+fn navigation_context(s: &State) -> Option<model::Context> {
+    let mut context = s.device().and_then(model::Context::from_device)?;
+    if let (Some(catalog), Some((path, effects))) = (&mut context.navigation, studio_view::navigation_library(s)) {
+        catalog.path = Some(path);
+        catalog.effects = effects;
+    }
+    Some(context)
 }
 fn dimensions(s: &State) -> (f64, f64) {
     (
@@ -365,7 +377,7 @@ fn inputs(s: &State) -> Vec<Input> {
 fn visible_inputs(s: &State) -> Vec<Input> {
     let mut inputs = inputs(s);
     if s.assignment.customized_only {
-        let context = s.device().and_then(model::Context::from_device);
+        let context = navigation_context(s);
         inputs.retain(|i| {
             context
                 .as_ref()
@@ -707,10 +719,7 @@ pub(super) unsafe fn paint_customize(s: &State, p: &mut Painter) -> bool {
         hit(p, r(197.0, 148.0, 26.0, 26.0), Control::Drawer);
         image(s, p, "assignment-panel-close", r(200.0, 151.0, 20.0, 20.0));
         let entries = visible_inputs(s);
-        let context = s
-            .device()
-            .and_then(model::Context::from_device)
-            .map(Arc::new);
+        let context = navigation_context(s).map(Arc::new);
         let saved = SaveDC(p.dc);
         IntersectClipRect(p.dc, 0, p.px(195), p.px(230), p.px((h - 12.0) as i32));
         for (index, i) in entries.iter().enumerate() {
@@ -886,6 +895,7 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
             button(p, if d.launch.website { "Selected: Website" } else { "Website" }, r(x,y+116.0,210.0,25.0), Some(Control::LaunchMode(true)));
         }
         Some(Category::Disable) => {}
+        Some(Category::Profile) => navigation_body(s, p, d, f),
         Some(Category::Sensitivity) => sensitivity_body(s, p, d, f),
         Some(Category::Media) => {
             border(p, f.dropdown, 0x515151);
@@ -1036,7 +1046,7 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
     }
     button(p, "CANCEL", f.cancel, Some(Control::Cancel));
     if d.category == Some(Category::Sensitivity) {button(p,"SAVE DRAFT",f.save,(d.sensitivity_valid() && s.pending==0 && !s.assignment.saving && !s.restricted_actions).then_some(Control::SaveSensitivity));} else {button(p, "SAVE", f.save, (d.can_save() && !s.assignment.saving && s.pending == 0 && !s.read_only_smoke && !s.restricted_actions).then_some(Control::Save));}
-    let validation = if d.category == Some(Category::Keyboard) {if d.dirty {d.keyboard_profile().err()} else {d.keyboard_error.clone()}} else {None};
+    let validation = if d.category == Some(Category::Profile) {d.navigation_profile().err()} else if d.category == Some(Category::Keyboard) {if d.dirty {d.keyboard_profile().err()} else {d.keyboard_error.clone()}} else {None};
     if d.dirty { button(p,"UNDO",r(f.cancel.x,f.cancel.y+125.0,80.0,27.0),Some(Control::Undo)); }
     text(
         p,
@@ -1254,7 +1264,7 @@ fn transition(s: &mut State, next: Transition) {
         Transition::Close => s.assignment.cancel(),
         Transition::Open(i, a) => {
             if i.enabled {
-                if let Some(c) = s.device().and_then(model::Context::from_device) {
+                if let Some(c) = navigation_context(s) {
                     s.assignment.draft = Some(Draft::new(Arc::new(c), i, a, s.assignment.hyper));
                 }
             }
@@ -1358,6 +1368,31 @@ pub(super) unsafe fn action(s: &mut State, c: Control) {
         Control::Category(c) => {
             if let Some(d) = &mut s.assignment.draft {
                 d.select(c);
+            }
+        }
+        Control::NavigationAction(index) => {
+            if let Some(d) = &mut s.assignment.draft {d.navigation_action(index);}
+        }
+        Control::NavigationTargets | Control::NavigationEffects => {
+            if let Some(d) = &mut s.assignment.draft {
+                let effects = matches!(c, Control::NavigationEffects);
+                let same = d.options_open && d.navigation.effects_menu == effects;
+                d.navigation.effects_menu = effects;
+                d.options_open = !same;
+                d.options_scroll = 0.0;
+            }
+        }
+        Control::NavigationLink => {
+            if let Some(d) = &mut s.assignment.draft {
+                let available = d.context.navigation.as_ref().is_some_and(|c|!c.effects.is_empty());
+                if d.navigation.linked || available {
+                    d.navigation.linked = !d.navigation.linked;
+                    if d.navigation.linked && d.navigation.effect.is_none() {
+                        d.navigation.effect = d.context.navigation.as_ref().and_then(|c|c.effects.first().map(|e|e.0.clone()));
+                    }
+                    d.options_open = false;
+                    d.dirty = true;
+                }
             }
         }
         Control::Options => {
@@ -1550,7 +1585,7 @@ pub(super) unsafe fn wheel(s: &mut State, delta: f64) {
         let d = s.assignment.draft.as_mut().unwrap();
         if d.options_open
             && geo::contains(
-                geo::options(draft_form(g, d, d.form_scroll).dropdown, h),
+                options_rect(d, draft_form(g, d, d.form_scroll).dropdown, h),
                 x,
                 y,
             )
@@ -1716,6 +1751,12 @@ pub(super) unsafe fn repeat(s: &mut State) {
 pub(super) fn diagnostics(s: &State) -> Value {
     let controls: Vec<Value> = s.hits.iter().filter_map(|h| {
         let key = match &h.action {
+            Action::Assignment(Control::Category(Category::Profile)) => "profile".to_string(),
+            Action::Assignment(Control::NavigationAction(index)) => format!("nav-action-{index}"),
+            Action::Assignment(Control::NavigationTargets) => "nav-targets".to_string(),
+            Action::Assignment(Control::NavigationEffects) => "nav-effects".to_string(),
+            Action::Assignment(Control::NavigationLink) => "nav-link".to_string(),
+            Action::Assignment(Control::Undo) => "undo".to_string(),
             Action::Assignment(Control::Category(Category::Windows)) => "windows".to_string(),
             Action::Assignment(Control::Options) => "options".to_string(),
             Action::Assignment(Control::Option(i)) => format!("option-{i}"),
@@ -1888,6 +1929,13 @@ fn draft_form(g: shell::Shell, d: &Draft, scroll: f64) -> geo::Form {
         d.turbo_available(),
         scroll,
     );
+    if d.category == Some(Category::Profile) {
+        f.dropdown = navigation_dropdown(f, d.navigation.effects_menu);
+        let foot = if d.navigation.action != Some(4) {239.0} else if d.navigation.linked {365.0} else {323.0};
+        f.cancel.y = g.body.y - scroll + foot;
+        f.save.y = f.cancel.y;
+        f.bottom = f.cancel.y + 27.0;
+    }
     if d.category == Some(Category::Sensitivity) {
         let foot = if d.context.sensitivity_range.is_none() {
             185.0
@@ -1911,7 +1959,73 @@ fn options_rect(d: &Draft, dropdown: Rect, height: f64) -> Rect {
     if d.category == Some(Category::Sensitivity) {
         panel.height = (d.sensitivity_options().len() as f64 * 25.0 + 2.0).min(180.0);
     }
+    if d.category == Some(Category::Profile) {
+        panel.width = 180.0;
+        panel.height = (d.option_labels().len() as f64 * 25.0 + 2.0).min(180.0);
+    }
     panel
+}
+fn navigation_dropdown(f: geo::Form, effects: bool) -> Rect {
+    r(f.display.x + 30.0, f.display.y + if effects {239.0} else {150.0}, 180.0, 27.0)
+}
+unsafe fn navigation_radio(p: &Painter, bounds: Rect, selected: bool) {
+    let outline = CreatePen(PS_SOLID, 1, rgb(if selected {GREEN} else {0x777777}));
+    let brush = CreateSolidBrush(rgb(0x111111));
+    let old_pen = SelectObject(p.dc, outline);
+    let old_brush = SelectObject(p.dc, brush);
+    let circle = box_px(p, r(bounds.x, bounds.y + 2.0, 16.0, 16.0));
+    Ellipse(p.dc, circle.left, circle.top, circle.right, circle.bottom);
+    if selected {
+        let dot = CreateSolidBrush(rgb(GREEN));
+        SelectObject(p.dc, dot);
+        let circle = box_px(p, r(bounds.x+4.0, bounds.y+6.0, 8.0, 8.0));
+        Ellipse(p.dc, circle.left, circle.top, circle.right, circle.bottom);
+        SelectObject(p.dc, brush);
+        DeleteObject(dot);
+    }
+    SelectObject(p.dc, old_pen);
+    SelectObject(p.dc, old_brush);
+    DeleteObject(outline);
+    DeleteObject(brush);
+}
+unsafe fn navigation_body(s: &State, p: &mut Painter, d: &Draft, f: geo::Form) {
+    let available = d.context.navigation.as_ref().is_some_and(|c|c.profiles.profiles.len()>1);
+    for (index, (_,label)) in secbird_core::profile_compat::profile_navigation::CHOICES.iter().enumerate() {
+        let row = r(f.display.x, f.display.y+index as f64*30.0, 210.0, 20.0);
+        navigation_radio(p,row,d.navigation.action==Some(index));
+        baseline_text(p,label,r(row.x+30.0,row.y,180.0,20.0),p.fonts.normal,
+            if available {0xcccccc} else {0x555555}, DT_SINGLELINE | DT_VCENTER,Role::Options);
+        if available {hit(p,row,Control::NavigationAction(index));}
+    }
+    if d.navigation.action != Some(4) {return;}
+    let targets = d.context.navigation.as_ref().map(|c|c.targets()).unwrap_or_default();
+    let target_label = targets.iter().find(|(id,_)|id.is_some() && id==&d.navigation.guid)
+        .map(|(_,name)|name.as_str()).unwrap_or("Choose a profile...");
+    let effects = d.context.navigation.as_ref().map(|c|c.effects.as_slice()).unwrap_or_default();
+    for effect in [false,true] {
+        if effect && !d.navigation.linked {continue;}
+        let bounds = navigation_dropdown(f,effect);
+        border(p,bounds,0x515151);
+        let label = if effect {effects.iter().find(|(id,_)|Some(id)==d.navigation.effect.as_ref())
+            .map(|(_,name)|name.as_str()).unwrap_or("Choose a Chroma effect...")} else {target_label};
+        baseline_text(p,label,r(bounds.x+10.0,bounds.y,150.0,27.0),p.fonts.normal,0xcccccc,
+            DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS,Role::Dropdown);
+        image(s,p,"expand",r(bounds.x+160.0,bounds.y+8.0,10.0,10.0));
+        if available && if effect {!effects.is_empty()} else {!targets.is_empty()} {
+            hit(p,bounds,if effect {Control::NavigationEffects} else {Control::NavigationTargets});
+        }
+    }
+    let link = r(f.display.x+30.0,f.display.y+187.0,180.0,38.0);
+    let enabled = !effects.is_empty() || d.navigation.linked;
+    border(p,r(link.x,link.y,18.0,18.0),if enabled {0x777777} else {0x444444});
+    if d.navigation.linked {fill(p,r(link.x+4.0,link.y+4.0,10.0,10.0),GREEN);}
+    text(p,"Switch lighting profile to",r(link.x+28.0,link.y,142.0,38.0),p.fonts.normal,
+        if enabled {0xcccccc} else {0x555555},DT_WORDBREAK);
+    if enabled && available {hit(p,link,Control::NavigationLink);}
+    if effects.is_empty() && !d.navigation.linked {
+        text(p,"Open a saved library in Chroma Studio to choose an effect.",
+            r(f.display.x+30.0,f.display.y+225.0,180.0,35.0),p.fonts.small,0x999999,DT_WORDBREAK);
+    }
 }
 fn dpi_box(f: geo::Form, axis: usize) -> Rect {
     r(

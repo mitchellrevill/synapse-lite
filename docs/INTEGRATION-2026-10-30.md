@@ -18,9 +18,10 @@ effect-specific field ownership and history.
 
 Customize combines Keyboard, Mouse, Multimedia, Windows, Launch and Disable/Default
 local assignment editing with guarded profile snapshots and Standard/Hypershift
-layers. Sensitivity is a separate inert desired draft. Profile Switch currently
-contributes core GUID/reference validation, not a native form or key-triggered
-switching. Cross-category cleanup prevents earlier overlays/drafts from hiding a
+layers. Sensitivity is a separate inert desired draft. The subsequent
+[Profile Switch authoring](PROFILE-NAVIGATION-AUTHORING.md) checkpoint adds its
+native form and local Save; key-triggered switching remains unimplemented.
+Cross-category cleanup prevents earlier overlays/drafts from hiding a
 later saved assignment. These checkpoints do not enable unverified input delivery.
 
 Shared additions include cached device information, per-device battery alerts,
@@ -51,7 +52,7 @@ tests and release builds are not proof of physical delivery or pixel identity.
 
 ## Remaining acceptance
 
-- Finish Profile Switch's native form/save/runtime, Ripple's panel/propagation,
+- Finish Profile Switch's trigger routing/ordered runtime, Ripple's panel/propagation,
   Tidal's radial runtime and the documented finite/input-driven effect modes.
 - Prove common driver routing, physical key identity, input ownership, terminal
   delivery, cancellation/release, reconnect and recovery before enabling bindings,

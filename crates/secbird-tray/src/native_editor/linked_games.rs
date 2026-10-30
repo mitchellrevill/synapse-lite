@@ -52,6 +52,7 @@ pub struct DeviceRow {
     pub profiles: Vec<String>,
 }
 pub struct Data {
+    notice: Option<String>,
     pub games: Vec<Game>,
     pub devices: Vec<DeviceRow>,
     pub bindings: BTreeMap<(String, String), Vec<String>>,
@@ -74,6 +75,61 @@ pub(super) struct View {
     maximum_scroll: Cell<i32>,
     status: String,
     failed: bool,
+    icons: RefCell<BTreeMap<String, GameIcon>>,
+    covers: RefCell<BTreeMap<String, Bitmap>>,
+}
+unsafe fn game_cover(view:&View,p:&Painter,game:&Game,x:i32,y:i32)->bool {
+    // Private, locally provisioned images only. Rendering never starts network
+    // requests and catalogue identifiers cannot select arbitrary files.
+    if game.id.is_empty()||!game.id.bytes().all(|b|b.is_ascii_hexdigit()||b==b'-'){return false;}
+    let mut covers=view.covers.borrow_mut();
+    if !covers.contains_key(&game.id){
+        let path=assets_dir().join("game-covers").join(format!("{}.bgra",game.id));
+        let Some(image)=Bitmap::load_alpha(&path) else{return false;};
+        if covers.len()>=32{covers.clear();}
+        covers.insert(game.id.clone(),image);
+    }
+    p.image(covers.get(&game.id),x,y,288,150);true
+}
+enum GameIcon { Native(HICON), Png(Bitmap) }
+impl Drop for GameIcon {
+    fn drop(&mut self) { if let Self::Native(icon)=self { unsafe { DestroyIcon(*icon); } } }
+}
+// Game Manager writes some PNG payloads with an .ico extension. Decode the
+// actual image, then clone its pixels so the vendor's source file is not held
+// open for the lifetime of this view.
+unsafe fn png_icon(path:&Path)->Option<Bitmap>{
+    use windows_sys::Win32::Graphics::GdiPlus::{GdipCreateBitmapFromFile,GdipGetImageWidth,GdipGetImageHeight,GdipCloneBitmapAreaI,GdipDisposeImage,GdipCreateHBITMAPFromBitmap};
+    let metadata=std::fs::metadata(path).ok()?;
+    if !metadata.is_file()||metadata.len()>4*1024*1024{return None;}
+    let mut file=std::fs::File::open(path).ok()?;let mut header=[0;8];
+    std::io::Read::read_exact(&mut file,&mut header).ok()?;
+    if header!=[137,80,78,71,13,10,26,10]{return None;}
+    let mut source=null_mut();
+    if GdipCreateBitmapFromFile(wide(&path.to_string_lossy()).as_ptr(),&mut source)!=0{return None;}
+    let mut width=0;let mut height=0;
+    let valid=GdipGetImageWidth(source.cast(),&mut width)==0&&GdipGetImageHeight(source.cast(),&mut height)==0&&width>0&&height>0&&width<=1024&&height<=1024;
+    let mut decoded=null_mut();
+    let cloned=valid&&GdipCloneBitmapAreaI(0,0,width as i32,height as i32,0x000e200b,source,&mut decoded)==0;
+    GdipDisposeImage(source.cast());
+    if !cloned{return None;}
+    let mut handle=null_mut();
+    if GdipCreateHBITMAPFromBitmap(decoded,&mut handle,0)!=0{GdipDisposeImage(decoded.cast());return None;}
+    Some(Bitmap{handle,width:width as i32,height:height as i32,alpha:true,smooth:decoded})
+}
+unsafe fn game_icon(view: &View, p: &Painter, game: &Game, x: i32, y: i32) -> bool {
+    let mut icons = view.icons.borrow_mut();
+    if !icons.contains_key(&game.id) {
+        let Some(path) = game.extra.get("stockIconPath").and_then(Value::as_str) else { return false; };
+        if !Path::new(path).extension().is_some_and(|ext| ext.eq_ignore_ascii_case("ico")) { return false; }
+        let icon = LoadImageW(null_mut(), wide(path).as_ptr(), IMAGE_ICON, p.px(96), p.px(96), LR_LOADFROMFILE) as HICON;
+        let image=if !icon.is_null(){GameIcon::Native(icon)}else if let Some(image)=png_icon(Path::new(path)){GameIcon::Png(image)}else{return false;};
+        icons.insert(game.id.clone(),image);
+    }
+    icons.get(&game.id).is_some_and(|icon|match icon{
+        GameIcon::Native(icon)=>DrawIconEx(p.dc,p.px(x),p.px(y),*icon,p.px(96),p.px(96),0,null_mut(),DI_NORMAL)!=0,
+        GameIcon::Png(image)=>{p.image(Some(image),x,y,96,96);true},
+    })
 }
 pub(super) fn active(state: &State) -> bool {
     state.selected.as_deref() == Some(ID)
@@ -106,6 +162,20 @@ pub(super) fn work(
     }
     let mut store = Store::load(&secbird_core::config_dir().join("profiles.json"))
         .map_err(|e| e.to_string())?;
+    let mut notice=None;
+    // Explicit private configuration (tests/portable sessions) must never read
+    // the computer owner's normal Game Manager account.
+    if std::env::var_os("SYNAPSE_LITE_CONFIG_DIR").is_none() {
+        if let Some(program_data) = std::env::var_os("ProgramData") {
+            let discovered = secbird_core::linked_games::stock_catalogue::read(
+                &PathBuf::from(program_data).join("Razer/GameManager3/Data"),
+            );
+            match discovered.and_then(|games|secbird_core::linked_games::stock_catalogue::merge(&store,games)) {
+                Ok(merged)=>store=merged,
+                Err(error)=>notice=Some(format!("Local games are available. Synapse catalogue could not be read: {error}")),
+            }
+        }
+    }
     let change = match request {
         Request::Read => None,
         Request::Add(path) => Some(Change::Add {
@@ -124,7 +194,12 @@ pub(super) fn work(
                 profile,
             })
         }
-        Request::Remove(game) => Some(Change::Remove { game }),
+        Request::Remove(game) => {
+            if Catalog::read(&store).map_err(|e|e.to_string())?.games.iter().any(|row|row.id==game&&(row.extra.contains_key("stockIconPath")||row.extra.contains_key("stockCoverArt"))){
+                secbird_core::linked_games::stock_catalogue::hide(&mut store, &game);
+            }
+            Some(Change::Remove { game })
+        },
     };
     if let Some(change) = change {
         store = secbird_core::linked_games::edit(&store, change).map_err(|e| e.to_string())?;
@@ -148,6 +223,7 @@ pub(super) fn work(
         }
     }
     Ok(Data {
+        notice,
         games: catalog.games,
         devices,
         bindings,
@@ -172,8 +248,10 @@ pub(super) unsafe fn receive(state: &mut State, result: Result<Data, String>) {
     state.linked_games.busy = false;
     match result {
         Ok(data) => {
+            state.linked_games.icons.borrow_mut().clear();
+            state.linked_games.covers.borrow_mut().clear();
+            state.linked_games.status=data.notice.clone().unwrap_or_default();
             state.linked_games.data = Some(data);
-            state.linked_games.status = "".into();
             state.linked_games.failed = false;
         }
         Err(error) => {
@@ -362,7 +440,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         (Page::Games, "GAMES", center - 75),
         (Page::Devices, "DEVICES", center + 5),
     ] {
-        p.button(
+        p.navigation(
             label,
             x,
             91,
@@ -475,13 +553,13 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
                 continue;
             }
             tile(p, x, y, 290, 220);
-            p.image(
+            if !game_cover(view,p,game,x+1,y+1)&&!game_icon(view, p, game, x+97, y+30) { p.image(
                 state.icons.get("host-game-placeholder"),
                 x + 115,
                 y + 45,
                 60,
                 60,
-            );
+            ); }
             p.text(
                 &game.name,
                 x + 10,
@@ -725,5 +803,5 @@ unsafe fn paint_dialog(
 #[cfg(test)]
 pub(super) fn diagnostics(state: &State) -> Value {
     let v = &state.linked_games;
-    json!({"active":active(state),"busy":v.busy,"status":v.status,"failed":v.failed,"devices":v.data.as_ref().map(|d|d.devices.iter().map(|r|json!({"id":r.id,"profiles":r.profiles})).collect::<Vec<_>>()).unwrap_or_default(),"games":v.data.as_ref().map(|d|d.games.clone()).unwrap_or_default(),"dialog":v.dialog.is_some(),"picker":v.picker.is_some(),"page":if v.page==Page::Games{"games"}else{"devices"}})
+    json!({"active":active(state),"search":v.search,"rendered_icons":v.icons.borrow().len(),"rendered_covers":v.covers.borrow().len(),"busy":v.busy,"status":v.status,"failed":v.failed,"devices":v.data.as_ref().map(|d|d.devices.iter().map(|r|json!({"id":r.id,"profiles":r.profiles})).collect::<Vec<_>>()).unwrap_or_default(),"games":v.data.as_ref().map(|d|d.games.clone()).unwrap_or_default(),"dialog":v.dialog.is_some(),"picker":v.picker.is_some(),"page":if v.page==Page::Games{"games"}else{"devices"}})
 }

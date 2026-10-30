@@ -1,0 +1,142 @@
+{
+  "scope": "Native Profile Switch authoring/local persistence; no input-triggered activation",
+  "base_commit": "00d03506d9b79e72e6b96f2f775cea741b9fb5af",
+  "compiler": "rustc 1.88.0 (6b00bc388 2025-06-23)",
+  "workspace": {
+    "log_sha256": "824d7231966ee0b343941ce6f6abb9a10340e6eeb55d79695d70c5c4e67b285b",
+    "summaries": [
+      {
+        "passed": 12,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 771,
+        "failed": 0,
+        "ignored": 9
+      },
+      {
+        "passed": 374,
+        "failed": 0,
+        "ignored": 75
+      },
+      {
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0
+      }
+    ]
+  },
+  "native": {
+    "log_sha256": "686cb45bd6ab22eb467a214225ab8dafc69d255c6f5af5c2c779d26346bd4423",
+    "summaries": [
+      {
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0
+      }
+    ]
+  },
+  "native_regressions": {
+    "native_keyboard_assignment": {
+      "log_sha256": "1ccf89abc81b2fb76f31eade226c411131055b08007144721e5238dd7d667311",
+      "summaries": [
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    "native_mouse_function": {
+      "log_sha256": "5355af26f0f949c9a1d76871755aa679c2ae261470ab9afd722567dd53f9bcbd",
+      "summaries": [
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    "native_windows_assignment": {
+      "log_sha256": "ce28419a918e6b08a0b5b9079d80216c3d8e2cbc0e9b15b8228e841ac596bcac",
+      "summaries": [
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    "native_assignment": {
+      "log_sha256": "41bd70f9e6b8f1f2f9b6db4d8f5a2fb55db15ce5bb193b29092f88a5c0a7e3ee",
+      "summaries": [
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    "native_multimedia": {
+      "log_sha256": "c7779622a42a8ee58cc7370cc0122df755f5f244cb4ac306e4fc22636be66aaf",
+      "summaries": [
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    "native_sensitivity": {
+      "log_sha256": "5c70915670ff618dbd0c866782d1657c38eb5f5720d759fe50650c33b319b3c2",
+      "summaries": [
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    }
+  },
+  "clippy": {
+    "log_sha256": "130884e47e24dd4d799e97d5eed2dfdccab757da01277dd239c9cdf8b6b96bd8",
+    "summaries": []
+  },
+  "build": {
+    "log_sha256": "cd8c020e2e46905252ca7e004aa6d278c24ee428c3245e2bf252beaeaabc4e28",
+    "summaries": []
+  },
+  "source_hash_encoding": "UTF-8 with LF line endings",
+  "tested_source_files_sha256": {
+    "crates/secbird-core/src/profile_compat.rs": "81689ed46d2a5402d67e3349ba3cec356f343d28067710a4e96b26c215c5b423",
+    "crates/secbird-core/src/profile_compat/profile_navigation.rs": "d0aaffcc37363f75bf6e121dffece0c5a2fbef9ef2ae7300257b56f79d1338a1",
+    "crates/secbird-core/src/profile_compat/profile_navigation/tests.rs": "3f1c3c83fc4267d8665f245b510714aeb76437eae68fd94acf8b5aa200a6cf8a",
+    "crates/secbird-core/tests/fixtures/profile-navigation-source.json": "49ac087dfc407263ad66929e2e97cc54a3ced4056bb8effa0813c05a5c07841b",
+    "crates/secbird-tray/src/native_editor.rs": "73ff449b977de33ac6b3ecc45afc9437af5fb995b6da39d9986c6d7d3c33dd75",
+    "crates/secbird-tray/src/native_editor/assignment_backend.rs": "e3580b6ed37738785baf15a9cb2e999cef170a0dfde271260afea26625f0eb91",
+    "crates/secbird-tray/src/native_editor/assignment_geometry.rs": "b7afe47b6b7460450e910e649be5dcafe8b99e570a405a4544d10f8c979febfd",
+    "crates/secbird-tray/src/native_editor/assignment_model.rs": "ef918f07c8cd535e70867525da2bb29f69bf3fe3e0c12a4c3366c6a435d2f4f8",
+    "crates/secbird-tray/src/native_editor/assignment_navigation.rs": "271655f15140753cdc54c39ee4e6de81cc0062882eda1c9db1ef47afe38ab31b",
+    "crates/secbird-tray/src/native_editor/assignment_view.rs": "b18cee0e6e97af5d1a742e6be42a891dc17a425daaf4b56dc426c33600570f58",
+    "crates/secbird-tray/src/native_editor/interaction_tests.rs": "0c2df4e1a7451f1e4c0a05777450349c89e96bcabf2e19d53441eb94e011f77f",
+    "crates/secbird-tray/src/native_editor/profile_navigation_interaction_tests.rs": "81d13527e1ef20cdd6b3bc5ea1977114e8ab985af9ab1647665a31df00a8b428",
+    "crates/secbird-tray/src/native_editor/studio_view.rs": "7ce8a917d2dd9d3781542255fcd4992b787267365ba47620f39e57d7c49a451c"
+  },
+  "new_codex_threads": 0,
+  "normal_profiles_devices_apps_changed": false,
+  "source_reference_cases": 10,
+  "rea_parent_evidence": "ev_de84446d3c008a778e8c3dbffa9c0d95277e41472d5b8dc9bb246316024a2375",
+  "validation_boundaries": [
+    "Owned native window; simulated transport and private profiles/library",
+    "Fresh missing-reference and read-only refusals checked directly at the shared save boundary after GUI exit",
+    "No additional simulated device SETs; active profile unchanged by Save",
+    "Initial stopped GUI error-modal run is retained as failure evidence, not a passing check"
+  ],
+  "remaining": [
+    "Input ownership/release/terminal routing, ordered navigation and linked-effect activation/recovery",
+    "Local profiles without retained identities, further device family/capability coverage",
+    "Automated owned error-modal acknowledgement harness; full visual/DPI parity",
+    "Full-goal hardware/privacy checks and three complete-build memory runs"
+  ]
+}

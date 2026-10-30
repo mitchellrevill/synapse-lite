@@ -25,6 +25,7 @@ try {
         $frameReport = Join-Path $scratch "$scenario-$([guid]::NewGuid().ToString('N')).json"
         $env:SYNAPSE_LITE_SMOKE_REPORT = $frameReport
         $process = Start-Process -FilePath $binary -ArgumentList @('--runtime-smoke', $Seconds.ToString()) -WindowStyle Hidden -PassThru
+        $processStartedUtc = $process.StartTime.ToUniversalTime()
         $clock = [Diagnostics.Stopwatch]::StartNew()
         $samples = @()
         $knownChildren = @()
@@ -84,6 +85,8 @@ try {
         $sampledWorking = ($samples | Measure-Object WorkingSetBytes -Maximum).Maximum
         $results += [pscustomobject]@{
             Scenario = $scenario
+            ProcessStartedUtc = $processStartedUtc.ToString('o')
+            StartupToPresentedFrameMilliseconds = ((Get-Item -LiteralPath $frameReport).LastWriteTimeUtc - $processStartedUtc).TotalMilliseconds
             PresentedFrame = $frame
             IntrinsicReadOnlyReported = ($null -ne $intrinsicField -and $intrinsicField.Value -eq $true)
             PeakWorkingSetBytes = $peakWorking

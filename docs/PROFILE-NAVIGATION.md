@@ -1,5 +1,9 @@
 # Profile switch assignment reference validation
 
+The native editor and local save path are now implemented; see
+[Profile Switch authoring](PROFILE-NAVIGATION-AUTHORING.md). The API described
+below remains a read-only resolver and does not activate profiles.
+
 Bounded unit: read-only per-device eligibility/resolution API, exported as
 DeviceProfiles::navigation_status and profile::NavigationStatus.
 It does not author/save assignments or trigger profile application.
@@ -20,12 +24,12 @@ are ambiguous. Current-profile targets and missing linked effects are refused.
 Opaque source objects remain unchanged. Existing profiles without retained GUIDs
 cannot be specific targets in this unit; no identity migration is invented.
 
-Remaining: native Customize form and local assignment Apply/Cancel persistence,
-stable identity provisioning for locally created profiles without source envelopes,
+Remaining: stable identity provisioning for locally created profiles without source envelopes,
 legacy ProfileId migration, device capability wiring, ordered runtime navigation,
 input ownership/release and live delivery; source-matched screenshots and final
 combined memory acceptance. No screenshot parity or complete feature claim.
-The current form retains its existing honest disabled Save state.
+The initial reference-only checkpoint kept Save disabled; the linked authoring
+checkpoint supplies local Save while keeping activation gated.
 
 Validation (30 October 2026): cargo test -j 1 -p secbird-core --
 --test-threads=1: 576 passed, 6 ignored, 0 failed; one doc test passed.

@@ -276,11 +276,7 @@ unsafe fn label(
     let hover = view.hover.as_deref() == Some(id);
     let pressed = view.pressed.as_deref() == Some(id) && hover;
     surface(p.dc, p.scale, x, width, active, hover, pressed);
-    if icon == "host-settings" {
-        p.text("⚙", x + 13, 12, 20, 20, p.fonts.normal, MUTED, DT_CENTER);
-    } else {
-        p.image(state.icons.get(icon), x + 13, 15, 20, 20);
-    }
+    p.image(state.icons.get(icon), x + 13, 15, 20, 20);
     let old_clip = SaveDC(p.dc);
     let bounds = css_rect(p, x as f32 + 43.0, 18.0, width - 56.0, 14.0);
     IntersectClipRect(p.dc, bounds.left, bounds.top, bounds.right, bounds.bottom);
@@ -432,7 +428,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, window: i32) {
         let width = widths[index];
         let id = device["id"].as_str().unwrap_or("");
         if x + width > g.start && x < g.start + g.viewport {
-            let icon = if device["module"]=="settings" {"host-settings"} else if device["module"]=="chroma" {"host-chroma"} else if device["module"]=="linked-games" {"host-linked-games"} else if device["pid"] == "025D" {
+            let icon = if device["module"]=="settings" {"host-settings"} else if device["module"]=="macro" {"host-macro"} else if device["module"]=="chroma" {"host-chroma"} else if device["module"]=="global-shortcuts" {"host-synapse"} else if device["module"]=="linked-games" {"host-linked-games"} else if device["pid"] == "025D" {
                 "host-keyboard"
             } else {
                 "host-mouse"

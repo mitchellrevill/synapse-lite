@@ -31,6 +31,8 @@ mod starlight;
 mod wave;
 #[path = "studio_wheel.rs"]
 mod wheel;
+#[path = "studio_workspace.rs"]
+mod workspace;
 #[path = "studio_layers.rs"]
 mod layer_tools;
 #[path = "studio_clipboard.rs"]
@@ -47,6 +49,7 @@ pub(super) fn output_control(state: &mut State, control: crate::host_studio::ses
 pub(super) unsafe fn output_receive(state: &mut State, result: Result<Value,String>) { output::receive(state,result); }
 pub(super) unsafe fn output_tick(state: &mut State) { output::tick(state); }
 pub(super) unsafe fn layer_pointer(state: &mut State, message: u32, lparam: isize, wparam: usize) -> bool {
+    workspace::hover(state, message, lparam);
     library::pointer(state, message, lparam)
         || property_tools::pointer(state, message, lparam)
         || spectrum::pointer(state, message, lparam)
@@ -194,6 +197,8 @@ pub(super) struct View {
     output: output::View,
     dropdown: bool,
     layer_menu: bool,
+    palette_scroll: i32,
+    workspace_hover: Option<(i32, i32)>,
     properties: property_tools::View,
     profile_scroll: usize,
     scroll: usize,
@@ -320,6 +325,12 @@ pub(super) fn work(request: Request, read_only:bool) -> Response {
     }
 }
 
+pub(super) fn navigation_library(state: &State) -> Option<(PathBuf, Vec<(String, String)>)> {
+    let view = &state.studio;
+    if view.dirty() || view.busy || view.dialog {return None;}
+    let archive = view.baseline.as_ref()?;
+    Some((view.path.clone()?, super::assignment_navigation::effect_choices(archive)))
+}
 impl View {
     fn dirty(&self) -> bool {
         self.library_dirty || self.draft.as_ref().is_some_and(Draft::is_dirty)
@@ -1312,7 +1323,14 @@ pub(super) unsafe fn wheel(state: &mut State, delta: i32, mut point: POINT) -> b
         // Rebuild child fields at their scrolled positions.
     } else if (point.x as f32 / state.scale) < 250.0 {
         let count = state.studio.visible_ids().len();
-        let visible = ((state.content_bottom_css() - 168.0) / 40.0).max(1.0) as usize;
+        let height = (state.height as f32 / state.scale) as i32;
+        if (point.y as f32 / state.scale) as i32 >= workspace::palette_top(height) {
+            state.studio.palette_scroll = (state.studio.palette_scroll - delta.signum()*36)
+                .clamp(0, workspace::max_scroll(height));
+            redraw(state);
+            return true;
+        }
+        let visible = ((workspace::palette_top(height) - 168) / 40).max(1) as usize;
         state.studio.scroll = (state.studio.scroll as i32 - if delta > 0 { 3 } else { -3 })
             .clamp(0, count.saturating_sub(visible) as i32) as usize;
     } else {
@@ -1382,7 +1400,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
     let view = &state.studio;
     let right = width - 250;
     p.fill(0, 80, width, height - 80, BG);
-    p.fill(0, 128, 250, height - 128, 0x181818);
+    p.fill(0, 128, 250, height - 128, BG);
     p.fill(right, 128, 250, height - 128, PANEL);
     p.fill(0, 127, width, 1, 0);
     p.fill(250, 128, 1, height - 128, 0);
@@ -1506,61 +1524,60 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         }
     }
     let clip = SaveDC(p.dc);
-    IntersectClipRect(p.dc, 0, p.px(168), p.px(250), state.height);
+    let layer_bottom = workspace::palette_top(height);
+    IntersectClipRect(p.dc, 0, p.px(168), p.px(250), p.px(layer_bottom));
     let ids = view.visible_ids();
     if let Some(draft) = &view.draft {
         for (index, id) in ids.iter().enumerate().skip(view.scroll) {
             let y = 168 + (index - view.scroll) as i32 * 40;
-            if y >= height {
+            if y >= layer_bottom {
                 break;
             }
             let row = draft.layers().iter().find(|row| row.id == *id).unwrap();
             let selected = view.selected.as_deref() == Some(&row.id);
-            if selected {
-                p.fill(0, y, 250, 40, 0x353535);
-            }
+            let hover = view.workspace_hover.is_some_and(|(x,py)| (0..250).contains(&x) && py>=y && py<y+40 && py<layer_bottom);
+            if hover { p.fill(0, y, 250, 40, 0x181818); }
+            let visible = row.visible == Some(true);
+            let tint = if !visible { "muted" } else if selected { "active" } else { "normal" };
+            workspace::icon(state,p,if row.kind == Kind::Group { "folder" } else { row.effect.as_deref().unwrap_or("static") },tint,
+                if row.parent.is_some() {35} else {10},y+10,20);
             if row.kind == Kind::Group {
                 let opened = row.opened.unwrap_or(false);
                 p.text(
                     if opened { "−" } else { "+" },
-                    4,
+                    30,
                     y,
-                    24,
+                    15,
                     40,
                     p.fonts.normal,
                     MUTED,
                     DT_CENTER,
                 );
-                p.hits.push(Hit {
-                    rect: p.rect(0, y, 27, 40),
-                    action: Action::Studio(Control::Expand(id.clone())),
-                });
+
             }
-            let x = if row.parent.is_some() { 35 } else { 28 };
+            let x = if row.parent.is_some() { 60 } else { 45 };
             if !(selected && view.renaming) {
-                p.text(layer_tools::display_title(row), x, y, 180 - x, 40, p.fonts.normal, TEXT, DT_LEFT);
+                p.text(layer_tools::display_title(row), x, y, 180 - x, 40, p.fonts.normal, if !visible {MUTED} else if selected {GREEN} else {TEXT}, DT_LEFT);
             }
             p.hits.push(Hit {
-                rect: p.rect(28, y, 152, 40),
+                rect: p.rect(0, y, 215, (layer_bottom-y).min(40)),
                 action: Action::Studio(Control::Select(id.clone())),
             });
-            button(
-                p,
-                if row.visible == Some(true) {
-                    "HIDE"
-                } else {
-                    "SHOW"
-                },
-                188,
-                y + 6,
-                54,
-                Control::Visibility(id.clone()),
-                view.editable(),
-            );
+            if row.kind == Kind::Group {
+                p.hits.push(Hit { rect:p.rect(30,y,15,(layer_bottom-y).min(40)),
+                    action:Action::Studio(Control::Expand(id.clone())) });
+            }
+            if hover || !visible {
+                workspace::icon(state,p,if visible {"eye"} else {"eye-disabled"},"normal",222,y+10,20);
+            }
+            // Stock fades the eye on hover but keeps its target stable.
+            if view.editable() { p.hits.push(Hit { rect:p.rect(215,y,35,(layer_bottom-y).min(40)),
+                action:Action::Studio(Control::Visibility(id.clone())) }); }
         }
     }
     layer_tools::paint_drop(state, p);
     RestoreDC(p.dc, clip);
+    workspace::paint_palette(state,p,height);
     let selected = view.draft.as_ref().and_then(|draft| {
         draft
             .layers()
@@ -1716,7 +1733,8 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
             p,
             if selected.is_some_and(|row| row.kind == Kind::Group) {
                 "Drag layers onto the middle of this group to add them. Drop beside a root row to move a layer out."
-            } else { "Effect properties and lighting preview are not available yet." },
+            } else if selected.is_some() { "Properties for this retained effect are not implemented yet." }
+            else { "Select an effect layer to edit its properties and preview lighting." },
             right + 10,
             274,
             230,
@@ -1744,7 +1762,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         view.archive.is_some() && !view.busy && !view.dialog && (view.dirty() || view.renaming || view.composition_renaming),
     );
     let message = if view.status.is_empty() {
-        "Open a .ChromaEffects file to edit its layers."
+        "Create or open a composition to edit its layers."
     } else {
         &view.status
     };
@@ -1808,10 +1826,10 @@ pub(super) unsafe fn output_test_dirty_apply(state: &mut State) {
 #[cfg(test)]
 pub(super) fn diagnostics(state: &State) -> Value {
     let view = &state.studio;
-    json!({"property_menu":view.properties.menu,"property_clipboard":view.properties.clip.is_some(),"open":view.open,"busy":view.busy,"dialog":view.dialog,"dirty":view.dirty(),"renaming":view.renaming,"status":view.status,"failed":view.failed,"pending":state.pending,"viewport":{"zoom":view.canvas.percent(f64::from(state.width)/f64::from(state.scale),f64::from(state.height)/f64::from(state.scale)),"names":view.canvas.names},"selected_leds":view.canvas.count(),"canvas_notes":view.canvas.notes,"canvas_devices":view.canvas.device_count(),"canvas_assets":view.canvas.asset_snapshot(),"canvas_can_preview":view.canvas.can_preview(),"canvas_selectable_leds":view.canvas.selectable_count(),"color":view.color,
+    json!({"property_menu":view.properties.menu,"property_clipboard":view.properties.clip.is_some(),"open":view.open,"busy":view.busy,"dialog":view.dialog,"dirty":view.dirty(),"renaming":view.renaming,"status":view.status,"failed":view.failed,"pending":state.pending,"viewport":{"zoom":view.canvas.percent(f64::from(state.width)/f64::from(state.scale),f64::from(state.height)/f64::from(state.scale)),"names":view.canvas.names},"workspace":{"palette_top":workspace::palette_top((state.height as f32/state.scale) as i32),"palette_scroll":view.palette_scroll,"icons":state.icons.keys().filter(|name|name.starts_with("studio-")).count()},"selected_leds":view.canvas.count(),"canvas_notes":view.canvas.notes,"canvas_devices":view.canvas.device_count(),"canvas_assets":view.canvas.asset_snapshot(),"canvas_can_preview":view.canvas.can_preview(),"canvas_selectable_leds":view.canvas.selectable_count(),"color":view.color,
         "preview":playback::diagnostics(state),"device_output":view.output.status,"output_busy":view.output.busy,"output_control_ready":view.output.control.is_some(),"index":view.index,"profile_id":view.archive.as_ref().and_then(|a|a.profile_header(view.index).ok()).and_then(|h|h.id),"profiles":view.archive.as_ref().map_or(0,|archive|archive.profile_count()),"selected":view.selected,
         "undo":view.draft.as_ref().map_or(0,Draft::undo_len),"redo":view.draft.as_ref().map_or(0,Draft::redo_len),
-        "rows":view.draft.as_ref().map(|draft|draft.layers().iter().map(|row|json!({"id":row.id,"title":row.title,"visible":row.visible,"parent":row.parent,"opened":row.opened})).collect::<Vec<_>>()).unwrap_or_default()})
+        "rows":view.draft.as_ref().map(|draft|draft.layers().iter().map(|row|json!({"id":row.id,"title":row.title,"visible":row.visible,"parent":row.parent,"opened":row.opened,"effect":row.effect})).collect::<Vec<_>>()).unwrap_or_default()})
 }
 
 #[cfg(test)]

@@ -111,7 +111,7 @@ pub(super) fn option_rows_count(panel: Rect, scroll: f64, count: usize) -> Vec<R
             r(
                 panel.x + 1.0,
                 panel.y + 1.0 + i as f64 * 25.0 - offset,
-                208.0,
+                panel.width - 2.0,
                 25.0,
             )
         })

@@ -1,0 +1,211 @@
+{
+  "baseline_application_commit": "33e46faceb5ff8843cbd278cc228be2e7c9d04b4",
+  "baseline_exe_sha256": "005f1a6ecaacfdfab27af9af1d5d519251f9bcad24ee7e3d7c1699f322d71cd6",
+  "current_exe_sha256": "4dfbae6ecbd55274ce9e402b085fe0f969acdc97aff16bd3d96bfc195c3037f2",
+  "comparison": [
+    {
+      "scenario": "chroma",
+      "before_peak_working_set": 78917632,
+      "after_peak_working_set": 38928384,
+      "before_peak_private": 60493824.0,
+      "after_peak_private": 21536768.0,
+      "before_startup_median_ms": 759.4922,
+      "after_startup_median_ms": 770.2326
+    },
+    {
+      "scenario": "dashboard",
+      "before_peak_working_set": 78843904,
+      "after_peak_working_set": 38838272,
+      "before_peak_private": 61988864.0,
+      "after_peak_private": 19877888.0,
+      "before_startup_median_ms": 766.5808,
+      "after_startup_median_ms": 769.9335
+    },
+    {
+      "scenario": "keyboard-lighting",
+      "before_peak_working_set": 76701696,
+      "after_peak_working_set": 35360768,
+      "before_peak_private": 58425344.0,
+      "after_peak_private": 18325504.0,
+      "before_startup_median_ms": 750.0879,
+      "after_startup_median_ms": 764.6305
+    }
+  ],
+  "runs": {
+    "chroma": [
+      {
+        "startup_ms": 770.2326,
+        "peak_working_set_bytes": 38928384,
+        "peak_sampled_private_bytes": 19918848.0,
+        "peak_paged_bytes": 21639168,
+        "exe_sha256": "4dfbae6ecbd55274ce9e402b085fe0f969acdc97aff16bd3d96bfc195c3037f2",
+        "observed_processes": 1.0
+      },
+      {
+        "startup_ms": 773.4703,
+        "peak_working_set_bytes": 38883328,
+        "peak_sampled_private_bytes": 19918848.0,
+        "peak_paged_bytes": 21536768,
+        "exe_sha256": "4dfbae6ecbd55274ce9e402b085fe0f969acdc97aff16bd3d96bfc195c3037f2",
+        "observed_processes": 1.0
+      },
+      {
+        "startup_ms": 729.169,
+        "peak_working_set_bytes": 38871040,
+        "peak_sampled_private_bytes": 21536768.0,
+        "peak_paged_bytes": 21536768,
+        "exe_sha256": "4dfbae6ecbd55274ce9e402b085fe0f969acdc97aff16bd3d96bfc195c3037f2",
+        "observed_processes": 1.0
+      }
+    ],
+    "dashboard": [
+      {
+        "startup_ms": 783.8266,
+        "peak_working_set_bytes": 38838272,
+        "peak_sampled_private_bytes": 19808256.0,
+        "peak_paged_bytes": 21979136,
+        "exe_sha256": "4dfbae6ecbd55274ce9e402b085fe0f969acdc97aff16bd3d96bfc195c3037f2",
+        "observed_processes": 1.0
+      },
+      {
+        "startup_ms": 766.3545,
+        "peak_working_set_bytes": 38776832,
+        "peak_sampled_private_bytes": 19877888.0,
+        "peak_paged_bytes": 21905408,
+        "exe_sha256": "4dfbae6ecbd55274ce9e402b085fe0f969acdc97aff16bd3d96bfc195c3037f2",
+        "observed_processes": 1.0
+      },
+      {
+        "startup_ms": 769.9335,
+        "peak_working_set_bytes": 38756352,
+        "peak_sampled_private_bytes": 19808256.0,
+        "peak_paged_bytes": 21872640,
+        "exe_sha256": "4dfbae6ecbd55274ce9e402b085fe0f969acdc97aff16bd3d96bfc195c3037f2",
+        "observed_processes": 1.0
+      }
+    ],
+    "keyboard-lighting": [
+      {
+        "startup_ms": 763.7809,
+        "peak_working_set_bytes": 35303424,
+        "peak_sampled_private_bytes": 18317312.0,
+        "peak_paged_bytes": 18317312,
+        "exe_sha256": "4dfbae6ecbd55274ce9e402b085fe0f969acdc97aff16bd3d96bfc195c3037f2",
+        "observed_processes": 1.0
+      },
+      {
+        "startup_ms": 765.2092,
+        "peak_working_set_bytes": 35360768,
+        "peak_sampled_private_bytes": 18325504.0,
+        "peak_paged_bytes": 18333696,
+        "exe_sha256": "4dfbae6ecbd55274ce9e402b085fe0f969acdc97aff16bd3d96bfc195c3037f2",
+        "observed_processes": 1.0
+      },
+      {
+        "startup_ms": 764.6305,
+        "peak_working_set_bytes": 35291136,
+        "peak_sampled_private_bytes": 18247680.0,
+        "peak_paged_bytes": 18300928,
+        "exe_sha256": "4dfbae6ecbd55274ce9e402b085fe0f969acdc97aff16bd3d96bfc195c3037f2",
+        "observed_processes": 1.0
+      }
+    ]
+  },
+  "decoded_pixel_bytes_saved": 40034304,
+  "asset_changes": [
+    {
+      "file": "icon-host-chroma.bgra",
+      "before_bytes": 2359312,
+      "after_bytes": 36880,
+      "before_dimensions": [
+        768,
+        768
+      ],
+      "after_dimensions": [
+        96,
+        96
+      ]
+    },
+    {
+      "file": "icon-host-macro.bgra",
+      "before_bytes": 37748752,
+      "after_bytes": 36880,
+      "before_dimensions": [
+        3072,
+        3072
+      ],
+      "after_dimensions": [
+        96,
+        96
+      ]
+    }
+  ],
+  "native_ui_comparison": {
+    "fixture": "native Macro source-surface test, same fixture, 125 percent scaling",
+    "tab_icon": {
+      "rectangle": [
+        450,
+        18,
+        477,
+        46
+      ],
+      "max_channel_difference": 5,
+      "mean_absolute_channel_difference": 0.2786596119929453
+    },
+    "menu_icon": {
+      "rectangle": [
+        124,
+        398,
+        151,
+        425
+      ],
+      "max_channel_difference": 5,
+      "mean_absolute_channel_difference": 0.30132601737540005
+    },
+    "claim": "Existing Lite artwork comparison only; not full stock parity"
+  },
+  "normal_profile_integrity": {
+    "before_sha256": "44F9C041C7E6302E503D8492B75F97B1E78248E0ACAFC1A6889011F749849E79",
+    "after_sha256": "44F9C041C7E6302E503D8492B75F97B1E78248E0ACAFC1A6889011F749849E79",
+    "unchanged": true
+  },
+  "regular_app_tests": {
+    "passed": 376,
+    "ignored": 78
+  },
+  "strict_clippy": "passed",
+  "native_checks": {
+    "macro_before": "passed",
+    "macro_after": "passed",
+    "lighting_and_studio_palette": "passed"
+  },
+  "asset_cli_test": "passed",
+  "full_goal_complete": false,
+  "scope": "Three repetitions each, eight-second warm-cache starts; read-only real keyboard presentation. Not active Studio playback, remapping or macro-load acceptance.",
+  "source_sha256": {
+    "crates/secbird-tray/src/native_editor.rs": "5317b5f1d70d31f2bcd2dd2c66cb6396638ad1bb8ca578d7cf584419905fcba5",
+    "crates/secbird-tray/src/native_editor/bitmap.rs": "ceac3a94280c449124c3d5ca86092fd958ac9e0c8148c1824b1b8da2cbb2e0be",
+    "tools/provision-window-assets.cjs": "c37f4a4484c37364ea821a9d220a152d7b1304db6d92c9a67f57e160f742b969",
+    "tools/test-provision-window-assets.cjs": "b217c85eefaef4c78771d93867363973c751764d9802d6b6943c2ce9731b67a5"
+  },
+  "logs_sha256": {
+    "perf-assets-app-tests.log": "c473f337ee8edc5200789a753f34b38212b08577f1425fca966323758a6a7725",
+    "perf-assets-clippy.log": "d92c2f071426ee9f8631b0112a920072362fcece3a144a3c94770d5d9310c45f",
+    "perf-assets-node-test.log": "d614d59dbc59e81c0e14ab9ea03ae559b76dab0db15e576ce2e8de9fe848dbf6",
+    "perf-assets-macro-before.log": "2afd887c365354f12239d0493819f202aa09bf8c7594be03adf9ad1c036e0f61",
+    "perf-assets-macro-after.log": "8b770fed447a9506d5699ad7aeb5f3f55548a9efe8518f483f92c3d4f2d6019e",
+    "perf-assets-studio-native.log": "8c475e80e18fcbe2c276dcd0c52e703beed5128cbb62a7da62022fe2bb75039b",
+    "perf-assets-build.log": "b953ab3459e8f6e03a47d704dc01bc9cb01a1f82bb766a75501263200e6683b4"
+  },
+  "runtime_raw_sha256": {
+    "measured-1-chroma\\runtime.json": "9425a17ad8ba87e5790e8134193b739ed50a37e02fcf788ead5264c8ea4f419f",
+    "measured-1-dashboard\\runtime.json": "e83bf11369b3ed84058e0f367696209b0feb4dc2897cdebafc2f5be596fbcd01",
+    "measured-1-keyboard-lighting\\runtime.json": "6a8bf177e0f15ab4e3ab6201e96b469ef917a431da9c64a7ccdf583563073e96",
+    "measured-2-chroma\\runtime.json": "888473f847b1f5d2326ee654e4f71a0dbaad7e6e8f9207a1699f23dcbc121428",
+    "measured-2-dashboard\\runtime.json": "3babd2a935957d7dc85d4811093f99631f674d38a65b3aca74b2f2db3c1508b4",
+    "measured-2-keyboard-lighting\\runtime.json": "b0906f728f8cbb4763052752806d74fa45f7d50d81949d21df99478dd10ab65c",
+    "measured-3-chroma\\runtime.json": "6e2f0080bb93ad27ebe332f86d579454715ba3b08856545891948581bd8ba271",
+    "measured-3-dashboard\\runtime.json": "f56eb1462d29ff0dc37d1a776ee11e2421eb76885d50ca704b0b18564e03f1e5",
+    "measured-3-keyboard-lighting\\runtime.json": "027b68e85ef2dab674191dc6f91604d8f22e4ea8d2912463107131d49604667d"
+  }
+}

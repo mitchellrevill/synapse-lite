@@ -24,6 +24,7 @@ pub mod effects;
 pub mod error;
 pub mod firmware;
 pub mod fire_lighting;
+pub mod hid_descriptor;
 pub mod features;
 pub mod keyboard_symbolic_bridge;
 pub mod keyboard_output_ledger;

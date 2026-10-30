@@ -54,7 +54,7 @@ pub(super) fn commit(state: &mut State) -> Result<(), String> {
     }
     Ok(())
 }
-pub(super) unsafe fn fields(state: &mut State, left: i32) -> bool {
+pub(super) unsafe fn fields(state: &mut State, left: i32, top: i32) -> bool {
     if !selected(&state.macros) {
         return false;
     }
@@ -69,7 +69,7 @@ pub(super) unsafe fn fields(state: &mut State, left: i32) -> bool {
         (MAX, state.macros.range_max.clone(), left + 105),
     ] {
         state.retained_fields.remove(&id);
-        state.field(id, &text, x, 310, 85);
+        state.field(id, &text, x, top, 85);
         if let Some(handle) = state.fields.get(&id) {
             SendMessageW(*handle, EM_SETLIMITTEXT, 4, 0);
             SendMessageW(*handle, EM_SETREADONLY, readonly as usize, 0);

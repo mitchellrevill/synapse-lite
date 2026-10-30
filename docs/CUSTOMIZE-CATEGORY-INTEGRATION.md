@@ -15,7 +15,9 @@ parents:
 | Sensitivity inert drafts | `7b5906a51075a246d142901bed64f405583f4a9c` |
 | Profile Switch reference validation only | `459132cc2225e118b3a4a678ad87173ef01023bb` |
 
-Profile Switch's native form, save and delivery remain unimplemented. Sensitivity
+The subsequent [Profile Switch authoring](PROFILE-NAVIGATION-AUTHORING.md)
+checkpoint adds its native form and local Save. Trigger delivery remains
+unimplemented. Sensitivity
 is included only as its completed inert-draft unit. Approved tabs are unchanged.
 
 ## Shared behavior

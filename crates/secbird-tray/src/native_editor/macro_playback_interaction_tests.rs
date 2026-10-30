@@ -131,6 +131,7 @@ fn native_macro_host_play_stop_refusals_revision_and_close_drain() {
                     redraw(hwnd);
                 };
                 SendMessageW(hwnd, super::super::macro_view::TEST, 1, 0);
+                SendMessageW(hwnd, super::super::macro_view::TEST, 13, 0);
                 wait_for(
                     || {
                         query()["busy"] == false
@@ -139,13 +140,9 @@ fn native_macro_host_play_stop_refusals_revision_and_close_drain() {
                     "macro library",
                 )?;
                 monitor.state().log.clear();
-                let mut client: RECT = std::mem::zeroed();
-                GetClientRect(hwnd, &mut client);
-                let scale = f64::from(GetDpiForWindow(hwnd).max(96)) / 96.;
-                let width = f64::from(client.right) / scale;
-                let timeline = (width - 900.).max(10.) / 2. + 210.;
+
                 select("launch");
-                lighting_click(hwnd, timeline + 260., 174., scale);
+                macro_command(hwnd,super::super::macro_view::Control::Play);
                 wait_for(
                     || {
                         query()["playback"]["report"]["outcome"] == "finished"
@@ -187,7 +184,9 @@ fn native_macro_host_play_stop_refusals_revision_and_close_drain() {
                     return Err("Read-only mode admitted playback".into());
                 }
                 SendMessageW(hwnd, READ_ONLY_TEST_SET, 0, 0);
+                macro_command(hwnd,super::super::macro_view::Control::Rename);
                 let name = GetDlgItem(hwnd, 2300);
+                assert!(!name.is_null(),"inline Rename field missing");
                 SetWindowTextW(name, wide("Unsaved name").as_ptr());
                 SendMessageW(
                     hwnd,
@@ -239,10 +238,11 @@ fn native_macro_host_play_stop_refusals_revision_and_close_drain() {
                 }
                 SendMessageW(hwnd, super::super::macro_view::TEST, 3, 0);
                 SendMessageW(hwnd, super::super::macro_view::TEST, 1, 0);
+                SendMessageW(hwnd, super::super::macro_view::TEST, 13, 0);
                 wait_for(|| query()["busy"] == false, "external revision reload")?;
                 select("pause");
                 redraw(hwnd);
-                lighting_click(hwnd, timeline + 260., 174., scale);
+                macro_command(hwnd,super::super::macro_view::Control::Play);
                 wait_for(
                     || {
                         query()["playback"]["active"] == true
@@ -255,7 +255,7 @@ fn native_macro_host_play_stop_refusals_revision_and_close_drain() {
                 )?;
                 let capture = json!(output.join("macro-playing.png").to_string_lossy());
                 SendMessageW(hwnd, STUDIO_TEST, 6, &capture as *const Value as isize);
-                lighting_click(hwnd, timeline + 370., 174., scale);
+                macro_command(hwnd,super::super::macro_view::Control::Stop);
                 wait_for(
                     || {
                         query()["playback"]["report"]["outcome"] == "stopped"

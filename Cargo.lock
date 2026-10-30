@@ -185,7 +185,7 @@ checksum = "04d056b875a9d2e6cb9a61d127afee9ac5999b9f87bcb32079d1318e505be714"
 
 [[package]]
 name = "secbird"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "embed-resource",
  "secbird-core",
@@ -195,7 +195,7 @@ dependencies = [
 
 [[package]]
 name = "secbird-core"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "base64",
  "hidapi",
@@ -209,7 +209,7 @@ dependencies = [
 
 [[package]]
 name = "secbird-tray"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "base64",
  "cc",

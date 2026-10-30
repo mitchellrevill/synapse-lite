@@ -1,6 +1,36 @@
 # Changelog
 
-## [Unreleased]
+## [0.5.1] - 2026-10-30
+
+### Added
+- Bluetooth, first try: mice connected over Bluetooth are now asked the same way as over the
+  cable, under the feature report id Windows lists for them (Bluetooth numbers its reports; the
+  cable doesn't). If one answers, it shows up with its product's settings, named "(Bluetooth)".
+  Untested: no Bluetooth Razer mouse here (#10, #51).
+- `secbird report` lists the feature reports each interface declares (`feature 5:90` = report
+  id 5, 90 bytes), and the report id a device answered under.
+- Mouse Dock V2 Pro (00F1): the mouse on it shows up by name ("Naga V3 Pro on Mouse Dock V2
+  Pro") with its DPI, polling rate, buttons and lighting zones, plus a Dock zone for the dock's
+  own light, the same as on the Mouse Dock Pro. Built from two reports (#61, #72, thanks
+  Skillprofi10 and Jayram2000); not tested on a V2 dock here.
+- Buttons on the Basilisk V4 HyperSpeed are named by where they are ("Side, rear (Mouse 4)",
+  "Side trigger (HyperShift)", "Underside (profile button)"), with a line on where to find each
+  one (#71, thanks lukethehawk). Other mice keep the generic names.
+
+### Fixed
+- A mouse on a mouse dock gets its mouse picture in the device list, not the dock's.
+- Buttons: "Play a macro…" is offered only on devices with macro memory. Before, it showed on
+  every mouse and pointed to a Macros section that devices without macro memory don't have
+  (#67, thanks FRNVR). Picking it before any macro is made now opens the Macros section.
+- Lights when away: a device that misses the write that dims it is tried again every 3 s for
+  30 s, instead of staying lit the whole time you're away. The log names devices that don't
+  answer, going away and coming back (#68, thanks lukethehawk).
+- Basilisk V4 HyperSpeed lighting: one zone, the underglow (LED 10), instead of logo and scroll
+  zones that did nothing. Reactive and Starlight are left out on it: the mouse accepts them but
+  doesn't run them (#69, thanks lukethehawk). Devices can now list effects they don't run; a
+  saved profile with one shows Static and skips it.
+
+## [0.5.0] - 2026-10-27
 
 ### Added
 - Lights when away: while the PC is locked or its screen is off, the lights dim to a quarter or
@@ -17,27 +47,33 @@
   had" restores it; Restore all puts it back too. Remaps stay live-only until you click, and
   switching profiles never writes the mouse's memory (`secbird button save-to-mouse`,
   `secbird button put-back`). Tested on the Basilisk V3.
-- Keyboard key remapping, beta, command line only for now: `secbird key capslock key:esc`,
-  `secbird key` to list, `reset`, `restore-all` and `--hypershift`, with the same actions as
-  mouse buttons. Remaps are saved per profile, and the tray sends them on a profile switch. It
-  writes to the keyboard the way it does for mice (Razer's "Set Single Key Assignment"), but
-  Synapse remaps keyboards in software, so whether a keyboard accepts it isn't known yet. Asked
-  for in #46, #39, #45 and #49. `secbird report` now shows whether a keyboard answers.
-
+- Keyboard key remapping: the Keys section in the editor (click a key on the drawing, Normal and
+  HyperShift layers), or `secbird key capslock key:esc` (`secbird key` lists them; `reset`,
+  `restore-all`, `--hypershift`). Same actions as mouse buttons, saved per profile, and the tray
+  sends them on a profile switch. It uses the keyboard's own remap commands, so it works on boards
+  that take them: confirmed on the Huntsman V3 Pro and BlackWidow V4 75% (#45, #39). Older boards
+  such as the BlackWidow Chroma V2, Ornata V3 X and Reclusa X Mini don't, and the editor says
+  remapping isn't supported there yet; a remap done by Secretarybird itself is planned (#49, #58,
+  #59). `secbird report` shows whether a keyboard answers.
+- Boards whose lights aren't mapped are drawn by size in Keys: 75% and 65% boards get their own
+  drawing instead of a full-size one (#39).
 - A Tab button next to Ctrl, Shift, Alt and Win when setting a key, for shortcuts the page can't
   catch: click Tab, then Alt, for Alt+Tab (#51, thanks LukeSz03).
 
 ### Fixed
 - Effects on older keyboards (the BlackWidow Chroma V2 and others on the older lighting commands)
   fell back to a static colour. Spectrum, wave, breathing, reactive and starlight are now sent the
-  way openrazer sends them (#49, thanks liuzhong-xin). Not tested on the keyboard yet.
+  way openrazer sends them (#49, thanks liuzhong-xin). Confirmed on the Chroma V2.
 - With no device the editor could control, every Settings and Help button failed with "invalid
   argument" (the device report included) (#51).
 - A mouse or keyboard connected over Bluetooth shows as "DeathAdder V2 Pro (Bluetooth)" and so
   on, with "use the cable or the USB receiver", instead of "Unknown model". Bluetooth can't be
   controlled yet (#51, #10).
+- The Basilisk V3 Pro and V4 Pro were missing their underglow. It's now a lighting zone, on the
+  Mouse Dock Pro too (#57, thanks Xnmk029; #54, thanks Vojtasanko).
 
 ### Changed
+- The Reclusa X Mini 65% (02E3) is known by name (#53).
 - 02EA is the Huntsman V3 HE TKL (#50, thanks Toru1475).
 - The Basilisk V4 Pro's button 128 is the extra side button, not a top button (#54, thanks
   Vojtasanko). It's now `side-extra`; remaps saved as `top-extra` move over by themselves.

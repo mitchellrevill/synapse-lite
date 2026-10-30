@@ -1,0 +1,270 @@
+{
+  "application_source_commit": "33e46faceb5ff8843cbd278cc228be2e7c9d04b4",
+  "binary_sha256": "005f1a6ecaacfdfab27af9af1d5d519251f9bcad24ee7e3d7c1699f322d71cd6",
+  "normal_observation": {
+    "samples": 31,
+    "working_set_median_bytes": 84131840,
+    "working_set_peak_bytes": 84131840,
+    "private_median_bytes": 61472768,
+    "private_peak_bytes": 61472768,
+    "cpu_percent_machine_mean": 0.043887845616565876,
+    "handles_range": [
+      271,
+      271
+    ],
+    "threads_range": [
+      7,
+      7
+    ]
+  },
+  "logical_processors": 16,
+  "observation_errors": [
+    {
+      "group": "stock",
+      "name": "RazerExperienceService",
+      "error": "You cannot call a method on a null-valued expression.",
+      "count": 31
+    },
+    {
+      "group": "stock",
+      "name": "RzAppManager",
+      "error": "You cannot call a method on a null-valued expression.",
+      "count": 31
+    },
+    {
+      "group": "stock",
+      "name": "RzBTLEManager",
+      "error": "You cannot call a method on a null-valued expression.",
+      "count": 31
+    },
+    {
+      "group": "stock",
+      "name": "RzDeviceManager",
+      "error": "You cannot call a method on a null-valued expression.",
+      "count": 31
+    },
+    {
+      "group": "stock",
+      "name": "RzDeviceManagerEx",
+      "error": "You cannot call a method on a null-valued expression.",
+      "count": 31
+    },
+    {
+      "group": "stock",
+      "name": "RzDiagnosticService",
+      "error": "You cannot call a method on a null-valued expression.",
+      "count": 31
+    },
+    {
+      "group": "stock",
+      "name": "RzIoTDeviceManager",
+      "error": "You cannot call a method on a null-valued expression.",
+      "count": 31
+    },
+    {
+      "group": "stock",
+      "name": "RzSDKServer",
+      "error": "You cannot call a method on a null-valued expression.",
+      "count": 31
+    },
+    {
+      "group": "stock",
+      "name": "RzSDKService",
+      "error": "You cannot call a method on a null-valued expression.",
+      "count": 31
+    },
+    {
+      "group": "stock",
+      "name": "RzSmartlightingDeviceManager",
+      "error": "You cannot call a method on a null-valued expression.",
+      "count": 31
+    },
+    {
+      "group": "stock",
+      "name": "RzWDLDeviceManager",
+      "error": "You cannot call a method on a null-valued expression.",
+      "count": 31
+    },
+    {
+      "group": "stock",
+      "name": "razer_elevation_service",
+      "error": "You cannot call a method on a null-valued expression.",
+      "count": 31
+    }
+  ],
+  "normal_profile_integrity": {
+    "before_sha256": "44F9C041C7E6302E503D8492B75F97B1E78248E0ACAFC1A6889011F749849E79",
+    "after_sha256": "44F9C041C7E6302E503D8492B75F97B1E78248E0ACAFC1A6889011F749849E79",
+    "unchanged": true
+  },
+  "collector_availability_check": "pass; memory retained when service CPU/start counters unavailable",
+  "stock_service_subset": {
+    "summary": {
+      "Samples": 10,
+      "AverageWorkingSetBytes": 278928588.8,
+      "PeakSampledWorkingSetBytes": 278974464.0,
+      "AveragePrivateBytes": 177540300.8,
+      "PeakSampledPrivateBytes": 177602560.0,
+      "AverageCpuPercentOfOneCore": 0.0
+    },
+    "max_processes": 8,
+    "max_cpu_measured_processes": 1,
+    "scope": "Existing service-matched subset only; not full stock Synapse or complete CPU coverage"
+  },
+  "runs": {
+    "chroma": [
+      {
+        "binary_sha256": "005f1a6ecaacfdfab27af9af1d5d519251f9bcad24ee7e3d7c1699f322d71cd6",
+        "startup_ms": 758.3238,
+        "peak_working_set_bytes": 78917632,
+        "peak_sampled_private_bytes": 60493824.0,
+        "peak_paged_bytes": 61825024,
+        "warm_cpu_percent_one_core": 1.174920529127359,
+        "warm_cpu_percent_machine": 0.07343253307045994,
+        "processes": 1.0,
+        "samples": 30
+      },
+      {
+        "binary_sha256": "005f1a6ecaacfdfab27af9af1d5d519251f9bcad24ee7e3d7c1699f322d71cd6",
+        "startup_ms": 788.3442,
+        "peak_working_set_bytes": 78901248,
+        "peak_sampled_private_bytes": 60035072.0,
+        "peak_paged_bytes": 61652992,
+        "warm_cpu_percent_one_core": 1.4368999965422438,
+        "warm_cpu_percent_machine": 0.08980624978389024,
+        "processes": 1.0,
+        "samples": 30
+      },
+      {
+        "binary_sha256": "005f1a6ecaacfdfab27af9af1d5d519251f9bcad24ee7e3d7c1699f322d71cd6",
+        "startup_ms": 759.4922,
+        "peak_working_set_bytes": 78880768,
+        "peak_sampled_private_bytes": 60002304.0,
+        "peak_paged_bytes": 61624320,
+        "warm_cpu_percent_one_core": 1.4343929108339595,
+        "warm_cpu_percent_machine": 0.08964955692712247,
+        "processes": 1.0,
+        "samples": 30
+      }
+    ],
+    "dashboard": [
+      {
+        "binary_sha256": "005f1a6ecaacfdfab27af9af1d5d519251f9bcad24ee7e3d7c1699f322d71cd6",
+        "startup_ms": 795.019,
+        "peak_working_set_bytes": 78843904,
+        "peak_sampled_private_bytes": 61988864.0,
+        "peak_paged_bytes": 61988864,
+        "warm_cpu_percent_one_core": 0.0,
+        "warm_cpu_percent_machine": 0.0,
+        "processes": 1.0,
+        "samples": 28
+      },
+      {
+        "binary_sha256": "005f1a6ecaacfdfab27af9af1d5d519251f9bcad24ee7e3d7c1699f322d71cd6",
+        "startup_ms": 766.5808,
+        "peak_working_set_bytes": 78843904,
+        "peak_sampled_private_bytes": 59904000.0,
+        "peak_paged_bytes": 61984768,
+        "warm_cpu_percent_one_core": 0.0,
+        "warm_cpu_percent_machine": 0.0,
+        "processes": 1.0,
+        "samples": 30
+      },
+      {
+        "binary_sha256": "005f1a6ecaacfdfab27af9af1d5d519251f9bcad24ee7e3d7c1699f322d71cd6",
+        "startup_ms": 752.0846,
+        "peak_working_set_bytes": 78794752,
+        "peak_sampled_private_bytes": 59863040.0,
+        "peak_paged_bytes": 62017536,
+        "warm_cpu_percent_one_core": 0.0,
+        "warm_cpu_percent_machine": 0.0,
+        "processes": 1.0,
+        "samples": 30
+      }
+    ],
+    "keyboard-lighting": [
+      {
+        "binary_sha256": "005f1a6ecaacfdfab27af9af1d5d519251f9bcad24ee7e3d7c1699f322d71cd6",
+        "startup_ms": 788.8602,
+        "peak_working_set_bytes": 75313152,
+        "peak_sampled_private_bytes": 58400768.0,
+        "peak_paged_bytes": 58400768,
+        "warm_cpu_percent_one_core": 0.0,
+        "warm_cpu_percent_machine": 0.0,
+        "processes": 1.0,
+        "samples": 29
+      },
+      {
+        "binary_sha256": "005f1a6ecaacfdfab27af9af1d5d519251f9bcad24ee7e3d7c1699f322d71cd6",
+        "startup_ms": 747.8455,
+        "peak_working_set_bytes": 76701696,
+        "peak_sampled_private_bytes": 58327040.0,
+        "peak_paged_bytes": 58368000,
+        "warm_cpu_percent_one_core": 0.0,
+        "warm_cpu_percent_machine": 0.0,
+        "processes": 1.0,
+        "samples": 30
+      },
+      {
+        "binary_sha256": "005f1a6ecaacfdfab27af9af1d5d519251f9bcad24ee7e3d7c1699f322d71cd6",
+        "startup_ms": 750.0879,
+        "peak_working_set_bytes": 75325440,
+        "peak_sampled_private_bytes": 58425344.0,
+        "peak_paged_bytes": 58425344,
+        "warm_cpu_percent_one_core": 0.0,
+        "warm_cpu_percent_machine": 0.0,
+        "processes": 1.0,
+        "samples": 30
+      }
+    ]
+  },
+  "catalogue": {
+    "build": "workspace release profile; metadata only; no hardware IO",
+    "catalogue_bytes": 10963,
+    "checksum": 4177647000,
+    "connections": 481,
+    "lookup_ns_per_query": [
+      1018.5720853858785,
+      1017.76026272578,
+      1024.536617405583,
+      1001.6249589490969,
+      1020.448275862069,
+      1001.7162561576355,
+      1010.1796387520526,
+      1070.663711001642,
+      1019.9251231527094
+    ],
+    "parse_ns_per_catalogue": [
+      137716.0,
+      131936.0,
+      135660.0,
+      119032.0,
+      117572.0,
+      110268.0,
+      108680.0,
+      111088.0,
+      112208.0
+    ],
+    "passes_per_sample": 500,
+    "products": 334,
+    "queries_per_pass": 609,
+    "samples": 9
+  },
+  "full_build_100mb_acceptance": false,
+  "raw_sha256": {
+    "process-before.json": "77954ba3e5209eb41645889bb5e3fe873be8c1a125303f912bd932c09e3e19da",
+    "catalog-baseline.json": "655c217c2effad0f0cf48915e8a49a2bc9c4ed92ec3d034e5b7e9c3bf6aae04f",
+    "normal-profile-integrity.json": "cbea0589330cd324e3f9f1e7d226833f337822e450b21581703d8fb42cf55101",
+    "measured-1-chroma\\runtime.json": "cb59d7878670c5dcdf881e8dc668b196bf2041c7e1ff395e5b565b1d64b1c7c4",
+    "measured-1-dashboard\\runtime.json": "c5922ddd97dc2dcb973b5da6671bc79441552506202fa7d36ab66ba82ec27c13",
+    "measured-1-keyboard-lighting\\runtime.json": "08465368c5de17915e6889a7c5c9f032247d1674eeae5eb02d6b5cc61ecd13ad",
+    "measured-2-chroma\\runtime.json": "77d3e817f4cdb432dedb2bad42d35b8948359706cd2dd34fad33e2220edd16bf",
+    "measured-2-dashboard\\runtime.json": "217ecd36dd33becf49e293ba84cffffbd0b8d0717341e85000032f1b15ceffcb",
+    "measured-2-keyboard-lighting\\runtime.json": "c852866251a90aba6f27cf5ced4c659c9c1109b5b6b0f14b9e3fc3551bf5797f",
+    "measured-3-chroma\\runtime.json": "85b9be0a8adc6ddafe589728458af1b14e1a1b155a6bcdf1bc0fb28ca0bf7008",
+    "measured-3-dashboard\\runtime.json": "9402d0f2f5ecb39f2c80ca57c3e5a069925532ae72a930c1fa8bcfa5c774ddf2",
+    "measured-3-keyboard-lighting\\runtime.json": "85b9230c4e1278ea42e7a9409722e1951f412bd400f807115c3b150031ffcca4",
+    "counter-availability-check.json": "e53aaad56a7e03d3e3464086544c0c318e9909821f99899dc58b6d51e9519c5e",
+    "stock-services.json": "b2e7fe37981d8cc98a860f31c6e163a0dc6f2ca21a17d2bb1d2cf3efb4919d25"
+  }
+}

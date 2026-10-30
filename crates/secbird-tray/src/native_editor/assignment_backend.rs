@@ -5,6 +5,7 @@ use secbird_core::profile_compat::{self, assignment_state};
 
 pub(super) fn candidate(draft: &Draft) -> Result<secbird_core::Profile, String> {
     if !draft.can_save() {
+        if draft.category == Some(Category::Profile) {draft.navigation_profile()?;}
         return Err("Choose a valid supported assignment before Save".into());
     }
     assignment_state::validate_input(
@@ -48,6 +49,7 @@ pub(super) fn candidate(draft: &Draft) -> Result<secbird_core::Profile, String> 
         original_profile: value.clone(),
         mappings: Some(mappings),
         sensitivity_range: draft.context.sensitivity_range.clone(),
+        navigation: draft.context.navigation.clone(),
     });
     let pid = edit.context.owner.pid;
     let mut next = match edit.category {
@@ -86,6 +88,7 @@ pub(super) fn candidate(draft: &Draft) -> Result<secbird_core::Profile, String> 
             edit.options()[edit.windows_option.ok_or("Select a Windows shortcut")?].0,
         )
         .map_err(|e| e.to_string())?,
+        Some(Category::Profile) => edit.navigation_profile()?,
         Some(Category::Launch) => {
             serde_json::from_value(edit.launch_profile()?).map_err(|e| e.to_string())?
         }
@@ -121,6 +124,13 @@ pub(super) fn save(engine: &mut Engine, draft: &Draft) -> Result<Value, String> 
     if profiles.active != draft.context.owner.profile {
         return Err("Active profile changed; reopen assignment".into());
     }
+    let mut current_draft = draft.clone();
+    if draft.category == Some(Category::Profile) {
+        let mut context = (*draft.context).clone();
+        let catalog = context.navigation.as_mut().ok_or("Profile catalogue unavailable")?;
+        catalog.refresh(profiles, draft.navigation.action == Some(4) && draft.navigation.linked)?;
+        current_draft.context = Arc::new(context);
+    }
     let profile = profiles
         .profiles
         .get_mut(&profiles.active)
@@ -129,7 +139,7 @@ pub(super) fn save(engine: &mut Engine, draft: &Draft) -> Result<Value, String> 
     {
         return Err("Profile changed; reopen assignment before saving".into());
     }
-    *profile = candidate(draft)?;
+    *profile = candidate(&current_draft)?;
     profile_compat::validate_store_budget(&store).map_err(|e| e.to_string())?;
     store.save().map_err(|e| e.to_string())?;
     server::dispatch(engine, "GET", "/api/state", &[]).map_err(|e| e.to_string())

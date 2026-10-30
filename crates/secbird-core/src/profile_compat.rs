@@ -15,6 +15,7 @@ use std::collections::BTreeMap;
 pub mod gui;
 pub mod macro_library;
 pub mod keyboard_assignments;
+pub mod profile_navigation;
 pub mod assignment_state;
 mod dependencies;
 pub use dependencies::{recover_macro_dependencies,MacroRecoveryReport};

@@ -1,0 +1,82 @@
+{
+  "source_sha256": "669b20ce5f1245e3742e9e2b95ba01678d6104f4547f5bd0511e7ec3bc964b01",
+  "main_sha256": "307e2b199037ed53a8fde90d76fc67a9a3766a9361fb152e7820d8bf05f19c65",
+  "converter_start_utf16": 3276,
+  "converter_end_utf16": 3637,
+  "boundary": "Extracted pure converter only, synthetic state, no bootstrap; helper conversion/spread supplied explicitly. This does not prove runtime routing.",
+  "cases": [
+    {
+      "action": "NextProfile",
+      "linked": false,
+      "expected": {
+        "profileNavigationAssignment": "NextProfile"
+      }
+    },
+    {
+      "action": "NextProfile",
+      "linked": true,
+      "expected": {
+        "profileNavigationAssignment": "NextProfile"
+      }
+    },
+    {
+      "action": "PreviousProfile",
+      "linked": false,
+      "expected": {
+        "profileNavigationAssignment": "PreviousProfile"
+      }
+    },
+    {
+      "action": "PreviousProfile",
+      "linked": true,
+      "expected": {
+        "profileNavigationAssignment": "PreviousProfile"
+      }
+    },
+    {
+      "action": "CycleUp",
+      "linked": false,
+      "expected": {
+        "profileNavigationAssignment": "CycleUp"
+      }
+    },
+    {
+      "action": "CycleUp",
+      "linked": true,
+      "expected": {
+        "profileNavigationAssignment": "CycleUp"
+      }
+    },
+    {
+      "action": "CycleDown",
+      "linked": false,
+      "expected": {
+        "profileNavigationAssignment": "CycleDown"
+      }
+    },
+    {
+      "action": "CycleDown",
+      "linked": true,
+      "expected": {
+        "profileNavigationAssignment": "CycleDown"
+      }
+    },
+    {
+      "action": "Specific",
+      "linked": false,
+      "expected": {
+        "profileNavigationAssignment": "Specific",
+        "guid": "target-id"
+      }
+    },
+    {
+      "action": "Specific",
+      "linked": true,
+      "expected": {
+        "profileNavigationAssignment": "Specific",
+        "guid": "target-id",
+        "lightpacId": "effect-id"
+      }
+    }
+  ]
+}

@@ -616,6 +616,7 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
                 let mut engine = app.engine();
                 engine.refresh_lighting_runtime();
                 engine.retry_lights_back();
+                engine.retry_lights_away();
                 engine.refresh_frames();
                 engine.keep_laptops_lit();
             });

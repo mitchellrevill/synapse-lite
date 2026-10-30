@@ -1,6 +1,6 @@
 # Synapse Lite
 
-A Rust fork of [Secretarybird](https://github.com/infinityInfinite/secbird), based on **v0.5.0-beta1** (`e649877a77f9a4e8573dda55b525a0a258ae9b0e`).
+A Rust fork of [Secretarybird](https://github.com/infinityInfinite/secbird), based on **v0.5.0-beta1** (`e649877a77f9a4e8573dda55b525a0a258ae9b0e`), with upstream functional fixes incorporated through v0.5.1.
 
 The project keeps Secretarybird's direct device controls and rebuilds the editor around the installed Synapse interface. Layout, typography, assets and profile formats are recovered from actual application artifacts with REA. Screenshots are not the implementation baseline.
 
