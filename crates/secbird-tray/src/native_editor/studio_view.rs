@@ -19,6 +19,8 @@ mod reactive;
 mod starlight;
 #[path = "studio_wave.rs"]
 mod wave;
+#[path = "studio_wheel.rs"]
+mod wheel;
 #[path = "studio_layers.rs"]
 mod layer_tools;
 #[path = "studio_preset_picker.rs"]
@@ -70,6 +72,7 @@ pub(super) enum Control {
     ClearColor(bool),
     Spectrum(spectrum::Control),
     Wave(wave::Control),
+    Wheel(wheel::Control),
     Starlight(starlight::Control),
     Reactive(reactive::Control),
     Layers(layer_tools::Control),
@@ -108,6 +111,7 @@ pub(super) struct View {
     selected_cold: Option<SelectedColor>,
     spectrum: spectrum::Properties,
     wave: wave::Properties,
+    wheel: wheel::Properties,
     starlight: starlight::Properties,
     reactive: reactive::Properties,
     breathing_gradient: bool,
@@ -333,6 +337,7 @@ pub(super) fn selection_changed(state: &mut State) {
     let view = &mut state.studio;
     spectrum::refresh(view);
     wave::refresh(view);
+    wheel::refresh(view);
     starlight::refresh(view);
     reactive::refresh(view);
     view.selected_color = None;
@@ -608,6 +613,7 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
         Control::StopDevice => unreachable!("handled before busy file operations"),
         Control::Spectrum(control) => spectrum::action(state, control),
         Control::Wave(control) => wave::action(state, control),
+        Control::Wheel(control) => wheel::action(state, control),
         Control::Starlight(control) => starlight::action(state, control),
         Control::Reactive(control) => reactive::action(state, control),
         Control::BreathingDuration(index) => {
@@ -975,6 +981,7 @@ pub(super) unsafe fn rebuild_fields(state: &mut State) {
     }
     spectrum::fields(state);
     wave::fields(state);
+    wheel::fields(state);
     starlight::fields(state);
     reactive::fields(state);
     if state.studio.color_property(false).is_some() {
@@ -1022,6 +1029,7 @@ pub(super) unsafe fn rebuild_fields(state: &mut State) {
     }
 }
 pub(super) fn command(state: &mut State, id: u16, notification: u16) -> bool {
+    if wheel::command(state,id,notification) {return true;}
     if wave::command(state,id,notification) {return true;}
     if starlight::command(state,id,notification) {return true;}
     if reactive::command(state,id,notification) {return true;}
@@ -1053,6 +1061,7 @@ pub(super) fn key(state: &State, key: usize, control: bool, edit: bool) -> Optio
         (13, _) if state.studio.renaming => Some(Control::CommitRename),
         (13, _) if edit && reactive::has_focus(state) => Some(Control::Reactive(reactive::Control::Color(false))),
         (13, _) if edit && starlight::has_focus(state) => Some(Control::Starlight(starlight::Control::Density)),
+        (13, _) if edit && wheel::enter(state).is_some() => Some(Control::Wheel(wheel::enter(state).unwrap())),
         (13, _) if edit && wave::has_focus(state) => Some(Control::Wave(wave::Control::Motion)),
         (13, _) if edit && spectrum::has_focus(state) => {
             Some(Control::Spectrum(spectrum::Control::ApplyStop(false)))
@@ -1459,6 +1468,8 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         reactive::paint(p,view,right);
     } else if view.effect() == Some("starlight") {
         starlight::paint(p,view,right);
+    } else if view.effect() == Some("wheel") {
+        wheel::paint(p,view,right);
     } else if view.effect() == Some("wave") {
         wave::paint(p,view,right);
     } else {
@@ -1499,7 +1510,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         p,
         message,
         right + 10,
-        if view.is_breathing() && !view.breathing_gradient { 566 } else if matches!(view.effect(),Some("breathing"|"spectrum"|"wave"|"starlight"|"reactive")) {
+        if view.is_breathing() && !view.breathing_gradient { 566 } else if matches!(view.effect(),Some("breathing"|"spectrum"|"wheel"|"wave"|"starlight"|"reactive")) {
             590
         } else if view.is_fire() {
             506
@@ -1582,6 +1593,18 @@ pub(super) unsafe fn capture_frame(state: &mut State, path: &Path) -> bool {
     }
     let old = SelectObject(dc, bitmap);
     super::paint(state, dc);
+    if state.studio.effect()==Some("wheel") {
+        // Wheel's evidence must include the real edit controls as well as the
+        // owner-painted panel. Capture only this owned window's children.
+        for &field in state.fields.values() {
+            if IsWindowVisible(field)==0 {continue;}
+            let mut bounds:RECT=std::mem::zeroed();GetWindowRect(field,&mut bounds);
+            let mut point=POINT{x:bounds.left,y:bounds.top};ScreenToClient(state.hwnd,&mut point);
+            let saved=SaveDC(dc);SetViewportOrgEx(dc,point.x,point.y,null_mut());
+            SendMessageW(field,WM_PRINT,dc as usize,(PRF_CLIENT|PRF_ERASEBKGND|PRF_CHECKVISIBLE) as isize);
+            RestoreDC(dc,saved);
+        }
+    }
     SelectObject(dc, old);
     let mut image = null_mut();
     let created = gp::GdipCreateBitmapFromHBITMAP(bitmap, null_mut(), &mut image);
@@ -1613,3 +1636,9 @@ pub(super) fn reset_test(state: &mut State) {
     state.studio.test_decision = Some(IDNO);
     state.exit_tray = None;
 }
+
+pub(super) fn wheel_picking(state:&State)->bool {state.studio.effect()==Some("wheel") && state.studio.wheel.picking && state.studio.editable()}
+pub(super) fn wheel_center(state:&mut State,x:u16,y:u16) {wheel::center(state,x,y);}
+pub(super) unsafe fn wheel_pointer(state:&mut State,message:u32,lparam:isize)->bool {wheel::pointer(state,message,lparam)}
+
+pub(super) fn wheel_geometry(state:&State)->Option<secbird_core::studio::document::WheelGeometry> {if state.studio.effect()!=Some("wheel") {return None;}state.studio.draft.as_ref()?.wheel_geometry(state.studio.selected.as_deref()?).ok()}

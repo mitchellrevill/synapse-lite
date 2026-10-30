@@ -15,6 +15,9 @@ pub use starlight::{StarlightProperty, SelectedStarlightValue, STARLIGHT_DURATIO
 #[path = "wave.rs"]
 mod wave;
 pub use wave::{WaveProperty, SelectedWaveValue, wave_preset};
+#[path = "wheel.rs"]
+mod wheel;
+pub use wheel::{WheelProperty, SelectedWheelValue, wheel_preset, WheelGeometry};
 pub use spectrum::{
     GradientStop, SelectedDuration, SelectedGradient, StopEdit, SPECTRUM_DURATIONS,
 };
@@ -64,6 +67,7 @@ enum RegionEdit<'a> {
     Spectrum(spectrum::Edit<'a>, &'a Object),
     BreathingDuration(u32),
     BreathingGradient(StopEdit, &'a Object),
+    Wheel(wheel::Edit, &'a Object),
     Wave(wave::Edit, &'a Object),
     Reactive(reactive::Edit, &'a Object),
     Starlight(starlight::Edit, &'a Object),
@@ -91,6 +95,13 @@ impl RegionEdit<'_> {
         if let Self::Wave(edit,projection)=self {
             if new {for (name,value) in &projection.0 {params.set(name,Some(value));}}
             if matches!(edit,wave::Edit::Stop(_)) && params.get("colorStops").is_none() {
+                params.set("colorStops",projection.get("colorStops"));
+            }
+            edit.apply(params)?;
+        }
+        if let Self::Wheel(edit,projection)=self {
+            if new {for (name,value) in &projection.0 {params.set(name,Some(value));}}
+            if matches!(edit,wheel::Edit::Stop(_)) && params.get("colorStops").is_none() {
                 params.set("colorStops",projection.get("colorStops"));
             }
             edit.apply(params)?;
@@ -331,13 +342,14 @@ impl Draft {
         }
         let property = match edit {
             RegionEdit::Color(property, _) => Some(property),
-            RegionEdit::Erase | RegionEdit::Spectrum(..) | RegionEdit::BreathingDuration(_) | RegionEdit::BreathingGradient(..) | RegionEdit::Wave(..) | RegionEdit::Starlight(..) | RegionEdit::Reactive(..) => None,
+            RegionEdit::Erase | RegionEdit::Spectrum(..) | RegionEdit::BreathingDuration(_) | RegionEdit::BreathingGradient(..) | RegionEdit::Wave(..) | RegionEdit::Wheel(..) | RegionEdit::Starlight(..) | RegionEdit::Reactive(..) => None,
         };
         let item = layer(self, id, property)?;
         if matches!(edit, RegionEdit::Spectrum(..)) {
             spectrum::validate_layer(&item)?;
         }
         if matches!(edit,RegionEdit::Wave(..)) {wave::validate_layer(&item)?;}
+        if matches!(edit,RegionEdit::Wheel(..)) {wheel::validate_layer(&item)?;}
         if matches!(edit,RegionEdit::BreathingDuration(_)) && (item.text("name")?!="breathing" || item.get("value").is_some_and(|value|value.get()!="5")) {
             return Err(invalid("selected layer is not Studio Breathing5"));
         }

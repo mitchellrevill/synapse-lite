@@ -49,7 +49,7 @@ impl Properties {
     }
 }
 pub(super) fn refresh(view: &mut View) {
-    if !matches!(view.effect(), Some("spectrum" | "wave" | "starlight" | "breathing")) {
+    if !matches!(view.effect(), Some("spectrum" | "wheel" | "wave" | "starlight" | "breathing")) {
         view.spectrum = Properties::default();
         return;
     }
@@ -59,9 +59,10 @@ pub(super) fn refresh(view: &mut View) {
     let id = view.selected.as_deref().unwrap();
     let selection = view.canvas.selection();
     let wave = view.effect() == Some("wave");
+    let wheel = view.effect() == Some("wheel");
     let star = view.effect() == Some("starlight");
     let breath = view.effect() == Some("breathing");
-    if !wave && !star && !breath {
+    if !wheel && !wave && !star && !breath {
         match draft.spectrum_selection_duration(id, &selection) {
             Ok(value) => view.spectrum.duration = Some(value),
             Err(error) => {
@@ -73,7 +74,9 @@ pub(super) fn refresh(view: &mut View) {
     } else {
         view.spectrum.duration = None;
     }
-    match if wave {
+    match if wheel {
+        draft.wheel_selection_gradient(id, &selection)
+    } else if wave {
         draft.wave_selection_gradient(id, &selection)
     } else if breath {
         draft.breathing_selection_gradient(id, &selection)
@@ -171,10 +174,11 @@ pub(super) fn action(state: &mut State, control: Control) {
     }
     let view = &mut state.studio;
     let result = (|| -> Result<bool, String> {
-        if !matches!(view.effect(), Some("spectrum" | "wave" | "starlight" | "breathing")) {
+        if !matches!(view.effect(), Some("spectrum" | "wheel" | "wave" | "starlight" | "breathing")) {
             return Err("Select a gradient effect first".into());
         }
         let wave = view.effect() == Some("wave");
+        let wheel = view.effect() == Some("wheel");
         let star = view.effect() == Some("starlight");
         let breath = view.effect() == Some("breathing");
         let id = view.selected.as_deref().ok_or("Select a layer")?;
@@ -182,7 +186,9 @@ pub(super) fn action(state: &mut State, control: Control) {
         let properties = &view.spectrum;
         let draft = view.draft.as_mut().ok_or("Open a composition first")?;
         let mut edit_stop = |edit| {
-            if wave {
+            if wheel {
+                draft.edit_wheel_stop(id,&selection,edit)
+            } else if wave {
                 draft.edit_wave_stop(id, &selection, edit)
             } else if breath {
                 draft.edit_breathing_stop(id, &selection, edit)
@@ -193,7 +199,7 @@ pub(super) fn action(state: &mut State, control: Control) {
             }
         };
         let result = match control {
-            Control::Duration(_) if wave || star || breath => {
+            Control::Duration(_) if wheel || wave || star || breath => {
                 return Err("Use this effect's own duration controls".into())
             }
             Control::Duration(index) => draft.set_spectrum_duration(
@@ -203,6 +209,7 @@ pub(super) fn action(state: &mut State, control: Control) {
             ),
             Control::Preset(index) if star => draft.set_starlight_preset(id, &selection, index),
             Control::Preset(_) if breath => return Err("Breathing uses its own two-colour stops or an imported gradient".into()),
+            Control::Preset(index) if wheel => draft.set_wheel_preset(id, &selection, index),
             Control::Preset(index) if wave => draft.set_wave_preset(id, &selection, index),
             Control::Preset(index) => draft.set_spectrum_gradient(
                 id,
@@ -246,6 +253,7 @@ pub(super) fn action(state: &mut State, control: Control) {
 }
 pub(super) unsafe fn fields(state: &mut State) {
     if !(state.studio.effect() == Some("spectrum")
+        || (state.studio.effect() == Some("wheel") && state.studio.wheel.gradient_open)
         || (state.studio.effect() == Some("wave") && state.studio.wave.gradient_open)
         || (state.studio.effect() == Some("starlight") && state.studio.starlight.gradient_open))
         && !(state.studio.effect() == Some("breathing") && state.studio.breathing_gradient)
@@ -316,6 +324,8 @@ pub(super) unsafe fn paint(p: &mut Painter, view: &View, right: i32) {
             super::Control::Starlight(starlight::Control::Gradient),
             true,
         );
+    } else if view.effect() == Some("wheel") {
+        button(p,"BACK TO PROPERTIES",right+10,278,220,super::Control::Wheel(wheel::Control::Gradient),true);
     } else if view.effect() == Some("wave") {
         button(
             p,

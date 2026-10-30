@@ -15,6 +15,7 @@ enum Generator {
     Fire(FireCycle),
     Breathing(crate::breathing_lighting::BreathingCycle),
     Wave(crate::studio_wave_lighting::StudioWaveCycle),
+    Wheel(crate::studio_wheel_lighting::StudioWheelCycle),
 }
 struct Effect {
     generator: Generator,
@@ -28,6 +29,7 @@ pub struct Preview {
     listed: [bool; CELLS],
     random_state: u32,
     frames: u64,
+    origin: [i32;2],
 }
 
 #[derive(Deserialize)]
@@ -97,6 +99,7 @@ impl Generator {
             Self::Fire(cycle) => cycle.storage_bytes(),
             Self::Breathing(cycle) => cycle.storage_bytes(),
             Self::Wave(cycle) => cycle.storage_bytes(),
+            Self::Wheel(cycle) => cycle.storage_bytes(),
         }
     }
 }
@@ -171,6 +174,7 @@ impl Preview {
             listed,
             random_state,
             frames: 0,
+            origin: [(placement.y/40.0) as i32,(placement.x/40.0) as i32],
         };
         // Match backend applyLayersEffect: reversed roots and reversed children;
         // each layer's own visibility controls generation.
@@ -202,6 +206,7 @@ impl Preview {
             "fire" => 8,
             "breathing" => 5,
             "wave" => 2,
+            "wheel" => 13,
             _ => return Err(invalid(format!("preview does not yet implement {name}"))),
         };
         if let Some(value) = item.get("value") {
@@ -249,6 +254,18 @@ impl Preview {
                 params.set(&name, Some(&value));
             }
             let generator = match expected {
+                13 => {
+                    let read=|key:&str| -> Result<u32> {serde_json::from_str(params.get(key).ok_or_else(||invalid(format!("Wheel needs explicit {key}")))?.get()).map_err(invalid)};
+                    let cycles=params.get("cycles").map(|v|serde_json::from_str::<i64>(v.get()).map_err(invalid)).transpose()?;
+                    let start=params.get("playbackStart").map(|v|serde_json::from_str::<String>(v.get()).map_err(invalid)).transpose()?;
+                    let end=params.get("playbackEnd").map(|v|serde_json::from_str::<String>(v.get()).map_err(invalid)).transpose()?;
+                    if cycles!=Some(-1)||start.as_deref().is_some_and(|s|s!="random")||end.as_deref().is_some_and(|s|s!="never") {return Err(invalid("Wheel finite and input-triggered playback is unverified; continuous cycles must be explicit"));}
+                    let geometry=Object::parse(item.get("params").ok_or_else(||invalid("Wheel needs layer geometry"))?)?;
+                    let center=|key:&str| -> Result<i32> {let value:i32=serde_json::from_str(geometry.get(key).ok_or_else(||invalid(format!("Wheel needs {key}")))?.get()).map_err(invalid)?;Ok(if (0..=255).contains(&value){value}else{0})};
+                    let counterclockwise:bool=serde_json::from_str(geometry.get("counterclockwise").ok_or_else(||invalid("Wheel needs layer direction"))?.get()).map_err(invalid)?;
+                    let stops=gradient(&params)?;
+                    Generator::Wheel(crate::studio_wheel_lighting::StudioWheelCycle::new(7,23,self.origin,[center("centerPointY")?,center("centerPointX")?],read("speed")?,counterclockwise,stops.as_deref())?)
+                }
                 2 => {
                     let value = |key: &str| -> Result<u32> {
                         serde_json::from_str(params.get(key).ok_or_else(||invalid(format!("Wave needs explicit {key}")))?.get()).map_err(invalid)
@@ -354,6 +371,7 @@ impl Preview {
                 Generator::Fire(cycle) => cycle.next_frame(&mut self.scratch)?,
                 Generator::Breathing(cycle) => self.scratch.fill(cycle.next_pixel()),
                 Generator::Wave(cycle) => {self.scratch.fill(Pixel::EMPTY);cycle.next_frame(&mut self.scratch)?;},
+                Generator::Wheel(cycle) => cycle.next_frame(&mut self.scratch)?,
             }
             Layer {
                 pixels: &self.scratch,
@@ -402,6 +420,9 @@ impl Preview {
 #[cfg(test)]
 #[path="breathing_tests.rs"]
 mod breathing_tests;
+#[cfg(test)]
+#[path="wheel_tests.rs"]
+mod wheel_tests;
 #[cfg(test)]
 #[path="wave_tests.rs"]
 mod wave_tests;

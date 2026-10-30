@@ -11,6 +11,8 @@ mod linked_games;
 mod macros;
 #[path="studio_interaction_tests.rs"]
 mod studio;
+#[path="studio_wheel_interaction_tests.rs"]
+mod studio_wheel;
 use super::*;
 use secbird_core::{commands as cmd, sim::Sim, Store};
 use std::time::Instant;

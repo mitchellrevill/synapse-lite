@@ -23,6 +23,7 @@ pub use regions::{
     ColorProperty, GradientStop, LedSelection, SelectedColor, SelectedDuration, SelectedGradient,
     StopEdit, SPECTRUM_DURATIONS,
     WaveProperty, SelectedWaveValue, wave_preset,
+    WheelProperty, SelectedWheelValue, wheel_preset, WheelGeometry,
     StarlightProperty, SelectedStarlightValue, STARLIGHT_DURATIONS,
     ReactiveProperty, SelectedReactiveValue, REACTIVE_DURATIONS,
 };
@@ -272,6 +273,9 @@ fn regions_equal(left: &RawValue, right: &RawValue) -> Result<bool> {
         #[serde(borrow)]
         regions: Option<&'a RawValue>,
         #[serde(borrow)]
+        params: Option<&'a RawValue>,
+        name: Option<String>,
+        #[serde(borrow)]
         layers: Option<&'a RawValue>,
     }
     fn compare(left: &RawValue, right: &RawValue, root: bool) -> Result<bool> {
@@ -292,7 +296,9 @@ fn regions_equal(left: &RawValue, right: &RawValue) -> Result<bool> {
             }
             match kind_a.as_deref() {
                 Some("layer") => {
-                    return Ok(a.regions.map(RawValue::get) == b.regions.map(RawValue::get))
+                    return Ok(a.regions.map(RawValue::get) == b.regions.map(RawValue::get)
+                        && (!(a.name.as_deref()==Some("wheel") || b.name.as_deref()==Some("wheel"))
+                            || a.params.map(RawValue::get)==b.params.map(RawValue::get)))
                 }
                 Some("group") => {}
                 _ => return Ok(true),
