@@ -8,7 +8,6 @@
 //! required. Drop attempts ownership-aware recovery, but callers should call
 //! restore() explicitly to observe errors. A crash cannot run recovery.
 
-#![cfg(windows)]
 
 use crate::device::Device;
 use crate::driver_control::{enumerate_control_interfaces, ControlInterface};
@@ -620,7 +619,7 @@ mod tests {
             }
             if state.fail_set_after_change {
                 state.fail_set_after_change = false;
-                return Err(io::Error::new(io::ErrorKind::Other, "ambiguous completion"));
+                return Err(io::Error::other("ambiguous completion"));
             }
             Ok(())
         }

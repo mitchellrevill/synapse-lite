@@ -52,6 +52,9 @@ pub type SimMacro = (Vec<u8>, Vec<u8>);
 /// Everything the simulated device remembers. Tests read and tweak it via [`Sim::state`].
 #[derive(Debug, Clone)]
 pub struct SimState {
+    /// Deterministic sleep/unplug/failure boundary. Refuses I/O before mutation.
+    pub available: bool,
+    pub unavailable_commands: Vec<Command>,
     /// Explicit196/197 sensor mock [proximityState,liftMode,rawHeight].
     pub sensor_calibration: Option<[u8; 3]>,
     /// Opt-in Advanced register bank: enable, mode, exact 250 float32 samples.
@@ -71,6 +74,10 @@ pub struct SimState {
     /// `None` = the device has no DPI sensor (keyboards).
     pub dpi: Option<(u16, u16)>,
     pub polling_code: u8,
+    /// Explicit wheel fixture only: mode, acceleration, Smart Reel.
+    pub wheel_controls: Option<[u8; 3]>,
+    /// Opt-in Device196 profile polling bank; no generic-family OBM inference.
+    pub onboard_polling: Option<u8>,
     /// High-speed polling code (`00:C0`), or `None` when the device doesn't have it.
     pub polling_hs: Option<u8>,
     /// DPI stages as the device reports them: `(active, [(x, y)])`.
@@ -135,12 +142,16 @@ pub struct SimState {
 impl SimState {
     fn new(serial: &str) -> Self {
         SimState {
+            available: true,
+            unavailable_commands: Vec::new(),
             txid: 0x1F,
             serial: serial.into(),
             firmware: (1, 2),
             dpi: None,
             polling_code: 0x01,
+            wheel_controls: None,
             polling_hs: None,
+            onboard_polling: None,
             dpi_stages: None,
             macros: None,
             macro_recyclable: 0,
@@ -298,6 +309,18 @@ impl SimState {
         }
         let known = |s: &Self, led: u8| s.leds.contains(&led);
         match c {
+            c if c.class == 2 && matches!(c.id & 0x7f, 0x14 | 0x16 | 0x17) => {
+                let index = match c.id & 0x7f { 0x14 => 0, 0x16 => 1, _ => 2 };
+                let expected_size = if index == 2 { 80 } else { 2 };
+                let Some(values) = self.wheel_controls.as_mut() else { return (NotSupported, vec![]) };
+                if size != expected_size || a[0] != 1 || a[1] > 1 || a[2..usize::from(size)].iter().any(|b| *b != 0) {
+                    return (Failed, vec![]);
+                }
+                if c.id & 0x80 == 0 { values[index] = a[1]; }
+                let mut reply = vec![0; usize::from(size)];
+                reply[..2].copy_from_slice(&[1, values[index]]);
+                ok(reply)
+            },
             c if c == cmd::FIRMWARE.get() => ok(vec![self.firmware.0, self.firmware.1]),
             c if c == cmd::FIRMWARE_EXT.get()=>match self.firmware_extended {Some(version)=>ok(version.to_vec()),None=>(NotSupported,vec![])},
             c if c==cmd::SENSOR_ANGLE.get()=>match self.sensor_rotation{Some(raw) if size==3&&a[0]==1=>ok(raw.to_vec()),_=>(NotSupported,vec![])},
@@ -373,6 +396,16 @@ impl SimState {
                 (Some(slot), _) => ok(vec![slot]),
                 (None, true) => (NotSupported, vec![]),
                 (None, false) => ok(vec![1]),
+            },
+            c if c == Command::new(0,0x8e) => match self.onboard_polling {
+                Some(code) if size==2 && a[0]==1 => ok(vec![1,code]),
+                _ => (NotSupported,vec![]),
+            },
+            c if c == Command::new(0,0x0e) => match self.onboard_polling {
+                Some(_) if size==2 && a[0]==1 && crate::onboard::polling_hz(a[1]).is_some() => {
+                    self.onboard_polling=Some(a[1]);ok(a[..2].to_vec())
+                },
+                _ => (NotSupported,vec![]),
             },
             c if c == cmd::POLLING.get() => ok(vec![self.polling_code]),
             cmd::POLLING => {
@@ -775,7 +808,8 @@ impl Sim {
     /// Open as a [`Device`], probing the txid like real discovery does.
     pub fn open(&self, pid: u16, spec: Option<DeviceSpec>) -> Option<Device> {
         let path = CString::new(format!("sim:{pid:04X}")).expect("no NUL");
-        Device::open(Box::new(self.clone()), pid, 0, path, &TXID_CANDIDATES, spec)
+        let interface = spec.as_ref().and_then(|spec| spec.interface).unwrap_or(0);
+        Device::open(Box::new(self.clone()), pid, interface, path, &TXID_CANDIDATES, spec)
     }
 }
 
@@ -789,6 +823,10 @@ impl Transport for Sim {
         let req = Report(body);
         let mut s = self.state();
         let command = req.command();
+        if !s.available || s.unavailable_commands.contains(&command) {
+            s.reply = None;
+            return Err(Error::NoReply(command));
+        }
 
         let to_dock = req.txid() == crate::device::DOCK_TXID && req.txid() != s.txid && s.dock_light.is_some();
         if req.txid() != s.txid && !to_dock {
@@ -863,14 +901,20 @@ pub fn from_env() -> Vec<Device> {
 }
 
 /// Every preset `SECBIRD_SIM=all` loads.
-pub const PRESETS: [&str; 13] =
-    ["mouse", "wireless", "keyboard", "old-keyboard", "naga", "cobra", "dock", "hyperpolling", "blackwidow", "goliathus", "firefly", "blade", "base-station"];
+pub const PRESETS: [&str; 15] =
+    ["mouse", "wireless", "keyboard", "old-keyboard", "naga", "cobra", "dock", "hyperpolling", "blackwidow", "goliathus", "firefly", "blade", "base-station", "basilisk-v3", "basilisk-v3-pro"];
 
 /// A simulated device by name. The later ones copy devices users reported, under their real
 /// product ids, so the editor treats them exactly as it treats the hardware.
 pub fn preset(name: &str) -> Option<(Sim, u16)> {
     Some(match name {
         "mouse" => (Sim::mouse(), MOUSE_PID),
+        "basilisk-v3" | "basilisk-v3-pro" => {
+            let sim = Sim::mouse();
+            sim.state().wheel_controls = Some([0; 3]);
+            sim.state().active_slot = Some(1);
+            (sim, if name == "basilisk-v3" { 0x0099 } else { 0x00aa })
+        },
         "wireless" => (Sim::wireless_mouse(), WIRELESS_MOUSE_PID),
         "keyboard" => (Sim::keyboard(), KEYBOARD_PID),
         "old-keyboard" => (Sim::old_keyboard(), OLD_KEYBOARD_PID),

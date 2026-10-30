@@ -1,0 +1,82 @@
+{
+  "source_sha256": "109b483f129044e1c7c17b9fcae0e30fa775885667976807cf2c94bd1c696d19",
+  "presets": [
+    [
+      {
+        "Stop": 0,
+        "Color": 65280
+      },
+      {
+        "Stop": 51,
+        "Color": 16776960
+      },
+      {
+        "Stop": 100,
+        "Color": 16711680
+      }
+    ],
+    [
+      {
+        "Stop": 0,
+        "Color": 16711680
+      },
+      {
+        "Stop": 26,
+        "Color": 16773888
+      },
+      {
+        "Stop": 42,
+        "Color": 3604296
+      },
+      {
+        "Stop": 55,
+        "Color": 6484479
+      },
+      {
+        "Stop": 68,
+        "Color": 3327
+      },
+      {
+        "Stop": 81,
+        "Color": 8388863
+      },
+      {
+        "Stop": 100,
+        "Color": 16711680
+      }
+    ],
+    [
+      {
+        "Stop": 0,
+        "Color": 255
+      },
+      {
+        "Stop": 51,
+        "Color": 16777215
+      },
+      {
+        "Stop": 100,
+        "Color": 16711680
+      }
+    ],
+    [
+      {
+        "Stop": 0,
+        "Color": 0
+      },
+      {
+        "Stop": 100,
+        "Color": 65280
+      }
+    ]
+  ],
+  "max_stops": 7,
+  "boost": 1,
+  "decay": 1,
+  "boost_min": 0.25,
+  "boost_max": 4,
+  "boost_step": 0.25,
+  "decay_min": 0.1,
+  "decay_max": 2,
+  "decay_step": 0.1
+}

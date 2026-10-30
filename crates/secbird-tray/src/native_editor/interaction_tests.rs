@@ -3,14 +3,46 @@
 //! process-local config/smoke environment and opens one bounded native window.
 #[path="calibration_interaction_tests.rs"]
 mod calibration;
+#[path="onboard_interaction_tests.rs"]
+mod onboard;
+#[path="mouse_assignment_interaction_tests.rs"]
+mod mouse_assignment;
 #[path="advanced_interaction_tests.rs"]
 mod advanced;
+#[path="wheel_interaction_tests.rs"]
+mod wheel;
 #[path="linked_games_interaction_tests.rs"]
 mod linked_games;
 #[path="macro_interaction_tests.rs"]
 mod macros;
+#[path="shortcut_interaction_tests.rs"]
+mod shortcuts;
+#[path="macro_xml_interaction_tests.rs"]
+mod macro_xml;
+#[path="macro_playback_interaction_tests.rs"]
+mod macro_playback;
+#[path="macro_random_delay_interaction_tests.rs"]
+mod macro_random_delay;
 #[path="studio_interaction_tests.rs"]
 mod studio;
+#[path="studio_library_interaction_tests.rs"]
+mod studio_library;
+#[path="studio_clipboard_interaction_tests.rs"]
+mod studio_clipboard;
+#[path="chroma_interaction_tests.rs"]
+mod chroma;
+#[path="settings_interaction_tests.rs"]
+mod settings;
+#[path="studio_wheel_interaction_tests.rs"]
+mod studio_wheel;
+#[path="studio_effects_integration_tests.rs"]
+mod studio_effects;
+#[path="keyboard_assignment_interaction_tests.rs"]
+mod keyboard_assignments;
+#[path="multimedia_interaction_tests.rs"]
+mod multimedia;
+#[path="sensitivity_interaction_tests.rs"]
+mod sensitivity;
 use super::*;
 use secbird_core::{commands as cmd, sim::Sim, Store};
 use std::time::Instant;
@@ -45,6 +77,17 @@ fn wait_for(mut predicate: impl FnMut() -> bool, reason: &str) -> Result<(), Str
         if predicate() {
             return Ok(());
         }
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    Err(format!("Timed out: {reason}"))
+}
+
+// Studio startup loads the native source assets before publishing WINDOW. Keep
+// cold-start admission bounded separately from the four-second action checks.
+fn wait_for_studio_window(mut predicate: impl FnMut() -> bool, reason: &str) -> Result<(), String> {
+    let started = Instant::now();
+    while started.elapsed() < Duration::from_secs(15) {
+        if predicate() { return Ok(()); }
         std::thread::sleep(Duration::from_millis(20));
     }
     Err(format!("Timed out: {reason}"))
@@ -316,6 +359,56 @@ unsafe fn lighting_click(hwnd: HWND, x: f64, y: f64, scale: f64) {
     SendMessageW(hwnd, WM_LBUTTONUP, 0, point);
     redraw(hwnd);
 }
+
+unsafe fn studio_add_effect(hwnd:HWND,effect:&str,scale:f64)->Result<(),String> {
+    lighting_click(hwnd,775.,100.,scale);
+    let mut position=json!(effect);
+    SendMessageW(hwnd,STUDIO_TEST,studio_view::TEST_EFFECT_POSITION,&mut position as *mut Value as isize);
+    let x=position["x"].as_f64().ok_or_else(||format!("Add {effect} is missing from the painted menu"))?;
+    let y=position["y"].as_f64().ok_or_else(||format!("Add {effect} has no menu position"))?;
+    lighting_click(hwnd,x,y,scale);Ok(())
+}
+
+unsafe fn native_click(hwnd: HWND, x: f64, y: f64, scale: f64) {
+    let point = position(x, y, scale);
+    wait_for(
+        || SendMessageW(hwnd, RUNTIME_TEST_QUERY, 9, point) == 1,
+        "UI-thread click batch accepted",
+    ).expect("Native click failed");
+}
+
+unsafe fn native_send(hwnd: HWND, message: u32, wparam: usize, lparam: isize) {
+    let request = (message, wparam, lparam);
+    wait_for(
+        || SendMessageW(hwnd, RUNTIME_TEST_QUERY, 10,
+            &request as *const (u32, usize, isize) as isize) == 1,
+        "UI-thread test message accepted",
+    ).expect("Native message failed");
+}
+
+// A synchronous sent message may reenter paint/rebuild while State is borrowed.
+// The test port explicitly acknowledges a snapshot; an unavailable snapshot is
+// never interpreted as absent geometry or an idle worker.
+unsafe fn native_query(hwnd: HWND, message: u32, wparam: usize) -> Result<Value, String> {
+    let mut value = Value::Null;
+    let mut attempts = 0;
+    wait_for(|| {
+        attempts += 1;
+        value = Value::Null;
+        SendMessageW(hwnd, message, wparam, &mut value as *mut Value as isize);
+        value.is_object()
+    }, "Native state snapshot available")?;
+    if attempts > 1 {
+        eprintln!("Native query {message} retried {} busy snapshots", attempts - 1);
+    }
+    Ok(value)
+}
+
+unsafe fn acknowledge_and_drain(hwnd: HWND) -> bool {
+    acknowledge_owned_failure(hwnd);
+    native_query(hwnd, RUNTIME_TEST_QUERY, 0).is_ok_and(|v|
+        v["pending"] == 0 && v["queued"] == 0 && v["failures"] == false)
+}
 unsafe fn edit_text(hwnd: HWND, id: u16) -> Option<String> {
     let edit = GetDlgItem(hwnd, i32::from(id));
     if edit.is_null() || IsWindowVisible(edit) == 0 {
@@ -474,7 +567,7 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                     )
                 };
                 let before = brightness_write_count(&controller_sim);
-                SendMessageW(hwnd, WM_LBUTTONDOWN, 1, point(60.0));
+                native_send(hwnd, WM_LBUTTONDOWN, 1, point(60.0));
                 let thread = GetWindowThreadProcessId(hwnd, null_mut());
                 let mut gui: GUITHREADINFO = std::mem::zeroed();
                 gui.cbSize = std::mem::size_of::<GUITHREADINFO>() as u32;
@@ -482,7 +575,7 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                 if gui.hwndCapture != hwnd {
                     return Err(format!("Brightness press did not capture HWND; client={}x{}, scale={}, source track={:?}, capture={:?}",client.right,client.bottom,scale,lighting_layout::track(shape),gui.hwndCapture));
                 }
-                SendMessageW(hwnd, WM_MOUSEMOVE, 1, point(45.0));
+                native_send(hwnd, WM_MOUSEMOVE, 1, point(45.0));
                 // Inject through the same cached collector, then force the queued
                 // dialog message to run while a real HWND capture is still held.
                 let runtime = json!({"profile":"Fixture","uniform_host":{"profile":"Fixture","state":"faulted","error":"simulated background fault"}});
@@ -490,13 +583,13 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                 let cached_store =
                     std::fs::read(controller_directory.join("profiles.json")).unwrap();
                 let mut before_feedback = Value::Null;
-                SendMessageW(
+                native_send(
                     hwnd,
                     RUNTIME_TEST_QUERY,
                     0,
                     &mut before_feedback as *mut Value as isize,
                 );
-                SendMessageW(
+                native_send(
                     hwnd,
                     RUNTIME_TEST_INJECT,
                     0,
@@ -508,7 +601,7 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                     return Err("Brightness wrote before release".into());
                 }
                 let mut observed = Value::Null;
-                SendMessageW(
+                native_send(
                     hwnd,
                     RUNTIME_TEST_QUERY,
                     0,
@@ -537,8 +630,8 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                 {
                     return Err("Cached status performed device IO or profile persistence".into());
                 }
-                SendMessageW(hwnd, WM_LBUTTONUP, 0, point(45.0));
-                SendMessageW(
+                native_send(hwnd, WM_LBUTTONUP, 0, point(45.0));
+                native_send(
                     hwnd,
                     RUNTIME_TEST_QUERY,
                     0,
@@ -546,7 +639,7 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                 );
                 PostMessageW(hwnd, WM_TIMER, CACHED_LIGHTING_TIMER, 0);
                 wait_for(
-                    || acknowledge_owned_failure(hwnd),
+                    || acknowledge_and_drain(hwnd),
                     "Deferred runtime failure acknowledged after release",
                 )?;
                 wait_for(
@@ -577,13 +670,13 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                 }
                 // User operations reset foreground dedup; an identical background
                 // fault still must stay acknowledged independently of that reset.
-                SendMessageW(
+                native_send(
                     hwnd,
                     RUNTIME_TEST_INJECT,
                     1,
                     &runtime as *const Value as isize,
                 );
-                SendMessageW(
+                native_send(
                     hwnd,
                     RUNTIME_TEST_QUERY,
                     0,
@@ -595,9 +688,9 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                     ));
                 }
                 let after_release = brightness_write_count(&controller_sim);
-                SendMessageW(hwnd, WM_LBUTTONDOWN, 1, point(80.0));
-                SendMessageW(hwnd, WM_CANCELMODE, 0, 0);
-                SendMessageW(hwnd, WM_LBUTTONUP, 0, point(80.0));
+                native_send(hwnd, WM_LBUTTONDOWN, 1, point(80.0));
+                native_send(hwnd, WM_CANCELMODE, 0, 0);
+                native_send(hwnd, WM_LBUTTONUP, 0, point(80.0));
                 std::thread::sleep(Duration::from_millis(80));
                 if brightness_write_count(&controller_sim) != after_release {
                     return Err("Cancelled brightness gesture wrote".into());
@@ -614,10 +707,10 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                     f64::from(client.bottom) / scale,
                 )
                 .ok_or("No palette geometry")?;
-                lighting_click(hwnd, anchor.x + 15.0, anchor.y + 12.0, scale);
+                native_click(hwnd, anchor.x + 15.0, anchor.y + 12.0, scale);
                 let open_edit = |slot: usize| {
                     let swatch = palette.custom_slots[slot];
-                    SendMessageW(
+                    native_send(
                         hwnd,
                         WM_RBUTTONUP,
                         0,
@@ -625,7 +718,7 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                     );
                     redraw(hwnd);
                     let menu = color_editor_layout::context_menu(swatch);
-                    lighting_click(hwnd, menu.x + 20.0, menu.y + 13.0, scale);
+                    native_click(hwnd, menu.x + 20.0, menu.y + 13.0, scale);
                 };
                 open_edit(1);
                 wait_for(
@@ -637,7 +730,7 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                 if edit_text(hwnd, lighting_view::HEX).as_deref() != Some("abcdef") {
                     return Err("HEX message draft not accepted".into());
                 }
-                lighting_click(
+                native_click(
                     hwnd,
                     palette.cancel.x + 40.0,
                     palette.cancel.y + 13.0,
@@ -650,19 +743,19 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                 )?;
                 // Exercise acknowledged failure feedback through a real source control.
                 // The native eyedropper is explicitly unavailable; no capture is started.
-                lighting_click(
+                native_click(
                     hwnd,
                     palette.eyedropper.x + 12.0,
                     palette.eyedropper.y + 12.0,
                     scale,
                 );
                 wait_for(
-                    || acknowledge_owned_failure(hwnd),
+                    || acknowledge_and_drain(hwnd),
                     "Acknowledged native failure dialog",
                 )?;
                 let edit = GetDlgItem(hwnd, i32::from(lighting_view::HEX));
                 SetWindowTextW(edit, wide("a1b2c3").as_ptr());
-                lighting_click(hwnd, palette.save.x + 40.0, palette.save.y + 13.0, scale);
+                native_click(hwnd, palette.save.x + 40.0, palette.save.y + 13.0, scale);
                 wait_for(
                     || {
                         Store::load(&controller_directory.join("profiles.json"))
@@ -686,28 +779,39 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                     },
                     "Saved slot and unchanged opaque slot persisted",
                 )?;
+                // Save first persists the custom slot, then applies its effect.
+                // Disk visibility of the first operation is not worker completion.
+                // Finish/acknowledge that accepted tail before measuring close.
+                wait_for(|| {
+                    acknowledge_and_drain(hwnd)
+                }, "Color Save worker and feedback drained")?;
                 if brightness_write_count(&controller_sim) != after_release {
                     return Err("Color editor unexpectedly changed brightness".into());
                 }
                 // An acknowledged background failure must not prevent closing
                 // while a real color EDIT still owns focus and an unsaved draft.
-                lighting_click(hwnd, anchor.x + 15.0, anchor.y + 12.0, scale);
+                native_click(hwnd, anchor.x + 15.0, anchor.y + 12.0, scale);
                 open_edit(2);
                 wait_for(
                     || edit_text(hwnd, lighting_view::HEX).as_deref() == Some("a1b2c3"),
                     "Color editor reopened before focused close",
                 )?;
                 let focused_fault = json!({"profile":"Fixture","uniform_host":{"profile":"Fixture","error":"simulated focused close fault"}});
+                let unsaved_edit = GetDlgItem(hwnd, i32::from(lighting_view::HEX));
+                SetWindowTextW(unsaved_edit, wide("fedcba").as_ptr());
+                if edit_text(hwnd, lighting_view::HEX).as_deref() != Some("fedcba") {
+                    return Err("Unsaved close draft was not accepted".into());
+                }
                 let before_close_log = controller_sim.state().log.len();
                 let before_close_store =
                     std::fs::read(controller_directory.join("profiles.json")).unwrap();
-                SendMessageW(
+                native_send(
                     hwnd,
                     RUNTIME_TEST_INJECT,
                     2,
                     &focused_fault as *const Value as isize,
                 );
-                SendMessageW(
+                native_send(
                     hwnd,
                     RUNTIME_TEST_QUERY,
                     0,
@@ -726,15 +830,27 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
                     },
                     "Editor closed after failure acknowledgement",
                 )?;
+                if IsWindow(unsaved_edit) != 0 || acknowledge_owned_failure(hwnd) {
+                    return Err("Focused editor or its failure dialog survived close".into());
+                }
                 if controller_sim.state().log.len() != before_close_log
                     || std::fs::read(controller_directory.join("profiles.json")).unwrap()
                         != before_close_store
                 {
-                    return Err("Focused close persisted draft or dispatched hardware".into());
+                    let after = std::fs::read(controller_directory.join("profiles.json")).unwrap();
+                    let diagnostic = json!({
+                        "before_store":serde_json::from_slice::<Value>(&before_close_store).unwrap(),
+                        "after_store":serde_json::from_slice::<Value>(&after).unwrap(),
+                        "commands_after_close":format!("{:?}", &controller_sim.state().log[before_close_log..]),
+                        "before_close_feedback":observed,
+                    });
+                    let path = controller_directory.join("focused-close-diagnostic.json");
+                    std::fs::write(&path, serde_json::to_vec_pretty(&diagnostic).unwrap()).unwrap();
+                    return Err(format!("Focused close persisted draft or dispatched hardware: {}",path.display()));
                 }
                 Ok(
                     json!({"native_failure_dialog_acknowledged":true,"transport":"simulated only","physical_discovery_disabled":true,"source_region0_readback_not_modeled":true,
-                "focused_background_failure_close_acknowledged":true,"cached_status_no_hid_or_store_write":true,"background_fault_preserves_capture_and_draft":true,"background_fault_once_across_user_operation":true,"brightness_capture_verified":true,"source_layout_client_css_width":width,"scale":scale,"brightness_no_write_before_release":true,"brightness_release_raw":114,"brightness_cancel_no_write":true,
+                "focused_background_failure_close_acknowledged":true,"unsaved_close_draft":"fedcba","saved_close_slot":"#a1b2c3","focused_edit_destroyed":true,"close_command_delta":0,"close_store_bytes_unchanged":true,"cached_status_no_hid_or_store_write":true,"background_fault_preserves_capture_and_draft":true,"background_fault_once_across_user_operation":true,"brightness_capture_verified":true,"source_layout_client_css_width":width,"scale":scale,"brightness_no_write_before_release":true,"brightness_release_raw":114,"brightness_cancel_no_write":true,
                 "native_edit_draft_switch_isolated":true,"cancelled_color_retained":true,"opaque_slot_preserved":true,
                 "edited_slot_saved":"#a1b2c3","color_actions_did_not_write_brightness":true,
                 "evidence":"actual HWND mouse/EDIT notifications and worker persistence; no OS pointer injection or hardware proof"}),
@@ -792,7 +908,7 @@ fn native_lighting_messages_commit_release_cancel_and_isolate_color_drafts() {
 
 unsafe fn modal_snapshot(hwnd: HWND) -> Value {
     let mut value = Value::Null;
-    SendMessageW(
+    native_send(
         hwnd,
         PROFILE_MODAL_TEST_QUERY,
         0,
@@ -1532,7 +1648,7 @@ fn native_assignment_source_draft_has_no_device_or_store_writes() {
                 }
                 let source_shell =
                     assignment_layout::shell(height - 42.0, 42.0, x, 36.0, false).unwrap();
-                let source_form = assignment_geometry::form(
+                let _source_form = assignment_geometry::form(
                     source_shell,
                     605,
                     Some(assignment_model::Category::Mouse),
@@ -1540,15 +1656,10 @@ fn native_assignment_source_draft_has_no_device_or_store_writes() {
                     true,
                     0.0,
                 );
-                lighting_click(
-                    hwnd,
-                    source_form.save.x + 50.0,
-                    source_form.save.y + 13.0,
-                    scale,
-                );
-                if query()["open"] != true || query()["pending"] != 0 {
-                    return Err("Disabled Save submitted or dismissed draft".into());
+                if query()["view"]["can_save"] != true {
+                    return Err("Supported local Mouse Function Save was not enabled".into());
                 }
+
 
                 lighting_click(hwnd, x + 265.0, y - 16.0, scale);
                 if query()["prompt"] != true {
@@ -1611,7 +1722,10 @@ fn native_assignment_source_draft_has_no_device_or_store_writes() {
                     return Err(format!("Source drawer/assets incomplete: {drawer}"));
                 }
                 SendMessageW(hwnd, WM_MOUSEMOVE, 0, position(150.0, 260.0, scale));
-                SendMessageW(hwnd, WM_MOUSEWHEEL, (-120i16 as u16 as usize) << 16, 0);
+                let mut wheel_point=POINT{x:(150.0*scale).round() as i32,y:(260.0*scale).round() as i32};
+                ClientToScreen(hwnd,&mut wheel_point);
+                let at=(wheel_point.x as u16 as usize | ((wheel_point.y as u16 as usize)<<16)) as isize;
+                SendMessageW(hwnd, WM_MOUSEWHEEL, (-120i16 as u16 as usize) << 16, at);
                 redraw(hwnd);
                 let scrolled = query();
                 let offset = scrolled["view"]["drawer_scroll"].as_f64().unwrap();
@@ -1653,7 +1767,7 @@ fn native_assignment_source_draft_has_no_device_or_store_writes() {
                 }
                 PostMessageW(hwnd, WM_CLOSE, 0, 0);
                 Ok(
-                    json!({"dirty_host_close_deferred":true,"host_dismiss_keeps_view":true,"host_discard_closes_only_view":true,"source_key_path_hit":true,"opaque_mapping_preserved":true,"mouse_category_and_dropdown":true,"turbo_controlled_numeric_repeat_and_drag":true,"unsupported_save_disabled":true,"source_drawer_wheel_and_thumb_drag":true,"source_icons_loaded":58,"dirty_close_prompt":true,"dismiss_keeps_draft":true,"discard_and_cancel_no_writes":true,"sim_commands_added":0,"profile_bytes_unchanged":true,"physical_discovery_disabled":true}),
+                    json!({"dirty_host_close_deferred":true,"host_dismiss_keeps_view":true,"host_discard_closes_only_view":true,"source_key_path_hit":true,"opaque_mapping_preserved":true,"mouse_category_and_dropdown":true,"turbo_controlled_numeric_repeat_and_drag":true,"save_not_invoked_in_cancel_discard_regression":true,"source_drawer_wheel_and_thumb_drag":true,"source_icons_loaded":58,"dirty_close_prompt":true,"dismiss_keeps_draft":true,"discard_and_cancel_no_writes":true,"sim_commands_added":0,"profile_bytes_unchanged":true,"physical_discovery_disabled":true}),
                 )
             }
         })();
@@ -1889,7 +2003,7 @@ fn native_assignment_mouse_labels_and_drawer_have_source_hit_targets() {
                 SendMessageW(hwnd, WM_MBUTTONDOWN, 0, (tx as u32 | (ty as u32)<<16) as isize);
                 redraw(hwnd);redraw(hwnd);
                 let closed = host();
-                if !closed["selected"].is_null() || closed["order"].as_array().unwrap().len()!=0
+                if !closed["selected"].is_null() || !closed["order"].as_array().unwrap().is_empty()
                     || closed["device_count"]!=1 || closed["cards"].as_array().unwrap().len()!=1 {
                     return Err(format!("Closing view removed device or auto-reopened tab: {closed}"));
                 }
@@ -1906,7 +2020,7 @@ fn native_assignment_mouse_labels_and_drawer_have_source_hit_targets() {
                 let mut close_button=Value::Null;
                 SendMessageW(hwnd,RUNTIME_TEST_QUERY,8,&mut close_button as *mut Value as isize);
                 redraw(hwnd);
-                if !host()["selected"].is_null() || host()["order"].as_array().unwrap().len()!=0 {
+                if !host()["selected"].is_null() || !host()["order"].as_array().unwrap().is_empty() {
                     return Err("Visible source close button did not close view".into());
                 }
                 shortcut(84,true);
@@ -2009,27 +2123,23 @@ fn native_wave_dropdown_reopens_selected_scrolls_drags_and_toggles_source_direct
                 let hwnd = WINDOW.load(Ordering::Acquire) as HWND;
                 let scale = f64::from(GetDpiForWindow(hwnd).max(96)) / 96.0;
                 let query = |enable: bool| {
-                    let mut value = Value::Null;
-                    SendMessageW(
-                        hwnd,
-                        LIGHTING_DROPDOWN_TEST,
-                        usize::from(enable),
-                        &mut value as *mut Value as isize,
-                    );
-                    value
+                    native_query(hwnd, LIGHTING_DROPDOWN_TEST, usize::from(enable))
                 };
-                let click = |r: &Value| {
-                    lighting_click(
+                let click = |name: &str, r: &Value| -> Result<(), String> {
+                    let coordinate = |field: &str| r[field].as_f64()
+                        .ok_or_else(|| format!("Wave {name}.{field} missing: {r}"));
+                    native_click(
                         hwnd,
-                        r["x"].as_f64().unwrap() + r["width"].as_f64().unwrap() / 2.0,
-                        r["y"].as_f64().unwrap() + r["height"].as_f64().unwrap() / 2.0,
+                        coordinate("x")? + coordinate("width")? / 2.0,
+                        coordinate("y")? + coordinate("height")? / 2.0,
                         scale,
-                    )
+                    );
+                    Ok(())
                 };
-                let initial = query(true);
+                let initial = query(true)?;
                 let log = controller_sim.state().log.len();
-                click(&initial["trigger"]);
-                let opened = query(false);
+                click("initial trigger", &initial["trigger"])?;
+                let opened = query(false)?;
                 if opened["open"] != true || opened["scroll"] != 122.0 {
                     return Err(format!("Wave not auto-visible: {opened}"));
                 }
@@ -2037,45 +2147,45 @@ fn native_wave_dropdown_reopens_selected_scrolls_drags_and_toggles_source_direct
                 let track = &opened["track"];
                 let x = thumb["x"].as_f64().unwrap() + 4.0;
                 let y = thumb["y"].as_f64().unwrap() + 10.0;
-                SendMessageW(hwnd, WM_LBUTTONDOWN, 1, position(x, y, scale));
-                SendMessageW(
+                native_send(hwnd, WM_LBUTTONDOWN, 1, position(x, y, scale));
+                native_send(
                     hwnd,
                     WM_MOUSEMOVE,
                     1,
                     position(x, track["y"].as_f64().unwrap() + 10.0, scale),
                 );
-                SendMessageW(
+                native_send(
                     hwnd,
                     WM_LBUTTONUP,
                     0,
                     position(x, track["y"].as_f64().unwrap() + 10.0, scale),
                 );
                 redraw(hwnd);
-                if query(false)["scroll"] != 0.0 {
+                if query(false)?["scroll"] != 0.0 {
                     return Err("Thumb drag did not reach start".into());
                 }
-                click(&initial["trigger"]);
-                click(&initial["trigger"]);
-                let reopened = query(false);
+                click("close trigger", &initial["trigger"])?;
+                click("reopen trigger", &initial["trigger"])?;
+                let reopened = query(false)?;
                 if reopened["scroll"] != 122.0 {
                     return Err("Reopen did not restore selected-row scroll".into());
                 }
                 // Choose the actual Wave row, which starts 250px into source content.
-                lighting_click(
+                native_click(
                     hwnd,
                     reopened["panel"]["x"].as_f64().unwrap() + 30.0,
                     reopened["panel"]["y"].as_f64().unwrap() + 1.0 + 250.0 - 122.0 + 12.0,
                     scale,
                 );
-                let selected = query(false);
+                let selected = query(false)?;
                 if selected["open"] != false || selected["selected"] != 4 {
                     return Err(format!("Wave row did not select: {selected}"));
                 }
                 // Clicking the already-active right tab must toggle left, per Z_.
-                click(&selected["directions"][1]);
-                let left = query(false);
-                click(&left["directions"][0]);
-                let right = query(false);
+                click("right direction", &selected["directions"][1])?;
+                let left = query(false)?;
+                click("left direction", &left["directions"][0])?;
+                let right = query(false)?;
                 let commands = right["commands"].as_array().unwrap();
                 if commands.len() != 3
                     || commands
@@ -2096,16 +2206,16 @@ fn native_wave_dropdown_reopens_selected_scrolls_drags_and_toggles_source_direct
                 SetWindowPos(hwnd, null_mut(), 0, 0, (1000.0 * scale).round() as i32, (650.0 * scale).round() as i32, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
                 redraw(hwnd);
                 for _ in 0..6 {
-                    SendMessageW(hwnd, WM_MOUSEWHEEL, (-120i16 as u16 as usize) << 16, 0);
+                    native_send(hwnd, WM_MOUSEWHEEL, (-120i16 as u16 as usize) << 16, 0);
                 }
                 redraw(hwnd);
-                let narrow = query(false);
-                click(&narrow["trigger"]);
-                let upward = query(false);
+                let narrow = query(false)?;
+                click("narrow trigger", &narrow["trigger"])?;
+                let upward = query(false)?;
                 if upward["open"] != true || upward["panel"]["y"].as_f64().unwrap() >= upward["trigger"]["y"].as_f64().unwrap() {
                     return Err(format!("Narrow dropdown did not open upwards: {upward}"));
                 }
-                click(&upward["trigger"]);
+                click("upward close trigger", &upward["trigger"])?;
                 if controller_sim.state().log.len() != log
                     || std::fs::read(controller_directory.join("profiles.json")).unwrap() != before
                 {
@@ -2196,9 +2306,199 @@ fn native_dashboard_uses_lazy_product_art_without_device_or_profile_writes() {
 
 #[path="studio_reactive_interaction_tests.rs"]
 mod reactive;
+#[path="studio_ambient_interaction_tests.rs"]
+mod ambient;
 
 #[path="studio_session_interaction_tests.rs"]
 mod studio_session;
 
 #[path="studio_presets_interaction_tests.rs"]
 mod studio_presets;
+
+#[path="studio_audio_interaction_tests.rs"]
+mod audio;
+#[path="studio_tidal_interaction_tests.rs"]
+mod tidal;
+
+#[path="windows_assignment_interaction_tests.rs"] mod windows_assignment;
+#[test]
+#[ignore = "opens a bounded native window with simulated transport only"]
+fn native_launch_assignment_saves_without_device_delivery() {
+    let directory = std::env::temp_dir().join(format!(
+        "synapse-native-assignment-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(&directory).unwrap();
+    let frame = directory.join("frame.json");
+    let _environment = Environment::set(&[
+        ("SYNAPSE_LITE_CONFIG_DIR", &directory),
+        ("SYNAPSE_LITE_SMOKE_REPORT", &frame),
+        ("SYNAPSE_LITE_SMOKE_VIEW", Path::new("keyboard-customize")),
+    ]);
+    let sim = Sim::keyboard();
+    let engine = Engine::with_simulated_keyboard(&sim, directory.join("profiles.json")).unwrap();
+    assert!(engine.event_paths().is_empty());
+    let device = &engine.devices()[0];
+    let mut profile = secbird_core::profile_compat::new_native_profile(605, "Fixture").unwrap();
+    let opaque = json!({"inputID":"KEY_A","inputType":"KeyInput","isHyperShift":false,"outputType":"futureGroup","futureGroup":{"opaque":[7,8],"unknownFlag":true}});
+    profile.extra.get_mut("_synapseLiteSynapse4").unwrap()["decoded"]["mappings"] = json!([opaque]);
+    let mut store = Store::load(&directory.join("profiles.json")).unwrap();
+    let profiles = store.for_device(device);
+    profiles.profiles.clear();
+    profiles.profiles.insert("Fixture".into(), profile);
+    profiles.active = "Fixture".into();
+    store.save().unwrap();
+    let engine = Arc::new(Mutex::new(engine));
+    let controller_sim = sim.clone();
+    let controller_directory = directory.clone();
+    let controller = std::thread::spawn(move || -> Result<Value, String> {
+        let result = (|| -> Result<Value, String> {
+            wait_for(
+                || {
+                    std::fs::read(&frame)
+                        .ok()
+                        .and_then(|b| serde_json::from_slice::<Value>(&b).ok())
+                        .is_some_and(|f| f["matched"] == true && f["presented"] == true)
+                },
+                "Customize native frame",
+            )?;
+            let hwnd = WINDOW.load(Ordering::Acquire) as HWND;
+            unsafe {
+                let mut client: RECT = std::mem::zeroed();
+                GetClientRect(hwnd, &mut client);
+                let scale = f64::from(GetDpiForWindow(hwnd).max(96)) / 96.0;
+                let width = client.right as f64 / scale;
+                let _height = client.bottom as f64 / scale;
+                let layout =
+                    source_layout::SourceLayout::load(&assets_dir().join("keyboard-layout.json"))?;
+                let viewport = source_layout::Viewport {
+                    left: assignment_geometry::keyboard_center(width, false) - 365.0,
+                    top: 154.0,
+                    width: 730.0,
+                    height: 387.0,
+                };
+                let key = layout
+                    .bounds("KEY_A", viewport)
+                    .ok_or("Missing source KEY_A path")?;
+                let before = controller_sim.state().log.len();
+                let _before_store =
+                    std::fs::read(controller_directory.join("profiles.json")).unwrap();
+                let query = || {
+                    let mut value = Value::Null;
+                    SendMessageW(
+                        hwnd,
+                        ASSIGNMENT_TEST_QUERY,
+                        0,
+                        &mut value as *mut Value as isize,
+                    );
+                    value
+                };
+                lighting_click(
+                    hwnd,
+                    (key.left + key.right) / 2.0,
+                    (key.top + key.bottom) / 2.0,
+                    scale,
+                );
+                let mut fonts = Value::Null;
+                SendMessageW(
+                    hwnd,
+                    ASSIGNMENT_TEST_QUERY,
+                    2,
+                    &mut fonts as *mut Value as isize,
+                );
+                if fonts["private_font_files"] != 3
+                    || !fonts["rows"].as_array().is_some_and(|rows| {
+                        rows.len() == 10 && rows.iter().all(|row| row["matches"] == true)
+                    })
+                {
+                    return Err(format!(
+                        "Native source baseline vector check failed: {fonts}"
+                    ));
+                }
+                std::fs::write(
+                    controller_directory.join("font-window-geometry.json"),
+                    serde_json::to_vec_pretty(&fonts).unwrap(),
+                )
+                .unwrap();
+                let target=json!("C:\\Owned fixture\\never-executed.exe");
+                SendMessageW(hwnd,ASSIGNMENT_TEST_QUERY,4,&target as *const Value as isize);
+                let q=query(); if q["category"]!="LAUNCH_PROGRAM" { return Err(format!("Launch category failed: {q}")); }
+                let args=GetDlgItem(hwnd,i32::from(assignment_view::LAUNCH_ARGUMENTS));
+                SetFocus(args); SetWindowTextW(args,wide("--fixture-only").as_ptr());
+                let path=controller_directory.join("launch-program.png"); let path=json!(path.to_string_lossy());
+                SendMessageW(hwnd,STUDIO_TEST,6,&path as *const Value as isize);
+                SendMessageW(hwnd,ASSIGNMENT_TEST_QUERY,5,0);
+                wait_for(|| query()["open"]==false,"saved launch profile snapshot")?;
+                let saved=Store::load(&controller_directory.join("profiles.json")).map_err(|e|e.to_string())?;
+                let profile=&saved.devices.values().next().unwrap().profiles["Fixture"];
+                let rows=&profile.extra["_synapseLiteSynapse4"]["decoded"]["mappings"];
+                if rows[0]["launchGroup"]["arguments"]!="--fixture-only" || rows[0]["futureGroup"]["opaque"]!=json!([7,8]) { return Err(format!("Saved fields lost: {rows}")); }
+                if controller_sim.state().log[before..].iter().any(|c| c.id & 0x80 == 0) { return Err("Save emitted a device write".into()); }
+                PostMessageW(hwnd, WM_CLOSE, 0, 0);
+                Ok(
+                    json!({"launch_saved":true,"arguments_preserved":true,"opaque_fields_preserved":true,"sim_set_commands_added":0,"physical_discovery_disabled":true}),
+                )
+            }
+        })();
+        if result.is_err() {
+            unsafe {
+                let hwnd = WINDOW.load(Ordering::Acquire) as HWND;
+                let mut ignored = Value::Null;
+                SendMessageW(
+                    hwnd,
+                    ASSIGNMENT_TEST_QUERY,
+                    1,
+                    &mut ignored as *mut Value as isize,
+                );
+                PostMessageW(hwnd, WM_CLOSE, 0, 0);
+            }
+        }
+        result
+    });
+    let window = run_window(engine, Some(Duration::from_secs(12)), None);
+    let result = controller
+        .join()
+        .unwrap()
+        .expect("Assignment HWND interaction failed");
+    window.unwrap();
+    std::fs::write(
+        directory.join("interaction.json"),
+        serde_json::to_vec_pretty(&result).unwrap(),
+    )
+    .unwrap();
+    eprintln!("Native assignment evidence: {}", directory.display());
+}
+
+#[test]
+fn local_assignment_worker_persists_without_device_delivery() {
+    use super::assignment_model::{Anchor,Category,Context,Draft};
+    let directory=std::env::temp_dir().join(format!("assignment-worker-{}",std::process::id()));
+    std::fs::create_dir_all(&directory).unwrap();
+    let path=directory.join("profiles.json");
+    let _environment=Environment::set(&[("SYNAPSE_LITE_CONFIG_DIR", &directory)]);
+    let sim=Sim::keyboard();
+    let mut engine=Engine::with_simulated_keyboard(&sim,path.clone()).unwrap();
+    let device=&engine.devices()[0];
+    let mut store=Store::load(&path).unwrap();
+    let profiles=store.for_device(device);
+    profiles.profiles.insert("Fixture".into(),secbird_core::profile_compat::new_native_profile(605,"Fixture").unwrap());
+    profiles.active="Fixture".into(); store.save().unwrap();
+    let snapshot=server::dispatch(&mut engine,"GET","/api/state",&[]).unwrap();
+    let ctx=Arc::new(Context::from_device(&snapshot["devices"][0]).unwrap());
+    let input=assignment_model::Input{key:"A".into(),input_id:"KEY_A".into(),input_type:"KeyInput".into(),label:"A".into(),default_label:"A".into(),functions:vec!["DEFAULT".into(),"DISABLE".into()],enabled:true};
+    let mut draft=Draft::new(ctx,input,Anchor::Key("KEY_A".into()),false); draft.select(Category::Disable);
+    let before=sim.state().log.len();
+    let (tx,rx)=mpsc::channel(); let (replies,answers)=mpsc::channel();
+    tx.send(Job::LocalAssignment(Box::new(draft))).unwrap(); drop(tx);
+    worker(Arc::new(Mutex::new(engine)),rx,replies);
+    let results=answers.try_iter().filter_map(|r|if let WorkerReply::User(reply)=r {Some((reply.failed,reply.status))}else{None}).collect::<Vec<_>>();
+    assert!(results.iter().any(|(failed,status)| !failed && status.contains("saved locally")),"{results:?}");
+    let loaded=Store::load(&path).unwrap();
+    assert_eq!(loaded.devices.values().next().unwrap().profiles["Fixture"].extra["_synapseLiteLocalAssignments"][0]["outputType"],"disableGroup");
+    assert!(sim.state().log[before..].iter().all(|command| command.id & 0x80 != 0), "Local save submitted a device SET");
+    std::fs::remove_file(path).unwrap(); std::fs::remove_dir(directory).unwrap();
+}

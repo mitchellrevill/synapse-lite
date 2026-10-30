@@ -1,0 +1,12 @@
+{
+  "date": "2026-10-30",
+  "base": "6149f7a9422ae93322365ed12df46ab681dc40a8",
+  "core_macro_library_tests": {"passed":31,"failed":0,"new_recording_tests":4},
+  "native_editor_test": {"passed":true,"synthetic_messages_only":true,"record_stop_pair":true,"repeat_ignored":true,"one_undo_unit":true,"escape_cancel":true,"focus_loss_omits_incomplete_press":true,"disk_unchanged_before_save":true,"existing_revision_conflict_check":true},
+  "source_evidence_reused": "macro-input-authoring.json",
+  "visual_review": {"stock":"macro-recording/stock-editor.jpg","native":"macro-recording/native-recording.png","pixel_parity":false},
+  "live_playback":false,
+  "physical_device_acceptance":false,
+  "complete_build_memory_acceptance":false,
+  "remaining_gaps":["wheel and pointer movement capture","ambiguous keyboard descriptors","source recording options and pixel parity","physical device acceptance"]
+}

@@ -201,6 +201,7 @@ pub fn tip_left(value: f64, min: f64, max: f64, width: f64, tip_width: f64) -> O
 
 /// Slider changes above zero enable lighting; switch toggles separately retain
 /// the prior numeric value. No 0..255 hardware scaling belongs in this helper.
+#[cfg(test)]
 pub fn enabled_after_brightness_slider(value: u8) -> Option<bool> {
     (value <= 100).then_some(value != 0)
 }

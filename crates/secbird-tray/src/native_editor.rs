@@ -27,10 +27,12 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
+mod device_information;
 mod assignment_geometry;
 mod assignment_fonts;
 mod assignment_layout;
 mod assignment_model;
+mod assignment_backend;
 mod assignment_view;
 mod color_editor_layout;
 mod color_editor_view;
@@ -43,10 +45,15 @@ mod lighting_view;
 mod image_render;
 mod host_tabs;
 mod linked_games;
+mod shortcuts;
+mod settings_view;
 mod macro_view;
+mod chroma_view;
 mod host_tab_model;
 mod calibration_view;
+mod onboard_view;
 mod advanced_view;
+mod wheel_view;
 mod mouse_speed;
 mod mouse_feedback;
 mod mouse_input_worker;
@@ -54,7 +61,7 @@ mod performance_layout;
 mod performance_view;
 mod power_layout;
 mod power_view;
-mod profile_files;
+pub(crate) mod profile_files;
 mod profile_modal_backend;
 mod profile_modal_files;
 mod profile_modal_layout;
@@ -67,6 +74,9 @@ mod viewport;
 mod window_frame;
 mod studio_view;
 mod studio_canvas;
+// Live Reactive admission remains closed pending native pulse/input proof.
+#[allow(dead_code)]
+mod studio_reactive_source;
 mod device_artwork;
 
 const CLASS: &str = "SynapseLiteNativeEditor";
@@ -90,13 +100,56 @@ const RUNTIME_TEST_INJECT: u32 = WM_APP + 104;
 #[cfg(test)]
 const RUNTIME_TEST_QUERY: u32 = WM_APP + 105;
 #[cfg(test)]
-const LIGHTING_DROPDOWN_TEST: u32 = WM_APP + 109;
+const LIGHTING_DROPDOWN_TEST: u32 = WM_APP + 110;
 #[cfg(test)]
 const READ_ONLY_TEST_SET: u32 = WM_APP + 106;
 #[cfg(test)]
 const STUDIO_TEST: u32 = WM_APP + 115;
 #[cfg(test)]
 const ASSIGNMENT_TEST_QUERY: u32 = WM_APP + 107;
+
+#[test]
+fn editor_private_messages_have_distinct_ids() {
+    // These all route through the same editor HWND. A collision silently lets
+    // an earlier handler consume another subsystem's message (and its payload).
+    let messages = [
+        ("profile dialog", PROFILE_DIALOG),
+        ("profile rename", PROFILE_RENAME),
+        ("failure dialog", FAILURE_DIALOG),
+        ("profile browse", PROFILE_MODAL_BROWSE),
+        ("profile save", PROFILE_MODAL_SAVE),
+        ("test profile browse", PROFILE_MODAL_TEST_BROWSE),
+        ("test profile save", PROFILE_MODAL_TEST_SAVE),
+        ("test profile open", PROFILE_MODAL_TEST_OPEN),
+        ("test profile query", PROFILE_MODAL_TEST_QUERY),
+        ("test runtime inject", RUNTIME_TEST_INJECT),
+        ("test runtime query", RUNTIME_TEST_QUERY),
+        ("test lighting dropdown", LIGHTING_DROPDOWN_TEST),
+        ("test read only", READ_ONLY_TEST_SET),
+        ("test assignment query", ASSIGNMENT_TEST_QUERY),
+        ("test studio", STUDIO_TEST),
+        ("mouse feedback", mouse_feedback::NOTIFY),
+        ("studio dialog", studio_view::DIALOG),
+        ("studio exit", studio_view::EXIT_REQUEST),
+        ("linked games browse", linked_games::BROWSE),
+        ("test linked games", linked_games::TEST),
+        ("macro browse", macro_view::BROWSE),
+        ("macro input menu", macro_view::INPUT_MENU),
+        ("macro host browse", macro_view::HOST_BROWSE),
+        ("macro XML export", macro_view::EXPORT_BROWSE),
+        ("test macro", macro_view::TEST),
+        ("test chroma", chroma_view::TEST),
+        ("test settings", settings_view::TEST),
+        ("shortcut menu", shortcuts::MENU),
+        ("shortcut file", shortcuts::FILE),
+        ("test shortcuts", shortcuts::TEST),
+    ];
+    for (index, (name, id)) in messages.iter().enumerate() {
+        for (other, other_id) in &messages[index + 1..] {
+            assert_ne!(id, other_id, "Editor messages {name} and {other} collide");
+        }
+    }
+}
 const FAILURE_DIALOG: u32 = WM_APP + 93;
 const FAILURE_TITLE: &str = "Synapse Lite - Action failed";
 const PERFORMANCE_REPEAT: usize = 73;
@@ -384,8 +437,13 @@ impl Tab {
 
 #[derive(Clone)]
 enum Action {
+    DeviceInformation,
+    Onboard(onboard_view::Control),
+    Chroma(chroma_view::Control),
+    Settings(settings_view::Control),
     Studio(studio_view::Control),
     LinkedGames(linked_games::Control),
+    Shortcuts(shortcuts::Control),
     MacroLibrary(macro_view::Control),
     Home,
     Device(String),
@@ -394,6 +452,7 @@ enum Action {
     HostMove(String, usize),
     Calibration(calibration_view::Control),
     Advanced(advanced_view::Control),
+    WheelControl(String, secbird_core::wheel_controls::WheelControl, bool),
     Tab(Tab),
     Refresh,
     ProfileMenu,
@@ -459,9 +518,17 @@ struct Hit {
     action: Action,
 }
 
+const ASSIGNMENT_SAVED_STATUS:&str="Assignment saved locally; hardware delivery unavailable";
+
 enum Job {
+    DeviceInformation(String),
+    LocalAssignment(Box<assignment_model::Draft>),
+    Onboard(onboard_view::Request),
+    Chroma(chroma_view::Request),
+    Settings(Option<Value>),
     Studio(studio_view::Request),
     LinkedGames(linked_games::Request),
+    Shortcuts(shortcuts::Request),
     MacroLibrary(macro_view::Request),
     StudioOutput(studio_view::OutputRequest),
     SensorRead(String, String),
@@ -525,10 +592,15 @@ struct Reply {
 }
 
 enum WorkerReply {
+    DeviceInformation(String, String),
+    Onboard(onboard_view::Request, Result<Value,String>),
+    Chroma(Result<chroma_view::Response, String>),
+    Settings(Result<Value,String>),
     StudioControl(crate::host_studio::session::Control, crate::lighting_status::Reader, Value),
     StudioOutput(Result<Value, String>),
     Studio(studio_view::Response),
     LinkedGames(Result<linked_games::Data,String>),
+    Shortcuts(Result<shortcuts::Data,String>),
     MacroLibrary(Result<macro_view::Data,String>),
     Sensor((String, String), Result<(Value,mouse_feedback::BindingResult), String>),
     User(Reply),
@@ -553,6 +625,33 @@ fn worker(
     }
     for job in jobs {
         let job = match job {
+            Job::DeviceInformation(id) => {
+                let text = match engine.lock() {
+                    Ok(engine) => engine.devices().iter().find(|dev| dev.key() == id)
+                        .map(secbird_core::device_information::diagnostic_text)
+                        .unwrap_or_else(|| "Device disconnected. Rescan devices and try again.".into()),
+                    Err(_) => "Device worker unavailable; try refreshing.".into(),
+                };
+                if replies.send(WorkerReply::DeviceInformation(id, text)).is_err() { break; }
+                continue;
+            }
+            Job::Onboard(request) => {
+                let result = engine.lock().map_err(|_|"Device worker is unavailable".to_string())
+                    .and_then(|mut engine|onboard_view::work(&mut engine,&request));
+                if replies.send(WorkerReply::Onboard(request,result)).is_err(){break;}
+                continue;
+            }
+            Job::Chroma(request) => {
+                let result = engine.lock().map_err(|_| "Device worker unavailable".to_string())
+                    .and_then(|mut engine|chroma_view::work(&mut engine,request));
+                if replies.send(WorkerReply::Chroma(result)).is_err() { break; }
+                continue;
+            }
+            Job::Shortcuts(request)=>{
+                let context=engine.lock().map_err(|_|"Device engine is busy".to_string()).map(|engine|engine.is_measurement_read_only());
+                let result=context.and_then(|read_only|shortcuts::work(request,read_only));
+                if replies.send(WorkerReply::Shortcuts(result)).is_err(){break;}continue;
+            }
             Job::MacroLibrary(request)=>{
                 let context=engine.lock().map_err(|_|"Device worker is unavailable".to_string()).map(|engine|engine.is_measurement_read_only());
                 let result=context.and_then(|read_only|macro_view::work(request,read_only));
@@ -572,9 +671,24 @@ fn worker(
                 if replies.send(WorkerReply::StudioOutput(result)).is_err() { break; }
                 continue;
             }
+            Job::Settings(body) => {
+                let result=engine.lock().map_err(|_|"Device worker is unavailable".to_string()).and_then(|mut engine| {
+                    if let Some(value)=body.as_ref().filter(|value|value["key"].as_str().is_some_and(|k|k.starts_with("store_"))) {return settings_view::store_work(&engine,value);}
+                    if let Some(value)=body.as_ref().filter(|value|value["key"]=="lighting_control") {
+                        if engine.is_measurement_read_only(){return Err("Read-only mode refuses lighting ownership changes".into());}
+                        let snapshot=server::dispatch(&mut engine,"GET","/api/state",&[]).map_err(|e|e.to_string())?;
+                        if !snapshot["devices"].as_array().is_some_and(|devices|devices.iter().any(|device|device["id"]==value["id"] && device["active"]==value["expected_profile"])) {return Err("Device or profile changed; refresh before changing lighting control".into());}
+                        server::dispatch(&mut engine,"POST","/api/lighting-control",&serde_json::to_vec(value).map_err(|e|e.to_string())?).map_err(|e|e.to_string())?;
+                        return Ok(server::settings_json(&engine));
+                    }
+                    let (method,bytes)=match body {Some(value)=>("POST",serde_json::to_vec(&value).map_err(|e|e.to_string())?),None=>("GET",vec![])};
+                    server::dispatch(&mut engine,method,"/api/settings",&bytes).map_err(|e|e.to_string())
+                });
+                if replies.send(WorkerReply::Settings(result)).is_err(){break;}continue;
+            }
             Job::Studio(request) => {
                 // Drop the device lock before reading/writing composition or bookmark files.
-                let read_only=matches!(&request,studio_view::Request::Save{..}|studio_view::Request::Remember{..})
+                let read_only=matches!(&request,studio_view::Request::Save{..}|studio_view::Request::Export{..}|studio_view::Request::Remember{..})
                     && engine.lock().map(|engine|engine.is_measurement_read_only()).unwrap_or(true);
                 if replies.send(WorkerReply::Studio(studio_view::work(request,read_only))).is_err() {break;}
                 continue;
@@ -666,6 +780,10 @@ fn worker(
             let mut failed = false;
             let mut notices = Vec::new();
             let state = match job {
+                Job::LocalAssignment(draft) => {
+                    let state=assignment_backend::save(&mut engine,&draft)?;
+                    status=ASSIGNMENT_SAVED_STATUS.into();Ok(state)
+                }
                 Job::Refresh => server::dispatch(&mut engine, "GET", "/api/state", &[]),
                 Job::Rescan => server::dispatch(&mut engine, "POST", "/api/rescan", b"{}"),
                 Job::Buttons(body) => {
@@ -705,22 +823,28 @@ fn worker(
                         );
                         failed = true;
                     }
+                    if !failed {
+                        status = answer.get("status").and_then(Value::as_str).unwrap_or("Settings applied").into();
+                    }
                     if answer.get("buttons").is_some() {
                         buttons = Some(answer);
                     }
-                    if !failed {
-                        status = "Settings applied".into();
-                    }
+                    if !failed && path=="/api/sensitivity-draft" {status="Sensitivity draft saved locally; device assignment unchanged".into();}
                     server::dispatch(&mut engine, "GET", "/api/state", &[])
                 }
-                Job::CachedLighting(_)
+                Job::Onboard(_)
+                | Job::Chroma(_)
+                | Job::CachedLighting(_)
                 | Job::LinkedGames(_)
+                | Job::Shortcuts(_)
                 | Job::MacroLibrary(_)
                 | Job::Studio(_)
                 | Job::StudioOutput(_)
                 | Job::SensorRead(..)
                 | Job::Profiles(_)
                 | Job::ImportFile { .. }
+                | Job::DeviceInformation(_)
+                | Job::Settings(_)
                 | Job::ExportFile { .. } => return Err("File operation was not routed".into()),
             }
             .map_err(|e| e.to_string())?;
@@ -943,8 +1067,12 @@ impl Drop for Bitmap {
 }
 
 struct State {
+    information_cache: HashMap<String, String>,
+    settings: settings_view::View,
     linked_games:linked_games::View,
+    shortcuts:shortcuts::View,
     macros:macro_view::View,
+    chroma: chroma_view::View,
     studio: studio_view::View,
     exit_tray: Option<HWND>,
     calibration: calibration_view::View,
@@ -997,6 +1125,7 @@ struct State {
     performance_hover_hit: Option<usize>,
     performance_gesture: Option<PerformanceGesture>,
     power_gesture: Option<power_view::Gesture>,
+    onboard: onboard_view::View,
     lighting: lighting_view::View,
     lighting_capture: bool,
     status: String,
@@ -1504,6 +1633,7 @@ impl State {
                     && self.tab == Tab::Performance
                     && performance_view::layout(self).is_some()
             }
+            "chroma" => chroma_view::active(self),
             "keyboard-lighting" => {
                 kind == Some("keyboard")
                     && self.tab == Tab::Lighting
@@ -1630,6 +1760,7 @@ impl State {
             "reserved_footer_css":if self.source_viewport(){0}else{35},
             "fidelity": "partial source-derived native port; pixel identity unproven"
         });
+        report["source_chroma_view"] = json!(chroma_view::active(self));
         report["source_text_fallback"] = json!(self.fonts.source_text.diagnostic());
         report["customize_background_cached"] = json!(self.customize_background.borrow().ready());
         report["source_text_cached_layouts"] = json!(self.fonts.source_text.metrics().cached_layouts);
@@ -1667,7 +1798,18 @@ impl State {
         json!({ "id": self.selected.as_deref().unwrap_or("") })
     }
 
-    unsafe fn queue(&mut self, job: Job) {
+    unsafe fn queue(&mut self, mut job: Job) {
+        if let Job::Action(path, body) = &mut job {
+            if matches!(*path, "/api/device-sleep" | "/api/critical-threshold" | "/api/calibration-tracking" | "/api/dynamic-sensitivity" | "/api/sensor-rotation")
+                && body.get("expected_connection").is_none()
+            {
+                if let Some(device) = self.device().filter(|d| d["id"] == body["id"]) {
+                    body["expected_connection"] = if matches!(*path, "/api/calibration-tracking" | "/api/dynamic-sensitivity" | "/api/sensor-rotation") {
+                        self.calibration.snapshot.as_ref().map(|s|s["connection_id"].clone()).unwrap_or(Value::Null)
+                    } else { device["connection_id"].clone() };
+                }
+            }
+        }
         self.submit(job, true);
     }
     unsafe fn submit(&mut self, job: Job, user_operation: bool) {
@@ -1678,7 +1820,7 @@ impl State {
                 &job,
                 Job::Profiles(profile_modal_model::Request::PreviewExport { .. })
             );
-        if self.restricted_actions && !matches!(&job, Job::Refresh | Job::SensorRead(..) | Job::LinkedGames(linked_games::Request::Read) | Job::MacroLibrary(macro_view::Request::Read) | Job::Studio(studio_view::Request::Restore{..})) && !presentation_preview {
+        if self.restricted_actions && !matches!(&job, Job::DeviceInformation(_) | Job::Refresh | Job::Settings(None) | Job::Onboard(onboard_view::Request { operation: onboard_view::Operation::Read, .. }) | Job::SensorRead(..) | Job::LinkedGames(linked_games::Request::Read) | Job::MacroLibrary(macro_view::Request::Read) | Job::Studio(studio_view::Request::Restore{..})) && !presentation_preview {
             return;
         }
         if self.pending > 0 {
@@ -1691,7 +1833,7 @@ impl State {
         if user_operation && !matches!(&job, Job::Refresh | Job::Rescan) {
             self.failures.new_operation();
         }
-        let sensor_read=matches!(&job,Job::SensorRead(..));
+        let sensor_read=matches!(&job,Job::SensorRead(..)|Job::Onboard(_));
         if self.jobs.send(job).is_ok() {
             self.pending += 1;
             if !sensor_read { self.status = "Working…".into();self.failed = false; }
@@ -1805,9 +1947,24 @@ impl State {
     unsafe fn collect(&mut self) {
         while let Ok(message) = self.replies.try_recv() {
             let reply = match message {
+                WorkerReply::Onboard(request,result)=>{
+                    self.pending=self.pending.saturating_sub(1);
+                    onboard_view::receive(self,request,result);
+                    continue;
+                }
+                WorkerReply::Chroma(result) => {self.pending=self.pending.saturating_sub(1);chroma_view::receive(self,result);continue;}
+                WorkerReply::Shortcuts(result)=>{self.pending=self.pending.saturating_sub(1);shortcuts::receive(self,result);continue;}
+                WorkerReply::DeviceInformation(id, text) => {
+                    self.pending=self.pending.saturating_sub(1);
+                    self.information_cache.insert(id.clone(), text);
+                    if self.selected.as_deref()==Some(id.as_str()) { device_information::show(self, &id); }
+                    continue;
+                }
+                WorkerReply::Settings(result)=>{self.pending=self.pending.saturating_sub(1);settings_view::receive(self,result);continue;}
                 WorkerReply::LinkedGames(result)=>{self.pending=self.pending.saturating_sub(1);linked_games::receive(self,result);continue;}
                 WorkerReply::MacroLibrary(result)=>{self.pending=self.pending.saturating_sub(1);macro_view::receive(self,result);continue;}
                 WorkerReply::StudioControl(control, reader, status) => {
+                    self.chroma.reader=Some(reader.clone());
                     studio_view::output_control(self, control, reader, status);
                     continue;
                 }
@@ -1848,6 +2005,7 @@ impl State {
             // Smoke-only selection follows the real read-only device snapshot.
             if let Some(view) = self.smoke_view.take() {
                 if view=="studio" {self.studio.open=true;self.selected=None;}
+                if view=="chroma" {self.chroma.used=true;self.selected=Some(chroma_view::ID.into());host_tabs::open(self,chroma_view::ID);}
                 let target = match view.as_str() {
                     "mouse-performance"
                     | "mouse-performance-polling"
@@ -1890,7 +2048,9 @@ impl State {
             if let Some(buttons) = reply.buttons {
                 self.buttons = buttons["buttons"].as_array().cloned().unwrap_or_default();
             }
+            let assignment_saved = !reply.failed && (reply.status == ASSIGNMENT_SAVED_STATUS || reply.status == "Sensitivity draft saved locally; device assignment unchanged");
             if reply.failed {
+                self.assignment.saving=false;
                 self.error(&reply.status);
             } else {
                 self.status = reply.status;
@@ -1904,7 +2064,7 @@ impl State {
                 );
                 self.notices = reply.notices;
             }
-            if self.selected.is_some() && self.device().is_none() && !linked_games::active(self) && !macro_view::active(self) {
+            if self.selected.is_some() && self.device().is_none() && !linked_games::active(self) && !macro_view::active(self) && !settings_view::active(self) && !chroma_view::active(self) && !shortcuts::active(self) {
                 self.selected = None;
                 self.buttons.clear();
             }
@@ -1918,6 +2078,7 @@ impl State {
                 ReleaseCapture();
                 self.error("The selected device/profile changed; reopen the profile dialog");
             }
+            if assignment_saved { assignment_view::saved(self); }
             assignment_view::sync(self);
             calibration_view::request(self,false);
             self.sync_performance(false);
@@ -2058,11 +2219,14 @@ impl State {
         for (_, hwnd) in self.fields.drain() {
             DestroyWindow(hwnd);
         }
-        if self.profile_modal.is_some() {
+        if self.profile_modal.is_some() || self.onboard.open {
             self.focus = 0;
             return;
         }
+        if chroma_view::active(self) { return; }
+        if settings_view::active(self) {return;}
         if linked_games::active(self) {linked_games::fields(self);return;}
+        if shortcuts::active(self) {shortcuts::fields(self);return;}
         if macro_view::active(self) {macro_view::fields(self);return;}
         if self.studio.open {
             studio_view::rebuild_fields(self);
@@ -2187,18 +2351,27 @@ impl State {
     }
 
     unsafe fn action(&mut self, action: Action) {
+        if matches!(&action,Action::MacroLibrary(macro_view::Control::Stop)) {
+            macro_view::action(self,macro_view::Control::Stop);return;
+        }
         if matches!(action, Action::Studio(studio_view::Control::StopDevice)) {
             studio_view::action(self, studio_view::Control::StopDevice);
             return;
         }
+        if self.assignment.saving { return; }
         if matches!(&action, Action::Device(id) if self.selected.as_ref() == Some(id)) {
             return;
         }
-        let leaving_macro=matches!(&action,Action::Home|Action::Device(_)|Action::Refresh|Action::Close|Action::Studio(studio_view::Control::Enter))||matches!(&action,Action::HostClose(id) if id==macro_view::ID);
+        let leaving_macro=matches!(&action,Action::Home|Action::Device(_)|Action::Refresh|Action::Close|Action::Studio(studio_view::Control::Enter)|Action::Chroma(chroma_view::Control::Open))||matches!(&action,Action::HostClose(id) if id==macro_view::ID);
+        if leaving_macro&&macro_view::playback::transition(self,&action){return;}
         if leaving_macro&&!macro_view::can_leave(self){return;}
-        if self.restricted_actions
-            && !matches!(&action, Action::Close | Action::Minimize | Action::Maximize | Action::MacroLibrary(macro_view::Control::Host(macro_view::FormControl::Cancel)))
-        {
+        let leaving_shortcuts=matches!(&action,Action::Home|Action::Device(_)|Action::Refresh|Action::Close|Action::Studio(studio_view::Control::Enter))||matches!(&action,Action::HostClose(id) if id==shortcuts::ID);
+        if leaving_shortcuts&&!shortcuts::can_leave(self,action.clone()){return;}
+        let allowed_when_restricted = matches!(&action, Action::Close | Action::Minimize | Action::Maximize | Action::MacroLibrary(macro_view::Control::Host(macro_view::FormControl::Cancel))
+            | Action::Settings(settings_view::Control::Open | settings_view::Control::Page(_) | settings_view::Control::Scroll(_)))
+            || matches!(&action, Action::Device(id) if id == settings_view::ID)
+            || (matches!(&action, Action::Refresh) && settings_view::active(self));
+        if self.restricted_actions && !allowed_when_restricted {
             return;
         }
         let stays_on_page = matches!(&action, Action::HostMove(..))
@@ -2229,11 +2402,26 @@ impl State {
             return;
         }
         match action {
+            Action::DeviceInformation => {
+                if let Some(id) = self.selected.clone().filter(|_|self.device().is_some()) {
+                    if self.information_cache.contains_key(&id) { device_information::show(self, &id); }
+                    else { self.queue(Job::DeviceInformation(id)); }
+                }
+            }
+            Action::Onboard(control)=>onboard_view::action(self,control),
+            Action::Chroma(control) => chroma_view::action(self,control),
+            Action::Settings(control)=>settings_view::action(self,control),
             Action::LinkedGames(control)=>linked_games::action(self,control),
+            Action::Shortcuts(control)=>shortcuts::action(self,control),
             Action::MacroLibrary(control)=>macro_view::action(self,control),
             Action::Studio(control) => studio_view::action(self,control),
             Action::Calibration(control) => calibration_view::action(self,control),
             Action::Advanced(control) => advanced_view::action(self,control),
+            Action::WheelControl(id, control, enabled) => {
+                if self.selected.as_deref() == Some(id.as_str()) {
+                    self.queue(Job::Action("/api/wheel-control", json!({"id":id,"expected_device":id,"wheel_control":control,"enabled":enabled})));
+                }
+            }
             Action::HostClose(id) => host_tabs::close(self, &id),
             Action::HostMove(id, target) => host_tabs::move_to(self, &id, target),
             Action::HostScroll(direction) => host_tabs::scroll(self, direction),
@@ -2269,7 +2457,9 @@ impl State {
                 self.rebuild_fields();
             }
             Action::Device(id) => {
-                if (id==linked_games::ID||id==macro_view::ID) && self.studio.open && studio_view::block_close(self){return;}
+                if id==chroma_view::ID && !studio_view::can_leave_to_chroma(self) { return; }
+                if id==linked_games::ID && self.studio.open && studio_view::leave_to_linked_games(self){return;}
+                if (id==settings_view::ID||id==macro_view::ID||id==shortcuts::ID) && self.studio.open && studio_view::block_close(self){return;}
                 self.studio.canvas.cancel();ReleaseCapture();
                 self.studio.open=false;
                 if !host_tabs::open(self, &id) { return; }
@@ -2278,7 +2468,9 @@ impl State {
                 self.renaming = None;
                 self.profile_actions = false;
                 self.selected = Some(id);
+                if settings_view::active(self){settings_view::request(self,None);}
                 if linked_games::active(self){linked_games::request(self,linked_games::Request::Read);}
+                if shortcuts::active(self){shortcuts::request(self,shortcuts::Request::Read);}
                 if macro_view::active(self){macro_view::request(self,macro_view::Request::Read);}
                 self.tab = page;
                 self.profile_open = false;
@@ -2299,7 +2491,9 @@ impl State {
                 self.rebuild_fields();
                 calibration_view::request(self,true);
             }
+            Action::Refresh if settings_view::active(self)=>settings_view::request(self,None),
             Action::Refresh if linked_games::active(self)=>linked_games::request(self,linked_games::Request::Read),
+            Action::Refresh if shortcuts::active(self)=>shortcuts::request(self,shortcuts::Request::Read),
             Action::Refresh if macro_view::active(self)=>macro_view::request(self,macro_view::Request::Read),
             Action::Refresh => {mouse_feedback::stop(self);self.calibration.owner=None;self.queue(Job::Rescan);}
             Action::ProfileMenu => {
@@ -2612,7 +2806,7 @@ impl State {
                     #[cfg(not(test))]
                     PostMessageW(self.hwnd, PROFILE_MODAL_SAVE, 0, 0);
                     #[cfg(test)]
-                    if !self.smoke_requested.is_some() {
+                    if self.smoke_requested.is_none() {
                         PostMessageW(self.hwnd, PROFILE_MODAL_SAVE, 0, 0);
                     }
                 }
@@ -2690,6 +2884,8 @@ impl Painter<'_> {
         FillRect(self.dc, &self.rect(x, y, width, height), brush);
         DeleteObject(brush);
     }
+    // GDI text wrapper preserves the source rectangle, font, color and alignment arguments.
+    #[allow(clippy::too_many_arguments)]
     unsafe fn text(
         &self,
         text: &str,
@@ -2815,7 +3011,7 @@ impl Painter<'_> {
         }
         let dc = CreateCompatibleDC(self.dc);
         let old = SelectObject(dc, image.handle);
-        SetStretchBltMode(self.dc, HALFTONE as i32);
+        SetStretchBltMode(self.dc, HALFTONE);
         SetBrushOrgEx(self.dc, 0, 0, null_mut());
         StretchBlt(
             self.dc,
@@ -2893,8 +3089,12 @@ unsafe fn paint(state: &mut State, dc: HDC) {
         rect: p.rect(40, 42, 40, 38),
         action: Action::Refresh,
     });
+    p.button("Settings",width-110,47,95,Action::Settings(settings_view::Control::Open),settings_view::active(state));
+    if state.device().is_some() {
+        p.button("Device info",width-245,47,125,Action::DeviceInformation,false);
+    }
     let device = state.device().cloned();
-    let title = if macro_view::active(state) {"MACRO"} else if linked_games::active(state) {"LINKED GAMES"} else if state.studio.open { "RAZER CHROMA STUDIO" } else { device
+    let title = if settings_view::active(state) {"SETTINGS"} else if shortcuts::active(state) {"GLOBAL SHORTCUTS"} else if chroma_view::active(state) {"RAZER CHROMA"} else if macro_view::active(state) {"MACRO"} else if linked_games::active(state) {"LINKED GAMES"} else if state.studio.open { "RAZER CHROMA STUDIO" } else { device
         .as_ref()
         .and_then(|d| d["name"].as_str())
         .unwrap_or("RAZER SYNAPSE") };
@@ -2922,8 +3122,10 @@ unsafe fn paint(state: &mut State, dc: HDC) {
         );
     }
     p.line(0, 79, width, 0);
-    if macro_view::active(state) {macro_view::paint(state,&mut p,width,height);
-    } else if linked_games::active(state) {linked_games::paint(state,&mut p,width,height);
+    if settings_view::active(state) {settings_view::paint(state,&mut p,width,height);
+    } else if chroma_view::active(state) {chroma_view::paint(state,&mut p,width,height);
+    } else if macro_view::active(state) {macro_view::paint(state,&mut p,width,height);
+    } else if shortcuts::active(state) {shortcuts::paint(state,&mut p,width,height);    } else if linked_games::active(state) {linked_games::paint(state,&mut p,width,height);
     } else if state.studio.open {
         studio_view::paint(state,&mut p,width,height);
     } else if let Some(device) = device {
@@ -3365,7 +3567,11 @@ unsafe fn paint(state: &mut State, dc: HDC) {
                 }
             }
             Tab::Calibration => calibration_view::paint(state,&mut p),
-            Tab::Advanced => advanced_view::paint(state,&mut p),
+            Tab::Advanced => {
+                if !wheel_view::paint(state, &mut p, &device) {
+                    advanced_view::paint(state,&mut p);
+                }
+            }
             Tab::Help => {}
         }
         if matches!(state.tab, Tab::Help) {
@@ -3440,11 +3646,13 @@ unsafe fn paint(state: &mut State, dc: HDC) {
                 ("Duplicate", Action::DuplicateProfile),
                 ("Export", Action::ExportProfile),
             ];
-            p.fill(285, 116, 157, 145, 0);
+            let has_onboard = device["onboard_capabilities"]["slots"] == 1;
+            let menu_height = if has_onboard { 172 } else { 145 };
+            p.fill(285, 116, 157, menu_height, 0);
             p.line(285, 116, 157, BORDER);
-            p.line(285, 260, 157, BORDER);
-            p.fill(285, 116, 1, 145, BORDER);
-            p.fill(441, 116, 1, 145, BORDER);
+            p.line(285, 115 + menu_height, 157, BORDER);
+            p.fill(285, 116, 1, menu_height, BORDER);
+            p.fill(441, 116, 1, menu_height, BORDER);
             let mut y = 117;
             for (index, (label, action)) in rows.into_iter().enumerate() {
                 if index == 2 {
@@ -3458,20 +3666,25 @@ unsafe fn paint(state: &mut State, dc: HDC) {
                 });
                 y += 27;
             }
+            if has_onboard {
+                p.text("Onboard memory",292,y,143,27,p.fonts.normal,TEXT,DT_LEFT);
+                p.hits.push(Hit {rect:p.rect(286,y,155,27),action:Action::Onboard(onboard_view::Control::Open)});
+            }
         }
     } else {
         p.text("DEVICES", 30, 104, 300, 32, p.fonts.heading, GREEN, DT_LEFT);
         p.button("LINKED GAMES",width-440,104,195,Action::LinkedGames(linked_games::Control::Open),false);
         p.button("MACRO",width-640,104,180,Action::MacroLibrary(macro_view::Control::Open),false);
-        p.button("CHROMA STUDIO",width-225,104,195,Action::Studio(studio_view::Control::Enter),false);
+        p.button("CHROMA",width-225,104,195,Action::Chroma(chroma_view::Control::Open),false);
+        p.button("GLOBAL SHORTCUTS",width-880,104,225,Action::Shortcuts(shortcuts::Control::Open),false);
         for (index, device) in state.devices().iter().enumerate() {
             let x = 30 + (index as i32 % 4) * 285;
             let y = 158 + (index as i32 / 4) * 280;
             p.fill(x, y, 260, 250, PANEL);
             // Only visible cards demand image residency. Off-screen devices
             // remain in the catalogue without loading their photographs.
-            if x < width && y < height && y + 250 > 128 {
-                if !state.device_artwork.borrow_mut().draw(&p, device, x + 15, y + 20, 230, 160) {
+            if x < width && y < height && y + 250 > 128
+                && !state.device_artwork.borrow_mut().draw(&p, device, x + 15, y + 20, 230, 160) {
                     let default_edition = device.get("edition_id")
                         .is_none_or(|id|id.is_null() || id.as_u64() == Some(0));
                     let image = if default_edition { match device["pid"].as_str() {
@@ -3481,7 +3694,6 @@ unsafe fn paint(state: &mut State, dc: HDC) {
                         } } else { None };
                     p.image(image, x + 15, y + 20, 230, 160);
                 }
-            }
             p.text(
                 device["name"].as_str().unwrap_or("Razer device"),
                 x + 12,
@@ -3532,7 +3744,7 @@ unsafe fn paint(state: &mut State, dc: HDC) {
             }
         }
     }
-    if !state.source_viewport() && !linked_games::active(state) && !macro_view::active(state) {
+    if !state.source_viewport() && !linked_games::active(state) && !macro_view::active(state) && !settings_view::active(state) && !chroma_view::active(state) && !shortcuts::active(state) {
         p.line(0, height - 35, width, 0);
         p.text(
             &state.status,
@@ -3547,6 +3759,7 @@ unsafe fn paint(state: &mut State, dc: HDC) {
     }
     assignment_view::paint_popup(state, &mut p);
     profile_modal_view::paint(state, &mut p);
+    onboard_view::paint(state, &mut p);
     if p.fonts.source_text.diagnostic().is_some() {
         p.fill(0, height - 24, width, 24, BG);
         p.text(
@@ -3629,7 +3842,10 @@ unsafe extern "system" fn window_proc(
             let pointer = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut RefCell<State>;
             if !pointer.is_null() {
                 if let Ok(mut state) = (*pointer).try_borrow_mut() {
+                    if macro_view::playback::block_close(&mut state){return 0;}
+                    if state.assignment.saving { return 0; }
                     if !macro_view::can_leave(&mut state){return 0;}
+                    if !shortcuts::can_leave(&mut state,Action::Close){return 0;}
                     if studio_view::block_close(&mut state) {return 0;}
                     mouse_feedback::stop(&mut state);
                     if state.assignment.draft.as_ref().is_some_and(|d| d.dirty) {
@@ -3670,6 +3886,7 @@ unsafe extern "system" fn window_proc(
             WINDOW.store(0, Ordering::Release);
             let pointer=GetWindowLongPtrW(hwnd,GWLP_USERDATA) as *mut RefCell<State>;
             if !pointer.is_null(){if let Ok(mut state)=(*pointer).try_borrow_mut(){
+                macro_view::playback::destroy(&mut state);
                 mouse_feedback::stop(&mut state);
                 if let Some(tray)=state.exit_tray.take(){PostMessageW(tray,WM_CLOSE,1,hwnd as isize);}
             }}
@@ -3706,6 +3923,9 @@ unsafe extern "system" fn window_proc(
                 7=>studio_view::output_test_dirty_apply(&mut state),
                 8=>{let value=&*(lparam as *const Value);studio_view::add_preset_test(&mut state,(value[0].as_u64().unwrap() as u16,value[1].as_u64().unwrap() as u16,value[2].as_u64().unwrap() as u16));},
                 9=>{EndMenu();},
+                studio_view::TEST_NAVIGATION=>{*(lparam as *mut Value)=match studio_canvas::navigation_test(&mut state) {Ok(())=>json!({"ok":true}),Err(error)=>json!({"error":error})};},
+                studio_view::TEST_REMAP=>studio_view::remap_fixture_test(&mut state),
+                studio_view::TEST_EFFECT_POSITION=>{let value=&mut *(lparam as *mut Value);let name=value.as_str().unwrap_or("").to_string();*value=studio_view::add_effect_position_test(&state,&name);},
                 _=>{},
             }
         }
@@ -3727,8 +3947,36 @@ unsafe extern "system" fn window_proc(
             7=>{let value=&*(lparam as *const Value);state.action(Action::MacroLibrary(macro_view::Control::Select(value.as_str().unwrap().into())));},
             8=>{*(lparam as *mut Value)=match macro_view::menu_targets(&state){Ok(targets)=>json!(targets.into_iter().map(|target|json!({"guid":target.guid,"name":target.name,"disabled":target.reason.is_some()})).collect::<Vec<_>>()),Err(error)=>json!({"error":error})};},
             9=>{use secbird_core::profile_compat::macro_library::host_actions::Kind;let value=&*(lparam as *const Value);let kind=match value.as_str(){Some("command")=>Kind::Command,Some("program")=>Kind::Program,Some("website")=>Kind::Website,_=>Kind::Text};state.action(Action::MacroLibrary(macro_view::Control::OpenHost(kind)));},
+            10=>{let value=&*(lparam as *const Value);macro_view::export_selected(&mut state,PathBuf::from(value.as_str().unwrap()));},
+            11=>state.action(Action::MacroLibrary(macro_view::Control::Play)),
+            12=>state.action(Action::MacroLibrary(macro_view::Control::Stop)),
             _=>{},
         }}return 0;
+    }
+    #[cfg(test)]
+    if message==chroma_view::TEST {
+        let mut state=(*pointer).borrow_mut();
+        match wparam {
+            0=>state.action(Action::Chroma(chroma_view::Control::Open)),
+            1=>*(lparam as *mut Value)=chroma_view::diagnostics(&state),
+            2=>state.action(Action::Chroma(chroma_view::Control::Effect(lparam as u8))),
+            3=>state.action(Action::Chroma(chroma_view::Control::Apply)),
+            4=>{let id=(*(lparam as *const Value)).as_str().unwrap().to_string();state.action(Action::Chroma(chroma_view::Control::Device(id)));},
+            5=>state.action(Action::Chroma(chroma_view::Control::Dismiss)),
+            6=>state.action(Action::Home),
+            _=>{}
+        }
+        return 0;
+    }
+    #[cfg(test)]
+    if message==settings_view::TEST {
+        if let Ok(mut state)=(*pointer).try_borrow_mut() {match wparam {
+            1=>state.action(Action::Settings(settings_view::Control::Open)),
+            2=>*(lparam as *mut Value)=settings_view::diagnostics(&state),
+            3=>{let body=(*(lparam as *const Value)).clone();settings_view::request(&mut state,Some(body));},
+            _=>{}
+        }}
+        return 0;
     }
     #[cfg(test)]
     if message==linked_games::TEST {
@@ -3740,22 +3988,46 @@ unsafe extern "system" fn window_proc(
             _=>{},
         }}return 0;
     }
+    if message==shortcuts::MENU||message==shortcuts::FILE {
+        let allowed=(*pointer).try_borrow().is_ok_and(|state|shortcuts::active(&state)&&!state.read_only_smoke&&!state.restricted_actions&&!state.shortcuts.busy);
+        if !allowed{return 0;}
+        if let Ok(mut state)=(*pointer).try_borrow_mut(){state.shortcuts.popup=true;}
+        if message==shortcuts::MENU {
+            let result=shortcuts::menu(hwnd,wparam!=0);
+            if let Ok(mut state)=(*pointer).try_borrow_mut(){state.shortcuts.popup=false;match result{Ok(Some(control))=>state.action(Action::Shortcuts(control)),Ok(None)=>{},Err(error)=>state.error(&error)}}
+        }else{
+            let result=shortcuts::file(hwnd,wparam!=0);
+            if let Ok(mut state)=(*pointer).try_borrow_mut(){state.shortcuts.popup=false;match result{Ok(Some(path))=>{let request=if wparam==0{Some(shortcuts::Request::Import(path))}else{state.shortcuts_export(path)};if let Some(request)=request{shortcuts::request(&mut state,request);}},Ok(None)=>{},Err(error)=>state.error(&error)}}
+        }
+        return 0;
+    }
+    #[cfg(test)]
+    if message==shortcuts::TEST {
+        if let Ok(mut state)=(*pointer).try_borrow_mut(){match wparam{
+            0=>state.action(Action::Shortcuts(shortcuts::Control::Open)),
+            1=>*(lparam as *mut Value)=shortcuts::diagnostics(&state),
+            2=>{let control=&*(lparam as *const shortcuts::Control);state.action(Action::Shortcuts(control.clone()));},
+            3=>{let request=&*(lparam as *const shortcuts::Request);shortcuts::request(&mut state,request.clone());},
+            _=>{},
+        }}return 0;
+    }
     if message==linked_games::BROWSE {
         let allowed=(*pointer).try_borrow().is_ok_and(|state|linked_games::active(&state)&&!state.read_only_smoke&&!state.restricted_actions&&!state.linked_games.busy);
         if allowed {let result=linked_games::browse(hwnd);if let Ok(mut state)=(*pointer).try_borrow_mut(){match result {Ok(Some(path))=>linked_games::request(&mut state,linked_games::Request::Add(path)),Ok(None)=>{},Err(error)=>state.error(&error)}InvalidateRect(hwnd,null(),0);}}
         return 0;
     }
     if message==macro_view::BROWSE {
-        let allowed=(*pointer).try_borrow().is_ok_and(|state|macro_view::active(&state)&&!state.read_only_smoke&&!state.restricted_actions&&!state.macros.busy);
+        let allowed=(*pointer).try_borrow().is_ok_and(|state|macro_view::active(&state)&&!state.read_only_smoke&&!state.restricted_actions&&!state.macros.busy&&!state.macros.playing());
         if allowed {let result=macro_view::browse(hwnd);if let Ok(mut state)=(*pointer).try_borrow_mut(){if macro_view::can_leave(&mut state){match result {Ok(Some(path))=>macro_view::request(&mut state,macro_view::Request::Import(path)),Ok(None)=>{},Err(error)=>state.error(&error)}}InvalidateRect(hwnd,null(),0);}}
         return 0;
     }
     if message==macro_view::INPUT_MENU {
-        let allowed=(*pointer).try_borrow().is_ok_and(|state|macro_view::active(&state)&&!state.read_only_smoke&&!state.restricted_actions&&!state.macros.busy);
+        let allowed=(*pointer).try_borrow().is_ok_and(|state|macro_view::active(&state)&&!state.read_only_smoke&&!state.restricted_actions&&!state.macros.busy&&!state.macros.playing());
         if allowed {let targets=(*pointer).try_borrow().map_err(|_|"Macro editor is busy".to_string()).and_then(|state|if wparam==0{macro_view::menu_targets(&state)}else{Ok(vec![])});let result=targets.and_then(|targets|{if let Ok(mut state)=(*pointer).try_borrow_mut(){state.macros.popup=true;}macro_view::choose_input(hwnd,wparam!=0,&targets)});if let Ok(mut state)=(*pointer).try_borrow_mut(){state.macros.popup=false;match result {Ok(Some(control))=>state.action(Action::MacroLibrary(control)),Ok(None)=>{},Err(error)=>state.error(&error)}}}
         return 0;
     }
     if message==macro_view::HOST_BROWSE {macro_view::browse_host(hwnd,pointer);return 0;}
+    if message==macro_view::EXPORT_BROWSE {macro_view::browse_export(hwnd,pointer);return 0;}
     if message==studio_view::EXIT_REQUEST {
         let tray=lparam as HWND;
         let mut process=0;
@@ -3917,12 +4189,24 @@ unsafe extern "system" fn window_proc(
     #[cfg(test)]
     if message == ASSIGNMENT_TEST_QUERY {
         if let Ok(mut state) = (*pointer).try_borrow_mut() {
+            if wparam == 4 {
+                let value=&*(lparam as *const Value);
+                assignment_view::action(&mut state,assignment_view::Control::Category(assignment_model::Category::Launch));
+                if let Some(d)=&mut state.assignment.draft { d.launch.path=value.as_str().unwrap().into();d.dirty=true; }
+                state.rebuild_fields(); return 0;
+            }
+            if wparam == 5 { assignment_view::action(&mut state,assignment_view::Control::Save); return 0; }
             if wparam == 2 {
                 *(lparam as *mut Value) = assignment_view::font_diagnostics(&state);
                 return 0;
             }
+            if wparam == 7 {*(lparam as *mut Value)=assignment_view::sensitivity_diagnostics(&state);return 0;}
             if wparam == 3 {
                 *(lparam as *mut Value) = json!({"width":state.width,"height":state.height,"scale":state.scale,"hit_count":state.hits.len()});
+                return 0;
+            }
+            if wparam == 6 {
+                *(lparam as *mut Value) = assignment_view::render_fixture(&mut state);
                 return 0;
             }
             if wparam == 1 {
@@ -3932,7 +4216,7 @@ unsafe extern "system" fn window_proc(
             }
             let draft = state.assignment.draft.as_ref();
             let g = assignment_view::shell(&state);
-            *(lparam as *mut Value) = json!({"view":assignment_view::diagnostics(&state),"open":draft.is_some(),"input":draft.map(|d|&d.input.input_id),"category":draft.and_then(|d|d.category).map(|c|c.key()),"dirty":draft.is_some_and(|d|d.dirty),"prompt":state.assignment.pending.is_some(),"speed":draft.map(|d|d.speed),"source_original":draft.map(|d|&d.context.original_profile),"popup":g.map(|g|json!({"x":g.popup.x,"y":g.popup.y,"height":g.popup.height})),"pending":state.pending});
+            *(lparam as *mut Value) = json!({"view":assignment_view::diagnostics(&state),"open":draft.is_some(),"input":draft.map(|d|&d.input.input_id),"category":draft.and_then(|d|d.category).map(|c|c.key()),"dirty":draft.is_some_and(|d|d.dirty),"prompt":state.assignment.pending.is_some(),"speed":draft.map(|d|d.speed),"media_option":draft.and_then(|d|d.media_option),"categories":draft.map(|d|d.categories.iter().map(|c|c.key()).collect::<Vec<_>>()),"save_reason":draft.map(|d|d.save_reason()),"status":state.status,"source_original":draft.map(|d|&d.context.original_profile),"popup":g.map(|g|json!({"x":g.popup.x,"y":g.popup.y,"height":g.popup.height})),"pending":state.pending});
         }
         return 0;
     }
@@ -3965,11 +4249,33 @@ unsafe extern "system" fn window_proc(
     if message == LIGHTING_DROPDOWN_TEST {
         if let Ok(mut state) = (*pointer).try_borrow_mut() {
             *(lparam as *mut Value) = lighting_view::test_dropdown(&mut state, wparam == 1);
+            return 1;
         }
         return 0;
     }
     #[cfg(test)]
     if message == RUNTIME_TEST_QUERY {
+        if wparam == 10 {
+            if (*pointer).try_borrow_mut().is_err() {
+                return 0;
+            }
+            let &(message, wparam, lparam) = &*(lparam as *const (u32, usize, isize));
+            SendMessageW(hwnd, message, wparam, lparam);
+            return 1;
+        }
+        if wparam == 9 {
+            // Sent controller messages can reenter a Win32 call during paint or
+            // field rebuilding. Refuse the whole batch while State is borrowed;
+            // the controller can retry without duplicating a partial click.
+            if (*pointer).try_borrow_mut().is_err() {
+                return 0;
+            }
+            let point = lparam;
+            SendMessageW(hwnd, WM_LBUTTONDOWN, 1, point);
+            SendMessageW(hwnd, WM_LBUTTONUP, 0, point);
+            RedrawWindow(hwnd, null(), null_mut(), RDW_INVALIDATE | RDW_UPDATENOW);
+            return 1;
+        }
         if wparam == 8 {
             // Atomically hover and click the actual close hit target. Keep the
             // user's cursor outside this simulated test window untouched.
@@ -4023,9 +4329,10 @@ unsafe extern "system" fn window_proc(
                 "deferred":state.runtime_feedback_waiting,
                 "failures":state.failures.outstanding(),
                 "pending":state.pending,
+                "queued":state.pending_jobs.len(),
                 "brightness":state.lighting.intent.brightness.as_ref().map(|b|b.value),
                 "status":state.status,"failed":state.failed,
-                "host_tabs":host_tabs::diagnostics(&state),"calibration":calibration_view::diagnostics(&state),"advanced":advanced_view::diagnostics(&state),"mouse_feedback":mouse_feedback::diagnostics(&state)
+                "onboard":onboard_view::diagnostics(&state),"host_tabs":host_tabs::diagnostics(&state),"calibration":calibration_view::diagnostics(&state),"advanced":advanced_view::diagnostics(&state),"mouse_feedback":mouse_feedback::diagnostics(&state)
             });
         }
         return 0;
@@ -4067,11 +4374,13 @@ unsafe extern "system" fn window_proc(
         }
         return DefWindowProcW(hwnd, message, wparam, lparam);
     };
-    if message==WM_COMMAND && (macro_view::command(&mut state,(wparam&0xffff)as u16,((wparam>>16)&0xffff)as u16) || linked_games::command(&mut state,(wparam&0xffff)as u16,((wparam>>16)&0xffff)as u16) || studio_view::command(&mut state,(wparam&0xffff)as u16,((wparam>>16)&0xffff)as u16)) {return 0;}
+    if macro_view::record_message(&mut state,message,wparam,lparam){return 0;}
+    if message==WM_COMMAND && (shortcuts::command(&mut state,(wparam&0xffff)as u16,((wparam>>16)&0xffff)as u16) || macro_view::command(&mut state,(wparam&0xffff)as u16,((wparam>>16)&0xffff)as u16) || linked_games::command(&mut state,(wparam&0xffff)as u16,((wparam>>16)&0xffff)as u16) || studio_view::command(&mut state,(wparam&0xffff)as u16,((wparam>>16)&0xffff)as u16)) {return 0;}
     if message==WM_MOUSEWHEEL && studio_view::wheel(&mut state,((wparam>>16)as u16 as i16)as i32,
         POINT{x:(lparam as u32&0xffff)as i16 as i32,y:((lparam as u32>>16)&0xffff)as i16 as i32}) {return 0;}
-    if studio_view::layer_pointer(&mut state,message,lparam) {return 0;}
+    if studio_view::layer_pointer(&mut state,message,lparam,wparam) {return 0;}
     if studio_canvas::Canvas::pointer(&mut state,message,lparam) {return 0;}
+    if onboard_view::pointer(&mut state,message,lparam,wparam) { return 0; }
     if state.restricted_actions
         && matches!(
             message,
@@ -4185,6 +4494,15 @@ unsafe extern "system" fn window_proc(
         }
     }
     match message {
+        WM_COMMAND if (wparam & 0xffff) as u16 >= assignment_view::LAUNCH_PATH && (wparam & 0xffff) as u16 <= assignment_view::LAUNCH_ARGUMENTS => {
+            if (wparam >> 16) as u32 == EN_CHANGE { assignment_view::launch_change(&mut state, (wparam & 0xffff) as u16, lparam as HWND); }
+            0
+        }
+        WM_COMMAND if matches!((wparam & 0xffff) as u16, assignment_view::DPI_X | assignment_view::DPI_Y) => {
+            let code=(wparam >> 16) as u32;
+            if code == EN_CHANGE || code == EN_KILLFOCUS {assignment_view::dpi_change(&mut state,(wparam & 0xffff) as u16,code == EN_KILLFOCUS);}
+            0
+        }
         WM_COMMAND if (wparam & 0xffff) as u16 == assignment_view::SPEED => {
             let code = (wparam >> 16) as u32;
             if code == EN_CHANGE || code == EN_KILLFOCUS {
@@ -4326,6 +4644,11 @@ unsafe extern "system" fn window_proc(
             0
         }
         WM_MOUSEWHEEL if assignment_view::covered(&state) => {
+            // WM_MOUSEWHEEL carries screen coordinates. A leave/scroll event
+            // can arrive without a preceding mouse-move in this window.
+            let mut point=POINT{x:(lparam as u32 & 0xffff) as i16 as i32,y:((lparam as u32>>16)&0xffff) as i16 as i32};
+            ScreenToClient(hwnd,&mut point);
+            state.assignment.hover=Some((point.x as f64/state.scale as f64,point.y as f64/state.scale as f64));
             assignment_view::wheel(&mut state, ((wparam >> 16) as u16 as i16) as f64 / 120.0);
             0
         }
@@ -4500,7 +4823,8 @@ unsafe extern "system" fn window_proc(
             } else if let Some(Action::Assignment(assignment_view::Control::Step(delta))) = action {
                 assignment_view::begin_step(&mut state, delta);
             } else if let Some(Action::Assignment(
-                control @ (assignment_view::Control::Slider(_)
+                control @ (assignment_view::Control::DpiSlider(_, _)
+                | assignment_view::Control::Slider(_)
                 | assignment_view::Control::RailThumb(_)
                 | assignment_view::Control::DrawerThumb(_)
                 | assignment_view::Control::FormThumb(_)
@@ -4518,7 +4842,10 @@ unsafe extern "system" fn window_proc(
             }
             0
         }
+        WM_MOUSEWHEEL if chroma_view::active(&state) => {chroma_view::wheel(&mut state,(wparam>>16) as u16 as i16);0}
+        WM_MOUSEWHEEL if settings_view::active(&state) => {settings_view::wheel(&mut state,(wparam>>16) as u16 as i16);0}
         WM_MOUSEWHEEL if linked_games::active(&state) => {linked_games::wheel(&mut state,(wparam>>16) as u16 as i16);0}
+        WM_MOUSEWHEEL if shortcuts::active(&state) => {shortcuts::action(&mut state,shortcuts::Control::Next(if ((wparam>>16)as u16 as i16)<0{1}else{-1}));0}
         WM_MOUSEWHEEL if macro_view::active(&state) => {macro_view::wheel(&mut state,(wparam>>16) as u16 as i16);0}
         WM_MOUSEWHEEL if state.profile_open => {
             let count = state
@@ -4666,6 +4993,8 @@ unsafe extern "system" fn window_proc(
             0
         }
         WM_KEYDOWN => {
+            if wparam == 27 && chroma_view::escape(&mut state) { return 0; }
+            if wparam==27&&shortcuts::modal(&state){shortcuts::action(&mut state,shortcuts::Control::Cancel);return 0;}
             if state.tab==Tab::Advanced&&advanced_view::template_key(&mut state,wparam){return 0;}
             if wparam == 27 && state.assignment.draft.is_some() {
                 let control = if state.assignment.pending.is_some() {
@@ -4759,11 +5088,15 @@ unsafe extern "system" fn window_proc(
         WM_TIMER if wparam == CACHED_LIGHTING_TIMER => {
             state.request_cached_lighting();
             studio_view::output_tick(&mut state);
+            if chroma_view::active(&state) { InvalidateRect(hwnd,null(),0); }
             0
         }
         WM_TIMER if wparam == studio_view::PREVIEW_TIMER => {
             studio_view::preview_tick(&mut state);
             0
+        }
+        WM_TIMER if wparam == macro_view::playback::TIMER => {
+            macro_view::playback::tick(&mut state);0
         }
         WM_TIMER if wparam == RESPONSE_TIMER => {
             state.collect();
@@ -4880,8 +5213,12 @@ fn run_window(
             .spawn(move || worker(engine, jobs_rx, replies_tx))
             .map_err(|e| e.to_string())?;
         let mut state = Box::new(RefCell::new(State {
+            information_cache: HashMap::new(),
+            settings: settings_view::View::default(),
             linked_games:linked_games::View::default(),
+            shortcuts:shortcuts::View::default(),
             macros:macro_view::View::default(),
+            chroma: chroma_view::View::default(),
             studio: studio_view::View::default(),
             exit_tray: None,
             calibration: calibration_view::View::default(),
@@ -4934,6 +5271,7 @@ fn run_window(
             performance_hover_hit: None,
             performance_gesture: None,
             power_gesture: None,
+            onboard: onboard_view::View::default(),
             lighting: lighting_view::View::default(),
             lighting_capture: false,
             status: "Reading connected devices…".into(),
@@ -5167,8 +5505,9 @@ fn run_window(
             if result <= 0 {
                 break;
             }
+            if message.hwnd==hwnd && macro_view::record_message(&mut state.borrow_mut(),message.message,message.wParam,message.lParam){continue;}
             if message.message == WM_KEYDOWN && GetKeyState(18) >= 0 {
-                let studio_action=studio_view::key(&state.borrow(),message.wParam,GetKeyState(17)<0,matches!(GetDlgCtrlID(message.hwnd)as u16,studio_view::NAME|studio_view::COLOR));
+                let studio_action=studio_view::key(&state.borrow(),message.wParam,GetKeyState(17)<0,state.borrow().fields.values().any(|&field| field == message.hwnd));
                 if let Some(control)=studio_action {state.borrow_mut().action(Action::Studio(control));continue;}
                 let action = host_tabs::shortcut_action(&state.borrow(), message.wParam,
                     GetKeyState(17) < 0, GetKeyState(16) < 0);
@@ -5186,6 +5525,7 @@ fn run_window(
                 }
             }
             let control_id = GetDlgCtrlID(message.hwnd) as u16;
+            if matches!(control_id, assignment_view::DPI_X | assignment_view::DPI_Y) && message.message == WM_KEYDOWN && matches!(message.wParam,13 | 27) {SetFocus(hwnd);continue;}
             if control_id == assignment_view::SPEED {
                 if message.message == WM_KEYDOWN && matches!(message.wParam, 13 | 27) {
                     SetFocus(hwnd);
@@ -5273,7 +5613,7 @@ fn run_window(
                     continue;
                 }
             }
-            if IsDialogMessageW(hwnd, &mut message) == 0 {
+            if IsDialogMessageW(hwnd, &message) == 0 {
                 TranslateMessage(&message);
                 DispatchMessageW(&message);
             }

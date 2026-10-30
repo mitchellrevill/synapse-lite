@@ -6,12 +6,15 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
+pub mod migration;
 const KEY: &str = "_synapseLiteLinkedGames";
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Game {
     pub id: String,
     pub name: String,
     pub path: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub aliases: Vec<String>,
     #[serde(default, flatten)]
     pub extra: BTreeMap<String, Value>,
 }
@@ -50,6 +53,14 @@ impl Catalog {
         let mut ids = BTreeSet::new();
         let mut paths = BTreeSet::new();
         for game in &catalog.games {
+            if game.aliases.len() > 16 {
+                return Err(invalid("too many executable aliases"));
+            }
+            for alias in &game.aliases {
+                if !paths.insert(normalize_app_path(alias)?) {
+                    return Err(invalid("duplicate executable alias"));
+                }
+            }
             if game.id.is_empty()
                 || game.id.len() > 128
                 || game.id.chars().any(char::is_control)
@@ -71,6 +82,10 @@ pub enum Change {
     Add {
         id: String,
         path: String,
+    },
+    Aliases {
+        game: String,
+        paths: Vec<String>,
     },
     Bind {
         game: String,
@@ -105,21 +120,51 @@ pub fn edit(store: &Store, change: Change) -> Result<Store> {
                 id,
                 path,
                 name,
+                aliases: vec![],
                 extra: BTreeMap::new(),
             });
+        }
+        Change::Aliases { game, paths } => {
+            let entry = catalog
+                .games
+                .iter_mut()
+                .find(|g| g.id == game)
+                .ok_or_else(|| invalid("selected game no longer exists"))?;
+            let old = executable_paths(entry)?;
+            entry.aliases = paths
+                .iter()
+                .map(|p| normalize_app_path(p))
+                .collect::<Result<_>>()?;
+            let new = executable_paths(entry)?;
+            for device in next.devices.values_mut() {
+                for profile in device.profiles.values_mut() {
+                    let linked = profile
+                        .app_paths
+                        .iter()
+                        .any(|p| normalize_app_path(p).is_ok_and(|p| old.contains(&p)));
+                    profile
+                        .app_paths
+                        .retain(|p| !normalize_app_path(p).is_ok_and(|p| old.contains(&p)));
+                    if linked {
+                        profile.app_paths.extend(new.iter().cloned());
+                        if profile.app_paths.len() > 128 { return Err(invalid("a profile supports at most 128 executable paths")); }
+                        profile.app_paths.sort();
+                        profile.app_paths.dedup();
+                    }
+                }
+            }
         }
         Change::Bind {
             game,
             device,
             profile,
         } => {
-            let path = normalize_app_path(
-                &catalog
+            let paths = executable_paths(
+                catalog
                     .games
                     .iter()
                     .find(|g| g.id == game)
-                    .ok_or_else(|| invalid("selected game no longer exists"))?
-                    .path,
+                    .ok_or_else(|| invalid("selected game no longer exists"))?,
             )?;
             let profiles = next
                 .devices
@@ -134,11 +179,13 @@ pub fn edit(store: &Store, change: Change) -> Result<Store> {
             for entry in profiles.profiles.values_mut() {
                 entry
                     .app_paths
-                    .retain(|old| normalize_app_path(old).ok().as_ref() != Some(&path));
+                    .retain(|old| !normalize_app_path(old).is_ok_and(|p| paths.contains(&p)));
             }
             if let Some(name) = profile {
                 let mut paths = profiles.profiles[&name].app_paths.clone();
-                paths.push(path);
+                paths.extend(executable_paths(
+                    catalog.games.iter().find(|g| g.id == game).unwrap(),
+                )?);
                 profiles.set_app_paths(&name, &paths)?;
             }
         }
@@ -148,12 +195,12 @@ pub fn edit(store: &Store, change: Change) -> Result<Store> {
                 .iter()
                 .position(|g| g.id == game)
                 .ok_or_else(|| invalid("selected game no longer exists"))?;
-            let path = normalize_app_path(&catalog.games.remove(index).path)?;
+            let paths = executable_paths(&catalog.games.remove(index))?;
             for profiles in next.devices.values_mut() {
                 for entry in profiles.profiles.values_mut() {
                     entry
                         .app_paths
-                        .retain(|old| normalize_app_path(old).ok().as_ref() != Some(&path));
+                        .retain(|old| !normalize_app_path(old).is_ok_and(|p| paths.contains(&p)));
                 }
             }
         }
@@ -170,8 +217,15 @@ pub fn edit(store: &Store, change: Change) -> Result<Store> {
     crate::profile_compat::validate_store_budget(&next)?;
     Ok(next)
 }
+fn executable_paths(game: &Game) -> Result<Vec<String>> {
+    std::iter::once(&game.path)
+        .chain(game.aliases.iter())
+        .map(|p| normalize_app_path(p))
+        .collect()
+}
 /// Explicit path bindings only. Legacy name rules are reported independently.
 pub fn bindings(store: &Store, game: &Game, device: &str) -> Result<(Vec<String>, Vec<String>)> {
+    let paths = executable_paths(game)?;
     let path = normalize_app_path(&game.path)?;
     let name = normalize_app(&path);
     let Some(profiles) = store.devices.get(device) else {
@@ -183,7 +237,7 @@ pub fn bindings(store: &Store, game: &Game, device: &str) -> Result<(Vec<String>
         .filter(|(_, p)| {
             p.app_paths
                 .iter()
-                .any(|old| normalize_app_path(old).ok().as_ref() == Some(&path))
+                .any(|old| normalize_app_path(old).is_ok_and(|p| paths.contains(&p)))
         })
         .map(|(name, _)| name.clone())
         .collect();

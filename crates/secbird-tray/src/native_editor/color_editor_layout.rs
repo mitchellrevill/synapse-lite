@@ -82,7 +82,7 @@ pub fn numeric_rgb_text(value: &str) -> Option<f64> {
 /// fractional text. Out-of-range values become0; they are not clamped to255.
 /// This is a draft-input helper, not an integer RGB validator or persistence API.
 pub fn filter_rgb_text(value: &str) -> String {
-    if numeric_rgb_text(value).is_some_and(|n| n >= 0.0 && n <= 255.0) {
+    if numeric_rgb_text(value).is_some_and(|n| (0.0..=255.0).contains(&n)) {
         value.to_string()
     } else {
         "0".into()
@@ -162,6 +162,7 @@ pub fn value_event_sample(x: f64, css_width: f64) -> Option<(f64, f64)> {
 
 #[derive(Debug)]
 pub struct Geometry {
+    #[cfg(test)]
     pub opens_up: bool,
     pub palette: Rect,
     pub editor: Rect,
@@ -184,6 +185,7 @@ pub struct Geometry {
 /// Source chooses direction from250px palette height, even when opening the
 /// taller269px editor. This can leave19px more overflow; no horizontal fitting
 /// or additional editor-height clamping is established by the source.
+#[cfg(test)]
 pub fn geometry(anchor: Rect, viewport_height: f64) -> Option<Geometry> {
     if ![
         anchor.x,
@@ -218,6 +220,7 @@ pub fn geometry_with_direction(anchor:Rect,up:bool)->Option<Geometry>{
     };
     let x = anchor.x;
     Some(Geometry {
+        #[cfg(test)]
         opens_up: up,
         palette: at(x, py, 250.0, 250.0),
         editor: at(x, ey, 220.0, 269.0),
@@ -285,6 +288,7 @@ pub fn picker_target(picked: &[bool], requested: usize) -> Option<usize> {
 
 /// Middleware persists all non-sentinel entries, including duplicates; caller
 /// retains the complete foreign slot object instead of rebuilding its fields.
+#[cfg(test)]
 pub fn persistent_slot_indices(colors: &[&str]) -> Vec<usize> {
     colors
         .iter()

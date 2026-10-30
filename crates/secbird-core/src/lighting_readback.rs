@@ -404,7 +404,7 @@ mod tests {
             let report = reply(
                 crate::commands::SERIAL.get(),
                 crate::commands::SERIAL_SIZE,
-                &[],
+                b"TEST-SERIAL",
             );
             buffer[0] = 0;
             buffer[1..91].copy_from_slice(&report.0);

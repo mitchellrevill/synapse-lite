@@ -1,4 +1,18 @@
-# Completion-driven keyboard macro scheduler
+# Completion-driven macro scheduler
+
+The current scheduler also supports balanced mixed keyboard/mouse passes, with
+explicit per-class contexts, a destination on each command, mouse button
+ownership and one-shot wheel completion. See
+[MACRO-MIXED-OUTPUT.md](MACRO-MIXED-OUTPUT.md) for the current interface and
+verification. The keyboard-only constructor remains. Refused cleanup now
+continues other eligible releases before reporting unconfirmed recovery,
+rather than stranding the whole class. The specific failure is reported once
+before the terminal unconfirmed stopped state.
+
+## Original keyboard-only checkpoint
+
+The text and counts below describe the initial checkpoint; the linked mixed
+output document supersedes its mouse admission and refusal limitations.
 
 `secbird_core::macro_scheduler` joins the existing source macro plan, native
 keyboard packet planner and held-output ledger into a bounded execution state

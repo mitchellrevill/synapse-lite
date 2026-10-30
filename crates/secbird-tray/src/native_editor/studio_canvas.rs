@@ -11,6 +11,8 @@ struct Document {
 #[derive(Deserialize)]
 struct Placement {
     id: String,
+    #[serde(default, rename = "productName")]
+    name: String,
     #[serde(rename = "productId")]
     product: u16,
     #[serde(rename = "editionId")]
@@ -24,6 +26,20 @@ struct Placement {
     orientation: u16,
     #[serde(default, rename="editorPreset")]
     editor_preset: bool,
+    #[serde(default, rename="selectionGroups")]
+    selection_groups: Vec<SelectionGroup>,
+    #[serde(default, rename="selectionGroupsDisabled")]
+    disabled_groups: Vec<String>,
+}
+#[derive(Deserialize)]
+struct SelectionGroup { name: String, leds: Vec<GroupLed> }
+#[derive(Deserialize)]
+struct GroupLed { row: u16, col: u16 }
+pub(super) struct QuickSelection {
+    pub title: String,
+    pub enabled: bool,
+    pub checked: bool,
+    members: BTreeSet<(String, String)>,
 }
 struct Device {
     placement: Placement,
@@ -36,6 +52,9 @@ pub(super) struct Canvas {
     pub notes: Vec<String>,
     selected: BTreeSet<(String, String)>,
     zoom: f64,
+    center: Option<Point>,
+    pan: Option<(Point, Point)>,
+    pub names: bool,
     gesture: Option<Gesture>,
 }
 struct Gesture {
@@ -103,6 +122,53 @@ impl Device {
 }
 
 impl Canvas {
+    /// Count each shared geometry allocation once, regardless of placements.
+    #[cfg(test)]
+    pub fn asset_snapshot(&self) -> Value {
+        let mut seen = BTreeSet::new();
+        let mut bytes = 0usize;
+        for device in &self.devices {
+            if seen.insert(Arc::as_ptr(&device.geometry) as usize) {
+                bytes += device.geometry.storage_bytes();
+            }
+        }
+        json!({"resident_layouts":seen.len(), "geometry_capacity_bytes":bytes,
+            "geometry_budget_bytes":8*1024*1024, "placement_count":self.devices.len()})
+    }
+
+    pub fn quick_selections(&self) -> Vec<QuickSelection> {
+        let mut choices = Vec::new();
+        let all: BTreeSet<_> = self.devices.iter().flat_map(|device| {
+            device.geometry.keys.iter().filter(|key| device.allowed(&key.input_id))
+                .map(|key| (device.placement.id.clone(), key.input_id.clone()))
+        }).collect();
+        choices.push(QuickSelection { title: "All".into(), enabled: !all.is_empty(), checked: !all.is_empty() && all.is_subset(&self.selected), members: all });
+        for device in &self.devices {
+            let p = &device.placement;
+            for group in p.selection_groups.iter().take(128) {
+                let members: BTreeSet<_> = group.leds.iter().filter_map(|led| {
+                    let key = format!("{}:{}", led.row, led.col);
+                    (device.allowed(&key) && device.geometry.keys.iter().any(|k| k.input_id == key))
+                        .then(|| (p.id.clone(), key))
+                }).collect();
+                choices.push(QuickSelection {
+                    title: format!("{} / {}", p.id, group.name),
+                    enabled: !members.is_empty() && !p.disabled_groups.contains(&group.name),
+                    checked: !members.is_empty() && members.is_subset(&self.selected), members,
+                });
+            }
+        }
+        choices
+    }
+    pub fn toggle_quick_selection(&mut self, choice: &QuickSelection) {
+        if !choice.enabled { return; }
+        self.cancel();
+        if choice.members.is_subset(&self.selected) {
+            self.selected.retain(|key| !choice.members.contains(key));
+        } else {
+            self.selected.extend(choice.members.iter().cloned());
+        }
+    }
     pub fn can_preview(&self) -> bool {
         self.devices.len() == 1 && self.notes.is_empty()
             && self.devices[0].placement.product==605 && self.devices[0].placement.edition==0
@@ -111,6 +177,23 @@ impl Canvas {
     }
     pub fn load(raw: &str, assets: &Path) -> Self {
         let mut canvas = Self::default();
+        // Read display metadata once, never from paint or hit testing.
+        #[derive(Deserialize)]
+        struct Names { records: Vec<Name> }
+        #[derive(Deserialize)]
+        struct Name { product_id: u16, #[serde(default)] product_name: String }
+        let names: HashMap<u16, String> = std::fs::File::open(assets.join("studio-presets/index.json"))
+            .ok().and_then(|file| {
+                use std::io::Read;
+                let mut bytes = Vec::new();
+                file.take(2 * 1024 * 1024 + 1).read_to_end(&mut bytes).ok()?;
+                if bytes.len() > 2 * 1024 * 1024 { return None; }
+                serde_json::from_slice::<Names>(&bytes).ok()
+            }).filter(|index| index.records.len() <= 4096)
+            .map(|index| index.records.into_iter()
+                .filter(|name| name.product_name.len() <= 256 && !name.product_name.chars().any(char::is_control))
+                .map(|name| (name.product_id, name.product_name)).collect())
+            .unwrap_or_default();
         let result = (|| -> Result<(), String> {
             let document: Document = serde_json::from_str(raw).map_err(|e| e.to_string())?;
             if document.devices.len() > 32 {
@@ -122,10 +205,12 @@ impl Canvas {
             let mut owned_bytes=0usize;
             for raw in document.devices {
                 let item = (|| -> Result<Device, String> {
-                    let p: Placement = serde_json::from_str(raw.get()).map_err(|_| {
+                    let mut p: Placement = serde_json::from_str(raw.get()).map_err(|_| {
                         "Placement needs explicit product, editionId, layout and geometry"
                             .to_string()
                     })?;
+                    if p.name.is_empty() { p.name = names.get(&p.product).cloned().unwrap_or_default(); }
+                    if p.name.len() > 256 || p.name.chars().any(char::is_control) { p.name.clear(); }
                     let leds = secbird_core::studio::inventory::led_inventory(raw.get())
                         .map_err(|error| error.to_string())?;
                     if p.id.is_empty() || p.id.len() > 512 || !ids.insert(p.id.clone()) {
@@ -211,14 +296,14 @@ impl Canvas {
             .min((height - 250.0) / (bottom - top))
             .clamp(0.05, 4.0);
         Some((
-            Point {
+            self.center.unwrap_or(Point {
                 x: (left + right) / 2.0,
                 y: (top + bottom) / 2.0,
-            },
+            }),
             if self.zoom == 0.0 { fit } else { self.zoom },
             Point {
                 x: width / 2.0,
-                y: (168.0 + height) / 2.0,
+                y: (118.0 + height) / 2.0,
             },
         ))
     }
@@ -244,6 +329,7 @@ impl Canvas {
         if !state.studio.open {
             return false;
         }
+        if studio_view::wheel_pointer(state,message,lparam) {return true;}
         if state.restricted_actions && !matches!(message, WM_CANCELMODE | WM_CAPTURECHANGED) {
             return false;
         }
@@ -253,8 +339,35 @@ impl Canvas {
         };
         let width = f64::from(state.width) / f64::from(state.scale);
         let height = f64::from(state.height) / f64::from(state.scale);
+        if studio_view::wheel_picking(state) && matches!(message,WM_LBUTTONDOWN|WM_LBUTTONUP) && point.x>250.0 && point.x<width-250.0 && point.y>=168.0 && point.y<height-50.0 {
+            if message==WM_LBUTTONUP {
+            if let Some(world)=state.studio.canvas.screen_to_world(point,width,height) {
+                if (0.0..=10000.0).contains(&world.x) && (0.0..=10000.0).contains(&world.y) {
+                    studio_view::wheel_center(state,world.x.round() as u16,world.y.round() as u16);
+                    studio_view::selection_changed(state);state.rebuild_fields();InvalidateRect(state.hwnd,null(),0);
+                }
+            }
+            }
+            return true;
+        }
+        if studio_view::tidal_center_active(state) && point.x>250.0 && point.x<width-250.0 && point.y>=168.0 && point.y<height-50.0 {
+            if message==WM_LBUTTONUP {
+                if let Some(world)=state.studio.canvas.screen_to_world(point,width,height) {
+                    studio_view::place_tidal_center(state,world.x,world.y);
+                    state.rebuild_fields(); InvalidateRect(state.hwnd,null(),0);
+                }
+                return true;
+            }
+            if message==WM_LBUTTONDOWN {return true;}
+        }
         let canvas = &mut state.studio.canvas;
         if message == WM_CANCELMODE || message == WM_CAPTURECHANGED {
+            if let Some((_, before)) = canvas.pan.take() {
+                canvas.center = Some(before);
+                if message == WM_CANCELMODE { ReleaseCapture(); }
+                InvalidateRect(state.hwnd, null(), 0);
+                return true;
+            }
             if let Some(gesture) = canvas.gesture.take() {
                 canvas.selected = gesture.before;
                 if message == WM_CANCELMODE {
@@ -269,7 +382,53 @@ impl Canvas {
             && point.x < width - 250.0
             && point.y >= 168.0
             && point.y < height - 50.0;
+        if message == WM_RBUTTONUP && inside {
+            let Some(world) = canvas.screen_to_world(point, width, height) else { return false; };
+            let hit = canvas.hit(world);
+            let on_device = canvas.devices.iter().any(|device| {
+                let local = device.local(world);
+                let b = device.geometry.view_box;
+                local.x >= b[0] && local.x <= b[0] + b[2]
+                    && local.y >= b[1] && local.y <= b[1] + b[3]
+            });
+            if !on_device { return false; }
+            // No output request is sent: the current backend cannot prove exact
+            // restoration of host animation state or exclusive ownership.
+            studio_view::identify_unavailable(state);
+            InvalidateRect(state.hwnd, null(), 0);
+            let menu = CreatePopupMenu();
+            if !menu.is_null() {
+                AppendMenuW(menu, MF_STRING | MF_GRAYED, 1, wide("Identify Device").as_ptr());
+                if hit.is_some() { AppendMenuW(menu, MF_STRING | MF_GRAYED, 2, wide("Identify LED").as_ptr()); }
+                AppendMenuW(menu, MF_SEPARATOR, 0, null());
+                AppendMenuW(menu, MF_STRING | MF_GRAYED, 3,
+                    wide("Unavailable: ownership / restoration unverified").as_ptr());
+                let mut cursor: POINT = std::mem::zeroed();
+                if GetCursorPos(&mut cursor) != 0 {
+                    TrackPopupMenu(menu, TPM_RETURNCMD | TPM_NONOTIFY,
+                        cursor.x, cursor.y, 0, state.hwnd, null());
+                }
+                DestroyMenu(menu);
+            }
+            return true;
+        }
         match message {
+            WM_LBUTTONDOWN if inside && GetKeyState(32) < 0 => {
+                let Some((center, zoom, _)) = canvas.frame(width, height) else { return false; };
+                canvas.cancel();
+                canvas.zoom = zoom;
+                canvas.center = Some(center);
+                canvas.pan = Some((point, center));
+                SetCapture(state.hwnd);
+            }
+            WM_MOUSEMOVE | WM_LBUTTONUP if canvas.pan.is_some() => {
+                let (start, before) = canvas.pan.unwrap();
+                canvas.center = Some(Point {
+                    x: before.x - (point.x - start.x) / canvas.zoom,
+                    y: before.y - (point.y - start.y) / canvas.zoom,
+                });
+                if message == WM_LBUTTONUP { canvas.pan = None; ReleaseCapture(); }
+            }
             WM_LBUTTONDOWN if inside => {
                 let Some(world) = canvas.screen_to_world(point, width, height) else {
                     return false;
@@ -367,22 +526,75 @@ impl Canvas {
         }
         true
     }
+    pub fn navigating(&self) -> bool { self.pan.is_some() || self.gesture.is_some() }
+    pub fn percent(&self, width: f64, height: f64) -> f64 {
+        self.frame(width, height).map_or(100.0, |(_, z, _)| z * 100.0)
+    }
+    pub fn set_zoom(&mut self, percent: f64, anchor: Option<Point>, width: f64, height: f64) {
+        if !percent.is_finite() || !(5.0..=400.0).contains(&percent) { return; }
+        let Some((_, _, screen)) = self.frame(width, height) else { return; };
+        let anchor = anchor.unwrap_or(screen);
+        let Some(world) = self.screen_to_world(anchor, width, height) else { return; };
+        self.cancel();
+        self.pan = None;
+        self.zoom = percent / 100.0;
+        self.center = Some(Point {
+            x: world.x - (anchor.x - screen.x) / self.zoom,
+            y: world.y - (anchor.y - screen.y) / self.zoom,
+        });
+    }
+    pub fn scroll(&mut self, x: f64, y: f64, width: f64, height: f64) {
+        if let Some((center, zoom, _)) = self.frame(width, height) {
+            self.cancel();
+            self.pan = None;
+            self.zoom = zoom;
+            self.center = Some(Point { x: center.x - x / zoom, y: center.y - y / zoom });
+        }
+    }
+    pub fn fit_selected(&mut self, width: f64, height: f64) {
+        let mut points = Vec::new();
+        for device in &self.devices {
+            // Stock fits selected devices. LED selection identifies their placements.
+            if self.selected.iter().any(|(id, _)| id == &device.placement.id) {
+                let p = &device.placement;
+                points.push(Point { x: p.x, y: p.y });
+                points.push(Point { x: p.x + p.width, y: p.y + p.height });
+            }
+        }
+        if points.is_empty() { return; }
+        let left = points.iter().map(|p| p.x).fold(f64::INFINITY, f64::min);
+        let right = points.iter().map(|p| p.x).fold(f64::NEG_INFINITY, f64::max);
+        let top = points.iter().map(|p| p.y).fold(f64::INFINITY, f64::min);
+        let bottom = points.iter().map(|p| p.y).fold(f64::NEG_INFINITY, f64::max);
+        self.cancel(); self.pan = None;
+        self.center = Some(Point { x: (left + right) / 2.0, y: (top + bottom) / 2.0 });
+        self.zoom = ((width - 540.0) / (right - left)).min((height - 250.0) / (bottom - top)).clamp(0.05, 4.0);
+    }
     pub fn zoom(&mut self, steps: i32, width: f64, height: f64) {
         if steps == 0 {
-            self.zoom = 0.0;
-        } else if let Some((_, zoom, _)) = self.frame(width, height) {
-            self.zoom = (zoom * 1.25f64.powi(steps.signum())).clamp(0.05, 4.0);
+            self.cancel(); self.pan = None; self.zoom = 0.0; self.center = None;
+        } else {
+            self.set_zoom((self.percent(width, height) * 1.25f64.powi(steps.signum())).clamp(5.0, 400.0), None, width, height);
         }
-        self.gesture = None;
     }
     pub fn cancel(&mut self) {
+        if let Some((_, before)) = self.pan.take() { self.center = Some(before); }
         if let Some(g) = self.gesture.take() {
             self.selected = g.before;
         }
     }
     pub fn clear_selection(&mut self) {
-        self.gesture = None;
+        self.cancel();
         self.selected.clear();
+    }
+    /// Context targeting uses the existing source-path hit test. A right click
+    /// inside the current selection keeps it; Ctrl keeps a mixed selection too.
+    pub fn context_target(&mut self, point: Point, width: f64, height: f64, control: bool) {
+        self.cancel();
+        if let Some(key) = self.screen_to_world(point, width, height).and_then(|p|self.hit(p)) {
+            if !control && !self.selected.contains(&key) { self.selected.clear(); }
+            self.selected.insert(key);
+        }
     }
     pub fn count(&self) -> usize {
         self.selected.len()
@@ -418,6 +630,57 @@ impl Canvas {
             })
             .collect()
     }
+}
+
+/// Runs only in the simulator test window. Keyboard state is local to its UI thread.
+#[cfg(test)]
+pub(super) unsafe fn navigation_test(state: &mut State) -> Result<(), String> {
+    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetKeyboardState, SetKeyboardState};
+    let mut original = [0u8; 256];
+    if GetKeyboardState(original.as_mut_ptr()) == 0 { return Err("Cannot read test keyboard state".into()); }
+    struct Restore([u8; 256]);
+    impl Drop for Restore { fn drop(&mut self) { unsafe { SetKeyboardState(self.0.as_ptr()); } } }
+    let _restore = Restore(original);
+    let width = f64::from(state.width) / f64::from(state.scale);
+    let height = f64::from(state.height) / f64::from(state.scale);
+    let point = Point { x: width / 2.0 - 30.0, y: height / 2.0 };
+    let pack = |p: Point| {
+        let x = (p.x * f64::from(state.scale)).round() as i32;
+        let y = (p.y * f64::from(state.scale)).round() as i32;
+        ((x as u32 & 65535) | ((y as u32 & 65535) << 16)) as isize
+    };
+    let start = pack(point);
+    let end = pack(Point { x: point.x + 60.0, y: point.y + 30.0 });
+    let mut keys = [0u8; 256]; keys[32] = 128;
+    SetKeyboardState(keys.as_ptr());
+    let before = state.studio.canvas.frame(width, height).ok_or("No frame")?;
+    let space = GetKeyState(32);
+    let down = Canvas::pointer(state, WM_LBUTTONDOWN, start);
+    let moving = Canvas::pointer(state, WM_MOUSEMOVE, end);
+    let moved = state.studio.canvas.frame(width, height).ok_or("No moved frame")?;
+    if moved.0 == before.0 { return Err(format!("Space drag did not pan: key={space}, down={down}, move={moving}, size={width}x{height}, pan={:?}, restricted={}", state.studio.canvas.pan, state.restricted_actions)); }
+    Canvas::pointer(state, WM_CANCELMODE, 0);
+    if state.studio.canvas.frame(width, height).unwrap().0 != before.0 { return Err("Cancel did not restore pan".into()); }
+    Canvas::pointer(state, WM_LBUTTONDOWN, start);
+    Canvas::pointer(state, WM_MOUSEMOVE, end);
+    Canvas::pointer(state, WM_LBUTTONUP, end);
+    if state.studio.canvas.pan.is_some() { return Err("Pan capture did not finish".into()); }
+    let mut screen = POINT { x: (point.x * f64::from(state.scale)) as i32, y: (point.y * f64::from(state.scale)) as i32 };
+    ClientToScreen(state.hwnd, &mut screen);
+    keys[32] = 0; keys[17] = 128; SetKeyboardState(keys.as_ptr());
+    let anchor = Point { x: f64::from((point.x * f64::from(state.scale)) as i32) / f64::from(state.scale), y: f64::from((point.y * f64::from(state.scale)) as i32) / f64::from(state.scale) };
+    let world = state.studio.canvas.screen_to_world(anchor, width, height).unwrap();
+    studio_view::wheel(state, 120, screen);
+    let after = state.studio.canvas.screen_to_world(anchor, width, height).unwrap();
+    if (after.x - world.x).abs() > 1e-7 || (after.y - world.y).abs() > 1e-7 { return Err("Native Ctrl wheel moved anchor".into()); }
+    keys[17] = 0; keys[16] = 128; SetKeyboardState(keys.as_ptr());
+    let before = state.studio.canvas.frame(width, height).unwrap();
+    studio_view::wheel(state, -120, screen);
+    let after = state.studio.canvas.frame(width, height).unwrap();
+    if before.0.x == after.0.x || before.0.y != after.0.y || before.1 != after.1 { return Err("Shift wheel did not scroll horizontally".into()); }
+    keys[16] = 0; SetKeyboardState(keys.as_ptr());
+    state.studio.canvas.zoom(0, width, height);
+    Ok(())
 }
 
 pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i32) {
@@ -498,6 +761,29 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         }
     }
     RestoreDC(p.dc, saved);
+    if canvas.names {
+        let clip = SaveDC(p.dc);
+        IntersectClipRect(p.dc, p.px(251), p.px(168), p.px(width - 250), p.px(height - 50));
+        for device in &canvas.devices {
+            let x = screen.x + (device.placement.x - center.x) * zoom;
+            let y = screen.y + (device.placement.y + device.placement.height - center.y) * zoom + 4.0;
+            p.text(if device.placement.name.is_empty() { &device.placement.id } else { &device.placement.name }, x as i32, y as i32, 240, 24, p.fonts.small, TEXT, DT_LEFT);
+        }
+        RestoreDC(p.dc, clip);
+    }
+    if let Some(g)=studio_view::wheel_geometry(state) {
+        let x=(screen.x+(f64::from(g.x)-center.x)*zoom) as i32;
+        let y=(screen.y+(f64::from(g.y)-center.y)*zoom) as i32;
+        if x>260 && x<width-260 && y>178 && y<height-60 {
+            p.fill(x-9,y,19,1,GREEN);p.fill(x,y-9,1,19,GREEN);
+        }
+    }
+    if let Some((x,y))=studio_view::tidal_center(state) {
+        let x=(screen.x+(f64::from(x)-center.x)*zoom).round() as i32;
+        let y=(screen.y+(f64::from(y)-center.y)*zoom).round() as i32;
+        if x>260 && x<width-260 && y>178 && y<height-60 {p.fill(x-8,y-1,17,3,GREEN);p.fill(x-1,y-8,3,17,GREEN);}
+    }
+
     if let Some(gesture) = &canvas.gesture {
         let a = Point {
             x: screen.x + (gesture.start.x - center.x) * zoom,
@@ -533,7 +819,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
     p.text(
         &format!("{} LEDs selected · {:.0}%", canvas.count(), zoom * 100.0),
         270,
-        height - 42,
+        204,
         (width - 540).max(1),
         28,
         p.fonts.normal,
@@ -544,7 +830,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         p.text(
             &format!("{} placement(s) unavailable", canvas.notes.len()),
             270,
-            170,
+            236,
             (width - 540).max(1),
             28,
             p.fonts.small,
@@ -582,6 +868,7 @@ mod tests {
             let device = Device {
                 placement: Placement {
                     id: "keyboard".into(),
+                    name: "Keyboard".into(),
                     product: 605,
                     edition: 0,
                     layout: 6,
@@ -591,6 +878,7 @@ mod tests {
                     height,
                     orientation,
                     editor_preset: false,
+                    selection_groups: vec![], disabled_groups: vec![],
                 },
                 geometry: geometry.clone(),
                 admitted: BTreeSet::from(["0:1".into()]),
@@ -662,6 +950,64 @@ mod tests {
         (folder,placement)
     }
     #[test]
+    fn fit_selected_devices_ignores_unselected_distant_placements() {
+        let (folder, placement) = generic_fixture();
+        let mut other = placement.clone();
+        other["id"] = json!("distant"); other["x"] = json!(2000);
+        let mut canvas = Canvas::load(&json!({"devices":[placement, other]}).to_string(), &folder);
+        let all = canvas.frame(1100.0, 800.0).unwrap();
+        assert_eq!(all.0, Point { x: 1050.0, y: 25.0 });
+        canvas.selected.insert(("foreign".into(), "0:1".into()));
+        canvas.fit_selected(1100.0, 800.0);
+        let selected = canvas.frame(1100.0, 800.0).unwrap();
+        assert_eq!(selected.0, Point { x: 50.0, y: 25.0 });
+        assert!(selected.1 > all.1);
+        canvas.zoom(0, 1100.0, 800.0);
+        assert_eq!(canvas.frame(1100.0, 800.0).unwrap(), all);
+        canvas.clear_selection();
+        canvas.fit_selected(1100.0, 800.0);
+        assert_eq!(canvas.frame(1100.0, 800.0).unwrap(), all);
+        std::fs::remove_dir_all(folder).unwrap();
+    }
+
+    #[test]
+    fn viewport_anchor_pan_fit_and_dpi_hit_testing_preserve_selection() {
+        let (folder, placement) = generic_fixture();
+        let raw = json!({"devices":[placement]}).to_string();
+        for dpi in [1.0, 1.25, 1.5, 2.0, 2.5] {
+            let mut canvas = Canvas::load(&raw, &folder);
+            canvas.selected.insert(("foreign".into(), "0:1".into()));
+            let selection = canvas.selection();
+            let (width, height) = (1100.0, 800.0);
+            let anchor = Point { x: 412.0, y: 345.0 };
+            let before = canvas.screen_to_world(anchor, width, height).unwrap();
+            for percent in [5.0, 50.0, 100.0, 200.0, 400.0] {
+                canvas.set_zoom(percent, Some(anchor), width, height);
+                let after = canvas.screen_to_world(anchor, width, height).unwrap();
+                assert!((after.x - before.x).abs() < 1e-8 && (after.y - before.y).abs() < 1e-8);
+                canvas.scroll(72.0, -36.0, width, height);
+                let (center, zoom, screen) = canvas.frame(width, height).unwrap();
+                let world = Point { x: 12.0, y: 12.0 };
+                let pixels = Point { x: ((screen.x + (world.x - center.x) * zoom) * dpi).round(), y: ((screen.y + (world.y - center.y) * zoom) * dpi).round() };
+                let hit = canvas.screen_to_world(Point { x: pixels.x / dpi, y: pixels.y / dpi }, width, height).unwrap();
+                assert_eq!(canvas.hit(hit), Some(("foreign".into(), "0:1".into())), "DPI {dpi}, zoom {percent}");
+                // Restore the anchor for the next zoom.
+                canvas.scroll(-72.0, 36.0, width, height);
+            }
+            canvas.fit_selected(width, height);
+            let selected_fit = canvas.frame(width, height).unwrap();
+            canvas.zoom(0, width, height);
+            assert_eq!(selected_fit, canvas.frame(width, height).unwrap());
+            assert_eq!(canvas.selection(), selection);
+            for invalid in [f64::NAN, f64::INFINITY, 0.0, 401.0] {
+                canvas.set_zoom(invalid, None, width, height);
+                assert_eq!(canvas.frame(width, height).unwrap(), selected_fit);
+            }
+        }
+        std::fs::remove_dir_all(folder).unwrap();
+    }
+
+    #[test]
     fn generic_presets_select_exact_leds_and_refuse_mismatched_identity_without_output_admission() {
         let (folder,placement)=generic_fixture();let raw=json!({"devices":[placement.clone()]}).to_string();let mut canvas=Canvas::load(&raw,&folder);
         assert_eq!(canvas.devices.len(),1);assert!(canvas.notes.is_empty());assert!(!canvas.can_preview());
@@ -672,10 +1018,45 @@ mod tests {
         value["product_id"]=json!(123);std::fs::write(folder.join("studio-123-4-2.json"),serde_json::to_vec(&value).unwrap()).unwrap();let canvas=Canvas::load(&raw,&folder);assert!(canvas.devices.is_empty());assert_eq!(canvas.notes,["Studio geometry identity mismatch"]);
     }
     #[test]
+    fn quick_groups_filter_unavailable_leds_toggle_mixed_and_respect_disabled() {
+        let (folder, mut placement) = generic_fixture();
+        placement["selectionGroups"] = json!([
+            {"name":"Keys", "leds":[{"row":0,"col":1},{"row":9,"col":9}]},
+            {"name":"Disabled", "leds":[{"row":0,"col":1}]},
+            {"name":"Absent", "leds":[{"row":9,"col":9}]}
+        ]);
+        placement["selectionGroupsDisabled"] = json!(["Disabled"]);
+        let raw = json!({"devices":[placement], "opaque":1.2300}).to_string();
+        let mut canvas = Canvas::load(&raw, &folder);
+        let choices = canvas.quick_selections();
+        assert_eq!(choices.len(), 4);
+        assert!(choices[1].enabled);
+        assert!(!choices[2].enabled);
+        assert!(!choices[3].enabled);
+        canvas.toggle_quick_selection(&choices[1]);
+        assert_eq!(canvas.count(), 1);
+        canvas.toggle_quick_selection(&choices[2]);
+        assert_eq!(canvas.count(), 1);
+        canvas.toggle_quick_selection(&choices[1]);
+        assert_eq!(canvas.count(), 0);
+        // Mixed checkboxes union; checked checkboxes subtract only their members.
+        canvas.selected.insert(("other".into(), "1:1".into()));
+        canvas.toggle_quick_selection(&choices[0]);
+        assert_eq!(canvas.count(), 2);
+        canvas.toggle_quick_selection(&choices[0]);
+        assert_eq!(canvas.selected, BTreeSet::from([("other".into(), "1:1".into())]));
+        std::fs::remove_dir_all(folder).unwrap();
+    }
+
+    #[test]
     fn repeated_generic_placements_share_geometry_and_keep_placement_limit() {
         let (folder,placement)=generic_fixture();let placements:Vec<_>=(0..32).map(|i|{let mut p=placement.clone();p["id"]=json!(format!("device-{i}"));p}).collect();
         let canvas=Canvas::load(&json!({"devices":placements}).to_string(),&folder);assert_eq!(canvas.devices.len(),32);assert!(canvas.notes.is_empty());
         for device in &canvas.devices {assert!(Arc::ptr_eq(&canvas.devices[0].geometry,&device.geometry));}
+        let assets = canvas.asset_snapshot();
+        assert_eq!(assets["resident_layouts"], 1);
+        assert_eq!(assets["geometry_capacity_bytes"], canvas.devices[0].geometry.storage_bytes());
+        assert_eq!(assets["placement_count"], 32);
         let oversized=vec![placement;33];let refused=Canvas::load(&json!({"devices":oversized}).to_string(),&folder);assert!(refused.devices.is_empty());assert_eq!(refused.notes.len(),1);
     }
 

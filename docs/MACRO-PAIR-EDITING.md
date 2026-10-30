@@ -72,3 +72,6 @@ memory measurements remain unfinished.
 
 Nested reference authoring and dependency-aware profile interchange are now
 covered by MACRO-NESTED.md; live nested execution is still unfinished.
+
+Paired Type6 loop authoring, repeat edits, nested ranges and boundary-only deletion
+are covered by MACRO-LOOPS.md. Live loop playback remains disabled.

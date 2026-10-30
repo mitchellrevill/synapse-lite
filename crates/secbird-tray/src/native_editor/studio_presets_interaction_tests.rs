@@ -12,7 +12,7 @@ fn native_studio_add_presets_menu_cancel_save_reopen_and_history_preserve_profil
     let baseline=std::fs::read(folder.join("profiles.json")).unwrap();let output=folder.clone();let monitor=sim.clone();let input=source.clone();
     let controller=std::thread::spawn(move||{
         let result=(||->Result<Value,String>{unsafe {
-            wait_for(||frame.exists(),"preset editor")?;let hwnd=WINDOW.load(Ordering::Acquire) as HWND;
+            wait_for_studio_window(||frame.exists(),"preset editor")?;let hwnd=WINDOW.load(Ordering::Acquire) as HWND;
             let query=||{let mut v=Value::Null;SendMessageW(hwnd,STUDIO_TEST,2,&mut v as *mut Value as isize);v};
             wait_for(||query()["pending"]==0,"initial reads")?;monitor.state().log.clear();
             let path=json!(input.to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,1,&path as *const Value as isize);
@@ -67,11 +67,11 @@ fn exercise_preset(filename:&str,pid:u16,edition:u16,layout:u16,expected_leds:us
     let _environment=Environment::set(&[("SYNAPSE_LITE_CONFIG_DIR",&folder),("SYNAPSE_LITE_SMOKE_REPORT",&frame),("SYNAPSE_LITE_SMOKE_VIEW",Path::new("studio"))]);let sim=Sim::mouse();let engine=Engine::with_simulated_mouse(&sim).unwrap();let mut store=Store::load(&folder.join("profiles.json")).unwrap();store.for_device(&engine.devices()[0]);store.save().unwrap();let baseline=std::fs::read(folder.join("profiles.json")).unwrap();let output=folder.clone();let monitor=sim.clone();let input=source.clone();
     let controller=std::thread::spawn(move||{
         let result=(||->Result<Value,String>{unsafe {
-            wait_for(||frame.exists(),"preset window")?;let hwnd=WINDOW.load(Ordering::Acquire) as HWND;let query=||{let mut v=Value::Null;SendMessageW(hwnd,STUDIO_TEST,2,&mut v as *mut Value as isize);v};wait_for(||query()["pending"]==0,"initial reads")?;monitor.state().log.clear();
+            wait_for_studio_window(||frame.exists(),"preset window")?;let hwnd=WINDOW.load(Ordering::Acquire) as HWND;let query=||{let mut v=Value::Null;SendMessageW(hwnd,STUDIO_TEST,2,&mut v as *mut Value as isize);v};wait_for(||query()["pending"]==0,"initial reads")?;monitor.state().log.clear();
             let path=json!(input.to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,1,&path as *const Value as isize);wait_for(||query()["profiles"]==1&&query()["pending"]==0,"preset open")?;
             if query()["canvas_devices"]!=1||query()["canvas_selectable_leds"]!=expected_leds||query()["canvas_notes"].as_array().is_none_or(|notes|!notes.is_empty())||query()["canvas_can_preview"]!=false{return Err(format!("Preset admission was wrong: {}",query()));}
             let scale=f64::from(GetDpiForWindow(hwnd).max(96))/96.;let mut client:RECT=std::mem::zeroed();GetClientRect(hwnd,&mut client);let width=f64::from(client.right)/scale;let height=f64::from(client.bottom)/scale;let right=width-250.;let fit=((width-540.)/dims.0).min((height-250.)/dims.1).clamp(0.05,4.);
-            lighting_click(hwnd,width/2.+(center.0-dims.0/2.)*fit,(168.+height)/2.+(center.1-dims.1/2.)*fit,scale);if query()["selected_leds"]!=1{return Err("Exact source mouse LED did not select".into());}
+            lighting_click(hwnd,width/2.+(center.0-dims.0/2.)*fit,(118.+height)/2.+(center.1-dims.1/2.)*fit,scale);if query()["selected_leds"]!=1{return Err("Exact source mouse LED did not select".into());}
             let color=GetDlgItem(hwnd,2101);if color.is_null(){return Err("Static colour field missing".into());}SendMessageW(color,WM_SETTEXT,0,wide("ABCDEF").as_ptr() as isize);lighting_click(hwnd,right+100.,343.,scale);
             let capture=json!(output.join("basilisk-preset.png").to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize);
             let saved=output.join("saved.ChromaEffects");let path=json!(saved.to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,3,&path as *const Value as isize);wait_for(||query()["dirty"]==false&&query()["pending"]==0,"preset save")?;
@@ -84,4 +84,30 @@ fn exercise_preset(filename:&str,pid:u16,edition:u16,layout:u16,expected_leds:us
         }})();unsafe{let hwnd=WINDOW.load(Ordering::Acquire) as HWND;SendMessageW(hwnd,STUDIO_TEST,5,0);PostMessageW(hwnd,WM_CLOSE,0,0);}std::fs::write(output.join("interaction.json"),serde_json::to_vec_pretty(&match &result{Ok(v)=>v.clone(),Err(e)=>json!({"error":e})}).unwrap()).unwrap();result
     });
     let run=run_standalone(Arc::new(Mutex::new(engine)),Some(Duration::from_secs(30)));let result=controller.join().unwrap();assert!(run.is_ok(),"{run:?}");assert!(result.is_ok(),"{result:?}");assert_eq!(std::fs::read(source).unwrap(),source_bytes);assert_eq!(std::fs::read(folder.join("profiles.json")).unwrap(),baseline);eprintln!("Generic Studio preset native evidence: {}",folder.display());
+}
+#[test]
+#[ignore="opens owned simulated native remap fixture window"]
+fn native_studio_remap_cancel_commit_save_history() {
+    let folder=std::env::temp_dir().join(format!("studio-remap-native-{}",std::process::id()));std::fs::create_dir_all(&folder).unwrap();
+    let source=folder.join("source.ChromaEffects");let original=format!("{{\"version\":1,\"profiles\":[{}]}}",include_str!("../../../secbird-core/tests/fixtures/remap-source.json"));std::fs::write(&source,&original).unwrap();
+    let frame=folder.join("frame.json");
+    let _environment=Environment::set(&[("SYNAPSE_LITE_CONFIG_DIR",&folder),("SYNAPSE_LITE_SMOKE_REPORT",&frame),("SYNAPSE_LITE_SMOKE_VIEW",Path::new("studio"))]);
+    let sim=Sim::mouse();let engine=Engine::with_simulated_mouse(&sim).unwrap();let monitor=sim.clone();let output=folder.clone();
+    let controller=std::thread::spawn(move||{let result=(||->Result<(),String>{unsafe{
+        wait_for_studio_window(||frame.exists(),"remap fixture window")?;let hwnd=WINDOW.load(Ordering::Acquire) as HWND;
+        let query=||{let mut value=Value::Null;SendMessageW(hwnd,STUDIO_TEST,2,&mut value as *mut Value as isize);value};
+        wait_for(||query()["pending"]==0,"initial reads")?;monitor.state().log.clear();
+        let path=json!(source.to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,1,&path as *const Value as isize);wait_for(||query()["profiles"]==1&&query()["pending"]==0,"fixture import")?;
+        let scale=f64::from(GetDpiForWindow(hwnd).max(96))/96.;
+        let capture=json!(output.join("remap-before.png").to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize);
+        lighting_click(hwnd,430.,184.,scale);wait_for(||query()["dialog"]==true,"source choices")?;
+        SendMessageW(hwnd,STUDIO_TEST,9,0);wait_for(||query()["dialog"]==false,"cancel remap")?;if query()["dirty"]!=false{return Err("Cancel changed draft".into());}
+        SendMessageW(hwnd,STUDIO_TEST,studio_view::TEST_REMAP,0);if query()["dirty"]!=true{return Err(format!("Commit did not dirty draft: {}",query()));}
+        let saved=output.join("saved.ChromaEffects");let path=json!(saved.to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,3,&path as *const Value as isize);wait_for(||query()["pending"]==0&&query()["dirty"]==false,"save remapped fixture")?;
+        let data=std::fs::read(&saved).map_err(|e|e.to_string())?;let archive=secbird_core::studio::Archive::parse(&data).map_err(|e|e.to_string())?;let raw=archive.profile_json(0).unwrap();if !raw.contains("\"row\":3")||!raw.contains("9007199254740993123456789"){return Err("Saved mapping or opaque metadata missing".into());}
+        lighting_click(hwnd,450.,100.,scale);if query()["dirty"]!=true{return Err("Undo failed".into());}lighting_click(hwnd,520.,100.,scale);if query()["dirty"]!=false{return Err("Redo failed".into());}
+        let capture=json!(output.join("remap-after.png").to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize);
+        if !monitor.state().log.is_empty(){return Err("Remap made device requests".into());}Ok(())
+    }})();unsafe{let hwnd=WINDOW.load(Ordering::Acquire) as HWND;SendMessageW(hwnd,STUDIO_TEST,5,0);PostMessageW(hwnd,WM_CLOSE,0,0);}result});
+    let run=run_standalone(Arc::new(Mutex::new(engine)),Some(Duration::from_secs(30)));let result=controller.join().unwrap();assert!(run.is_ok(),"{run:?}");assert!(result.is_ok(),"{result:?}");assert_eq!(std::fs::read_to_string(folder.join("source.ChromaEffects")).unwrap(),original);eprintln!("Remap evidence: {}",folder.display());
 }

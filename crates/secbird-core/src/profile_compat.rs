@@ -14,9 +14,13 @@ use std::collections::BTreeMap;
 
 pub mod gui;
 pub mod macro_library;
+pub mod keyboard_assignments;
+pub mod assignment_state;
 mod dependencies;
 pub use dependencies::{recover_macro_dependencies,MacroRecoveryReport};
 mod mappings;
+pub mod mouse_assignment;
+pub mod multimedia;
 mod settings;
 
 pub(crate) fn source_key_usage(id: &str) -> Option<u8> {
@@ -558,7 +562,7 @@ pub fn export_synapse4(store: &Store, device_key: &str) -> Result<ExportReport> 
         }
     }
     for (name, profile) in &device.profiles {
-        if profile.extra.keys().any(|key| key != SOURCE)
+        if profile.extra.keys().any(|key| key != SOURCE && key != assignment_state::LOCAL)
             || profile
                 .dpi_stages
                 .as_ref()
@@ -605,6 +609,8 @@ pub fn export_synapse4(store: &Store, device_key: &str) -> Result<ExportReport> 
             }
         }
         mappings::export(profile, decoded_object, pid)?;
+        mouse_assignment::export_pending(profile, decoded_object, pid)?;
+        assignment_state::export_local(profile, decoded_object, pid)?;
         if pid == 605 {
             settings::export_snap_tap(profile, decoded_object)?;
             settings::export_game_mode(profile, decoded_object)?;
@@ -772,8 +778,8 @@ fn export_effect(
     let colors = |items: &[Rgb]| {
         json!({
             "isRandom": items.is_empty(),
-            "color1": items.first().copied().map(&rgb).unwrap_or_else(|| "#00ff00".into()),
-            "color2": items.get(1).copied().map(&rgb).unwrap_or_else(|| "no-color".into())
+            "color1": items.first().copied().map(rgb).unwrap_or_else(|| "#00ff00".into()),
+            "color2": items.get(1).copied().map(rgb).unwrap_or_else(|| "no-color".into())
         })
     };
     Ok(Some(match effect {
@@ -1271,3 +1277,6 @@ mod tests {
         );
     }
 }
+
+pub mod legacy_archive;
+pub mod windows_shortcuts;

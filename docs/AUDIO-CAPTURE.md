@@ -2,8 +2,10 @@
 
 The app now has an opt-in Rust WASAPI render-loopback backend, an owned capture
 handle, and bounded PCM/RMS/peak/FFT analysis. It is not yet connected to the Audio
-Meter screen or Studio renderer. Its analysis is explicitly defined here; it is
-not claimed to reproduce the proprietary Razer FFT scaling or effect mapping.
+Meter screen or Studio renderer. [Studio authoring](STUDIO-AUDIO.md) now supports
+the recovered Boost/Auto/Decay/gradient settings without starting capture. The
+capture analysis is explicitly defined here; it is not claimed to reproduce the
+proprietary Razer FFT scaling or effect mapping.
 
 Normal startup and endpoint discovery do not start capture. The explicit local
 diagnostic captures1..30 seconds from the default Multimedia playback endpoint:

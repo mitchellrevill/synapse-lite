@@ -31,9 +31,15 @@ impl View {
 fn entries(state:&State)->Vec<&Value> {
     static LINKED:std::sync::LazyLock<Value>=std::sync::LazyLock::new(||json!({"id":linked_games::ID,"name":"LINKED GAMES","module":"linked-games"}));
     static MACRO:std::sync::LazyLock<Value>=std::sync::LazyLock::new(||json!({"id":macro_view::ID,"name":"MACRO","module":"macro"}));
+    static CHROMA:std::sync::LazyLock<Value>=std::sync::LazyLock::new(||json!({"id":chroma_view::ID,"name":"CHROMA","module":"chroma"}));
+    static SHORTCUTS:std::sync::LazyLock<Value>=std::sync::LazyLock::new(||json!({"id":shortcuts::ID,"name":"GLOBAL SHORTCUTS","module":"global-shortcuts"}));
+    static SETTINGS:std::sync::LazyLock<Value>=std::sync::LazyLock::new(||json!({"id":settings_view::ID,"name":"SETTINGS","module":"settings"}));
     let mut entries:Vec<_>=state.devices().iter().collect();
+    if state.chroma.used||state.host_tabs.borrow().session.known(chroma_view::ID) {entries.push(&CHROMA);}
     if state.linked_games.used||state.host_tabs.borrow().session.known(linked_games::ID) {entries.push(&LINKED);}
     if state.macros.used||state.host_tabs.borrow().session.known(macro_view::ID) {entries.push(&MACRO);}
+    if state.shortcuts.used||state.host_tabs.borrow().session.known(shortcuts::ID) {entries.push(&SHORTCUTS);}
+    if state.settings.used||state.host_tabs.borrow().session.known(settings_view::ID) {entries.push(&SETTINGS);}
     entries
 }
 
@@ -254,6 +260,8 @@ unsafe fn surface(
     gp::GdipDeleteGraphics(graphics);
 }
 
+// Keep the source-matching drawing parameters explicit; grouping them would churn geometry call sites.
+#[allow(clippy::too_many_arguments)]
 unsafe fn label(
     p: &mut Painter<'_>,
     state: &State,
@@ -268,7 +276,11 @@ unsafe fn label(
     let hover = view.hover.as_deref() == Some(id);
     let pressed = view.pressed.as_deref() == Some(id) && hover;
     surface(p.dc, p.scale, x, width, active, hover, pressed);
-    p.image(state.icons.get(icon), x + 13, 15, 20, 20);
+    if icon == "host-settings" {
+        p.text("⚙", x + 13, 12, 20, 20, p.fonts.normal, MUTED, DT_CENTER);
+    } else {
+        p.image(state.icons.get(icon), x + 13, 15, 20, 20);
+    }
     let old_clip = SaveDC(p.dc);
     let bounds = css_rect(p, x as f32 + 43.0, 18.0, width - 56.0, 14.0);
     IntersectClipRect(p.dc, bounds.left, bounds.top, bounds.right, bounds.bottom);
@@ -420,7 +432,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, window: i32) {
         let width = widths[index];
         let id = device["id"].as_str().unwrap_or("");
         if x + width > g.start && x < g.start + g.viewport {
-            let icon = if device["module"]=="linked-games" {"host-linked-games"} else if device["pid"] == "025D" {
+            let icon = if device["module"]=="settings" {"host-settings"} else if device["module"]=="chroma" {"host-chroma"} else if device["module"]=="linked-games" {"host-linked-games"} else if device["pid"] == "025D" {
                 "host-keyboard"
             } else {
                 "host-mouse"

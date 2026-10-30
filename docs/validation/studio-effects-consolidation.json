@@ -1,0 +1,144 @@
+{
+  "unit": "Six completed Studio effect units consolidated locally",
+  "worktree": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-effects",
+  "branch": "integration/studio-effects-consolidated-2026-10-30",
+  "base": "41b6c8519a165bcf399336c83420f6d2aa693b89",
+  "source_commits": {
+    "wheel": "5913bc0eacf27ddb255616bc05ed26b0614ebb50",
+    "breathing": "5cb97abd48787dd3ce4dfef4750ea289e682fad2",
+    "spectrum": "bb53b8803ff6bf3cc8737807758ec5620e26dd55",
+    "tidal": "c5495d16cfcf527776c15a414054acc4c35e04ab",
+    "fire": "02267db9b36c6a3018c6120eedf91bd6bae76287",
+    "ripple": "025931fdd6d0cad35eb5c3129e6143a040d094e7"
+  },
+  "tests": {
+    "core": {
+      "passed": 692,
+      "failed": 0,
+      "ignored": 9,
+      "doc_passed": 1,
+      "serial": true
+    },
+    "tray": {
+      "passed": 336,
+      "failed": 0,
+      "ignored": 64,
+      "serial": true
+    },
+    "isolated_native": {
+      "passed": 8,
+      "failed": 0,
+      "serial": true,
+      "names": [
+        "native_studio_integrated_effect_fields_routes_and_persistence",
+        "native_studio_wheel_authoring_save_history_and_no_device_output",
+        "native_studio_tidal_authoring_save_history_center_and_runtime_gate",
+        "native_studio_breathing_colors_speed_preview_save_and_undo_preserve_source",
+        "native_studio_spectrum_controls_drag_save_and_scroll",
+        "native_studio_audio_parameters_gradient_save_history_and_capture_refusal",
+        "native_studio_wave_direction_presets_motion_preview_save_and_undo_preserve_source",
+        "native_studio_ambient_region_blur_save_history_and_invalid_values"
+      ]
+    },
+    "optimized_workspace_build": "passed; CLI and tray; jobs1"
+  },
+  "resolved": [
+    "Audio2120/2121, Wheel2130..2132, Tidal2140..2143; active-effect and open-view ownership",
+    "Source Spectrum scrolling with shared per-effect gradient dispatch",
+    "Explicit Breathing clock and Wheel origin combined with synthetic-only Ambient flag",
+    "Layer params dirty tracking for all effects",
+    "Fire source rebuild/random-state semantics",
+    "Effect-owned center picking; semantic native Add menu lookup; cancellation pointer release"
+  ],
+  "native": {
+    "audio_fields": [
+      2120,
+      2121
+    ],
+    "device_requests": 0,
+    "effect_switching": [
+      "wheel",
+      "tidal",
+      "audio",
+      "spectrum",
+      "breathing",
+      "fire",
+      "ambient"
+    ],
+    "saved_independent_values": true,
+    "stale_field_messages_inert": true,
+    "tidal_fields": [
+      2140,
+      2141,
+      2142,
+      2143
+    ],
+    "wheel_fields": [
+      2130,
+      2131,
+      2132
+    ]
+  },
+  "screenshots": [
+    {
+      "file": "integrated-audio.png",
+      "sha256": "1e20e8d8fdf525a6d693eef71c179c672397e8bbb74ba374029c72e206b45601"
+    },
+    {
+      "file": "integrated-breathing.png",
+      "sha256": "bd0047ba98cd8a67e2bee6046a804b741160ef766e88aac1de7fa4d90a11bb6d"
+    },
+    {
+      "file": "integrated-fire.png",
+      "sha256": "34dd187db7c1a83c905056b2f6e601536c3a8b5b1eb296a46bebecaa4c22294f"
+    },
+    {
+      "file": "integrated-spectrum.png",
+      "sha256": "331ab51a9edf0af90294781cbf41f608ea19c98d5ec012c11ddda147ccafdd90"
+    },
+    {
+      "file": "integrated-tidal.png",
+      "sha256": "4709aafb49820869b48119d07900f648b9650be6ffddf2ada614d977a44feae8"
+    },
+    {
+      "file": "integrated-wheel.png",
+      "sha256": "93fc3d0b5d898dd2d31fc4a8ff5f97ad9126ceec91891d292450020b24152425"
+    }
+  ],
+  "safety": {
+    "pushed_during_consolidation": false,
+    "canonical_or_root_checkout_modified": false,
+    "other_feature_checkouts_modified": false,
+    "physical_output_or_live_input": false,
+    "shared_profile_writes": false,
+    "new_threads_or_agents": false
+  },
+  "remaining": [
+    "Tidal radial renderer remains refused",
+    "Ripple native panel and propagation/trigger runtime absent; core authoring only",
+    "Breathing input/toggle and Wheel finite/input execution remain gated",
+    "Existing per-feature visual/native-oracle/fractional-center/malformed-gradient/stock-reimport gaps",
+    "Physical/optical/device acceptance and input ownership/terminal completion",
+    "Full feature parity, exact pixels and total application RAM below100MB acceptance",
+    "Root must fetch and merge the local consolidation; no push/auto-merge performed"
+  ],
+  "test_fixture_correction": "First combined-window test lacked an explicit Spectrum preset before editing stops; the fixture now selects a source preset. No production fallback or renderer gate was relaxed.",
+  "build_environment": {
+    "cargo_home": "C:/Users/mitch/Documents/Codex/2026-10-27/what-i-want-you-to-do/work/cargo-home",
+    "target": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-next-studio-wheel\\work\\effects-target",
+    "temp": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-next-studio-wheel\\work\\effects-consolidation",
+    "jobs": 1
+  },
+  "optimized_binaries": [
+    {
+      "file": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-next-studio-wheel\\work\\effects-target\\release\\secbird.exe",
+      "bytes": 1549824,
+      "sha256": "2773a4172fcfb55168aef70cb81edcf93699eb65361044005471b843aa43e9f0"
+    },
+    {
+      "file": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-next-studio-wheel\\work\\effects-target\\release\\secbird-tray.exe",
+      "bytes": 3731456,
+      "sha256": "86fb874fd5a2e8b7a77e5dab0f496b66d21c6a02035f525d09629b14b75c3460"
+    }
+  ]
+}

@@ -1,0 +1,188 @@
+{
+  "recovered": [
+    {
+      "pid": "605",
+      "main": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-27\\what-i-want-you-to-do\\work\\synapse-renderer\\cache\\apps.razer.com\\synapse\\products\\605\\ui\\static\\js\\main.fcf07de2.js",
+      "main_sha256": "307e2b199037ed53a8fde90d76fc67a9a3766a9361fb152e7820d8bf05f19c65",
+      "choice_table_offset": 1818027,
+      "choices": [
+        [
+          "VolumeDown",
+          "VOLUME_DOWN"
+        ],
+        [
+          "VolumeUp",
+          "VOLUME_UP"
+        ],
+        [
+          "MuteVolume",
+          "MUTE_VOLUME"
+        ],
+        [
+          "MicVolumeUp",
+          "MIC_VOLUME_UP"
+        ],
+        [
+          "MicVolumeDown",
+          "MIC_VOLUME_DOWN"
+        ],
+        [
+          "MuteMic",
+          "MUTE_MIC"
+        ],
+        [
+          "MuteAll",
+          "MUTE_ALL"
+        ],
+        [
+          "Play",
+          "PLAY_PAUSE"
+        ],
+        [
+          "PrevTrack",
+          "PREVIOUS_TRACK"
+        ],
+        [
+          "NextTrack",
+          "NEXT_TRACK"
+        ]
+      ],
+      "map_media": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-27\\what-i-want-you-to-do\\work\\synapse-renderer\\cache\\apps.razer.com\\synapse\\products\\605\\ui\\static\\js\\MapMedia.f5d0f9ae.chunk.js",
+      "map_media_sha256": "beaa69fcfa75acdd021d4f58c3540327c344985deccff4981a8ebe4ffe0adf38"
+    },
+    {
+      "pid": "196",
+      "main": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-27\\what-i-want-you-to-do\\work\\synapse-renderer\\cache\\apps.razer.com\\synapse\\products\\196\\ui\\static\\js\\main.bbc961f9.js",
+      "main_sha256": "f99b1f88ca9496a77cab258d05814a312b876873cb5c586841c28a732db78c42",
+      "choice_table_offset": 4074543,
+      "choices": [
+        [
+          "VolumeDown",
+          "VOLUME_DOWN"
+        ],
+        [
+          "VolumeUp",
+          "VOLUME_UP"
+        ],
+        [
+          "MuteVolume",
+          "MUTE_VOLUME"
+        ],
+        [
+          "MicVolumeUp",
+          "MIC_VOLUME_UP"
+        ],
+        [
+          "MicVolumeDown",
+          "MIC_VOLUME_DOWN"
+        ],
+        [
+          "MuteMic",
+          "MUTE_MIC"
+        ],
+        [
+          "MuteAll",
+          "MUTE_ALL"
+        ],
+        [
+          "Play",
+          "PLAY_PAUSE"
+        ],
+        [
+          "PrevTrack",
+          "PREVIOUS_TRACK"
+        ],
+        [
+          "NextTrack",
+          "NEXT_TRACK"
+        ]
+      ],
+      "map_media": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-27\\what-i-want-you-to-do\\work\\synapse-renderer\\cache\\apps.razer.com\\synapse\\products\\196\\ui\\static\\js\\MapMedia.5ecd29bf.chunk.js",
+      "map_media_sha256": "4438972361eabf33b4b8b50fae3902350b863126631b53a4d6d7a104c297fdc1"
+    }
+  ],
+  "rea_parent": "ev_2074a9f1f13f85d66f0eca3101865a312f6eb4e4faee472e76dd5ea3774f3327",
+  "rea_summary": "ev_76c4c0ae68c32591d641c239243d3767529c058ea4737a46a9ffc4092dcc465d",
+  "limits": "Static inert JavaScript only; unresolved imports and semantic unknowns do not prove delivery. No vendor bootstrap was executed.",
+  "controlled_helper_replay": [
+    {
+      "pid": "605",
+      "pure_getMappingData_cases": 10,
+      "results": [
+        {
+          "multimediaAssignment": "VolumeDown",
+          "useTurbo": true
+        },
+        {
+          "multimediaAssignment": "VolumeUp",
+          "useTurbo": true
+        },
+        {
+          "multimediaAssignment": "MuteVolume"
+        },
+        {
+          "multimediaAssignment": "MicVolumeUp"
+        },
+        {
+          "multimediaAssignment": "MicVolumeDown"
+        },
+        {
+          "multimediaAssignment": "MuteMic"
+        },
+        {
+          "multimediaAssignment": "MuteAll"
+        },
+        {
+          "multimediaAssignment": "Play"
+        },
+        {
+          "multimediaAssignment": "PrevTrack"
+        },
+        {
+          "multimediaAssignment": "NextTrack"
+        }
+      ],
+      "bootstrap_executed": false
+    },
+    {
+      "pid": "196",
+      "pure_getMappingData_cases": 10,
+      "results": [
+        {
+          "multimediaAssignment": "VolumeDown",
+          "useTurbo": true
+        },
+        {
+          "multimediaAssignment": "VolumeUp",
+          "useTurbo": true
+        },
+        {
+          "multimediaAssignment": "MuteVolume"
+        },
+        {
+          "multimediaAssignment": "MicVolumeUp"
+        },
+        {
+          "multimediaAssignment": "MicVolumeDown"
+        },
+        {
+          "multimediaAssignment": "MuteMic"
+        },
+        {
+          "multimediaAssignment": "MuteAll"
+        },
+        {
+          "multimediaAssignment": "Play"
+        },
+        {
+          "multimediaAssignment": "PrevTrack"
+        },
+        {
+          "multimediaAssignment": "NextTrack"
+        }
+      ],
+      "bootstrap_executed": false
+    }
+  ],
+  "rust_ids_equal_recovered_tables": true
+}

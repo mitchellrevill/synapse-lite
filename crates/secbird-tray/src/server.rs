@@ -18,6 +18,8 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 mod lighting;
 #[cfg(test)]
+mod mouse_assignment;
+#[cfg(test)]
 mod application_paths_tests;
 #[cfg(test)]
 mod physical_static_probe;
@@ -354,9 +356,17 @@ struct Body {
     #[serde(default)]
     expected_device: Option<String>,
     #[serde(default)]
+    wheel_control: Option<secbird_core::wheel_controls::WheelControl>,
+    #[serde(default)]
+    expected_connection: Option<u64>,
+    #[serde(default)]
     critical_threshold_percent: Option<u8>,
     #[serde(default)]
     tracking_distance_mm: Option<u8>,
+    #[serde(default)]
+    sensitivity_draft: Option<secbird_core::sensitivity_assignment::Intent>,
+    #[serde(default)]
+    expected_profile_data: Option<Value>,
     #[serde(default)]
     dynamic_sensitivity: Option<secbird_core::dynamic_sensitivity::DynamicSensitivity>,
     #[serde(default)]
@@ -438,8 +448,64 @@ fn buttons_json(dev: &Device, store: &mut Store) -> Value {
 }
 
 fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
+    if path == "/api/keyboard-assignment-local" {
+        return keyboard_assignment_local(engine, body);
+    }
+    if path == "/api/assignment-windows-local" {
+        let value: Value = serde_json::from_slice(body).map_err(|e|Error::InvalidArg(e.to_string()))?;
+        let text = |key: &str| value[key].as_str().filter(|s|!s.is_empty()).ok_or_else(||Error::InvalidArg(format!("Missing {key}")));
+        let id = text("id")?;
+        let dev = engine.devices().iter().find(|d|d.key()==id).ok_or_else(||Error::InvalidArg("Selected device disconnected".into()))?;
+        let mut store = Store::load(&config_dir().join("profiles.json"))?;
+        let profiles = store.devices.get_mut(id).ok_or_else(||Error::InvalidArg("Stored device unavailable".into()))?;
+        if profiles.active != text("expected_profile")? {return Err(Error::InvalidArg("Active profile changed; reopen assignment".into()));}
+        let profile = profiles.profiles.get_mut(&profiles.active).ok_or_else(||Error::InvalidArg("Stored profile unavailable".into()))?;
+        if serde_json::to_value(&*profile).map_err(|e|Error::Db(e.to_string()))? != value["original_profile"] {
+            return Err(Error::InvalidArg("Profile changed; reopen assignment".into()));
+        }
+        let hyper = value["hyper"].as_bool().ok_or_else(||Error::InvalidArg("Missing assignment layer".into()))?;
+        let prepared=secbird_core::profile_compat::assignment_state::prepare_layer(profile,dev.pid,text("expected_profile")?,text("input")?,hyper)?;
+        *profile = secbird_core::profile_compat::windows_shortcuts::edit(&prepared,dev.pid,text("input")?,text("input_type")?,hyper,text("choice")?)?;
+        secbird_core::profile_compat::assignment_state::mark_local(profile,dev.pid,text("input")?,hyper)?;
+        store.save()?;
+        return Ok(json!({"ok":true,"local_only":true}));
+    }
     let b: Body = serde_json::from_slice(body).map_err(|e| Error::InvalidArg(e.to_string()))?;
+    if matches!(path, "/api/device-sleep" | "/api/critical-threshold" | "/api/calibration-tracking" | "/api/dynamic-sensitivity" | "/api/sensor-rotation") {
+        validate_mouse_connection(engine, &b)?;
+    }
+    if path == "/api/sensitivity-draft" {
+        if b.id.is_empty() || b.expected_device.as_deref() != Some(&b.id) {
+            return Err(Error::InvalidArg("Sensitivity draft requires the selected device identity".into()));
+        }
+        let dev = engine.devices().iter().find(|d| d.key() == b.id)
+            .ok_or_else(|| Error::InvalidArg("Selected mouse disconnected".into()))?;
+        let range = dev.spec.as_ref().and_then(|s| s.dpi.as_ref())
+            .ok_or_else(|| Error::Unsupported("Device DPI capability unavailable".into()))?;
+        let profile = b.expected_profile.as_deref().ok_or_else(|| Error::InvalidArg("Profile identity missing".into()))?;
+        let expected = b.expected_profile_data.as_ref().ok_or_else(|| Error::InvalidArg("Profile snapshot missing".into()))?;
+        let intent = b.sensitivity_draft.as_ref().ok_or_else(|| Error::InvalidArg("Sensitivity draft missing".into()))?;
+        let mut store = Store::load(&config_dir().join("profiles.json"))?;
+        secbird_core::sensitivity_assignment::save_draft(&mut store, &b.id, profile, dev.pid, range, expected, intent)?;
+        return Ok(json!({"ok":true,"delivery":"local draft only; no device assignment applied","state":state(engine)}));
+    }
     if path=="/api/profile" && b.action=="paths" && (b.id.is_empty() || b.expected_device.as_deref()!=Some(&b.id) || !engine.devices().iter().any(|dev|dev.key()==b.id)) {return Err(Error::InvalidArg("Executable links require the selected device identity".into()));}
+    if path == "/api/customize-multimedia" {
+        let dev = engine.devices().iter().find(|d| d.key() == b.id).ok_or_else(|| Error::InvalidArg("Selected device disconnected".into()))?;
+        let profile = b.expected_profile.as_deref().filter(|p| !p.is_empty()).ok_or_else(|| Error::InvalidArg("Selected profile identity required".into()))?;
+        let mut edit:secbird_core::profile_compat::multimedia::Edit = serde_json::from_value(b.data).map_err(|e| Error::InvalidArg(format!("Invalid multimedia assignment: {e}")))?;
+        let mut store = Store::load(&config_dir().join("profiles.json"))?;
+        {
+            let profiles=store.devices.get_mut(&b.id).ok_or_else(||Error::InvalidArg("Stored device unavailable".into()))?;
+            if profiles.active!=profile || serde_json::to_value(profiles.active()).map_err(|e|Error::Db(e.to_string()))? != edit.expected {return Err(Error::InvalidArg("Profile changed; reopen assignment".into()));}
+            *profiles.active_mut()=secbird_core::profile_compat::assignment_state::prepare_layer(profiles.active(),dev.pid,profile,&edit.input_id,edit.hyper)?;
+            edit.expected=serde_json::to_value(profiles.active()).map_err(|e|Error::Db(e.to_string()))?;
+        }
+        secbird_core::profile_compat::multimedia::update(&mut store,&b.id,profile,dev.pid,&edit)?;
+        secbird_core::profile_compat::assignment_state::mark_local(store.devices.get_mut(&b.id).unwrap().active_mut(),dev.pid,&edit.input_id,edit.hyper)?;
+        store.save()?;
+        return Ok(json!({"ok":true,"status":"Saved locally. Multimedia device/host output is unavailable.","state":state(engine)}));
+    }
     if path=="/api/sensor-rotation" {
         if b.id.is_empty() || b.expected_device.as_deref()!=Some(&b.id){return Err(Error::InvalidArg("Rotation requires the selected device identity".into()));}
         let profile=b.expected_profile.as_deref().filter(|p|!p.is_empty()).ok_or_else(||Error::InvalidArg("Rotation requires the selected profile identity".into()))?;
@@ -462,6 +528,12 @@ fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
         let mm=b.tracking_distance_mm.ok_or_else(||Error::InvalidArg("Tracking distance is missing".into()))?;
         let mut store=Store::load(&config_dir().join("profiles.json"))?;
         secbird_core::mouse_sensor::set_tracking_distance(dev,&mut store,expected,mm)?;
+        return Ok(json!({"ok":true,"state":state(engine)}));
+    }
+    if path == "/api/wheel-control" {
+        let dev = engine.devices().iter().find(|dev| dev.key() == b.id)
+            .ok_or_else(|| Error::NotFound("Selected wheel device is not connected".into()))?;
+        wheel_control_post(dev, &b)?;
         return Ok(json!({"ok":true,"state":state(engine)}));
     }
     if path == "/api/sync" {
@@ -566,7 +638,7 @@ fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
             .ok_or_else(|| Error::NotFound(format!("device {target}")))?;
         let response = lighting::effect(dev, &mut store, &b, gate, worker_ready, &mut trace);
         match &response {
-            Ok(_) if matches!(b.source_effect_id, Some(2 | 3 | 4)) => {
+            Ok(_) if matches!(b.source_effect_id, Some(2..=4)) => {
                 let profiles = store
                     .devices
                     .get(&target)
@@ -615,6 +687,16 @@ fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
                 Ok(json!({ "dpi": [x, y] }))
             }
             "/api/polling" => actions::set_polling(dev, &mut store, b.hz).map(|_| json!({})),
+            "/api/onboard-settings" => {
+                validate_power_identity(&b)?;
+                let profile = b.expected_profile.as_deref().ok_or_else(|| Error::InvalidArg("expected_profile is required".into()))?;
+                match b.action.as_str() {
+                    "save" => secbird_core::onboard::save(dev, &mut store, &b.id, profile)?,
+                    "restore" => secbird_core::onboard::restore(dev, &mut store, &b.id, profile)?,
+                    _ => return Err(Error::InvalidArg("Use save or restore for onboard settings".into())),
+                };
+                onboard_device_snapshot(dev, &mut store, profile)
+            }
             "/api/stages" => {
                 let want = secbird_core::DpiStages { active: b.active, stages: b.stages.clone(), ..Default::default() };
                 let sent = actions::set_dpi_stages(dev, &mut store, &want)?;
@@ -777,6 +859,8 @@ fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
     if path == "/api/find-light" {
         engine.pause_frames(b.light.is_some());
     }
+    // Recovery-sensitive onboard operations are never automatically retried.
+    if path == "/api/onboard-settings" { return attempt(engine); }
     match attempt(engine) {
         Err(Error::Hid(_)) | Err(Error::NotFound(_)) | Err(Error::NoReply(_)) => {
             engine.rescan();
@@ -784,6 +868,34 @@ fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
         }
         other => other,
     }
+}
+
+/// Save desired source intent only. Deliberately bypasses every device setter.
+fn keyboard_assignment_local(engine: &Engine, body: &[u8]) -> Result<Value, Error> {
+    #[derive(Deserialize)]
+    struct Edit {
+        id: String,
+        profile: String,
+        expected: Value,
+        input: String,
+        input_type: String,
+        hyper: bool,
+        setting: secbird_core::profile_compat::keyboard_assignments::Setting,
+    }
+    let edit: Edit = serde_json::from_slice(body).map_err(|e|Error::InvalidArg(e.to_string()))?;
+    let device = engine.devices().iter().find(|d|d.key() == edit.id).ok_or_else(||Error::InvalidArg("Selected device disconnected".into()))?;
+    let mut store = Store::load(&config_dir().join("profiles.json"))?;
+    let profiles = store.for_device(device);
+    if profiles.active != edit.profile || serde_json::to_value(profiles.active()).map_err(|e|Error::Db(e.to_string()))? != edit.expected {
+        return Err(Error::InvalidArg("Profile changed; reopen the assignment before saving".into()));
+    }
+    let prepared=secbird_core::profile_compat::assignment_state::prepare_layer(profiles.active(),device.pid,&edit.profile,&edit.input,edit.hyper)?;
+    let mut next = secbird_core::profile_compat::keyboard_assignments::update(&prepared, device.pid, &edit.input, &edit.input_type, edit.hyper, &edit.setting)?;
+    secbird_core::profile_compat::assignment_state::mark_local(&mut next,device.pid,&edit.input,edit.hyper)?;
+    *profiles.active_mut() = next;
+    secbird_core::profile_compat::validate_store_budget(&store)?;
+    store.save()?;
+    Ok(json!({"ok":true,"local_only":true}))
 }
 
 /// One color, or one effect started together, on every zone of every connected device.
@@ -815,20 +927,26 @@ fn sync(engine: &mut Engine, color: &str, effect: &str) -> Result<Value, Error> 
 }
 
 /// The app's own settings, for the editor's Settings page.
-fn settings_json(engine: &Engine) -> Value {
+pub(crate) fn settings_json(engine: &Engine) -> Value {
     let s = crate::settings::TraySettings::load();
+    let startup=crate::settings::autostart_enabled();
     json!({
         "version": env!("CARGO_PKG_VERSION"),
         "measurement_read_only":engine.is_measurement_read_only(),
         "query_only_device_handles":engine.is_measurement_read_only() && engine.devices().iter().all(Device::is_query_only),
         "repository": env!("CARGO_PKG_REPOSITORY"),
         "folder": config_dir().display().to_string(),
-        "autostart": crate::settings::autostart_enabled(),
+        "autostart": startup.as_ref().ok().copied(),
+        "autostart_error": startup.err(),
+        "settings_error": s.read_error,
+        "start_minimized": s.start_minimized,
+        "lighting_devices": state(engine)["devices"].as_array().map(|devices|devices.iter().map(|d|json!({"id":d["id"],"name":d["name"],"active":d["active"],"lighting_control":d["lighting_control"]})).collect::<Vec<_>>()).unwrap_or_default(),
         "updates": !s.updates_off,
         "firmware_weekly": s.firmware_weekly,
         "popups": !s.popups_off,
         "battery_warning": !s.battery_warning_off,
         "battery_warning_at": s.low_battery(),
+        "battery_devices": engine.devices().iter().filter(|d|d.spec.as_ref().is_some_and(|s|s.wireless)).map(|d|json!({"id":d.key(),"name":d.name(),"preferences":crate::battery_notifications::preferences(&s,&d.key())})).collect::<Vec<_>>(),
         "auto_switch": !s.auto_switch_off,
         "away_lights": s.away_lights.as_deref().unwrap_or(""),
         "synapse": engine.synapse(),
@@ -837,41 +955,12 @@ fn settings_json(engine: &Engine) -> Value {
 
 /// Settings page actions that are about the app, not one device. `None` for other paths.
 fn app_post(engine: &mut Engine, path: &str, b: &Body) -> Option<Result<Value, Error>> {
-    use crate::settings::{set_autostart, TraySettings};
     Some(match path {
-        "/api/settings" => {
-            let mut s = TraySettings::load();
-            match b.key.as_str() {
-                "autostart" => set_autostart(b.on),
-                "updates" => s.updates_off = !b.on,
-                "firmware_weekly" => s.firmware_weekly = b.on,
-                "popups" => s.popups_off = !b.on,
-                "battery_warning" => s.battery_warning_off = !b.on,
-                "battery_warning_at" => {
-                    let range = crate::settings::BATTERY_RANGE;
-                    if !range.contains(&b.value) {
-                        return Some(Err(Error::InvalidArg(format!(
-                            "pick a battery warning level from {}% to {}%",
-                            range.start(),
-                            range.end()
-                        ))));
-                    }
-                    s.battery_warning_at = Some(b.value);
-                }
-                "auto_switch" => s.auto_switch_off = !b.on,
-                // `data`: "dim", "off", or "" to leave the lights as they are.
-                "away_lights" => {
-                    let want = b.data.as_str().unwrap_or_default();
-                    if !want.is_empty() && !crate::settings::AWAY_LIGHTS.iter().any(|(name, _)| *name == want) {
-                        return Some(Err(Error::InvalidArg(format!("unknown choice '{want}' for the lights when away"))));
-                    }
-                    s.away_lights = (!want.is_empty()).then(|| want.to_string());
-                }
-                other => return Some(Err(Error::InvalidArg(format!("unknown setting '{other}'")))),
-            }
-            s.save();
+        "/api/settings" => (|| {
+            crate::settings::change_local(&b.key,b.on,b.value,b.data.as_str().unwrap_or_default(),engine.is_measurement_read_only())
+                .map_err(Error::InvalidArg)?;
             Ok(settings_json(engine))
-        }
+        })(),
         "/api/update-check" => secbird_core::update::check().map(|r| match r {
             Some(r) => json!({ "latest": r.version, "url": r.url, "installed": secbird_core::update::installed() }),
             None => json!({ "latest": null }),
@@ -995,7 +1084,8 @@ pub(crate) fn mouse_sensor_snapshot(engine: &mut Engine, id: &str, profile: &str
     };
     let firmware=dev.firmware_version().ok();
     let rotation=match engine.rotation_snapshot(id,profile){Ok(value)=>value,Err(error)=>json!({"available":false,"error":error.to_string()})};
-    Ok(json!({"device":id,"profile":profile,"calibration":calibration,"dynamic":dynamic,"rotation":rotation,"firmware":firmware}))
+    let connection = engine.devices().iter().find(|d|d.key()==id).map(Device::connection_id);
+    Ok(json!({"device":id,"connection_id":connection,"profile":profile,"calibration":calibration,"dynamic":dynamic,"rotation":rotation,"firmware":firmware}))
 }
 
 fn state(engine: &Engine) -> Value {
@@ -1006,7 +1096,8 @@ fn state(engine: &Engine) -> Value {
         "query_only_device_handles": engine.is_measurement_read_only() && engine.devices().iter().all(Device::is_query_only),
         "devices": engine.devices().iter().map(|dev|{
             let mut device=device_json(dev);
-            device["lighting_runtime"]=runtime.get(&dev.key()).cloned().unwrap_or(Value::Null);
+            device["lighting_runtime"]=runtime.get(dev.key()).cloned().unwrap_or(Value::Null);
+            device["chroma_quick"]=chroma_quick_capabilities(dev,engine.uniform_is_enabled());
             device
         }).collect::<Vec<_>>(),
         "unsupported": engine.unsupported().iter().map(|u| json!({
@@ -1014,6 +1105,26 @@ fn state(engine: &Engine) -> Value {
         })).collect::<Vec<_>>(),
         "synapse": engine.synapse(),
     })
+}
+
+/// Conservative dashboard admission, not a replacement for action-time gates.
+/// No capability is inferred for another product or an unreadable mode.
+fn chroma_quick_capabilities(dev: &Device, worker_ready: bool) -> Value {
+    if dev.pid != 605 || dev.interface != 2 || dev.spec.is_none() {
+        return json!({"source_effects":[],"mode":null,"error":"No verified Chroma Quick route"});
+    }
+    match dev.ornata_mode_readback() {
+        Ok(mode) => {
+            let effects: &[u8] = match mode.mode() {
+                0 => &[1,2,3,7],
+                3 if worker_ready => &[1,2,3,4],
+                3 => &[1],
+                _ => &[],
+            };
+            json!({"source_effects":effects,"mode":mode.mode(),"error":if effects.is_empty(){Some("No supported Quick effect route in this mode")}else{None}})
+        }
+        Err(error) => json!({"source_effects":[],"mode":null,"error":error.to_string()}),
+    }
 }
 
 /// The macro id an action text plays (`macro:3@hold` -> 3).
@@ -1052,6 +1163,27 @@ fn validate_power_identity(body: &Body) -> Result<(), Error> {
     Ok(())
 }
 
+fn wheel_control_post(dev: &Device, body: &Body) -> Result<(), Error> {
+    if body.id.is_empty() || body.expected_device.as_deref() != Some(body.id.as_str()) || dev.key() != body.id {
+        return Err(Error::InvalidArg("Wheel actions require the exact selected device identity".into()));
+    }
+    let control = body.wheel_control.ok_or_else(|| Error::InvalidArg("wheel_control is required".into()))?;
+    let enabled = body.enabled.ok_or_else(|| Error::InvalidArg("enabled must be a boolean".into()))?;
+    dev.set_wheel_control(control, enabled)
+}
+
+fn wheel_controls_json(dev: &Device) -> Value {
+    use secbird_core::wheel_controls::{self, WheelControl};
+    if !wheel_controls::supports(dev) { return json!([]); }
+    json!(WheelControl::ALL.map(|control| {
+        let value = dev.wheel_control(control);
+        json!({"control":control,"title":control.title(),"source_supported":true,
+            "slot":1,"available":value.is_ok(),"writable":value.is_ok() && !dev.is_query_only(),
+            "enabled":value.as_ref().ok(),"error":value.err().map(|e|e.to_string()),
+            "coverage":"source-supported; simulated; physical validation pending"})
+    }))
+}
+
 fn critical_threshold_post(dev: &Device, store: &mut Store, body: &Body) -> Result<Value, Error> {
     validate_power_identity(body)?;
     let percent = body
@@ -1070,6 +1202,18 @@ fn device_sleep_post(dev: &Device, body: &Body) -> Result<Value, Error> {
     validate_power_identity(body)?;
     actions::set_device_sleep_minutes(dev, body.expected_device.as_deref().unwrap(), body.minutes)?;
     Ok(json!({"device_sleep":device_sleep_json(dev)}))
+}
+
+fn validate_mouse_connection(engine: &Engine, body: &Body) -> Result<(), Error> {
+    if body.id.is_empty() || body.expected_device.as_deref() != Some(body.id.as_str()) {
+        return Err(Error::InvalidArg("Mouse actions require the exact selected device identity".into()));
+    }
+    let device = engine.devices().iter().find(|d| d.key() == body.id)
+        .ok_or_else(|| Error::InvalidArg("Mouse disconnected; refresh before changing settings".into()))?;
+    if body.expected_connection != Some(device.connection_id()) {
+        return Err(Error::InvalidArg("Mouse connection changed; refresh before changing settings".into()));
+    }
+    device.require_mouse_identity()
 }
 
 fn critical_threshold_json(dev: &Device) -> Value {
@@ -1112,6 +1256,88 @@ fn sleep_json(dev: &Device) -> Value {
     }
 }
 
+/// Independent GET results: absence of an answer does not establish sleep,
+/// charge state, or the runtime low-power mode. No new command is guessed.
+fn mouse_power_status(dev: &Device) -> Value {
+    if !matches!(dev.pid,196|197) {
+        return Value::Null;
+    }
+    if let Err(error) = dev.require_mouse_identity() {
+        return json!({"transport":if dev.pid==196 {"wired"} else {"receiver"},
+            "identity_verified":false,"identity_error":error.to_string(),
+            "battery_percent":null,"charging":null,"sleeping":null,"low_power_active":null,
+            "battery_error":"Mouse identity could not be verified","charging_error":"Mouse identity could not be verified"});
+    }
+    let battery = dev.battery();
+    let charging = dev.charging();
+    json!({
+        "transport": if dev.pid==196 { "wired" } else { "receiver" },
+        "identity_verified": true,
+        "battery_percent": battery.as_ref().ok().copied().flatten(),
+        "battery_error": battery.err().map(|e|e.to_string()),
+        "charging": charging.as_ref().ok(),
+        "charging_error": charging.err().map(|e|e.to_string()),
+        "sleeping": null,
+        "low_power_active": null,
+        "low_power_reason": "Runtime low-power status command is not established; threshold is configuration only"
+    })
+}
+
+#[cfg(test)]
+mod wireless_lifecycle_tests {
+    use super::*;
+    use secbird_core::sim::Sim;
+
+    #[test]
+    fn reconnect_rejects_queued_actions_before_hardware_or_profile_access() {
+        let sim = Sim::wireless_mouse();
+        let mut engine = Engine::with_simulated_mouse(&sim).unwrap();
+        let device = &engine.devices()[0];
+        let key = device.key();
+        let body = json!({"id":key,"expected_device":key,"expected_connection":device.connection_id()+1});
+        sim.state().log.clear();
+        for path in ["/api/device-sleep", "/api/critical-threshold", "/api/calibration-tracking", "/api/dynamic-sensitivity", "/api/sensor-rotation"] {
+            assert!(post(&mut engine, path, &serde_json::to_vec(&body).unwrap()).unwrap_err().to_string().contains("connection changed"));
+        }
+        assert!(sim.state().log.is_empty());
+        let mut current = body.clone();
+        current["expected_connection"] = json!(engine.devices()[0].connection_id());
+        let request: Body = serde_json::from_value(current).unwrap();
+        validate_mouse_connection(&engine, &request).unwrap();
+        sim.state().available = false;
+        assert!(validate_mouse_connection(&engine, &request).is_err());
+    }
+
+    #[test]
+    fn battery_and_charging_are_observed_separately_from_power_configuration() {
+        let sim = Sim::wireless_mouse();
+        let db = secbird_core::Db::builtin().unwrap();
+        for pid in [196,197] {
+            let device = sim.open(pid, db.get(pid).cloned()).unwrap();
+            sim.state().charging = true;
+            let value = mouse_power_status(&device);
+            assert!(value["battery_percent"].is_number());
+            assert_eq!(value["charging"], true);
+            assert_eq!(value["transport"], if pid==196 {"wired"} else {"receiver"});
+            assert!(value["sleeping"].is_null());
+            assert!(value["low_power_active"].is_null());
+            sim.state().unavailable_commands.push(secbird_core::commands::CHARGING.get());
+            let partial = mouse_power_status(&device);
+            assert!(partial["battery_percent"].is_number());
+            assert!(partial["charging"].is_null());
+            assert!(partial["charging_error"].is_string());
+            sim.state().unavailable_commands.clear();
+            sim.state().available = false;
+            let value = mouse_power_status(&device);
+            assert!(value["battery_percent"].is_null());
+            assert!(value["charging"].is_null());
+            assert!(value["battery_error"].is_string());
+            assert!(value["charging_error"].is_string());
+            sim.state().available = true;
+        }
+    }
+}
+
 fn device_json(dev: &Device) -> Value {
     let spec = dev.spec.as_ref();
     let (profile_names, active) = Engine::profiles(dev);
@@ -1138,8 +1364,12 @@ fn device_json(dev: &Device) -> Value {
         Some(Kind::Accessory) => "accessory",
         None => "unknown",
     };
+    let power_status = mouse_power_status(dev);
     json!({
         "id": dev.key(),
+        "connection_id": dev.connection_id(),
+        "power_status": power_status,
+        "sensitivity_assignment": dpi_range.filter(|_| matches!(dev.pid,196|197)).map(|r| json!({"min":r.min,"max":r.max,"step":r.step,"xy":true,"delivery":"draft-only"})),
         "pid": format!("{:04X}", dev.pid),
         "name": dev.name(),
         "kind": kind,
@@ -1167,7 +1397,7 @@ fn device_json(dev: &Device) -> Value {
             .then(|| dev.polling_rate().ok())
             .flatten()
             .map(|hz| json!({ "hz": hz, "options": polling_options })),
-        "battery": dev.battery().ok().flatten(),
+        "battery": if matches!(dev.pid,196|197) { power_status["battery_percent"].clone() } else { json!(dev.battery().ok().flatten()) },
         "stages": spec
             .is_none_or(|s| s.dpi.is_some())
             .then(|| dev.dpi_stages().ok())
@@ -1175,8 +1405,10 @@ fn device_json(dev: &Device) -> Value {
             .map(|s| json!({ "active": s.active, "list": s.stages, "max": secbird_core::commands::MAX_DPI_STAGES })),
         "sleep": sleep_json(dev),
         "device_sleep": device_sleep_json(dev),
+        "wheel_controls": wheel_controls_json(dev),
         "critical_threshold": critical_threshold_json(dev),
         "power_settings": power_settings,
+        "onboard_capabilities": secbird_core::onboard::capabilities(dev),
         "lighting_settings":lighting_settings,
         "lighting_readback":lighting_readback,
         "lighting_settings_origin":lighting_origin,
@@ -1321,6 +1553,34 @@ mod tests {
         assert!(critical_threshold_json(&missing)["error"].is_string());
     }
     #[test]
+    fn wheel_capabilities_validate_identity_types_and_keep_controls_independent() {
+        use secbird_core::{sim, Db};
+        let (sim, pid) = sim::preset("basilisk-v3").unwrap();
+        let dev = sim.open(pid, Db::builtin().unwrap().get(pid).cloned()).unwrap();
+        let initial = wheel_controls_json(&dev);
+        assert_eq!(initial.as_array().unwrap().len(), 3);
+        assert!(initial.as_array().unwrap().iter().all(|v| v["writable"] == true));
+        for request in [json!({}), json!({"id":dev.key()}), json!({"id":dev.key(),"expected_device":"other"}),
+            json!({"id":dev.key(),"expected_device":dev.key(),"wheel_control":"mode"})] {
+            let body: Body = serde_json::from_value(request).unwrap();
+            let before = sim.state().log.len();
+            assert!(wheel_control_post(&dev, &body).is_err());
+            assert_eq!(sim.state().log.len(), before);
+        }
+        for bad in [json!({"wheel_control":"unknown"}), json!({"enabled":1}), json!({"enabled":"true"})] {
+            assert!(serde_json::from_value::<Body>(bad).is_err());
+        }
+        let body = serde_json::from_value(json!({"id":dev.key(),"expected_device":dev.key(),"wheel_control":"acceleration","enabled":true})).unwrap();
+        wheel_control_post(&dev, &body).unwrap();
+        assert_eq!(sim.state().wheel_controls, Some([0, 1, 0]));
+        sim.state().active_slot = Some(2);
+        let snapshot = wheel_controls_json(&dev);
+        assert!(snapshot.as_array().unwrap().iter().all(|v| v["available"] == false && v["error"].is_string()));
+        let other = Sim::mouse().open(196, None).unwrap();
+        assert_eq!(wheel_controls_json(&other), json!([]));
+        assert!(wheel_control_post(&other, &body).is_err());
+    }
+    #[test]
     fn source_power_handlers_persist_device_threshold_and_keep_sleep_out_of_profiles() {
         let (sim,dev)=power_device(false);
         let folder=std::env::temp_dir().join(format!("synapse-power-server-{}-{}",std::process::id(),SEQUENCE.fetch_add(1,Ordering::Relaxed)));
@@ -1359,4 +1619,28 @@ mod tests {
         assert_eq!(base64(b"foo"), "Zm9v");
         assert_eq!(base64(b"foobar"), "Zm9vYmFy");
     }
+}
+
+/// Explicit worker GET: does not rescan, apply profiles or mutate storage.
+pub(crate) fn onboard_snapshot(engine: &Engine, id: &str, expected_profile: &str) -> Result<Value, Error> {
+    let dev = engine.devices().iter().find(|d|d.key()==id)
+        .ok_or_else(||Error::NotFound("Selected mouse disconnected; reconnect and read again".into()))?;
+    let mut store = Store::load(&config_dir().join("profiles.json"))?;
+    onboard_device_snapshot(dev, &mut store, expected_profile)
+}
+fn onboard_device_snapshot(dev: &Device, store: &mut Store, expected_profile: &str) -> Result<Value, Error> {
+    if store.for_device(dev).active != expected_profile {
+        return Err(Error::InvalidArg("Selected profile changed; reopen onboard memory".into()));
+    }
+    let capabilities = secbird_core::onboard::capabilities(dev);
+    let saved = store.for_device(dev).onboard_settings.clone();
+    let readback = secbird_core::onboard::read(dev);
+    let value = match readback {
+        Ok(raw) => json!({"available":true,"dpi":raw.dpi_pair(),"stages":raw.dpi_stages(),
+            "polling_hz":secbird_core::onboard::polling_hz(raw.polling[1]),
+            "matches_saved":saved.as_ref().map(|r|r.desired.matches_readback(&raw)),"raw":raw}),
+        Err(error) => json!({"available":false,"error":error.to_string()}),
+    };
+    Ok(json!({"id":dev.key(),"profile":expected_profile,"capabilities":capabilities,"readback":value,
+        "recovery":saved,"legacy_button_backup":store.for_device(dev).onboard.is_some()}))
 }

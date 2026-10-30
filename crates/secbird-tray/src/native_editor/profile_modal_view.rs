@@ -64,6 +64,8 @@ unsafe fn backdrop(state: &State, p: &Painter<'_>) {
     DeleteObject(bitmap);
     DeleteDC(dc);
 }
+// Keep the source-matching drawing parameters explicit; grouping them would churn geometry call sites.
+#[allow(clippy::too_many_arguments)]
 unsafe fn checkbox(
     state: &State,
     p: &mut Painter<'_>,

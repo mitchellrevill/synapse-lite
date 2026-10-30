@@ -1,0 +1,502 @@
+{
+  "schema": 1,
+  "base": "9603b7c85fa86febb324e385c0724c9b5410b2a4",
+  "checkout": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci",
+  "branch": "cleanup/strict-ci-2026-10-30",
+  "scope": "Bounded mechanical Clippy cleanup outside Studio; preserves rendering signatures and hardware gates.",
+  "core_cli_strict_clippy": {
+    "exit_code": 0,
+    "command": "cargo clippy --release --offline -p secbird-core -p secbird --all-targets -j 1 -- -D warnings"
+  },
+  "workspace_all_targets_strict_clippy": {
+    "exit_code": 101,
+    "command": "cargo clippy --release --offline --all-targets -j 1 -- -D warnings",
+    "remaining_errors": [
+      {
+        "code": "clippy::suspicious_assignment_formatting",
+        "file": "crates\\secbird-tray\\src\\native_editor\\studio_view.rs",
+        "line": 767,
+        "message": "this looks like you are trying to use `.. != ..`, but you really are doing `.. = (! ..)`"
+      },
+      {
+        "code": "clippy::permissions_set_readonly_false",
+        "file": "crates\\secbird-tray\\src\\engine\\source_studio\\tests\\brightness.rs",
+        "line": 242,
+        "message": "call to `set_readonly` with argument `false`"
+      },
+      {
+        "code": "clippy::derivable_impls",
+        "file": "crates\\secbird-tray\\src\\host_studio\\session.rs",
+        "line": 123,
+        "message": "this `impl` can be derived"
+      },
+      {
+        "code": "clippy::too_many_arguments",
+        "file": "crates\\secbird-tray\\src\\host_studio\\session.rs",
+        "line": 161,
+        "message": "this function has too many arguments (8/7)"
+      },
+      {
+        "code": "clippy::needless_borrows_for_generic_args",
+        "file": "crates\\secbird-tray\\src\\native_editor\\studio_interaction_tests.rs",
+        "line": 289,
+        "message": "the borrowed expression implements the required traits"
+      },
+      {
+        "code": "clippy::items_after_test_module",
+        "file": "crates\\secbird-tray\\src\\native_editor\\studio_view.rs",
+        "line": 1932,
+        "message": "items after a test module"
+      },
+      {
+        "code": "clippy::type_complexity",
+        "file": "crates\\secbird-tray\\src\\native_editor\\studio_library.rs",
+        "line": 383,
+        "message": "very complex type used. Consider factoring parts into `type` definitions"
+      },
+      {
+        "code": "clippy::field_reassign_with_default",
+        "file": "crates\\secbird-tray\\src\\native_editor\\studio_library.rs",
+        "line": 508,
+        "message": "field assignment outside of initializer for an instance created with Default::default()"
+      },
+      {
+        "code": "clippy::field_reassign_with_default",
+        "file": "crates\\secbird-tray\\src\\native_editor\\studio_preview.rs",
+        "line": 197,
+        "message": "field assignment outside of initializer for an instance created with Default::default()"
+      },
+      {
+        "code": "clippy::collapsible_else_if",
+        "file": "crates\\secbird-tray\\src\\native_editor\\studio_view.rs",
+        "line": 1584,
+        "message": "this `else { if .. }` block can be collapsed"
+      },
+      {
+        "code": "clippy::needless_borrow",
+        "file": "crates\\secbird-tray\\src\\native_editor\\studio_view.rs",
+        "line": 1785,
+        "message": "this expression creates a reference which is immediately dereferenced by the compiler"
+      }
+    ]
+  },
+  "production_strict_clippy": {
+    "exit_code": 101,
+    "command": "cargo clippy --release --offline --workspace -j 1 -- -D warnings",
+    "remaining_errors": [
+      {
+        "code": "clippy::suspicious_assignment_formatting",
+        "file": "crates\\secbird-tray\\src\\native_editor\\studio_view.rs",
+        "line": 767,
+        "message": "this looks like you are trying to use `.. != ..`, but you really are doing `.. = (! ..)`"
+      },
+      {
+        "code": "dead_code",
+        "file": "crates\\secbird-tray\\src\\host_studio.rs",
+        "line": 150,
+        "message": "methods `identity`, `placement_id`, `matches_draft`, `final_random_state`, and `storage_bytes` are never used"
+      },
+      {
+        "code": "dead_code",
+        "file": "crates\\secbird-tray\\src\\host_studio\\preparation.rs",
+        "line": 12,
+        "message": "multiple fields are never read"
+      },
+      {
+        "code": "dead_code",
+        "file": "crates\\secbird-tray\\src\\host_studio\\preparation.rs",
+        "line": 24,
+        "message": "methods `prepared`, `prepared_mut`, `matches_target`, `observation_started_at`, and `metadata_at` are never used"
+      },
+      {
+        "code": "dead_code",
+        "file": "crates\\secbird-tray\\src\\native_editor\\studio_canvas.rs",
+        "line": 126,
+        "message": "method `asset_snapshot` is never used"
+      },
+      {
+        "code": "clippy::derivable_impls",
+        "file": "crates\\secbird-tray\\src\\host_studio\\session.rs",
+        "line": 123,
+        "message": "this `impl` can be derived"
+      },
+      {
+        "code": "clippy::too_many_arguments",
+        "file": "crates\\secbird-tray\\src\\host_studio\\session.rs",
+        "line": 161,
+        "message": "this function has too many arguments (8/7)"
+      },
+      {
+        "code": "clippy::type_complexity",
+        "file": "crates\\secbird-tray\\src\\native_editor\\studio_library.rs",
+        "line": 383,
+        "message": "very complex type used. Consider factoring parts into `type` definitions"
+      },
+      {
+        "code": "clippy::unnecessary_literal_unwrap",
+        "file": "crates\\secbird-tray\\src\\native_editor\\studio_library.rs",
+        "line": 391,
+        "message": "used `unwrap_or_else()` on `None` value"
+      },
+      {
+        "code": "clippy::unnecessary_literal_unwrap",
+        "file": "crates\\secbird-tray\\src\\native_editor\\studio_view.rs",
+        "line": 1077,
+        "message": "used `unwrap_or_else()` on `None` value"
+      },
+      {
+        "code": "clippy::collapsible_else_if",
+        "file": "crates\\secbird-tray\\src\\native_editor\\studio_view.rs",
+        "line": 1584,
+        "message": "this `else { if .. }` block can be collapsed"
+      },
+      {
+        "code": "clippy::needless_borrow",
+        "file": "crates\\secbird-tray\\src\\native_editor\\studio_view.rs",
+        "line": 1785,
+        "message": "this expression creates a reference which is immediately dereferenced by the compiler"
+      }
+    ]
+  },
+  "release_tests": {
+    "command": "cargo test --release --offline --workspace -j 1 -- --test-threads=1 --skip dynamic_sensitivity::tests::presets_custom_chunk_readback_rollback_and_profile_scope",
+    "results_in_binary_execution_order": [
+      {
+        "result": "ok",
+        "passed": "12",
+        "failed": "0",
+        "ignored": "0",
+        "measured": "0",
+        "filtered": "0",
+        "seconds": "0.10"
+      },
+      {
+        "result": "ok",
+        "passed": "764",
+        "failed": "0",
+        "ignored": "9",
+        "measured": "0",
+        "filtered": "1",
+        "seconds": "5.58"
+      },
+      {
+        "result": "ok",
+        "passed": "369",
+        "failed": "0",
+        "ignored": "74",
+        "measured": "0",
+        "filtered": "0",
+        "seconds": "5.51"
+      },
+      {
+        "result": "ok",
+        "passed": "1",
+        "failed": "0",
+        "ignored": "0",
+        "measured": "0",
+        "filtered": "0",
+        "seconds": "0.07"
+      }
+    ],
+    "failed_tests": [],
+    "explicit_exclusion": "Inherited stalled dynamic_sensitivity::tests::presets_custom_chunk_readback_rollback_and_profile_scope; no complete-suite claim."
+  },
+  "semantic_decisions_deferred": [
+    "Audio Choice::Exact and Capture::latest remain intentional backend interfaces. Root explicitly authorized retaining each with a narrow dead-code allowance and TODO: the production desktop has no exact-endpoint selector or meter consumer yet. No runtime integration is claimed.",
+    "Studio remains owned by the existing Wheel/Gradient integration work. Apply only reviewed minimal fixes after those changes; all remaining Studio diagnostics are listed explicitly.",
+    "OutputSession::apply_saved is not a drawing wrapper. Its argument-count lint is left to the Studio owner rather than covered by the drawing allowance."
+  ],
+  "specific_drawing_allowances": "Per-function allow(clippy::too_many_arguments) with source geometry/FFI rationale, explicitly authorized by root; no module/workspace suppression and no drawing signature redesign.",
+  "test_only_helpers": "Assertion-only wrappers/getters/metadata and the unexposed legacy Mouse save harness now compile only in test builds; active generic save paths are unchanged.",
+  "unreachable_lighting_cleanup": "Removed two never-constructed enum tags and their unavailable-notice arms (Sync/LaunchChroma); visible unavailable copy and disabled UI remain unchanged. No working Chroma action was removed.",
+  "float_literal_check": "Five shortened literals verified to have identical f32 bit patterns; visible Unicode additions/removals verified unchanged.",
+  "evidence": [
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\strict-ci-core-final.log",
+      "bytes": 298,
+      "sha256": "8b53c6ddae85a37769b47ae22b4e3efdf4e5c2dd5eee5b98d96ce40e0fcdb3fe"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\strict-ci-final.jsonl",
+      "bytes": 118354,
+      "sha256": "31f2fc7887e693e75d8b406ce19dce037a03a04c9749100c58c625103bbc5b32"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\strict-ci-final.err.log",
+      "bytes": 293,
+      "sha256": "4dc35ecf51b30278cc9a964e6057b394f24f8522400f59083a4b62f43d1d0631"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\strict-ci-production-final.jsonl",
+      "bytes": 100963,
+      "sha256": "ec4286622aed98d2f21f41aba1585d998728e5cc961f2203d44aa4789ecd0308"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\strict-ci-production-final.err.log",
+      "bytes": 288,
+      "sha256": "87f6b0b9d7654f1a170f4bc1b13b7e6d43e4df1825c24c05b14b87177c419f67"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\strict-ci-release-tests.log",
+      "bytes": 137791,
+      "sha256": "168772c97df53d6e426e632d3e7c1420f991f6ee81b1460de097db74afdf779f"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\strict-ci-studio-mechanical.patch",
+      "bytes": 6496,
+      "sha256": "b6b0bd353598101aa4f0903e48f401522413234087cb46bf4556a0e29506599a"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\strict-ci-studio-permissions.patch",
+      "bytes": 1161,
+      "sha256": "2191d961c71481f942f506f7e8748dbd9f5bc623ccadac1cf8d1a5f429655429"
+    }
+  ],
+  "changed_source_evidence": [
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-core\\examples\\check_ornata_gaming_indicator.rs",
+      "bytes": 3994,
+      "sha256": "3c6b83835642ac1ea9c4cc226eb8a1afb703e479d9376a497dfa43966ea5aaa8"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-core\\examples\\observe_ornata_notifications.rs",
+      "bytes": 7343,
+      "sha256": "e05ad6c6ddb71ea41579280ade451f311f98d196f0be2cf7a42aa5e866c5ee51"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-core\\examples\\ornata_frame_probe.rs",
+      "bytes": 20188,
+      "sha256": "10f19bb7a172015ea644f629a90c649d27a51bec8daf0a4b299f71729bfba773"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-core\\src\\breathing_lighting.rs",
+      "bytes": 17377,
+      "sha256": "f1a39ab95c8d281fdeecdc2b4b37f80ddd17958764fdc6e925be9e6c82b2da09"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-core\\src\\mouse_output_ledger.rs",
+      "bytes": 31595,
+      "sha256": "4dd7cfb80cf4ce865859acc99f3107ef1e271b2e113f0ce73a95e64a2f9c09aa"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-core\\src\\ornata_frame.rs",
+      "bytes": 21817,
+      "sha256": "6a857c52aeed58086ffaa1edf81c1c5b1c2b941b1fd175b2db5a23110a6c4a02"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-core\\src\\ornata_gaming_indicator.rs",
+      "bytes": 4417,
+      "sha256": "d035f9825d56831f4b5e06aa9d2e94b4305f0d3204f46c220827fded95ce00f5"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-core\\src\\ornata_spatial.rs",
+      "bytes": 20306,
+      "sha256": "ca2c801ca939bf37ea14bc128adf7059d1fe86a297a7bb787dfda6255172da33"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-core\\src\\profile_compat\\assignment_state.rs",
+      "bytes": 18209,
+      "sha256": "346c0bae1155998c7ddbf94f3471648b6a5a12d85a404e58d70ee6e53481a704"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-core\\src\\profile_compat\\expanded_tests.rs",
+      "bytes": 36562,
+      "sha256": "9ec2aec0313ec684fa2a99f14591e2164422b60ce6c1d5ea414a11dca802ea39"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-core\\src\\profile_compat\\multimedia.rs",
+      "bytes": 12276,
+      "sha256": "616b7f8e082b417fd9017838ff3f4891d660ca550faad4092e9a25d991837102"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-core\\src\\sensor_rotation.rs",
+      "bytes": 24168,
+      "sha256": "af62ff96713a06c1012e6799d70c2a276b67aca1704f507a5ef7967fb32da4f1"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-core\\src\\sensor_rotation_control.rs",
+      "bytes": 19889,
+      "sha256": "dc7590468baa87f5bbd5a5b382380c2e64952a5fab971146daf77cd21fe8de86"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-core\\src\\source_macro.rs",
+      "bytes": 38904,
+      "sha256": "ab5ea6cd0c398e2cfa6db7307f38e80ac9d6b67d503b61aaa118d101cbf055a8"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\audio_capture.rs",
+      "bytes": 13038,
+      "sha256": "7f21b49ae363e4407ba5a3f97e15fc5784d07ae480297e5d87d20ec1eb8dd18a"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\engine.rs",
+      "bytes": 59813,
+      "sha256": "5c83b79205696f86371f48329c3d15962e80996062bfd815609b1bfcfbf965c2"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\engine\\lighting_probe.rs",
+      "bytes": 32443,
+      "sha256": "a6b2c6108556383ee447eecb38b1c822c9e75b27a4e39e195cf0aa877a0715a8"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\global_shortcuts.rs",
+      "bytes": 11518,
+      "sha256": "d26593d8465cd64a280908e7b1e6b78d45d927cee78abd52f1ad0fffda499d2b"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\host_uniform.rs",
+      "bytes": 27576,
+      "sha256": "e9018a08d853815131e1e19b68ae525188f197e32ba89b5951e516ada1f320f9"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\host_wave.rs",
+      "bytes": 16453,
+      "sha256": "25be34b42e5a3616e596f5b8bdb2811a7d77fe92df27b443413552a5bca11f8e"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\host_wave\\preparation.rs",
+      "bytes": 11944,
+      "sha256": "1cebf4dbe066dd1ee2c6a7bd5effc9fb17017b3f025c6a9fcd73b7ddab542a68"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\lighting_runtime.rs",
+      "bytes": 44776,
+      "sha256": "2b81a08d482a6c3c3876646f6183f58a255d3370b9f906093dcee6fb97010244"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\native_editor.rs",
+      "bytes": 243295,
+      "sha256": "4f945698f6e254bb0f78388d80a5f69bff5e6f06dd5f85872f91956a2637b688"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\native_editor\\advanced_interaction_tests.rs",
+      "bytes": 12548,
+      "sha256": "983b88125d2ec846e2812cc45fc3cdf0ff238e315c805ace4cf4a2db3b9e6447"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\native_editor\\assignment_geometry.rs",
+      "bytes": 10693,
+      "sha256": "0e83a6f6d9bdcef1058ff4989ae15e9926650d96f5f83e9acf5055b9434ad2c4"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\native_editor\\assignment_layout.rs",
+      "bytes": 8037,
+      "sha256": "6d98455e13f864a323cd61d18446bcefb94a231aaafeffa18383fa242aa50aea"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\native_editor\\assignment_model.rs",
+      "bytes": 56314,
+      "sha256": "66571b786375c03acc73e271126ebd954d22a934806c51b8f37a5a181b63c1cf"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\native_editor\\assignment_view.rs",
+      "bytes": 86929,
+      "sha256": "85155e5c4b7f8158531c4a455284d0fb1fa6e3bbd1ee01ff9039923dbdfdc557"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\native_editor\\chroma_view.rs",
+      "bytes": 29853,
+      "sha256": "04ccd11662d3152a21b0e269d7ee28e73cdb4d50d9a41a322fbdf8b69d93dd6c"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\native_editor\\color_editor_layout.rs",
+      "bytes": 12264,
+      "sha256": "f0116898f73fc882bc0b7269a58bafe1c0732cfb2eadcd58811b520f4df347ce"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\native_editor\\color_editor_view.rs",
+      "bytes": 15407,
+      "sha256": "1ff13d51321c08c3a3e18a5d56023035851e03aed103f37c230bb0d8ec502546"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\native_editor\\device_information.rs",
+      "bytes": 733,
+      "sha256": "3d11527b2fbabc9d7021c290e0414240b39d55605479e1b4ef57a060e8e2cb7a"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\native_editor\\host_tabs.rs",
+      "bytes": 28029,
+      "sha256": "fed239d2099d612158ded574f1c1dac4b1ecc879469783683cc96a39b9397733"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\native_editor\\image_render.rs",
+      "bytes": 7684,
+      "sha256": "1a5a9dee12c51da308d5a968a1826ce9f911347e4ed2f955d24d8f8b4b347649"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\native_editor\\interaction_tests.rs",
+      "bytes": 121306,
+      "sha256": "c5675b22021218f4911ee7c90b16fb73acc6e591f6bca771af2838067ba02b53"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\native_editor\\lighting_layout.rs",
+      "bytes": 11902,
+      "sha256": "e6712619ac4c3e6a67a7af02ebe7be061946f9c375ea0478b6699ee39c14563c"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\native_editor\\lighting_view.rs",
+      "bytes": 71457,
+      "sha256": "8545711689f2feec6e0d80d6b7d56346d7ba30d923e4e0144a6221a70ff97552"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\native_editor\\macro_view.rs",
+      "bytes": 46398,
+      "sha256": "0fa252fdb26b913e18187cf56ede1dff2bbb81e0196ebb198c73a535d35ef978"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\native_editor\\macro_view\\playback.rs",
+      "bytes": 8076,
+      "sha256": "9f5b4d2ae988292d1e2e62a6ff8689cfad682c09f7d2831bcc36de8a9537f196"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\native_editor\\performance_view.rs",
+      "bytes": 19880,
+      "sha256": "8ed47504230a374cfba22695f2f2446a4ce62a7633a75596d5152827ab6edc14"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\native_editor\\profile_modal_view.rs",
+      "bytes": 18653,
+      "sha256": "cf14a8f91c95ef8ee88e72d9d3601be5c3d58fb1de8869269d1067ef03ae8997"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\native_editor\\shortcuts.rs",
+      "bytes": 38239,
+      "sha256": "32990809dc591d91c955d0ba30eb0a791a833403d8ea3f6fdfbd4f41fab71b4e"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\native_editor\\source_layout.rs",
+      "bytes": 28955,
+      "sha256": "fccb2115e870d3dd818a385b415dc648f8ad047134052c44c769193c57b293c6"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\native_editor\\source_text.rs",
+      "bytes": 14276,
+      "sha256": "73f9db653817eb136e5c303fe85792ed24094c564e4804a87dabfe4bbacbc75c"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\runtime_probe.rs",
+      "bytes": 39997,
+      "sha256": "47e30ee471d48f1dc10faf2c4f480dab3e3c4cf07df4febfebba0edb26708be1"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\server.rs",
+      "bytes": 85470,
+      "sha256": "162723022f158bc6754b9ad8c733fe27ffe28239897a7dd9185b9d3e7c101a30"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-strict-ci\\crates\\secbird-tray\\src\\server\\lighting\\effects.rs",
+      "bytes": 60673,
+      "sha256": "29b95b289f27ca173eafb8089a58ac6b009bf89fb8bc1df46973a7d668b14c1c"
+    }
+  ],
+  "isolation": {
+    "target": "C:/Users/mitch/Documents/Codex/synapse-strict-ci-target",
+    "temp": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\work\\strict-ci-temp",
+    "jobs": 1,
+    "test_threads": 1,
+    "push": false,
+    "root_or_other_feature_checkout_edited": false,
+    "new_codex_thread": false,
+    "physical_device_input_clipboard_driver_service_actions": false
+  }
+}

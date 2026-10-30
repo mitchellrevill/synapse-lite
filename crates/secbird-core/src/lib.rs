@@ -37,9 +37,11 @@ pub mod lighting_readback;
 pub mod log;
 pub mod macros;
 pub mod mouse_symbolic_bridge;
+pub mod mouse_output_ledger;
 pub mod mouse_sensor;
 pub mod dynamic_sensitivity;
 pub mod sensor_curve;
+pub mod sensitivity_assignment;
 #[cfg(windows)]
 pub mod sensor_rotation;
 #[cfg(windows)]
@@ -55,7 +57,9 @@ pub mod ornata_gaming_indicator;
 pub mod ornata_manifest;
 pub mod ornata_spatial;
 pub mod performance;
+pub mod onboard;
 pub mod power;
+pub mod wheel_controls;
 pub mod profile;
 pub mod profile_compat;
 pub mod proto;
@@ -63,6 +67,8 @@ pub mod report;
 pub mod rzcontrol_packet;
 pub mod sim;
 pub mod source_macro;
+pub mod native_host_launch;
+pub mod native_paste_plan;
 pub mod macro_scheduler;
 pub mod snap_tap;
 pub mod studio;
@@ -72,6 +78,7 @@ pub mod uniform_lighting;
 pub mod update;
 pub mod wave_lighting;
 pub mod studio_wave_lighting;
+pub mod studio_wheel_lighting;
 pub mod audio_analysis;
 
 pub use db::{Db, DeviceSpec, Kind, Lighting, Matrix};
@@ -110,3 +117,10 @@ pub fn config_dir() -> std::path::PathBuf {
 pub use hidapi;
 
 pub mod linked_games;
+
+pub mod ambient_sampling;
+pub mod global_shortcuts;
+
+pub mod device_information;
+pub mod support_bundle;
+pub mod lighting_identify;

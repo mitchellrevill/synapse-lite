@@ -39,6 +39,27 @@ fn native_linked_games_add_bind_unlink_remove_and_tab_lifecycle_preserve_setting
             SendMessageW(hwnd,WM_MBUTTONDOWN,0,((ty<<16)|tx) as isize);SendMessageW(hwnd,WM_MBUTTONUP,0,((ty<<16)|tx) as isize);if query()["active"]!=false{return Err("Module middle-close failed".into());}
             SendMessageW(hwnd,super::super::linked_games::TEST,1,0);wait_for(||query()["active"]==true&&query()["busy"]==false,"module reopen")?;
             let tabs_path=output.join("tabs.json");if !tabs_path.exists(){return Err("Module tab was not persisted".into());}
+            // A dirty Studio draft must continue to this module after Discard.
+            let studio_query=||{let mut value=Value::Null;SendMessageW(hwnd,STUDIO_TEST,2,&mut value as *mut Value as isize);value};
+            SendMessageW(hwnd,STUDIO_TEST,0,0);
+            wait_for(||studio_query()["busy"]==false,"Studio restore")?;
+            let composition=output.join("navigation.ChromaEffects");
+            std::fs::write(&composition,br#"{"version":1,"profiles":[{"id":"p","title":"Desk","devices":[],"layers":[{"id":"a","type":"layer","title":"STATIC","name":"static","visible":true,"regions":[]}]}]}"#).map_err(|e|e.to_string())?;
+            let value=json!(composition.to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,1,&value as *const Value as isize);
+            wait_for(||studio_query()["profiles"]==1&&studio_query()["busy"]==false,"navigation composition")?;
+            lighting_click(hwnd,width-190.,193.,scale);
+            let field=GetDlgItem(hwnd,i32::from(studio_view::NAME));
+            SendMessageW(field,WM_SETTEXT,0,wide("Navigation draft").as_ptr() as isize);
+            lighting_click(hwnd,width-190.,193.,scale);
+            if studio_query()["dirty"]!=true{return Err("navigation fixture did not become dirty".into());}
+            SendMessageW(hwnd,STUDIO_TEST,4,IDCANCEL as isize);
+            SendMessageW(hwnd,super::super::linked_games::TEST,1,0);
+            std::thread::sleep(Duration::from_millis(100));
+            if studio_query()["dirty"]!=true||studio_query()["open"]!=true{return Err("navigation cancel lost draft".into());}
+            SendMessageW(hwnd,STUDIO_TEST,4,IDNO as isize);
+            SendMessageW(hwnd,super::super::linked_games::TEST,1,0);
+            wait_for(||query()["active"]==true&&query()["busy"]==false,"discard navigation continuation")?;
+            let capture=json!(output.join("after-studio-discard.png").to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize);
             Ok(json!({"games_devices_views":true,"add_bind_unlink_remove":true,"saved_profiles_byte_equal":true,"read_only_inert":true,"worker_read_only_refuses_before_store_creation":true,"tab_close_reopen":true,"profile_choice":"Gaming","hardware_sets":0,"native_file_picker_bypassed":true,"physical_discovery_disabled":true}))
         }})();
         unsafe{let hwnd=WINDOW.load(Ordering::Acquire) as HWND;PostMessageW(hwnd,WM_CLOSE,0,0);}

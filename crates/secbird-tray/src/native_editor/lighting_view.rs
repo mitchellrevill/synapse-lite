@@ -107,8 +107,6 @@ pub(super) enum Control {
     EditorPlane(color::Rect),
     EditorValue(color::Rect),
     EditorEye,
-    Sync,
-    LaunchChroma,
 }
 #[derive(Clone)]
 enum GestureKind {
@@ -704,15 +702,6 @@ pub(super) unsafe fn action(state: &mut State, control: Control) -> Update {
             u.commands.push(Command::Eyedropper);
             u
         }
-        Control::Sync => {
-            state.lighting.notice = "Chroma synchronization runtime is unavailable.".into();
-            Update::handled()
-        }
-        Control::LaunchChroma => {
-            state.lighting.notice =
-                "External Chroma installation and launch are unavailable in this build.".into();
-            Update::handled()
-        }
         Control::BrightnessSlider(_)
         | Control::IdleSlider(_)
         | Control::EffectScroll(_)
@@ -966,7 +955,7 @@ unsafe fn refresh_editor_fields(state: &mut State, skip: Option<u16>) {
     let Some(values) = values else { return };
     state.lighting.rebuilding = true;
     for (i, value) in values.iter().enumerate() {
-        let id = HEX + i as u16;
+        let id = [HEX, RED, GRN, BLUE][i];
         if skip == Some(id) {
             continue;
         }
@@ -1266,6 +1255,8 @@ unsafe fn check(
         h(p, r, control)
     }
 }
+// Preserve the source slider value/range, presentation and control arguments.
+#[allow(clippy::too_many_arguments)]
 unsafe fn slider(
     p: &mut Painter<'_>,
     r: source::Rect,
@@ -1602,7 +1593,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, _device: &Value) 
             );
         }
         if !g.direction_tabs.is_empty() {
-            let base = if v.selected == Some(19) { 1 } else { 1 };
+            let base = 1;
             let labels = if v.selected == Some(19) {
                 ["lighting-out", "lighting-in"]
             } else if v.selected == Some(13) {
@@ -1957,6 +1948,26 @@ unsafe fn wrapped_text(
     SelectObject(p.dc, old);
 }
 
+/// Test-only sink at the effect-command boundary: real HWND/hit/capture paths,
+/// no backend invocation. It cannot be enabled in a production executable.
+#[cfg(test)]
+pub(super) fn test_dropdown(state: &mut State, enable: bool) -> Value {
+    if enable {
+        state.lighting.test_commands = Some(Vec::new());
+    }
+    let g = geometry(state).unwrap();
+    let d = source::effect_dropdown(
+        g.effect_dropdown,
+        f64::from(state.height) / f64::from(state.scale),
+        state.lighting.effect_offset,
+    );
+    let rect = |r: source::Rect| json!({"x":r.x,"y":r.y,"width":r.width,"height":r.height});
+    json!({"open":state.lighting.effect_menu,"selected":state.lighting.selected,"setting":state.lighting.setting,
+        "trigger":rect(g.effect_dropdown),"panel":rect(d.panel),"track":rect(d.track),"thumb":rect(d.thumb),
+        "scroll":d.scroll,"directions":g.direction_tabs.iter().copied().map(rect).collect::<Vec<_>>(),
+        "commands":state.lighting.test_commands})
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2059,24 +2070,4 @@ mod tests {
         assert!(view.slots[2].get("picked").is_none());
         assert_eq!(view.slots.len(), 16);
     }
-}
-
-/// Test-only sink at the effect-command boundary: real HWND/hit/capture paths,
-/// no backend invocation. It cannot be enabled in a production executable.
-#[cfg(test)]
-pub(super) fn test_dropdown(state: &mut State, enable: bool) -> Value {
-    if enable {
-        state.lighting.test_commands = Some(Vec::new());
-    }
-    let g = geometry(state).unwrap();
-    let d = source::effect_dropdown(
-        g.effect_dropdown,
-        f64::from(state.height) / f64::from(state.scale),
-        state.lighting.effect_offset,
-    );
-    let rect = |r: source::Rect| json!({"x":r.x,"y":r.y,"width":r.width,"height":r.height});
-    json!({"open":state.lighting.effect_menu,"selected":state.lighting.selected,"setting":state.lighting.setting,
-        "trigger":rect(g.effect_dropdown),"panel":rect(d.panel),"track":rect(d.track),"thumb":rect(d.thumb),
-        "scroll":d.scroll,"directions":g.direction_tabs.iter().copied().map(rect).collect::<Vec<_>>(),
-        "commands":state.lighting.test_commands})
 }

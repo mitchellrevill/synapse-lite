@@ -3,6 +3,58 @@ use secbird_core::profile_compat::macro_library as library;
 use windows_sys::Win32::UI::Controls::EM_REPLACESEL;
 
 #[test]
+#[ignore="opens an isolated simulated macro loop editor window"]
+fn native_macro_loops_range_nested_history_save_discard_and_invalid_repeat() {
+    let folder=std::env::temp_dir().join(format!("native-macro-loops-{}-{}",std::process::id(),std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+    std::fs::create_dir_all(&folder).unwrap();let frame=folder.join("frame.json");
+    let _environment=Environment::set(&[("SYNAPSE_LITE_CONFIG_DIR",&folder),("SYNAPSE_LITE_SMOKE_REPORT",&frame),("SYNAPSE_LITE_SMOKE_VIEW",Path::new("dashboard"))]);
+    let sim=Sim::mouse();let engine=Engine::with_simulated_mouse(&sim).unwrap();let path=folder.join("profiles.json");
+    let mut original=Store::load(&path).unwrap();original.for_device(&engine.devices()[0]).active_mut().dpi=Some((800,800));original.save().unwrap();
+    let profiles=serde_json::to_value(&original).unwrap()["devices"].clone();let output=folder.clone();let monitor=sim.clone();
+    let controller=std::thread::spawn(move||{
+        let result=(||->Result<Value,String>{unsafe{
+            wait_for(||frame.exists(),"macro loop HWND")?;let hwnd=WINDOW.load(Ordering::Acquire) as HWND;
+            let query=||{let mut value=Value::Null;SendMessageW(hwnd,super::super::macro_view::TEST,2,&mut value as *mut Value as isize);value};
+            SendMessageW(hwnd,super::super::macro_view::TEST,1,0);wait_for(||query()["open"]==true&&query()["busy"]==false,"loop library read")?;redraw(hwnd);
+            monitor.state().log.clear();let scale=f64::from(GetDpiForWindow(hwnd).max(96))/96.;let mut client:RECT=std::mem::zeroed();GetClientRect(hwnd,&mut client);let left=(f64::from(client.right)/scale-900.).max(10.)/2.;let timeline=left+210.;
+            let click=|x,y|lighting_click(hwnd,x,y,scale);
+            let edit=|id,text:&str|{let field=GetDlgItem(hwnd,id);assert!(!field.is_null(),"missing edit field {id}");SetWindowTextW(field,wide(text).as_ptr());};
+            click(350.,100.);wait_for(||query()["entries"].as_array().is_some_and(|a|a.len()==1)&&query()["busy"]==false,"new loop macro")?;
+            click(timeline+180.,212.);if query()["events"].as_array().map(Vec::len)!=Some(3){return Err("Empty loop creation failed".into());}click(timeline+40.,174.);
+            edit(2300,"Loop authoring");edit(2301,"125");click(left+90.,368.);click(left+90.,368.);
+            let before=query()["events"].clone();let disk=std::fs::read(&path).unwrap();
+            click(timeline+90.,258.);click(timeline+50.,212.);click(timeline+90.,296.);edit(2302,"3");click(timeline+180.,212.);
+            let wrapped=query();if wrapped["events"].as_array().map(Vec::len)!=Some(5)||wrapped["events"][1]["LoopEvent"]["State"]!=0||wrapped["events"][4]["LoopEvent"]["State"]!=1||wrapped["events"][1]["Id"]!=wrapped["events"][4]["Id"]||wrapped["events"][1]["Number"]!=3{return Err(format!("Native loop range incorrect: {wrapped}"));}
+            if wrapped["events"][2]!=before[1]||wrapped["events"][3]!=before[2]||std::fs::read(&path).unwrap()!=disk{return Err("Wrapping changed body or saved without Save".into());}
+            click(timeline+90.,372.);edit(2302,"4");click(timeline+480.,212.);
+            let updated=query();if updated["events"][1]["Number"]!=4||updated["events"][4]["Number"]!=4{return Err(format!("End-boundary edit failed: {updated}"));}
+            edit(2302,"2");click(timeline+180.,212.);let nested=query();
+            if nested["events"].as_array().map(Vec::len)!=Some(7)||nested["events"][1]["Id"]==nested["events"][2]["Id"]||nested["events"][2]!=updated["events"][1]||nested["events"][5]!=updated["events"][4]||nested["events"][1]["Number"]!=2{return Err(format!("Nested loop incorrect: {nested}"));}
+            click(left+90.,484.);if query()["events"]!=updated["events"]{return Err("Loop delete removed the body".into());}
+            click(timeline+40.,174.);if query()["events"]!=nested["events"]{return Err("Loop delete Undo failed".into());}
+            click(timeline+130.,174.);if query()["events"]!=updated["events"]{return Err("Loop delete Redo failed".into());}
+            click(timeline+40.,174.);click(timeline+620.,174.);wait_for(||query()["busy"]==false&&query()["dirty"]==false,"loop Save")?;
+            let saved=Store::load(&path).map_err(|e|e.to_string())?;let entry=library::read(&saved).map_err(|e|e.to_string())?.entries.remove(0);
+            if json!(entry.events)!=nested["events"]||library::loops::pairs(&entry.events).map_err(|e|e.to_string())?.len()!=2{return Err("Saved loop rows differ".into());}
+            let saved_bytes=std::fs::read(&path).unwrap();click(timeline+90.,258.);edit(2302,"100000");click(timeline+480.,212.);click(timeline+620.,174.);
+            if query()["failed"]!=true||query()["events"]!=nested["events"]||query()["dirty"]!=true||std::fs::read(&path).unwrap()!=saved_bytes{return Err("Invalid loop repeat mutated or saved rows".into());}
+            click(timeline+510.,174.);if query()["dirty"]!=false||query()["events"]!=nested["events"]{return Err("Loop Discard failed".into());}
+            click(timeline+90.,258.);let readonly=query();SendMessageW(hwnd,READ_ONLY_TEST_SET,1,0);redraw(hwnd);click(timeline+50.,212.);click(timeline+180.,212.);click(timeline+480.,212.);click(left+90.,484.);
+            if query()["events"]!=readonly["events"]||query()["dirty"]!=false{return Err("Read-only loop controls mutated rows".into());}SendMessageW(hwnd,READ_ONLY_TEST_SET,0,0);redraw(hwnd);
+            let field=GetDlgItem(hwnd,2302);let mut text=[0u16;16];let length=GetWindowTextW(field,text.as_mut_ptr(),text.len() as i32);let mut field_rect:RECT=std::mem::zeroed();GetClientRect(field,&mut field_rect);
+            if String::from_utf16_lossy(&text[..length as usize])!="2"||IsWindowVisible(field)==0||field_rect.right<30||field_rect.bottom<15{return Err("Native repeat edit HWND text/visibility/geometry failed".into());}
+            let capture=json!(output.join("macro-loops.png").to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize);
+            if serde_json::to_value(Store::load(&path).unwrap()).unwrap()["devices"]!=profiles{return Err("Loop Save changed device profiles".into());}
+            if monitor.state().log.iter().any(|c|c.id&0x80==0){return Err("Loop editor issued a hardware SET".into());}
+            Ok(json!({"real_hwnd_pointer_controls":true,"empty_loop_authoring":true,"native_repeat_child_text_visibility_geometry":true,"range_wrap_preserves_body":true,"paired_end_repeat_update":true,"nested_distinct_ids":true,"pair_delete_preserves_body":true,"undo_redo_exact":true,"explicit_save_exact_rows":true,"discard_restores_saved_rows":true,"invalid_repeat_blocks_save":true,"read_only_inert":true,"profiles_preserved":true,"hardware_sets":0,"physical_discovery_disabled":true}))
+        }})();
+        unsafe{let hwnd=WINDOW.load(Ordering::Acquire) as HWND;SendMessageW(hwnd,super::super::macro_view::TEST,5,0);PostMessageW(hwnd,WM_CLOSE,0,0);}
+        std::fs::write(output.join("interaction.json"),serde_json::to_vec_pretty(&match &result{Ok(v)=>v.clone(),Err(e)=>json!({"error":e})}).unwrap()).unwrap();result
+    });
+    let run=run_standalone(Arc::new(Mutex::new(engine)),Some(Duration::from_secs(40)));let result=controller.join().unwrap();assert!(run.is_ok(),"{run:?}");assert!(result.is_ok(),"{result:?}");eprintln!("Macro loop native evidence: {}",folder.display());
+}
+
+#[test]
 #[ignore="opens an isolated simulated macro editor window"]
 fn native_macro_library_drafts_save_history_conflicts_and_lifecycle() {
     let folder=std::env::temp_dir().join(format!("native-macros-{}-{}",std::process::id(),std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
@@ -16,13 +68,29 @@ fn native_macro_library_drafts_save_history_conflicts_and_lifecycle() {
             // Keep normal action deadlines; allow private-asset startup to finish.
             let ready_started=Instant::now();while !frame.exists()&&ready_started.elapsed()<Duration::from_secs(15){std::thread::sleep(Duration::from_millis(20));}if !frame.exists(){return Err("Timed out: macro editor window (15s startup budget)".into());}let ready_ms=ready_started.elapsed().as_millis();let hwnd=WINDOW.load(Ordering::Acquire) as HWND;
             let query=||{let mut value=Value::Null;SendMessageW(hwnd,super::super::macro_view::TEST,2,&mut value as *mut Value as isize);value};
-            SendMessageW(hwnd,super::super::macro_view::TEST,1,0);wait_for(||query()["open"]==true&&query()["busy"]==false,"macro library read")?;
+            SendMessageW(hwnd,super::super::macro_view::TEST,1,0);wait_for(||query()["open"]==true&&query()["busy"]==false,"macro library read")?;redraw(hwnd);
             monitor.state().log.clear();let scale=f64::from(GetDpiForWindow(hwnd).max(96))/96.;let mut client:RECT=std::mem::zeroed();GetClientRect(hwnd,&mut client);let width=f64::from(client.right)/scale;let left=(width-900.).max(10.)/2.;let timeline=left+210.;
             let click=|x,y|lighting_click(hwnd,x,y,scale);
             let edit=|id,text:&str|{let field=GetDlgItem(hwnd,id);assert!(!field.is_null(),"missing edit field {id}");if matches!(id,2310|2311){SendMessageW(field,EM_SETSEL,0,-1);SendMessageW(field,EM_REPLACESEL,1,wide(text).as_ptr()as isize);}else{SetWindowTextW(field,wide(text).as_ptr());}};
             click(350.,100.);wait_for(||query()["entries"].as_array().is_some_and(|a|a.len()==1)&&query()["busy"]==false,"new macro")?;
             let id=query()["selected"].as_str().unwrap().to_owned();let baseline=std::fs::read(&path).map_err(|e|e.to_string())?;
             click(left+90.,528.);wait_for(||query()["menu_open"]==true,"input chooser open")?;SendMessageW(hwnd,STUDIO_TEST,9,0);wait_for(||query()["menu_open"]==false,"input chooser cancel")?;if query()["dirty"]!=false||std::fs::read(&path).unwrap()!=baseline{return Err("Cancelled input menu changed draft or disk".into());}
+            // Explicit initiation, synthetic window messages only: never physical input.
+            click(timeline+610.,212.);redraw(hwnd);
+            if query()["recording"]!=true||query()["playback"]["active"]!=false{return Err("Record did not enter exclusive focused capture".into());}
+            // The merged Play toolbar must not shadow Record or admit playback during capture.
+            click(timeline+250.,174.);
+            if query()["recording"]!=true||query()["playback"]["active"]!=false{return Err("Playback overlapped focused capture".into());}
+            let capture=json!(output.join("macro-recording.png").to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize);
+            SendMessageW(hwnd,WM_KEYDOWN,65,30<<16);SendMessageW(hwnd,WM_KEYDOWN,65,(30<<16)|(1<<30));SendMessageW(hwnd,WM_KEYUP,65,30<<16);
+            click(timeline+610.,212.);
+            let recorded=query();if recorded["events"].as_array().map(Vec::len)!=Some(4)||recorded["events"][1]["ScanCode"]!=30||recorded["events"][1]["Id"]!=recorded["events"][3]["Id"]{return Err(format!("Recording did not preserve source pair: {recorded}"));}
+            if std::fs::read(&path).unwrap()!=baseline{return Err("Recording wrote before Save".into());}
+            click(timeline+40.,174.);if query()["events"].as_array().map(Vec::len)!=Some(1){return Err("Recording was not one undo unit".into());}
+            click(timeline+610.,212.);SendMessageW(hwnd,WM_KEYDOWN,65,30<<16);SendMessageW(hwnd,WM_KEYDOWN,27,1<<16);
+            if query()["events"].as_array().map(Vec::len)!=Some(1){return Err("Cancel changed draft".into());}
+            click(timeline+610.,212.);SendMessageW(hwnd,WM_KEYDOWN,65,30<<16);SendMessageW(hwnd,WM_KILLFOCUS,0,0);SendMessageW(hwnd,WM_KEYUP,65,30<<16);
+            if query()["events"].as_array().map(Vec::len)!=Some(1){return Err("Focus loss retained incomplete down".into());}
             edit(2300,"Night macro");edit(2301,"1250");click(left+90.,368.);
             if query()["dirty"]!=true||query()["events"][1]["Number"]!="1.25"{return Err(format!("Local draft incorrect: {}",query()));}
             if std::fs::read(&path).unwrap()!=baseline{return Err("Unsaved fields reached disk".into());}
@@ -30,9 +98,9 @@ fn native_macro_library_drafts_save_history_conflicts_and_lifecycle() {
                 SendMessageW(hwnd,super::super::macro_view::TEST,6,&choice as *const Value as isize);click(left+90.,600.);
             }
             let initial=query();if initial["events"].as_array().map(Vec::len)!=Some(7)||initial["events"][2]["KeyEvent"]["State"]!=2||initial["events"][3]["KeyEvent"]["State"]!=3||initial["events"][4]["MouseEvent"]["MouseButton"]!=1||initial["events"][6]["MouseEvent"]["MouseButton"]!=8{return Err(format!("Native input authoring incorrect: {initial}"));}
-            click(timeline+90.,258.);let shift=json!({"key":"KEY_RIGHT_SHIFT"});SendMessageW(hwnd,super::super::macro_view::TEST,6,&shift as *const Value as isize);click(left+90.,636.);
+            click(timeline+90.,296.);let shift=json!({"key":"KEY_RIGHT_SHIFT"});SendMessageW(hwnd,super::super::macro_view::TEST,6,&shift as *const Value as isize);click(left+90.,636.);
             let rebound=query();if rebound["events"][2]["ScanCode"]!=54||rebound["events"][3]["ScanCode"]!=54||rebound["events"][2]["KeyEvent"]["State"]!=0||rebound["events"][3]["KeyEvent"]["State"]!=1||rebound["events"][2]["Id"]!=initial["events"][2]["Id"]{return Err(format!("Key pair rebind incorrect: {rebound}"));}
-            click(timeline+90.,334.);let button=json!({"mouse":4});SendMessageW(hwnd,super::super::macro_view::TEST,6,&button as *const Value as isize);click(left+90.,636.);let authored=query();if authored["events"][4]["MouseEvent"]["MouseButton"]!=4||authored["events"][5]["MouseEvent"]["MouseButton"]!=4{return Err("Mouse pair rebind did not change both rows".into());}
+            click(timeline+90.,372.);let button=json!({"mouse":4});SendMessageW(hwnd,super::super::macro_view::TEST,6,&button as *const Value as isize);click(left+90.,636.);let authored=query();if authored["events"][4]["MouseEvent"]["MouseButton"]!=4||authored["events"][5]["MouseEvent"]["MouseButton"]!=4{return Err("Mouse pair rebind did not change both rows".into());}
             click(left+90.,484.);if query()["events"].as_array().map(Vec::len)!=Some(5){return Err("Delete pair did not remove both rows".into());}click(timeline+40.,174.);if query()["events"]!=authored["events"]{return Err("Undo did not restore the deleted pair".into());}
             if std::fs::read(&path).unwrap()!=baseline{return Err("Input rows reached disk before Save".into());}
             SendMessageW(hwnd,super::super::macro_view::TEST,3,0);SendMessageW(hwnd,WM_CLOSE,0,0);
@@ -41,9 +109,9 @@ fn native_macro_library_drafts_save_history_conflicts_and_lifecycle() {
             let saved=Store::load(&path).map_err(|e|e.to_string())?;let entries=library::read(&saved).map_err(|e|e.to_string())?.entries;
             if entries[0].name!="Night macro"||entries[0].guid!=id||entries[0].events[1]["Number"]!="1.25"||entries[0].events.len()!=7||json!(entries[0].events)!=authored["events"]{return Err("Saved definition differs from draft".into());}
             click(timeline+40.,174.);if query()["dirty"]!=true{return Err("Undo history lost after save".into());}click(timeline+130.,174.);if query()["dirty"]!=false{return Err("Redo did not return to saved definition".into());}
-            let saved_bytes=std::fs::read(&path).unwrap();click(timeline+90.,220.);edit(2301,"-1");click(left+90.,404.);if query()["failed"]!=true||std::fs::read(&path).unwrap()!=saved_bytes{return Err("Invalid delay was saved".into());}
+            let saved_bytes=std::fs::read(&path).unwrap();click(timeline+90.,258.);edit(2301,"-1");click(left+90.,404.);if query()["failed"]!=true||std::fs::read(&path).unwrap()!=saved_bytes{return Err("Invalid delay was saved".into());}
             SendMessageW(hwnd,super::super::macro_view::TEST,5,0);
-            click(timeline+90.,258.);let blocked=json!({"key":"KEY_B"});SendMessageW(hwnd,super::super::macro_view::TEST,6,&blocked as *const Value as isize);
+            click(timeline+90.,296.);let blocked=json!({"key":"KEY_B"});SendMessageW(hwnd,super::super::macro_view::TEST,6,&blocked as *const Value as isize);
             SendMessageW(hwnd,READ_ONLY_TEST_SET,1,0);redraw(hwnd);click(350.,100.);click(left+90.,368.);click(left+90.,600.);click(left+90.,636.);click(timeline+620.,174.);if std::fs::read(&path).unwrap()!=saved_bytes||query()["dirty"]!=false{return Err("Read-only controls changed disk or draft".into());}SendMessageW(hwnd,READ_ONLY_TEST_SET,0,0);redraw(hwnd);
             click(left+45.,254.);wait_for(||query()["entries"].as_array().is_some_and(|a|a.len()==2)&&query()["busy"]==false,"duplicate").map_err(|error|format!("{error}: {}",query()))?;
             if query()["selected"]==id{return Err("Duplicate reused original GUID".into());}click(left+145.,254.);wait_for(||query()["entries"].as_array().is_some_and(|a|a.len()==1)&&query()["busy"]==false,"delete unused duplicate")?;
@@ -63,7 +131,7 @@ fn native_macro_library_drafts_save_history_conflicts_and_lifecycle() {
             let child=json!("nested-c");SendMessageW(hwnd,super::super::macro_view::TEST,7,&child as *const Value as isize);redraw(hwnd);let mut targets=Value::Null;SendMessageW(hwnd,super::super::macro_view::TEST,8,&mut targets as *mut Value as isize);if !targets.as_array().is_some_and(|targets|targets.iter().any(|target|target["guid"]==id&&target["disabled"]==true)){return Err(format!("Cycle target was not disabled: {targets}"));}
             let baseline=std::fs::read(&path).unwrap();let cycle=json!({"macro":id});SendMessageW(hwnd,super::super::macro_view::TEST,6,&cycle as *const Value as isize);click(left+90.,600.);if query()["failed"]!=true||query()["dirty"]!=false||std::fs::read(&path).unwrap()!=baseline{return Err("Cycle request changed the draft/store".into());}
             SendMessageW(hwnd,super::super::macro_view::TEST,7,&owner as *const Value as isize);SendMessageW(hwnd,READ_ONLY_TEST_SET,1,0);redraw(hwnd);click(left+90.,600.);if query()["dirty"]!=false||std::fs::read(&path).unwrap()!=baseline{return Err("Read-only nested add changed data".into());}SendMessageW(hwnd,READ_ONLY_TEST_SET,0,0);redraw(hwnd);
-            click(timeline+90.,448.);let capture=json!(output.join("macro-nested.png").to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize);
+            click(timeline+90.,486.);let capture=json!(output.join("macro-nested.png").to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize);
             let mut client:RECT=std::mem::zeroed();GetClientRect(hwnd,&mut client);let height=f64::from(client.bottom)/scale;let fx=(width-620.)/2.;let fy=(height-360.)/2.;let apply=||{redraw(hwnd);click(fx+536.,fy+326.);};let cancel=||{redraw(hwnd);click(fx+406.,fy+326.);};
             let stored=std::fs::read(&path).unwrap();let text=json!("text");SendMessageW(hwnd,super::super::macro_view::TEST,9,&text as *const Value as isize);redraw(hwnd);if query()["form"]["data"]["kind"]!="text"{return Err("Text action form did not open".into());}edit(2310,&"x".repeat(251));apply();if query()["form"]["error"].as_str().is_none_or(str::is_empty)||query()["events"].as_array().map(Vec::len)!=Some(8){return Err("Oversized text changed the draft".into());}
             edit(2310,"Hello\r\nworld 😃");if query()["form"]["data"]["value"]!="Hello\nworld 😃"{return Err("Multiline edit did not update the form value".into());}SendMessageW(hwnd,super::super::macro_view::TEST,3,0);SendMessageW(hwnd,WM_CLOSE,0,0);if query()["form"].is_null()||IsWindow(hwnd)==0{return Err("Action form was lost on Home/Close".into());}

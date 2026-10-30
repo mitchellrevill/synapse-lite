@@ -25,7 +25,17 @@ struct Image {
 #[derive(Deserialize)]
 struct Index { format: String, catalog_sha256: String, images: Vec<Image> }
 
-struct Cached { key: (u16, u16), bitmap: Option<Bitmap>, bytes: usize }
+#[derive(Clone, PartialEq)]
+struct Stamp { length: u64, modified: Option<std::time::SystemTime> }
+fn stamp(path: &Path) -> Option<Stamp> {
+    let metadata = std::fs::metadata(path).ok()?;
+    Some(Stamp { length: metadata.len(), modified: metadata.modified().ok() })
+}
+struct Cached { key: (u16, u16), bitmap: Option<Bitmap>, bytes: usize, stamp: Option<Stamp>, digest: String }
+#[derive(Default)]
+struct Metrics { hits: u64, misses: u64, evictions: u64, invalidations: u64, failures: u64,
+    decode_micros: u128, peak_pixels: usize }
+
 
 pub(super) struct View {
     root: PathBuf,
@@ -34,6 +44,8 @@ pub(super) struct View {
     cache: VecDeque<Cached>,
     resident: usize,
     error: Option<String>,
+    metrics: Metrics,
+    pack_stamp: (Option<Stamp>, Option<Stamp>),
 }
 
 fn read_bounded(path: &Path, max: usize) -> Option<Vec<u8>> {
@@ -64,13 +76,31 @@ unsafe fn load_png(path: &Path, width: u32, height: u32) -> Option<Bitmap> {
     if gp::GdipGetImageWidth(image.cast(), &mut actual_width) != gp::Ok
         || gp::GdipGetImageHeight(image.cast(), &mut actual_height) != gp::Ok
         || (actual_width, actual_height) != (width, height) { return None; }
-    Some(bitmap)
+    // Detach decoded pixels from the file-backed image. GDI+ otherwise keeps
+    // the pack file locked until eviction, preventing atomic pack replacement.
+    let mut detached = null_mut();
+    if gp::GdipCreateBitmapFromScan0(width as i32, height as i32, 0,
+        0x0026_200a, null(), &mut detached) != gp::Ok { return None; }
+    let mut graphics = null_mut();
+    if gp::GdipGetImageGraphicsContext(detached.cast(), &mut graphics) != gp::Ok {
+        image_render::dispose(detached); return None;
+    }
+    gp::GdipSetCompositingMode(graphics, gp::CompositingModeSourceCopy);
+    let status = gp::GdipDrawImageRectRectI(graphics, image.cast(), 0, 0,
+        width as i32, height as i32, 0, 0, width as i32, height as i32,
+        gp::UnitPixel, null(), 0, null_mut());
+    gp::GdipDeleteGraphics(graphics);
+    if status != gp::Ok { image_render::dispose(detached); return None; }
+    drop(bitmap);
+    Some(Bitmap { handle: null_mut(), width: width as i32, height: height as i32,
+        alpha: true, smooth: detached })
 }
 
 impl View {
     pub(super) fn load(root: PathBuf) -> Self {
-        let mut view = Self { root, catalog: None, images: BTreeMap::new(),
-            cache: VecDeque::new(), resident: 0, error: None };
+        let mut view = Self { root: root.clone(), catalog: None, images: BTreeMap::new(),
+            cache: VecDeque::new(), resident: 0, error: None, metrics: Metrics::default(),
+            pack_stamp: (stamp(&root.join("index.json")), stamp(&root.join("catalog.json"))) };
         if let Err(error) = view.read_index() {
             view.catalog = None;
             view.images.clear();
@@ -109,20 +139,40 @@ impl View {
     }
 
     unsafe fn image(&mut self, connection: u16, edition: u16) -> Option<&Bitmap> {
+        // Reload declarations only when the pack changes; release all old native images
+        // before reading a replacement. A repaired missing pack becomes usable in-place.
+        let pack_stamp = (stamp(&self.root.join("index.json")), stamp(&self.root.join("catalog.json")));
+        if pack_stamp != self.pack_stamp {
+            self.pack_stamp = pack_stamp;
+            self.cache.clear(); self.resident = 0;
+            self.images.clear(); self.catalog = None;
+            self.metrics.invalidations += 1;
+            self.error = self.read_index().err();
+            if self.error.is_some() { self.images.clear(); self.catalog = None; }
+        }
         let primary = match self.catalog.as_ref()?.resolve(connection) {
             Resolution::Unique(primary) => primary,
             Resolution::Unknown | Resolution::Ambiguous(_) => return None,
         };
         let key = (primary, edition);
-        if let Some(position) = self.cache.iter().position(|entry| entry.key == key) {
+        let record = self.images.get(&key)?.clone();
+        let current_stamp = stamp(&self.root.join(&record.file));
+        if let Some(position) = self.cache.iter().position(|entry| entry.digest == record.sha256 && entry.stamp != current_stamp) {
+            self.resident -= self.cache.remove(position)?.bytes;
+            self.metrics.invalidations += 1;
+        }
+        if let Some(position) = self.cache.iter().position(|entry| entry.digest == record.sha256) {
+            self.metrics.hits += 1;
             let entry = self.cache.remove(position)?;
             self.cache.push_back(entry);
         } else {
-            let record = self.images.get(&key)?.clone();
+            self.metrics.misses += 1;
+            let started = std::time::Instant::now();
             let needed = record.width as usize * record.height as usize * 4;
             while self.cache.len() >= MAX_CACHE_ENTRIES || self.resident + needed > MAX_RESIDENT {
                 let oldest = self.cache.pop_front()?;
                 self.resident -= oldest.bytes;
+                self.metrics.evictions += 1;
             }
             // Free cold images before admitting the next decoded image. No bulk
             // image preload, network request or device call occurs during paint.
@@ -141,7 +191,10 @@ impl View {
                 });
             let bytes = if bitmap.is_some() { needed } else { 0 };
             self.resident += bytes;
-            self.cache.push_back(Cached { key, bitmap, bytes });
+            self.metrics.decode_micros += started.elapsed().as_micros();
+            self.metrics.peak_pixels = self.metrics.peak_pixels.max(self.resident);
+            if bitmap.is_none() { self.metrics.failures += 1; }
+            self.cache.push_back(Cached { key, bitmap, bytes, stamp: current_stamp, digest: record.sha256 });
         }
         self.cache.back()?.bitmap.as_ref()
     }
@@ -165,6 +218,10 @@ impl View {
     pub(super) fn snapshot(&self) -> Value {
         json!({"indexed_images":self.images.len(), "cached_entries":self.cache.len(),
             "resident_pixel_bytes":self.resident, "pixel_budget_bytes":MAX_RESIDENT,
+            "cache_hits":self.metrics.hits, "cache_misses":self.metrics.misses,
+            "evictions":self.metrics.evictions, "invalidations":self.metrics.invalidations,
+            "load_failures":self.metrics.failures, "decode_microseconds":self.metrics.decode_micros,
+            "peak_pixel_bytes":self.metrics.peak_pixels, "entry_budget":MAX_CACHE_ENTRIES,
             "error":self.error, "cache":self.cache.iter().map(|entry|json!({
                 "product_id":entry.key.0,"edition_id":entry.key.1,
                 "loaded":entry.bitmap.is_some(),"pixel_bytes":entry.bytes})).collect::<Vec<_>>()})
@@ -193,8 +250,11 @@ mod tests {
                 (768, 512) => include_bytes!("../../tests/fixtures/dashboard-large.png"),
                 _ => panic!("unknown synthetic image dimensions"),
             };
-            let file = format!("dashboard-{}.png", digest(data).unwrap());
-            std::fs::write(root.join(&file), data).unwrap();
+            let mut data = data.to_vec();
+            // PNG decoders permit trailing data; each synthetic product has a unique digest.
+            if width > 2 { data.extend_from_slice(&id.to_le_bytes()); }
+            let file = format!("dashboard-{}.png", digest(&data).unwrap());
+            std::fs::write(root.join(&file), &data).unwrap();
             images.push(json!({"product_id":id,"edition_id":0,"layout_id":0,"file":file,
                 "width":width,"height":height,"bytes":data.len(),"sha256":digest(&data).unwrap()}));
         }
@@ -221,7 +281,7 @@ mod tests {
         assert!(view.image(1, 128).is_none(), "unknown edition must not borrow another edition");
         assert!(view.image(999, 0).is_none());
         assert!(view.image(2, 0).is_some());
-        assert_eq!(view.resident, 16);
+        assert_eq!(view.resident, 8, "Identical content shares one native allocation");
     }}
 
     #[test]
@@ -257,6 +317,33 @@ mod tests {
         std::fs::write(&path, serde_json::to_vec(&index).unwrap()).unwrap();
         let view = View::load(root);
         assert!(view.error.is_some()); assert!(view.images.is_empty());
+    }}
+
+    #[test]
+    fn missing_repaired_and_removed_files_invalidate_without_restarting() { unsafe {
+        let _runtime = image_render::Runtime::start().unwrap();
+        let root = folder(); fixture(&root, 1, 2, 1);
+        let mut view = View::load(root.clone());
+        let path = root.join(&view.images[&(1, 0)].file);
+        let data = std::fs::read(&path).unwrap();
+        std::fs::remove_file(&path).unwrap();
+        assert!(view.image(1, 0).is_none());
+        assert!(view.image(1, 0).is_none());
+        assert_eq!(view.metrics.hits, 1);
+        std::fs::write(&path, data).unwrap();
+        assert!(view.image(1, 0).is_some());
+        assert_eq!(view.resident, 8);
+        std::fs::remove_file(&path).unwrap();
+        assert!(view.image(1, 0).is_none());
+        assert_eq!(view.resident, 0);
+        assert_eq!(view.metrics.invalidations, 2);
+        std::fs::remove_file(root.join("index.json")).unwrap();
+        assert!(view.image(1, 0).is_none());
+        assert!(view.images.is_empty()); assert!(view.cache.is_empty());
+        fixture(&root, 1, 2, 1);
+        assert!(view.image(1, 0).is_some());
+        assert!(view.error.is_none());
+        drop(view); std::fs::remove_dir_all(root).unwrap();
     }}
 
     #[test]

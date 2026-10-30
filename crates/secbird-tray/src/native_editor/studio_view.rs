@@ -9,20 +9,36 @@ use windows_sys::Win32::UI::Controls::Dialogs::*;
 
 #[path = "studio_session.rs"]
 mod session;
+#[path = "studio_library.rs"]
+mod library;
 #[path = "studio_preview.rs"]
 mod playback;
 #[path = "studio_spectrum.rs"]
 mod spectrum;
+#[path = "studio_breathing.rs"]
+mod breathing;
+#[path = "studio_tidal.rs"]
+mod tidal;
 #[path = "studio_reactive.rs"]
 mod reactive;
+#[path = "studio_audio.rs"]
+mod audio;
+#[path = "studio_ambient.rs"]
+mod ambient;
 #[path = "studio_starlight.rs"]
 mod starlight;
 #[path = "studio_wave.rs"]
 mod wave;
+#[path = "studio_wheel.rs"]
+mod wheel;
 #[path = "studio_layers.rs"]
 mod layer_tools;
+#[path = "studio_clipboard.rs"]
+mod property_tools;
 #[path = "studio_preset_picker.rs"]
 mod preset_picker;
+#[path = "studio_remap.rs"]
+mod remap;
 #[path = "studio_output.rs"]
 mod output;
 pub(super) use output::Request as OutputRequest;
@@ -30,8 +46,11 @@ pub(super) fn output_work(engine: &mut Engine, request: OutputRequest) -> Result
 pub(super) fn output_control(state: &mut State, control: crate::host_studio::session::Control, reader: crate::lighting_status::Reader, status: Value) { state.studio.output.control=Some(control); state.studio.output.reader=Some(reader); state.studio.output.status=status; }
 pub(super) unsafe fn output_receive(state: &mut State, result: Result<Value,String>) { output::receive(state,result); }
 pub(super) unsafe fn output_tick(state: &mut State) { output::tick(state); }
-pub(super) unsafe fn layer_pointer(state: &mut State, message: u32, lparam: isize) -> bool {
-    layer_tools::pointer(state, message, lparam)
+pub(super) unsafe fn layer_pointer(state: &mut State, message: u32, lparam: isize, wparam: usize) -> bool {
+    library::pointer(state, message, lparam)
+        || property_tools::pointer(state, message, lparam)
+        || spectrum::pointer(state, message, lparam)
+        || layer_tools::pointer(state, message, lparam, wparam)
 }
 pub(super) const PREVIEW_TIMER: usize = 79;
 pub(super) unsafe fn preview_tick(state: &mut State) {
@@ -43,6 +62,37 @@ pub(super) fn preview_color(state: &State, device: &str, key: &str) -> Option<u3
 
 pub(super) const DIALOG: u32 = WM_APP + 112;
 pub(super) const EXIT_REQUEST: u32 = WM_APP + 114;
+pub(super) const ZOOM: u16 = 2190;
+const QUICK_SELECTION_DIALOG: usize = 8;
+const REMAP_DIALOG: usize = 9;
+#[cfg(test)]
+pub(super) const TEST_NAVIGATION: usize = 10;
+#[cfg(test)]
+pub(super) const TEST_REMAP: usize = 11;
+#[cfg(test)]
+pub(super) const TEST_EFFECT_POSITION: usize = 12;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum DialogRoute { File, Unsaved, Presets, Library, QuickSelection, Remap }
+fn dialog_route(kind: usize) -> Option<DialogRoute> {
+    Some(match kind {
+        0 | 1 => DialogRoute::File,
+        2 => DialogRoute::Unsaved,
+        3 => DialogRoute::Presets,
+        4..=7 => DialogRoute::Library,
+        QUICK_SELECTION_DIALOG => DialogRoute::QuickSelection,
+        REMAP_DIALOG => DialogRoute::Remap,
+        _ => return None,
+    })
+}
+
+/// Cancel captured transient state before opening another editor workflow.
+pub(super) unsafe fn cancel_gestures(state: &mut State) {
+    spectrum::cancel_drag(state);
+    state.studio.layer_drag = None;
+    state.studio.canvas.cancel();
+    ReleaseCapture();
+}
 pub(super) const NAME: u16 = 2100;
 pub(super) const COLOR: u16 = 2101;
 pub(super) const COLD: u16 = 2102;
@@ -55,6 +105,7 @@ pub(super) enum Control {
     Open,
     Save,
     Profiles,
+    Library(library::Control),
     Profile(usize),
     Select(String),
     Visibility(String),
@@ -65,20 +116,34 @@ pub(super) enum Control {
     Undo,
     Redo,
     Zoom(i32),
+    ZoomPercent,
+    ZoomPreset(f64),
+    FitSelected,
+    DeviceNames,
+    PanKey,
+    CancelCanvas,
     ApplyColor,
     ApplyCold,
     ClearColor(bool),
     Spectrum(spectrum::Control),
     Wave(wave::Control),
+    Wheel(wheel::Control),
     Starlight(starlight::Control),
     Reactive(reactive::Control),
+    Audio(audio::Control),
+    Ambient(ambient::Control),
+    Tidal(tidal::Control),
     Layers(layer_tools::Control),
+    Properties(property_tools::Control),
     AddPreset,
+    QuickSelection,
+    Remap,
     Preview,
     ApplyDevice,
     StopDevice,
     BreathingDuration(usize),
     BreathingGradient,
+    Breathing(breathing::Control),
     Erase,
 }
 #[derive(Clone, Copy)]
@@ -86,6 +151,8 @@ enum Next {
     Open,
     Profile(usize),
     Close,
+    LinkedGames,
+    Library(library::Next),
 }
 
 #[derive(Default)]
@@ -94,12 +161,18 @@ pub(super) struct View {
     pub open: bool,
     restore_attempted: bool,
     archive: Option<Arc<Archive>>,
+    baseline: Option<Arc<Archive>>,
+    baseline_index: usize,
+    library_dirty: bool,
+    composition_renaming: bool,
+    composition_menu: bool,
+    import_candidate: Option<Arc<Archive>>,
     titles: Vec<String>,
     draft: Option<Draft>,
     path: Option<PathBuf>,
     index: usize,
     selected: Option<String>,
-    expanded: BTreeMap<String, bool>,
+    layer_drag: Option<layer_tools::Drag>,
     renaming: bool,
     name: String,
     color: String,
@@ -108,13 +181,20 @@ pub(super) struct View {
     selected_cold: Option<SelectedColor>,
     spectrum: spectrum::Properties,
     wave: wave::Properties,
+    wheel: wheel::Properties,
     starlight: starlight::Properties,
     reactive: reactive::Properties,
+    audio: audio::Properties,
+    ambient: ambient::Properties,
+    tidal: tidal::Properties,
     breathing_gradient: bool,
+    breathing_playback: bool,
+    breathing: breathing::Properties,
     playback: playback::Playback,
     output: output::View,
     dropdown: bool,
     layer_menu: bool,
+    properties: property_tools::View,
     profile_scroll: usize,
     scroll: usize,
     epoch: u64,
@@ -128,8 +208,11 @@ pub(super) struct View {
 }
 pub(super) enum Request {
     Restore {epoch:u64},
+    Import {epoch:u64,path:PathBuf},
+    Export {epoch:u64,path:PathBuf,archive:Arc<Archive>,indices:Vec<usize>},
     Remember {epoch:u64,selection:session::Selection},
     Preview {
+        synthetic_ambient: bool,
         epoch: u64,
         generation: u64,
         snapshot: ReadSnapshot,
@@ -144,11 +227,13 @@ pub(super) enum Request {
         path: PathBuf,
         index: usize,
         archive: Arc<Archive>,
-        checkpoint: SaveCheckpoint,
+        checkpoint: Option<SaveCheckpoint>,
     },
 }
 pub(super) enum Response {
     Restore {epoch:u64,result:Result<Option<session::Restored>,String>},
+    Import {epoch:u64,result:Result<Arc<Archive>,String>},
+    Export {epoch:u64,result:Result<(),String>},
     Remember {epoch:u64,result:Result<(),String>},
     Preview {
         epoch: u64,
@@ -164,21 +249,28 @@ pub(super) enum Response {
     Save {
         epoch: u64,
         path: PathBuf,
-        result: Result<(Arc<Archive>, SaveCheckpoint), String>,
+        result: Result<(Arc<Archive>, Option<SaveCheckpoint>), String>,
     },
 }
 
 pub(super) fn work(request: Request, read_only:bool) -> Response {
     match request {
+        Request::Import{epoch,path} => Response::Import{epoch,result:File::open(path).map_err(|e|e.to_string()).and_then(|file|Archive::read(file).map(Arc::new).map_err(|e|e.to_string()))},
+        Request::Export{epoch,path,archive,indices} => Response::Export{epoch,result:(|| {
+            if read_only {return Err("Read-only mode refuses Studio exports".into());}
+            let bytes=archive.export_selected(&indices).map_err(|e|e.to_string())?;
+            profile_files::write_studio(&path,&bytes)
+        })()},
         Request::Restore{epoch}=>Response::Restore{epoch,result:session::restore(&secbird_core::config_dir().join("studio-editor.json"))},
         Request::Remember{epoch,selection}=>Response::Remember{epoch,result:session::save(&secbird_core::config_dir().join("studio-editor.json"),selection,read_only)},
         Request::Preview {
+            synthetic_ambient,
             epoch,
             generation,
             snapshot,
             random_state,
         } => {
-            let result = Preview::from_snapshot(&snapshot, random_state)
+            let result = if synthetic_ambient {Preview::from_snapshot_synthetic_ambient(&snapshot, random_state)} else {Preview::from_snapshot(&snapshot, random_state)}
                 .map(Box::new)
                 .map_err(|e| e.to_string());
             Response::Preview {
@@ -211,9 +303,10 @@ pub(super) fn work(request: Request, read_only:bool) -> Response {
         } => {
             let result = (|| {
                 if read_only {return Err("Read-only mode refuses Studio file changes".into());}
-                let bytes = archive
-                    .replace_profile_bytes(index, checkpoint.json())
-                    .map_err(|error| error.to_string())?;
+                let bytes = match &checkpoint {
+                    Some(checkpoint) => archive.replace_profile_bytes(index, checkpoint.json()),
+                    None => archive.to_bytes(),
+                }.map_err(|error| error.to_string())?;
                 let replacement = Archive::parse(&bytes).map_err(|error| error.to_string())?;
                 profile_files::write_studio(&path, &bytes)?;
                 Ok((Arc::new(replacement), checkpoint))
@@ -229,7 +322,7 @@ pub(super) fn work(request: Request, read_only:bool) -> Response {
 
 impl View {
     fn dirty(&self) -> bool {
-        self.draft.as_ref().is_some_and(Draft::is_dirty)
+        self.library_dirty || self.draft.as_ref().is_some_and(Draft::is_dirty)
     }
     fn editable(&self) -> bool {
         self.draft.is_some() && !self.busy && !self.dialog
@@ -250,11 +343,16 @@ impl View {
             .ok_or("Studio session limit reached")?;
         self.draft = None;
         self.selected = None;
-        self.expanded.clear();
+        self.layer_drag = None;
         self.scroll = 0;
         self.dropdown = false;
+        self.composition_menu = false;
+        self.composition_renaming = false;
         self.layer_menu = false;
+        self.properties = property_tools::View::default();
         self.breathing_gradient = false;
+        self.breathing_playback = false;
+        self.breathing = breathing::Properties::default();
         self.renaming = false;
         self.canvas = studio_canvas::Canvas::load(raw, &assets_dir());
         match Draft::open(raw) {
@@ -280,14 +378,8 @@ impl View {
             .iter()
             .filter(|row| {
                 row.parent.as_ref().is_none_or(|parent| {
-                    self.expanded.get(parent).copied().unwrap_or_else(|| {
-                        draft
-                            .layers()
-                            .iter()
-                            .find(|group| group.id == *parent)
-                            .and_then(|group| group.opened)
-                            .unwrap_or(false)
-                    })
+                    draft.layers().iter().find(|group| group.id == *parent)
+                        .and_then(|group| group.opened).unwrap_or(false)
                 })
             })
             .map(|row| row.id.clone())
@@ -306,7 +398,7 @@ impl View {
         self.effect() == Some("fire")
     }
     fn is_breathing(&self) -> bool { self.effect()==Some("breathing") }
-    fn has_two_colors(&self) -> bool { self.is_fire() || (self.is_breathing() && !self.breathing_gradient) }
+    fn has_two_colors(&self) -> bool { self.is_fire() || (self.is_breathing() && !self.breathing_gradient && !self.breathing_playback) }
     fn effect(&self) -> Option<&str> {
         self.draft
             .as_ref()?
@@ -317,7 +409,7 @@ impl View {
             .as_deref()
     }
     fn color_property(&self, cold: bool) -> Option<ColorProperty> {
-        if self.is_breathing() && self.breathing_gradient {return None;}
+        if self.is_breathing() && (self.breathing_gradient || self.breathing_playback) {return None;}
         match (self.effect()?, cold) {
             ("static", false) => Some(ColorProperty::Static),
             ("fire", false) => Some(ColorProperty::FireHot),
@@ -331,10 +423,15 @@ impl View {
 
 pub(super) fn selection_changed(state: &mut State) {
     let view = &mut state.studio;
+    breathing::refresh(view);
     spectrum::refresh(view);
     wave::refresh(view);
+    wheel::refresh(view);
     starlight::refresh(view);
     reactive::refresh(view);
+    audio::refresh(view);
+    ambient::refresh(view);
+    tidal::refresh(view);
     view.selected_color = None;
     view.selected_cold = None;
     let Some(property) = view.color_property(false) else {
@@ -379,11 +476,17 @@ pub(super) fn selection_changed(state: &mut State) {
         }
     }
 }
+pub(super) fn identify_unavailable(state: &mut State) {
+    state.studio.status = secbird_core::lighting_identify::DISABLED_REASON.into();
+}
+
 fn error(state: &mut State, message: impl Into<String>) {
     state.studio.status = message.into();
     state.studio.failed = true;
 }
 unsafe fn redraw(state: &mut State) {
+    let visible = ((state.content_bottom_css() - 168.0) / 40.0).max(1.0) as usize;
+    state.studio.scroll = state.studio.scroll.min(state.studio.visible_ids().len().saturating_sub(visible));
     state.rebuild_fields();
     InvalidateRect(state.hwnd, null(), 0);
 }
@@ -425,14 +528,15 @@ pub(super) unsafe fn read_path(state: &mut State, path: PathBuf) {
         error(state, "Studio file operation was not accepted");
     }
 }
+unsafe fn start_save(state:&mut State) {
+    if let Some(path)=state.studio.path.clone() {save_path(state,path);} else {PostMessageW(state.hwnd,DIALOG,1,0);}
+}
+
 pub(super) unsafe fn save_path(state: &mut State, path: PathBuf) {
     let Some(archive) = state.studio.archive.clone() else {
         return;
     };
-    let Some(draft) = &state.studio.draft else {
-        return;
-    };
-    let checkpoint = draft.checkpoint();
+    let checkpoint = state.studio.draft.as_ref().map(Draft::checkpoint);
     let request = Request::Save {
         epoch: state.studio.epoch,
         path,
@@ -454,15 +558,22 @@ pub(super) unsafe fn save_path(state: &mut State, path: PathBuf) {
 
 unsafe fn proceed(state: &mut State, next: Next) {
     match next {
+        Next::Library(next) => library::proceed(state, next),
         Next::Open => {
             PostMessageW(state.hwnd, DIALOG, 0, 0);
         }
         Next::Profile(index) => {
             if let Err(message) = state.studio.profile(index) {
                 error(state, message);
+            } else if !state.studio.library_dirty {
+                state.studio.baseline_index=index;
             }
             selection_changed(state);
             remember(state);
+        }
+        Next::LinkedGames => {
+            state.studio.open = false;
+            state.action(Action::Device(linked_games::ID.into()));
         }
         Next::Close => {
             PostMessageW(state.hwnd, WM_CLOSE, 0, 0);
@@ -478,6 +589,7 @@ unsafe fn transition(state: &mut State, next: Next) {
     }
 }
 fn finish_name(state: &mut State) -> bool {
+    if state.studio.composition_renaming { return library::finish_name(state); }
     if !state.studio.renaming {
         return true;
     }
@@ -497,6 +609,29 @@ fn finish_name(state: &mut State) -> bool {
             false
         }
     }
+}
+/// Navigation must not reuse the exit dialog's Next::Close continuation.
+pub(super) unsafe fn can_leave_to_chroma(state: &mut State) -> bool {
+    if !state.studio.open { return true; }
+    if !finish_name(state) { return false; }
+    if state.studio.busy || state.studio.dialog || state.studio.dirty() {
+        error(state,"Save or discard Studio changes before opening Chroma");
+        redraw(state);
+        return false;
+    }
+    true
+}
+
+/// Save/discard/cancel keeps the requested module as the continuation.
+pub(super) unsafe fn leave_to_linked_games(state: &mut State) -> bool {
+    if !finish_name(state) || state.studio.busy || state.studio.dialog {
+        return true;
+    }
+    if state.studio.dirty() {
+        transition(state, Next::LinkedGames);
+        return true;
+    }
+    false
 }
 pub(super) unsafe fn block_close(state: &mut State) -> bool {
     if !finish_name(state) {
@@ -518,6 +653,10 @@ pub(super) unsafe fn block_close(state: &mut State) -> bool {
 }
 
 pub(super) unsafe fn action(state: &mut State, control: Control) {
+    spectrum::cancel_drag(state);
+    if matches!(control, Control::Library(_) | Control::Profiles | Control::Profile(_) | Control::Remap | Control::QuickSelection | Control::Open | Control::AddPreset) {
+        cancel_gestures(state);
+    }
     if matches!(control, Control::StopDevice) { output::stop(state); redraw(state); return; }
     if matches!(control, Control::Enter) {
         state.studio.open = true;
@@ -533,9 +672,10 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
     if state.studio.busy || state.studio.dialog || state.studio.output.busy {
         return;
     }
+    if state.studio.layer_drag.take().is_some() { ReleaseCapture(); }
     if !matches!(
         control,
-        Control::Rename | Control::CommitRename | Control::CancelRename
+        Control::Rename | Control::CommitRename | Control::CancelRename | Control::Library(library::Control::CommitRename | library::Control::CancelRename)
     ) && !finish_name(state)
     {
         redraw(state);
@@ -553,18 +693,22 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
             | Control::BreathingDuration(_)
     );
     if !matches!(control, Control::Layers(_)) { state.studio.layer_menu = false; }
+    if !matches!(control,Control::Library(library::Control::Menu)) {state.studio.composition_menu=false;}
+    if !matches!(control, Control::Properties(_)) { state.studio.properties.menu = None; }
     match control {
         Control::Enter => {}
+        Control::Library(control) => library::action(state, control),
         Control::Open => transition(state, Next::Open),
         Control::Save => {
-            if finish_name(state) && state.studio.draft.is_some() {
-                PostMessageW(state.hwnd, DIALOG, 1, 0);
+            if finish_name(state) && state.studio.archive.is_some() {
+                start_save(state);
             }
         }
-        Control::Profiles => state.studio.dropdown = !state.studio.dropdown,
-        Control::Profile(index) => transition(state, Next::Profile(index)),
+        Control::Profiles => {state.studio.dropdown = !state.studio.dropdown;state.studio.composition_menu=false;},
+        Control::Profile(index) => {state.studio.dropdown=false;transition(state, Next::Profile(index));},
         Control::Select(id) => {
             if state.studio.selected.as_ref() != Some(&id) {
+                state.studio.properties = property_tools::View::default();
                 state.studio.canvas.clear_selection();
                 ReleaseCapture();
             }
@@ -572,21 +716,13 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
             state.studio.renaming = false;
         }
         Control::Expand(id) => {
-            let old = state
-                .studio
-                .expanded
-                .get(&id)
-                .copied()
-                .or_else(|| {
-                    state
-                        .studio
-                        .draft
-                        .as_ref()
-                        .and_then(|draft| draft.layers().iter().find(|row| row.id == id))
-                        .and_then(|row| row.opened)
-                })
-                .unwrap_or(false);
-            state.studio.expanded.insert(id, !old);
+            if let Some(draft) = &mut state.studio.draft {
+                let opened = draft.layers().iter().find(|row| row.id == id)
+                    .and_then(|row| row.opened).unwrap_or(false);
+                if let Err(message) = draft.set_opened(&id, !opened) {
+                    error(state, message.to_string());
+                }
+            }
         }
         Control::Rename => {
             if let Some(row) = state.studio.draft.as_ref().and_then(|draft| {
@@ -608,8 +744,13 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
         Control::StopDevice => unreachable!("handled before busy file operations"),
         Control::Spectrum(control) => spectrum::action(state, control),
         Control::Wave(control) => wave::action(state, control),
+        Control::Wheel(control) => wheel::action(state, control),
         Control::Starlight(control) => starlight::action(state, control),
         Control::Reactive(control) => reactive::action(state, control),
+        Control::Audio(control) => audio::action(state, control),
+        Control::Ambient(control) => ambient::action(state, control),
+        Control::Breathing(control) => breathing::action(state, control),
+        Control::Tidal(control) => tidal::action(state, control),
         Control::BreathingDuration(index) => {
             let result=(|| -> Result<(),String> {
                 let view=&mut state.studio;
@@ -623,13 +764,22 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
         }
         Control::BreathingGradient => {
             if state.studio.is_breathing() {
-                state.studio.breathing_gradient=!state.studio.breathing_gradient;
+                state.studio.breathing_gradient = !state.studio.breathing_gradient;
                 selection_changed(state);
             }
         }
         Control::Layers(control) => {
             layer_tools::action(state, control);
             ReleaseCapture();
+        }
+        Control::Properties(control) => property_tools::action(state, control),
+        Control::QuickSelection => {
+            if state.studio.editable() && !state.read_only_smoke && !state.restricted_actions {
+                PostMessageW(state.hwnd, DIALOG, QUICK_SELECTION_DIALOG, 0);
+            }
+        }
+        Control::Remap => {
+            if state.studio.editable() && !state.read_only_smoke && !state.restricted_actions {PostMessageW(state.hwnd,DIALOG,REMAP_DIALOG,0);}
         }
         Control::AddPreset => {
             if state.studio.editable() && !state.read_only_smoke && !state.restricted_actions {
@@ -694,6 +844,20 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
                 Err(message) => error(state, message),
             }
         }
+        Control::PanKey => {}
+        Control::CancelCanvas => { state.studio.canvas.cancel(); ReleaseCapture(); }
+        Control::DeviceNames => { state.studio.canvas.names = !state.studio.canvas.names; }
+        Control::FitSelected => {
+            state.studio.canvas.fit_selected(f64::from(state.width) / f64::from(state.scale), f64::from(state.height) / f64::from(state.scale));
+            ReleaseCapture();
+        }
+        Control::ZoomPercent | Control::ZoomPreset(_) => {
+            let percent = if let Control::ZoomPreset(value) = control { Some(value) } else { state.raw_text(ZOOM).trim().trim_end_matches('%').parse::<f64>().ok() };
+            if let Some(percent) = percent.filter(|p| p.is_finite() && (5.0..=400.0).contains(p)) {
+                state.studio.canvas.set_zoom(percent, None, f64::from(state.width) / f64::from(state.scale), f64::from(state.height) / f64::from(state.scale));
+                ReleaseCapture();
+            } else { error(state, "Enter zoom from 5 to 400 percent"); }
+        }
         Control::Zoom(steps) => {
             state.studio.canvas.zoom(
                 steps,
@@ -746,6 +910,8 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
 
 fn install_archive(state:&mut State,path:PathBuf,archive:Arc<Archive>,index:usize)->Result<(),String> {
     state.studio.titles=(0..archive.profile_count()).map(|index|archive.profile_header(index).ok().and_then(|header|header.title).unwrap_or_else(||format!("Composition {}",index+1))).collect();
+    state.studio.baseline=Some(archive.clone());state.studio.baseline_index=index;
+    state.studio.library_dirty=false;
     state.studio.archive=Some(archive);state.studio.path=Some(path);
     if state.studio.archive.as_ref().unwrap().profile_count()==0 {
         state.studio.canvas=studio_canvas::Canvas::default();state.studio.draft=None;state.studio.selected=None;state.studio.status="This file contains no compositions".into();Ok(())
@@ -769,7 +935,7 @@ pub(super) unsafe fn receive(state: &mut State, response: Response) {
         other => other,
     };
     let epoch = match &response {
-        Response::Read { epoch, .. } | Response::Save { epoch, .. } | Response::Restore{epoch,..} => *epoch,
+        Response::Read { epoch, .. } | Response::Save { epoch, .. } | Response::Restore{epoch,..} | Response::Import{epoch,..} | Response::Export{epoch,..} => *epoch,
         Response::Remember{..}=>unreachable!(),
         Response::Preview { .. } => unreachable!(),
     };
@@ -777,22 +943,30 @@ pub(super) unsafe fn receive(state: &mut State, response: Response) {
         return;
     }
     state.studio.busy = false;
-    let should_remember=!matches!(&response,Response::Restore{..});
+    let should_remember=!matches!(&response,Response::Restore{..}|Response::Import{..}|Response::Export{..});
     let result = match response {
         Response::Remember{..}=>unreachable!(),
+        Response::Import{result,..}=>result.map(|archive| {
+            state.studio.import_candidate=Some(archive);
+            PostMessageW(state.hwnd,DIALOG,6,0);
+        }),
+        Response::Export{result,..}=>result.map(|_| {
+            state.studio.status="Selected compositions exported; editor draft retained".into();
+            state.studio.failed=false;
+        }),
         Response::Restore{result,..}=>result.and_then(|restored| {
             if let Some(restored)=restored { install_archive(state,restored.path,restored.archive,restored.index)?; }
             Ok(())
         }),
         Response::Read { path, result, .. } => result.and_then(|archive| install_archive(state,path,archive,0)),
         Response::Save { path, result, .. } => result.and_then(|(archive, checkpoint)| {
-            state
-                .studio
-                .draft
-                .as_mut()
-                .ok_or("Composition changed before save completed")?
-                .accept_saved(checkpoint)
-                .map_err(|error| error.to_string())?;
+            if let Some(checkpoint)=checkpoint {
+                state.studio.draft.as_mut().ok_or("Composition changed before save completed")?
+                    .accept_saved(checkpoint).map_err(|error|error.to_string())?;
+            }
+            state.studio.baseline=Some(archive.clone());
+            state.studio.baseline_index=state.studio.index;
+            state.studio.library_dirty=false;
             state.studio.archive = Some(archive);
             state.studio.path = Some(path);
             state.studio.status = if state.studio.playback.active() {
@@ -809,7 +983,7 @@ pub(super) unsafe fn receive(state: &mut State, response: Response) {
     match result {
         Ok(()) => {
             selection_changed(state);
-            if should_remember && state.studio.draft.is_some(){remember(state);}
+            if should_remember && state.studio.archive.is_some(){remember(state);}
             if let Some(next) = state.studio.next.take() {
                 proceed(state, next);
             }
@@ -877,7 +1051,14 @@ unsafe fn choose(hwnd: HWND, save: bool, initial: &str) -> Result<Option<PathBuf
 }
 
 pub(super) unsafe fn dialog(hwnd: HWND, pointer: *mut RefCell<State>, kind: usize) {
-    if kind == 3 { preset_picker::dialog(hwnd, pointer); return; }
+    match dialog_route(kind) {
+        Some(DialogRoute::QuickSelection) => {quick_selection_dialog(hwnd,pointer);return;}
+        Some(DialogRoute::Remap) => {remap::dialog(hwnd,pointer);return;}
+        Some(DialogRoute::Presets) => {preset_picker::dialog(hwnd,pointer);return;}
+        Some(DialogRoute::Library) => {library::dialog(hwnd,pointer,kind);return;}
+        Some(DialogRoute::File | DialogRoute::Unsaved) => {}
+        None => return,
+    }
     let epoch = {
         let Ok(mut state) = (*pointer).try_borrow_mut() else {
             return;
@@ -891,16 +1072,18 @@ pub(super) unsafe fn dialog(hwnd: HWND, pointer: *mut RefCell<State>, kind: usiz
     if kind == 2 {
         #[cfg(test)]
         let decision = (*pointer).borrow_mut().studio.test_decision.take();
-        #[cfg(not(test))]
-        let decision: Option<i32> = None;
-        let choice = decision.unwrap_or_else(|| {
+        let confirm = || {
             MessageBoxW(
                 hwnd,
-                wide("Save changes to this Studio composition?").as_ptr(),
+                wide("Save changes to this Studio composition library?\nChoose No to discard all unsaved composition and layer changes.").as_ptr(),
                 wide("Chroma Studio").as_ptr(),
                 MB_YESNOCANCEL | MB_ICONQUESTION,
             )
-        });
+        };
+        #[cfg(test)]
+        let choice = decision.unwrap_or_else(confirm);
+        #[cfg(not(test))]
+        let choice = confirm();
         let mut state = (*pointer).borrow_mut();
         state.studio.dialog = false;
         if state.studio.epoch != epoch {
@@ -909,12 +1092,10 @@ pub(super) unsafe fn dialog(hwnd: HWND, pointer: *mut RefCell<State>, kind: usiz
         }
         match choice {
             IDYES => {
-                PostMessageW(hwnd, DIALOG, 1, 0);
+                start_save(&mut state);
             }
             IDNO => {
-                if let Some(draft) = &mut state.studio.draft {
-                    draft.discard();
-                }
+                library::discard(&mut state);
                 selection_changed(&mut state);
                 if let Some(next) = state.studio.next.take() {
                     proceed(&mut state, next);
@@ -973,10 +1154,20 @@ pub(super) unsafe fn rebuild_fields(state: &mut State) {
     if !state.studio.open {
         return;
     }
+    let width = f64::from(state.width) / f64::from(state.scale);
+    let height = f64::from(state.height) / f64::from(state.scale);
+    let zoom = format!("{:.0}", state.studio.canvas.percent(width, height));
+    state.retained_fields.remove(&ZOOM);
+    state.field(ZOOM, &zoom, (width as i32) - 390, (height as i32) - 40, 50);
+    if let Some(&edit) = state.fields.get(&ZOOM) { SendMessageW(edit, EM_SETLIMITTEXT, 6, 0); }
     spectrum::fields(state);
     wave::fields(state);
+    wheel::fields(state);
     starlight::fields(state);
     reactive::fields(state);
+    audio::fields(state);
+    ambient::fields(state);
+    tidal::fields(state);
     if state.studio.color_property(false).is_some() {
         let text = state.studio.color.clone();
         let right = (state.width as f32 / state.scale) as i32 - 250;
@@ -996,9 +1187,14 @@ pub(super) unsafe fn rebuild_fields(state: &mut State) {
             }
         }
     }
-    if !state.studio.renaming {
+    if state.studio.composition_renaming {
+        let text=state.studio.name.clone();
+        state.retained_fields.remove(&NAME);
+        state.field(NAME,&text,46,87,200);
+        if let Some(&edit)=state.fields.get(&NAME) {SendMessageW(edit,EM_SETLIMITTEXT,32,0);}
         return;
     }
+    if !state.studio.renaming { return; }
     let ids = state.studio.visible_ids();
     let Some(index) = ids
         .iter()
@@ -1022,9 +1218,14 @@ pub(super) unsafe fn rebuild_fields(state: &mut State) {
     }
 }
 pub(super) fn command(state: &mut State, id: u16, notification: u16) -> bool {
+    if !state.studio.open {return false;}
+    if wheel::command(state,id,notification) {return true;}
     if wave::command(state,id,notification) {return true;}
     if starlight::command(state,id,notification) {return true;}
+    if tidal::command(state,id,notification) {return true;}
     if reactive::command(state,id,notification) {return true;}
+    if audio::command(state,id,notification) {return true;}
+    if ambient::command(state,id,notification) {return true;}
     if spectrum::command(state, id, notification) {
         return true;
     }
@@ -1047,12 +1248,31 @@ pub(super) fn key(state: &State, key: usize, control: bool, edit: bool) -> Optio
         return None;
     }
     match (key, control) {
+        (27, _) if state.studio.composition_menu => Some(Control::Library(library::Control::Menu)),
+        (27, _) if state.studio.dropdown => Some(Control::Profiles),
+        (27, _) if state.studio.properties.menu.is_some() => Some(Control::Properties(property_tools::Control::Dismiss)),
+        (0x43, true) if !edit => Some(Control::Properties(property_tools::Control::Copy)),
+        (0x56, true) if !edit => Some(Control::Properties(property_tools::Control::Paste)),
+        (0x2e | 8, false) if !edit && state.studio.canvas.count()>0 => Some(Control::Properties(property_tools::Control::Remove)),
+        (32, false) if !edit => Some(Control::PanKey),
+        (27, _) if state.studio.canvas.navigating() => Some(Control::CancelCanvas),
+        (0x46, true) if !edit && unsafe { GetKeyState(16) } < 0 => Some(Control::Zoom(0)),
+        (0x46, true) if !edit => Some(Control::ZoomPreset(100.0)),
+        (0x4c, true) if !edit => Some(Control::DeviceNames),
+        (13, _) if unsafe { GetFocus() } == state.fields.get(&ZOOM).copied().unwrap_or(null_mut()) => Some(Control::ZoomPercent),
         (27, _) if state.studio.layer_menu => Some(Control::Layers(layer_tools::Control::Dismiss)),
         (0x44, true) if !edit => Some(Control::Layers(layer_tools::Control::Duplicate)),
+        (0x45, true) if !edit => Some(Control::Rename),
         (0x2e, false) if !edit => Some(Control::Layers(layer_tools::Control::Delete)),
+        (13, _) if state.studio.composition_renaming => Some(Control::Library(library::Control::CommitRename)),
+        (27, _) if state.studio.composition_renaming => Some(Control::Library(library::Control::CancelRename)),
         (13, _) if state.studio.renaming => Some(Control::CommitRename),
+        (13, _) if edit && audio::enter(state).is_some() => audio::enter(state).map(Control::Audio),
+        (13, _) if edit && tidal::enter(state).is_some() => tidal::enter(state).map(Control::Tidal),
         (13, _) if edit && reactive::has_focus(state) => Some(Control::Reactive(reactive::Control::Color(false))),
+        (13, _) if edit && ambient::focused_control(state).is_some() => ambient::focused_control(state).map(Control::Ambient),
         (13, _) if edit && starlight::has_focus(state) => Some(Control::Starlight(starlight::Control::Density)),
+        (13, _) if edit && wheel::enter(state).is_some() => Some(Control::Wheel(wheel::enter(state).unwrap())),
         (13, _) if edit && wave::has_focus(state) => Some(Control::Wave(wave::Control::Motion)),
         (13, _) if edit && spectrum::has_focus(state) => {
             Some(Control::Spectrum(spectrum::Control::ApplyStop(false)))
@@ -1064,6 +1284,7 @@ pub(super) fn key(state: &State, key: usize, control: bool, edit: bool) -> Optio
                 Control::ApplyColor
             },
         ),
+        (27, _) if spectrum::dragging(&state.studio) => Some(Control::Spectrum(spectrum::Control::CancelDrag)),
         (27, _) if state.studio.renaming => Some(Control::CancelRename),
         (0x53, true) => Some(Control::Save),
         (0x4f, true) => Some(Control::Open),
@@ -1076,6 +1297,7 @@ pub(super) unsafe fn wheel(state: &mut State, delta: i32, mut point: POINT) -> b
     if !state.studio.open {
         return false;
     }
+    if state.studio.properties.menu.is_some() { return true; }
     ScreenToClient(state.hwnd, &mut point);
     if state.studio.dropdown {
         let count = state
@@ -1086,22 +1308,29 @@ pub(super) unsafe fn wheel(state: &mut State, delta: i32, mut point: POINT) -> b
         state.studio.profile_scroll = (state.studio.profile_scroll as i32
             - if delta > 0 { 1 } else { -1 })
         .clamp(0, count.saturating_sub(7) as i32) as usize;
+    } else if spectrum::wheel(state, delta, (point.x as f32 / state.scale) as i32) {
+        // Rebuild child fields at their scrolled positions.
     } else if (point.x as f32 / state.scale) < 250.0 {
         let count = state.studio.visible_ids().len();
         let visible = ((state.content_bottom_css() - 168.0) / 40.0).max(1.0) as usize;
         state.studio.scroll = (state.studio.scroll as i32 - if delta > 0 { 3 } else { -3 })
             .clamp(0, count.saturating_sub(visible) as i32) as usize;
     } else {
+        let scale = f64::from(state.scale);
+        let width = f64::from(state.width) / scale;
+        let height = f64::from(state.height) / scale;
+        let anchor = source_layout::Point { x: f64::from(point.x) / scale, y: f64::from(point.y) / scale };
+        if anchor.x <= 250.0 || anchor.x >= width - 250.0 || anchor.y < 168.0 || anchor.y >= height - 50.0 { return false; }
+        if delta == 0 { return false; }
         if GetKeyState(17) < 0 {
-            state.studio.canvas.zoom(
-                if delta > 0 { 1 } else { -1 },
-                f64::from(state.width) / f64::from(state.scale),
-                f64::from(state.height) / f64::from(state.scale),
-            );
-            ReleaseCapture();
+            let percent = (state.studio.canvas.percent(width, height) * 1.25f64.powf(f64::from(delta) / 120.0)).clamp(5.0, 400.0);
+            state.studio.canvas.set_zoom(percent, Some(anchor), width, height);
+        } else if GetKeyState(16) < 0 {
+            state.studio.canvas.scroll(f64::from(delta) / 3.0, 0.0, width, height);
         } else {
-            return false;
+            state.studio.canvas.scroll(0.0, f64::from(delta) / 3.0, width, height);
         }
+        ReleaseCapture();
     }
     redraw(state);
     true
@@ -1176,6 +1405,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
             action: Action::Studio(Control::Profiles),
         });
     }
+    button(p,"…",278,87,20,Control::Library(library::Control::Menu),!view.busy&&!view.dialog);
     button(
         p,
         "OPEN FILE",
@@ -1215,6 +1445,8 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         p,
         if view.playback.active() {
             "STOP PREVIEW"
+        } else if view.effect()==Some("ambient") {
+            "SYNTHETIC TEST"
         } else {
             "LOCAL PREVIEW"
         },
@@ -1244,9 +1476,11 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         GREEN,
         DT_LEFT,
     );
+    button(p, "QUICK SELECTIONS", 360, 135, 155, Control::QuickSelection,
+        view.editable() && !view.busy && !view.dialog);
     for (label, x, width, step) in [
         ("−", right - 170, 35, -1),
-        ("FIT", right - 130, 65, 0),
+        ("FIT ALL", right - 130, 65, 0),
         ("+", right - 60, 35, 1),
     ] {
         button(
@@ -1258,6 +1492,18 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
             Control::Zoom(step),
             !view.busy && !view.dialog,
         );
+    }
+    for (label, x, w, control) in [
+        ("NAMES", 270, 60, Control::DeviceNames),
+        ("FIT SELECTED", 335, 100, Control::FitSelected),
+        ("50%", 440, 45, Control::ZoomPreset(50.0)),
+        ("100%", 490, 50, Control::ZoomPreset(100.0)),
+        ("200%", 545, 50, Control::ZoomPreset(200.0)),
+        ("SET %", right - 85, 65, Control::ZoomPercent),
+    ] {
+        if x + w < right - 145 || x == right - 85 {
+            button(p, label, x, height - 40, w, control, !view.busy && !view.dialog);
+        }
     }
     let clip = SaveDC(p.dc);
     IntersectClipRect(p.dc, 0, p.px(168), p.px(250), state.height);
@@ -1274,12 +1520,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
                 p.fill(0, y, 250, 40, 0x353535);
             }
             if row.kind == Kind::Group {
-                let opened = view
-                    .expanded
-                    .get(id)
-                    .copied()
-                    .or(row.opened)
-                    .unwrap_or(false);
+                let opened = row.opened.unwrap_or(false);
                 p.text(
                     if opened { "−" } else { "+" },
                     4,
@@ -1318,6 +1559,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
             );
         }
     }
+    layer_tools::paint_drop(state, p);
     RestoreDC(p.dc, clip);
     let selected = view.draft.as_ref().and_then(|draft| {
         draft
@@ -1341,9 +1583,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         p,
         if view.renaming {
             "APPLY NAME"
-        } else {
-            "RENAME LAYER"
-        },
+        } else if selected.is_some_and(|row| row.kind == Kind::Group) { "RENAME GROUP" } else { "RENAME LAYER" },
         right + 10,
         180,
         150,
@@ -1403,6 +1643,8 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
             Control::Erase,
             enabled,
         );
+    } else if view.is_breathing() && view.breathing_playback {
+        breathing::paint(p,view,right);
     } else if view.is_breathing() && view.breathing_gradient {
         spectrum::paint(p,view,right);
     } else if view.has_two_colors() {
@@ -1454,17 +1696,27 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
             view.editable() && view.canvas.count() > 0,
         );
     } else if view.effect() == Some("spectrum") {
-        spectrum::paint(p, view, right);
+        spectrum::paint_scrolled(p, view, right, height-40);
+    } else if view.effect() == Some("audio") {
+        audio::paint(p,view,right);
+    } else if view.effect() == Some("tidal") {
+        tidal::paint(p,view,right);
     } else if view.effect() == Some("reactive") {
         reactive::paint(p,view,right);
+    } else if view.effect() == Some("ambient") {
+        ambient::paint(p,view,right);
     } else if view.effect() == Some("starlight") {
         starlight::paint(p,view,right);
+    } else if view.effect() == Some("wheel") {
+        wheel::paint(p,view,right);
     } else if view.effect() == Some("wave") {
         wave::paint(p,view,right);
     } else {
         paragraph(
             p,
-            "Effect properties and lighting preview are not available yet.",
+            if selected.is_some_and(|row| row.kind == Kind::Group) {
+                "Drag layers onto the middle of this group to add them. Drop beside a root row to move a layer out."
+            } else { "Effect properties and lighting preview are not available yet." },
             right + 10,
             274,
             230,
@@ -1473,9 +1725,10 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         );
     }
     if view.is_breathing() && !view.breathing_gradient && !view.renaming {
-        button(p,"CUSTOM GRADIENT",right+10,220,220,Control::BreathingGradient,view.editable());
+        if !view.breathing_playback {button(p,"GRADIENT",right+10,220,106,Control::BreathingGradient,view.editable());}
+        button(p,if view.breathing_playback {"BACK TO COLOURS"}else{"PLAYBACK"},right+if view.breathing_playback{10}else{124},220,if view.breathing_playback{220}else{106},Control::Breathing(breathing::Control::Page),view.editable());
     }
-    if view.is_breathing() && !view.breathing_gradient {
+    if view.is_breathing() && !view.breathing_gradient && !view.breathing_playback {
         p.text("SPEED · SELECT LEDS",right+10,500,230,25,p.fonts.small,TEXT,DT_LEFT);
         for (index,title) in ["SLOW","NORMAL","FAST"].iter().enumerate() {
             button(p,title,right+10+index as i32*77,530,72,Control::BreathingDuration(index),view.editable() && view.canvas.count()>0);
@@ -1488,32 +1741,36 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         height - 40,
         100,
         Control::Save,
-        view.editable() && (view.dirty() || view.renaming),
+        view.archive.is_some() && !view.busy && !view.dialog && (view.dirty() || view.renaming || view.composition_renaming),
     );
     let message = if view.status.is_empty() {
         "Open a .ChromaEffects file to edit its layers."
     } else {
         &view.status
     };
+    if view.effect()!=Some("spectrum") {
     paragraph(
         p,
         message,
-        right + 10,
-        if view.is_breathing() && !view.breathing_gradient { 566 } else if matches!(view.effect(),Some("breathing"|"spectrum"|"wave"|"starlight"|"reactive")) {
+        if view.effect()==Some("tidal") {270} else {right + 10},
+        if view.effect()==Some("tidal") {height-112} else if spectrum::visible(view) {628} else if view.is_breathing() && view.breathing_playback {592} else if view.effect() == Some("ambient") { 614 } else if view.is_breathing() && !view.breathing_gradient { 566 } else if matches!(view.effect(),Some("breathing"|"spectrum"|"wheel"|"wave"|"starlight"|"reactive"|"audio")) {
             590
         } else if view.is_fire() {
             506
         } else {
             400
         },
-        230,
-        130,
+        if view.effect()==Some("tidal") {(width-540).max(1)} else {230},
+        if view.effect()==Some("tidal") {60} else if spectrum::visible(view) {(height-40-628).max(0)} else if view.is_breathing() && view.breathing_playback {80} else {130},
         if view.failed { 0xfd4949 } else { MUTED },
     );
+    }
     layer_tools::paint(state, p);
+    button(p,"REMAP",390,172,90,Control::Remap,view.editable());
     button(p,"ADD DEVICE",270,172,110,Control::AddPreset,
         view.editable() && !state.read_only_smoke && !state.restricted_actions);
     output::paint(state, p);
+    if view.composition_menu {library::paint_menu(state,p,116);}
     if view.dropdown {
         let count = view
             .archive
@@ -1525,7 +1782,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
             let title = &view.titles[index];
             let y = 116 + (index - view.profile_scroll) as i32 * 28;
             p.text(
-                &title,
+                title,
                 52,
                 y,
                 254,
@@ -1540,6 +1797,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
             });
         }
     }
+    property_tools::paint(state, p);
 }
 
 #[cfg(test)]
@@ -1550,14 +1808,23 @@ pub(super) unsafe fn output_test_dirty_apply(state: &mut State) {
 #[cfg(test)]
 pub(super) fn diagnostics(state: &State) -> Value {
     let view = &state.studio;
-    json!({"open":view.open,"busy":view.busy,"dialog":view.dialog,"dirty":view.dirty(),"renaming":view.renaming,"status":view.status,"failed":view.failed,"pending":state.pending,"selected_leds":view.canvas.count(),"canvas_notes":view.canvas.notes,"canvas_devices":view.canvas.device_count(),"canvas_can_preview":view.canvas.can_preview(),"canvas_selectable_leds":view.canvas.selectable_count(),"color":view.color,
+    json!({"property_menu":view.properties.menu,"property_clipboard":view.properties.clip.is_some(),"open":view.open,"busy":view.busy,"dialog":view.dialog,"dirty":view.dirty(),"renaming":view.renaming,"status":view.status,"failed":view.failed,"pending":state.pending,"viewport":{"zoom":view.canvas.percent(f64::from(state.width)/f64::from(state.scale),f64::from(state.height)/f64::from(state.scale)),"names":view.canvas.names},"selected_leds":view.canvas.count(),"canvas_notes":view.canvas.notes,"canvas_devices":view.canvas.device_count(),"canvas_assets":view.canvas.asset_snapshot(),"canvas_can_preview":view.canvas.can_preview(),"canvas_selectable_leds":view.canvas.selectable_count(),"color":view.color,
         "preview":playback::diagnostics(state),"device_output":view.output.status,"output_busy":view.output.busy,"output_control_ready":view.output.control.is_some(),"index":view.index,"profile_id":view.archive.as_ref().and_then(|a|a.profile_header(view.index).ok()).and_then(|h|h.id),"profiles":view.archive.as_ref().map_or(0,|archive|archive.profile_count()),"selected":view.selected,
         "undo":view.draft.as_ref().map_or(0,Draft::undo_len),"redo":view.draft.as_ref().map_or(0,Draft::redo_len),
-        "rows":view.draft.as_ref().map(|draft|draft.layers().iter().map(|row|json!({"id":row.id,"title":row.title,"visible":row.visible})).collect::<Vec<_>>()).unwrap_or_default()})
+        "rows":view.draft.as_ref().map(|draft|draft.layers().iter().map(|row|json!({"id":row.id,"title":row.title,"visible":row.visible,"parent":row.parent,"opened":row.opened})).collect::<Vec<_>>()).unwrap_or_default()})
 }
 
 #[cfg(test)]
 pub(super) unsafe fn add_preset_test(state:&mut State,key:(u16,u16,u16)) { preset_picker::add_test(state,key); }
+
+#[cfg(test)]
+pub(super) fn add_effect_position_test(state:&State,name:&str)->Value {
+    state.hits.iter().find_map(|hit| match &hit.action {
+        Action::Studio(Control::Layers(layer_tools::Control::Add(effect))) if format!("{effect:?}")==name =>
+            Some(json!({"x":f64::from(hit.rect.left+hit.rect.right)/2.0/f64::from(state.scale),"y":f64::from(hit.rect.top+hit.rect.bottom)/2.0/f64::from(state.scale)})),
+        _=>None,
+    }).unwrap_or(Value::Null)
+}
 
 /// Render our own window state for review, without reading another app's pixels.
 #[cfg(test)]
@@ -1582,6 +1849,18 @@ pub(super) unsafe fn capture_frame(state: &mut State, path: &Path) -> bool {
     }
     let old = SelectObject(dc, bitmap);
     super::paint(state, dc);
+    // Native EDIT children are separate windows and are absent from paint().
+    for child in state.fields.values() {
+        if IsWindowVisible(*child)==0 {continue;}
+        let mut bounds: RECT = std::mem::zeroed();
+        GetWindowRect(*child, &mut bounds);
+        let mut point = POINT { x: bounds.left, y: bounds.top };
+        ScreenToClient(state.hwnd, &mut point);
+        let saved = SaveDC(dc);
+        SetViewportOrgEx(dc, point.x, point.y, null_mut());
+        SendMessageW(*child, WM_PRINT, dc as usize, (PRF_CLIENT | PRF_ERASEBKGND | PRF_CHECKVISIBLE) as isize);
+        RestoreDC(dc, saved);
+    }
     SelectObject(dc, old);
     let mut image = null_mut();
     let created = gp::GdipCreateBitmapFromHBITMAP(bitmap, null_mut(), &mut image);
@@ -1604,12 +1883,82 @@ pub(super) unsafe fn capture_frame(state: &mut State, path: &Path) -> bool {
 
 #[cfg(test)]
 pub(super) fn reset_test(state: &mut State) {
-    if let Some(draft) = &mut state.studio.draft {
-        draft.discard();
-    }
+    library::discard(state);
     state.studio.renaming = false;
     state.studio.name.clear();
     state.studio.next = None;
     state.studio.test_decision = Some(IDNO);
     state.exit_tray = None;
+}
+
+// Match the source checkbox union/subtraction semantics without editing the file.
+unsafe fn quick_selection_dialog(hwnd: HWND, pointer: *mut RefCell<State>) {
+    let (choices, epoch) = {
+        let Ok(mut state) = (*pointer).try_borrow_mut() else { return; };
+        if state.restricted_actions || state.read_only_smoke || !state.studio.editable()
+            || state.studio.busy || state.studio.dialog { return; }
+        cancel_gestures(&mut state);
+        state.studio.dialog = true;
+        (state.studio.canvas.quick_selections(), state.studio.epoch)
+    };
+    let menu = CreatePopupMenu();
+    let mut selected = 0;
+    if !menu.is_null() {
+        for (index, choice) in choices.iter().enumerate() {
+            AppendMenuW(menu, MF_STRING | if choice.enabled { 0 } else { MF_GRAYED } | if choice.checked { MF_CHECKED } else { 0 },
+                index + 1, wide(&choice.title.replace('&', "&&")).as_ptr());
+        }
+        let mut point: POINT = std::mem::zeroed();
+        if GetCursorPos(&mut point) != 0 {
+            selected = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_NONOTIFY,
+                point.x, point.y, 0, hwnd, null()) as usize;
+        }
+        DestroyMenu(menu);
+    }
+    let Ok(mut state) = (*pointer).try_borrow_mut() else { return; };
+    state.studio.dialog = false;
+    if state.studio.epoch != epoch || state.read_only_smoke || state.restricted_actions || !state.studio.editable() || state.studio.output.busy { return; }
+    if let Some(choice) = selected.checked_sub(1).and_then(|i| choices.get(i)) {
+        state.studio.canvas.toggle_quick_selection(choice);
+        selection_changed(&mut state);
+        state.rebuild_fields();
+    }
+    redraw(&mut state);
+}
+#[cfg(test)]
+pub(super) unsafe fn remap_fixture_test(state:&mut State){remap::fixture(state);}
+
+pub(super) fn wheel_picking(state:&State)->bool {state.studio.effect()==Some("wheel") && state.studio.wheel.picking && state.studio.editable()}
+pub(super) fn wheel_center(state:&mut State,x:u16,y:u16) {wheel::center(state,x,y);}
+pub(super) unsafe fn wheel_pointer(state:&mut State,message:u32,lparam:isize)->bool {wheel::pointer(state,message,lparam)}
+
+pub(super) fn wheel_geometry(state:&State)->Option<secbird_core::studio::document::WheelGeometry> {if state.studio.effect()!=Some("wheel") {return None;}state.studio.draft.as_ref()?.wheel_geometry(state.studio.selected.as_deref()?).ok()}
+pub(super) fn tidal_center_active(state:&State)->bool {tidal::center_active(&state.studio)}
+pub(super) fn tidal_center(state:&State)->Option<(u16,u16)> {tidal::center(&state.studio)}
+pub(super) fn place_tidal_center(state:&mut State,x:f64,y:f64) {
+    if !x.is_finite() || !y.is_finite() || !(0.0..=10000.0).contains(&x) || !(0.0..=10000.0).contains(&y) {
+        error(state,"Center point must be inside the 10000-pixel Studio canvas");return;
+    }
+    tidal::action(state,tidal::Control::Place(x.round() as u16,y.round() as u16));
+}
+
+#[cfg(test)]
+mod integration_contract_tests {
+    use super::*;
+    #[test]
+    fn studio_dialog_routes_keep_all_library_operations_distinct_from_quick_and_remap() {
+        for id in 4..=7 { assert_eq!(dialog_route(id), Some(DialogRoute::Library)); }
+        assert_eq!(dialog_route(QUICK_SELECTION_DIALOG), Some(DialogRoute::QuickSelection));
+        assert_eq!(dialog_route(REMAP_DIALOG), Some(DialogRoute::Remap));
+        assert_eq!(dialog_route(3), Some(DialogRoute::Presets));
+        assert_eq!(dialog_route(2), Some(DialogRoute::Unsaved));
+        assert_eq!(dialog_route(0), Some(DialogRoute::File));
+        assert_eq!(dialog_route(1), Some(DialogRoute::File));
+        assert_eq!(dialog_route(10), None);
+        assert_eq!(dialog_route(usize::MAX), None);
+        assert_ne!(TEST_NAVIGATION,TEST_REMAP);
+        assert_ne!(TEST_EFFECT_POSITION,TEST_NAVIGATION);
+        assert_ne!(TEST_EFFECT_POSITION,TEST_REMAP);
+        assert!(![NAME,COLOR,COLD,POSITION,STOP_COLOR].contains(&ZOOM));
+    }
 }

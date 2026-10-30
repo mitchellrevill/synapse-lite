@@ -11,6 +11,7 @@ pub(super) enum Kind {
 
 pub(super) struct Gesture {
     device: String,
+    connection: u64,
     kind: Kind,
     shape: Rect,
     value: u16,
@@ -63,6 +64,7 @@ pub(super) unsafe fn begin(state: &mut State, kind: Kind, shape: Rect) {
         return;
     }
     state.power_gesture = Some(Gesture {
+        connection: device["connection_id"].as_u64().unwrap_or(0),
         device: device["id"].as_str().unwrap_or_default().into(),
         kind,
         shape,
@@ -102,7 +104,10 @@ pub(super) unsafe fn finish(state: &mut State) {
     if state.tab != Tab::Power || state.selected.as_deref() != Some(gesture.device.as_str()) {
         return;
     }
-    let mut body = json!({"id":gesture.device,"expected_device":gesture.device});
+    if state.device().and_then(|d| d["connection_id"].as_u64()) != Some(gesture.connection) {
+        return;
+    }
+    let mut body = json!({"id":gesture.device,"expected_device":gesture.device,"expected_connection":gesture.connection});
     let path = match gesture.kind {
         Kind::Sleep => {
             body["minutes"] = json!(gesture.value);
@@ -260,5 +265,19 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, device: &Value) -
             );
         }
     }
+    let status = &device["power_status"];
+    let battery = status["battery_percent"].as_u64()
+        .map(|percent| format!("Battery {percent}%"))
+        .unwrap_or_else(|| "Battery unavailable".into());
+    let charging = match status["charging"].as_bool() {
+        Some(true) => "Charging",
+        Some(false) => "Not charging",
+        None => "Charging status unavailable",
+    };
+    let transport = if status["transport"] == "wired" { "Wired" } else { "Receiver" };
+    let bottom = (g.sleep.bounds.y + g.sleep.bounds.height)
+        .max(g.threshold.bounds.y + g.threshold.bounds.height);
+    text(p, &format!("{transport}   {battery}   {charging}"),
+        at(30.0, bottom + 16.0, 900.0, 24.0), p.fonts.small, MUTED, DT_LEFT);
     true
 }

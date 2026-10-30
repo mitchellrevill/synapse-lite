@@ -93,14 +93,14 @@ impl Transform {
         })
     }
 
-    pub fn to_screen(&self, point: Point) -> Point {
+    pub fn to_screen(self, point: Point) -> Point {
         Point {
             x: self.left + point.x * self.scale,
             y: self.top + point.y * self.scale,
         }
     }
 
-    pub fn to_source(&self, point: Point) -> Point {
+    pub fn to_source(self, point: Point) -> Point {
         Point {
             x: (point.x - self.left) / self.scale,
             y: (point.y - self.top) / self.scale,

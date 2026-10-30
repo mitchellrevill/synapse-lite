@@ -1,0 +1,79 @@
+{
+  "checkpoint": "studio-reactive-event-replay-boundary",
+  "date": "2026-10-29",
+  "base_main": "e6c21c3",
+  "scope": "Diagnostic sample-driven renderer, source metadata mapping and exact-handle Windows decoder; ordinary Studio Reactive preview/output remains refused",
+  "source_projection": {
+    "bundle_sha256": "109b483f129044e1c7c17b9fcae0e30fa775885667976807cf2c94bd1c696d19",
+    "unicode_character_range": [19602, 20250],
+    "projection_tree_sha256": "35b00c2d7ab0796d6ebe31634f99631f5abc0c139324a88bdb26cda850836709",
+    "parent_evidence": "ev_007527f7cc6422581a889aecea11ecb8b67e86da9d450d45603c318b755397de",
+    "summary_evidence": "ev_83dee50f8d330206937e399b06cbbce7f1450c140d335f8715e4f6d8505e83bb",
+    "text_bytes": 763,
+    "ast_nodes": 225,
+    "parse_failures": 0,
+    "semantic_unknowns": 51,
+    "execution_observed": false,
+    "observation": "Source copies InputType and JSON.stringify(InputData) by matching LedInputMap.MatrixPos to LED row/column",
+    "inference": "kbd pair is interpreted as make-code/prefix candidates for replay; physical source-to-Windows translation remains unproved"
+  },
+  "native_blocker": {
+    "dll_sha256": "cd9fc2a61ff920b9b73e1f5e27632020e2f8586f443e426a875ad3b042b714fa",
+    "procedure": "0x180063680",
+    "previous_constructor_decompilation_repeated": false,
+    "smaller_operation": "procedure_assembly",
+    "sandbox_result": "provider_timeout",
+    "outside_sandbox_hypothesis": "Test whether the restricted loopback bridge caused the timeout",
+    "outside_sandbox_result": "provider_timeout with initial cleanup_incomplete",
+    "per_query_timeout_ms": 240000,
+    "subsequent_explicit_close": "success",
+    "new_native_function_evidence": null,
+    "next_diagnostic": "Repair/reuse an owned narrow analysis provider, resolve Reactive vtable frame/init/trigger slots, then corroborate only those small methods against controlled native effect pulse samples"
+  },
+  "contract": {
+    "default_vendor_pulse": false,
+    "samples_required": true,
+    "retrigger_policy_required": true,
+    "explicit_preview_session_required": true,
+    "stale_sessions_and_source_loss_cannot_change_new_session": true,
+    "render_led_limit": 512,
+    "region_limit": 128,
+    "samples_per_pulse_limit": 16384,
+    "pulse_and_active_slot_budget_bytes": 4194304,
+    "whole_process_memory_claimed": false
+  },
+  "validation": {
+    "status": "passed offline workspace suite with isolated workspace TEMP/TMP and SYNAPSE_LITE_CONFIG_DIR",
+    "new_reactive_checks_passed": 14,
+    "workspace": {
+      "core_passed": 521,
+      "core_ignored": 6,
+      "tray_passed": 308,
+      "tray_ignored": 47,
+      "cli_passed": 4,
+      "doc_passed": 1,
+      "failed": 0
+    },
+    "initial_workspace_attempt": "32 existing file-persistence tests failed with Access is denied in sandbox default TEMP; unchanged code passed after moving TEMP/TMP and config into the workspace",
+    "optimized_build": "not run for this diagnostic-only checkpoint",
+    "operation_count_scope": "New Reactive mapping/replay/decoder and owned-window diagnostic tests only",
+    "physical_discovery": false,
+    "raw_input_registrations": 0,
+    "physical_input_reads": 0,
+    "interception": false,
+    "generated_input": false,
+    "device_mode_changes": 0,
+    "hardware_output_operations": 0,
+    "normal_profile_writes": 0,
+    "native_window": "Owned hidden message-only HWND; synchronous private WM_APP synthetic records, never counterfeit WM_INPUT",
+    "vendor_animation_reference_claimed": false,
+    "visual_parity_claimed": false
+  },
+  "remaining": [
+    "Native colour/gradient/None/decay/random/duration and retrigger algorithm",
+    "Physical normal-mode exact-device Raw Input delivery, special keys and ownership lifecycle",
+    "Separately explicit input observation and lighting output opt-ins in ordinary Studio",
+    "Saved-device output integration and physical stop/unplug/sleep/restart proof",
+    "Matched captures, all-device/profile compatibility and three-run complete-build memory gates"
+  ]
+}

@@ -157,7 +157,7 @@ unsafe fn image(p: &Painter<'_>, bitmap: Option<&Bitmap>, r: SourceRect, alpha: 
     }
     let old = SelectObject(dc, bitmap.handle);
     let dst = rect(p, r);
-    SetStretchBltMode(p.dc, HALFTONE as i32);
+    SetStretchBltMode(p.dc, HALFTONE);
     SetBrushOrgEx(p.dc, 0, 0, null_mut());
     if alpha < 1.0 {
         source_alpha_blend(
@@ -273,6 +273,8 @@ unsafe fn spinner(
     }
 }
 
+// Keep the source-matching drawing parameters explicit; grouping them would churn geometry call sites.
+#[allow(clippy::too_many_arguments)]
 unsafe fn slider(
     p: &mut Painter<'_>,
     state: &State,

@@ -6,7 +6,6 @@
 //! HID Device. The filter additionally has its existing best-effort Drop recovery.
 //! Coordinate stock ownership before SET: neither transport provides atomic CAS.
 
-#![cfg(windows)]
 
 pub use crate::dynamic_sensitivity::Rotation;
 use crate::sensor_rotation::{SensorRotation, SensorRotationReader};
@@ -473,8 +472,7 @@ mod tests {
     }
     #[test]
     fn source_bytes_and_unknown_observation() {
-        let mut intent = Rotation::default();
-        intent.value = -44;
+        let mut intent = Rotation { value: -44, ..Rotation::default() };
         assert_eq!(
             Raw::desired(RotationPath::Hardware, &intent).unwrap(),
             Raw::Hardware([1, 1, 212])

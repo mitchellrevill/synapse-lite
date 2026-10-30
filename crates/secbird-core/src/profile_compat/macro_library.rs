@@ -4,8 +4,13 @@ use serde::{Deserialize,Serialize};
 use serde_json::value::RawValue;
 use std::collections::BTreeSet;
 pub mod input_events;
+pub mod recording;
 pub mod nested;
+pub mod loops;
 pub mod host_actions;
+pub mod random_delay;
+pub mod planning;
+pub mod xml;
 use input_events::{Input,Gesture};
 
 const KEY:&str="_synapseLiteMacroLibrary";
@@ -37,11 +42,14 @@ pub enum Change {
     DeleteInputGroup{guid:String,index:usize},
     InsertNested{guid:String,index:usize,target:String},
     RebindNested{guid:String,index:usize,target:String},
+    WrapLoop{guid:String,index:usize,end:usize,repeat:u32},
+    SetLoopRepeat{guid:String,index:usize,repeat:u32},
     InsertAction{guid:String,index:usize,action:host_actions::Action},
     SetAction{guid:String,index:usize,action:host_actions::Action},
     DeleteEvent{guid:String,index:usize},
     MoveEvent{guid:String,index:usize,direction:i8},
     SetDelay{guid:String,index:usize,milliseconds:u32},
+    SetRandomDelay{guid:String,index:usize,min_ms:u32,max_ms:u32},
 }
 fn global(store:&Store)->Result<Vec<Value>> {
     let Some(value)=store.extra.get(KEY) else{return Ok(vec![]);};
@@ -142,10 +150,16 @@ fn patch(record:&Value,field:&str,value:Box<RawValue>)->Result<Value> {
 fn raw(value:&impl Serialize)->Result<Box<RawValue>> {RawValue::from_string(serde_json::to_string(value).map_err(|e|invalid(e.to_string()))?).map_err(|e|invalid(e.to_string()))}
 fn event_rows(record:&Value)->Result<Vec<Box<RawValue>>> {
     let body=payload(record)?;
-    if body.0.iter().any(|(key,_)|key=="appEngine"){return Err(invalid("Macro contains a native event cache; source cache invalidation needs verification before event edits"));}
+    if let Some((_,engine))=body.0.iter().find(|(key,_)|key=="appEngine"){
+        let hint:Value=serde_json::from_str(engine.get()).map_err(|e|invalid(e.to_string()))?;
+        if !movement_only_hint(&hint){return Err(invalid("Macro contains a native event cache; source cache invalidation needs verification before event edits"));}
+    }
     let events=body.0.iter().find(|(key,_)|key=="macroEvents").ok_or_else(||invalid("Macro has no event array"))?;
     let rows:Vec<Box<RawValue>>=serde_json::from_str(events.1.get()).map_err(|e|invalid(e.to_string()))?;
     if rows.len()>MAX_EVENTS{return Err(invalid("Macro exceeds512 event rows"));}Ok(rows)
+}
+fn movement_only_hint(value:&Value)->bool {
+    value.as_object().is_some_and(|object|object.len()==1&&object.get("mouseMoveType").and_then(Value::as_str).is_some_and(|s|["none","absolute","foreground","relative"].contains(&s)))
 }
 fn delay(milliseconds:u32)->Result<Box<RawValue>> {
     if milliseconds>3_600_000{return Err(invalid("Delay exceeds one hour"));}
@@ -197,16 +211,20 @@ pub fn edit(current:&Store,change:Change)->Result<Store> {
             for device in candidate.devices.values_mut(){for (key,envelope) in &mut device.extra {if key==SOURCE||key.starts_with(&format!("_synapseLiteImported:{SOURCE}")){if let Some(rows)=envelope.get_mut("macros").and_then(Value::as_array_mut){let mut kept=vec![];for row in rows.drain(..){if guid(&row)?!=id{kept.push(row);}}*rows=kept;}}}}
         }
         Change::Import(bytes)=>{
-            if bytes.len()>MAX_DECODED_BYTES*2{return Err(invalid("Macro import exceeds2MiB"));}check_json_complexity(&bytes)?;
-            let source:Value=serde_json::from_slice(&bytes).map_err(|e|invalid(e.to_string()))?;
+            if bytes.len()>MAX_DECODED_BYTES*2{return Err(invalid("Macro import exceeds2MiB"));}
+            let text=std::str::from_utf8(&bytes).map_err(|_|invalid("Macro import must be UTF-8"))?.trim_start_matches('\u{feff}').trim_start();
+            let source:Value=if text.starts_with('<'){json!({"macros":[xml::import(&bytes)?]})}else{check_json_complexity(&bytes)?;serde_json::from_slice(&bytes).map_err(|e|invalid(e.to_string()))?};
             let incoming=source["macros"].as_array().ok_or_else(||invalid("Choose a Synapse4 profile export containing macro records"))?;
             if incoming.len()>MAX_MACROS{return Err(invalid("Too many imported macros"));}
             for r in incoming {let id=guid(r)?;if let Some(old)=records.get(&id){if old!=r{return Err(invalid("Import conflicts with an existing macro GUID"));}}else{records.insert(id,r.clone());}propagate(&mut candidate,r)?;}
         }
         other=>{
-            let (id,index)=match &other {Change::InsertDelay{guid,index,..}|Change::InsertInput{guid,index,..}|Change::RebindInput{guid,index,..}|Change::DeleteInputGroup{guid,index}|Change::InsertNested{guid,index,..}|Change::RebindNested{guid,index,..}|Change::InsertAction{guid,index,..}|Change::SetAction{guid,index,..}|Change::DeleteEvent{guid,index}|Change::MoveEvent{guid,index,..}|Change::SetDelay{guid,index,..}=>(guid.clone(),*index),_=>unreachable!()};
+            let (id,index)=match &other {Change::InsertAction{guid,index,..}|Change::SetAction{guid,index,..}|Change::WrapLoop{guid,index,..}|Change::SetLoopRepeat{guid,index,..}|Change::InsertDelay{guid,index,..}|Change::InsertInput{guid,index,..}|Change::RebindInput{guid,index,..}|Change::DeleteInputGroup{guid,index}|Change::InsertNested{guid,index,..}|Change::RebindNested{guid,index,..}|Change::DeleteEvent{guid,index}|Change::MoveEvent{guid,index,..}|Change::SetRandomDelay{guid,index,..}|Change::SetDelay{guid,index,..}=>(guid.clone(),*index),_=>unreachable!()};
             let original=records.get(&id).ok_or_else(||invalid("Unknown macro"))?;let mut rows=event_rows(original)?;
+            loops::validate(&rows)?;
             match other {
+                Change::WrapLoop{end,repeat,..}=>loops::wrap(&mut rows,index,end,repeat)?,
+                Change::SetLoopRepeat{repeat,..}=>loops::set_repeat(&mut rows,index,repeat)?,
                 Change::InsertDelay{milliseconds,..}=>{if rows.len()>=MAX_EVENTS||index>rows.len(){return Err(invalid("Event insertion exceeds macro bounds"));}rows.insert(index,delay(milliseconds)?);}
                 Change::InsertInput{input,gesture,..}=>{
                     let parsed:Vec<Value>=rows.iter().map(|row|serde_json::from_str(row.get()).map_err(|e|invalid(e.to_string()))).collect::<Result<_>>()?;
@@ -220,14 +238,17 @@ pub fn edit(current:&Store,change:Change)->Result<Store> {
                 Change::RebindNested{target,..}=>{let old=rows.get(index).ok_or_else(||invalid("Select a nested macro event"))?;rows[index]=nested::retarget(old,&target)?;explicit_target=Some(target);}
                 Change::InsertAction{action,..}=>{if rows.len()>=MAX_EVENTS||index>rows.len()||index==0&&rows.first().is_some_and(|row|protected(row)){return Err(invalid("Action insertion exceeds macro bounds"));}rows.insert(index,host_actions::row(&action)?);}
                 Change::SetAction{action,..}=>{let old=rows.get(index).ok_or_else(||invalid("Select a text, command or launch event"))?;rows[index]=host_actions::update(old,&action)?;}
+                Change::SetRandomDelay{min_ms,max_ms,..}=>{let old=rows.get(index).ok_or_else(||invalid("Unknown event"))?;rows[index]=random_delay::update(old,random_delay::Range::new(min_ms,max_ms)?)?;}
                 Change::SetDelay{milliseconds,..}=>{let old=rows.get(index).ok_or_else(||invalid("Unknown event"))?;let value:Value=serde_json::from_str(old.get()).map_err(|e|invalid(e.to_string()))?;if value["Type"]!=0{return Err(invalid("Select a delay event"));}
                     if value["Number"].is_object()||value["Number"].is_array(){return Err(invalid("Random/structured delay editing is not implemented; its source data was preserved"));}
                     // Preserve unknown leaves in an explicitly edited delay row.
                     let mut fields:Fields=serde_json::from_str(old.get()).map_err(|e|invalid(e.to_string()))?;let new:Value=serde_json::from_str(delay(milliseconds)?.get()).unwrap();let field=fields.0.iter_mut().find(|(key,_)|key=="Number").ok_or_else(||invalid("Delay has no Number field"))?;field.1=raw(&new["Number"])?;rows[index]=raw(&fields)?;}
-                Change::DeleteEvent{..}=>{if index>=rows.len()||protected(&rows[index]){return Err(invalid("This event cannot be deleted"));}rows.remove(index);}
+                Change::DeleteEvent{..}=>{if index>=rows.len()||protected(&rows[index]){return Err(invalid("This event cannot be deleted"));}
+                if serde_json::from_str::<Value>(rows[index].get()).map_err(|e|invalid(e.to_string()))?["Type"]==6{loops::delete(&mut rows,index)?;}else{rows.remove(index);}}
                 Change::MoveEvent{direction,..}=>{if index>=rows.len(){return Err(invalid("Unknown event"));}let next=index.checked_add_signed(direction as isize).filter(|n|*n<rows.len()).ok_or_else(||invalid("Event move exceeds macro bounds"))?;if ![-1,1].contains(&direction)||protected(&rows[index])||protected(&rows[next]){return Err(invalid("This event cannot be moved"));}rows.swap(index,next);}
                 _=>unreachable!(),
             }
+            loops::validate(&rows)?;
             let r=patch(original,"macroEvents",raw(&rows)?)?;records.insert(id,r.clone());changed=Some(r);
         }
     }
@@ -257,7 +278,7 @@ pub(super) fn definition_store(record:&Value,context:&[Value])->Result<Store> {
 pub fn edit_definition_with_library(record:&Value,change:Change,context:&[Value])->Result<Value> {
     let id=guid(record)?;
     match &change {
-        Change::Rename{guid,..}|Change::InsertDelay{guid,..}|Change::InsertInput{guid,..}|Change::RebindInput{guid,..}|Change::DeleteInputGroup{guid,..}|Change::InsertNested{guid,..}|Change::RebindNested{guid,..}|Change::InsertAction{guid,..}|Change::SetAction{guid,..}|Change::DeleteEvent{guid,..}|Change::MoveEvent{guid,..}|Change::SetDelay{guid,..} if guid==&id=>{},
+        Change::InsertAction{guid,..}|Change::SetAction{guid,..}|Change::WrapLoop{guid,..}|Change::SetLoopRepeat{guid,..}|Change::Rename{guid,..}|Change::InsertDelay{guid,..}|Change::InsertInput{guid,..}|Change::RebindInput{guid,..}|Change::DeleteInputGroup{guid,..}|Change::InsertNested{guid,..}|Change::RebindNested{guid,..}|Change::DeleteEvent{guid,..}|Change::MoveEvent{guid,..}|Change::SetRandomDelay{guid,..}|Change::SetDelay{guid,..} if guid==&id=>{},
         _=>return Err(invalid("This operation is not a local definition edit")),
     }
     let isolated=definition_store(record,context)?;

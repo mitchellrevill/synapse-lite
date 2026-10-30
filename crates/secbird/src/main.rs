@@ -6,11 +6,25 @@ mod control_probe;
 mod studio_files;
 mod catalog_files;
 mod profile_files;
+mod macro_files;
+mod linked_game_files;
 
 const USAGE: &str = "\
 Synapse Lite - device controls based on Secretarybird beta
 
 USAGE: secbird [-d PID] <command> [args]
+
+LOCAL FILES (does not open hardware or apply device settings):
+  source-macro list PROFILE_DOCUMENT
+                            List saved macro names, GUIDs and references
+  source-macro plan PROFILE_DOCUMENT BINDING_JSON NEW_OUTPUT
+                            Prepare saved GUI macro events for inspection;
+                            does not open hardware, run input or install profiles
+  profiles inspect-archive FILE  Inspect stored ZIP members; no conversion or activation
+
+  linked-games preview BACKUP SOURCE SELECTIONS
+  linked-games prepare BACKUP SOURCE SELECTIONS NEW_OUTPUT
+                            Offline explicit GUID migration; never installs the store
 
 STUDIO FILES (local interchange only; does not apply lighting):
   profiles recover-macros NATIVE_BACKUP SOURCE_EXPORT EXACT_DEVICE_KEY NEW_OUTPUT
@@ -18,6 +32,8 @@ STUDIO FILES (local interchange only; does not apply lighting):
                             does not activate profiles, run macros or install the store
   catalog inspect FILE      Inspect a local Razer catalogue without opening hardware
   studio inspect FILE       List compositions in a JSON-v1 .ChromaEffects file
+  studio starlight FILE NUMBER LAYER_ID
+                            Inspect prepared Starlight region descriptors (no playback)
   studio export INPUT OUTPUT all|NUMBER...
                             Export selected compositions to a new file (1-based numbers)
 
@@ -172,6 +188,10 @@ fn run(mut args: Vec<String>) -> Result<(), Error> {
         if selector.is_some() { return Err(Error::InvalidArg("studio file commands do not use -d".into())); }
         return studio_files::run(&args[1..]);
     }
+    if command == "linked-games" {
+        if selector.is_some() { return Err(Error::InvalidArg("Linked Games file commands do not use -d".into())); }
+        return linked_game_files::run(&args[1..]);
+    }
     if command == "catalog" {
         if selector.is_some() { return Err(Error::InvalidArg("catalog file commands do not use -d".into())); }
         return catalog_files::run(&args[1..]);
@@ -179,6 +199,10 @@ fn run(mut args: Vec<String>) -> Result<(), Error> {
     if command == "profiles" {
         if selector.is_some(){return Err(Error::InvalidArg("profiles file commands require an exact stored key, without -d".into()));}
         return profile_files::run(&args[1..]);
+    }
+    if command == "source-macro" {
+        if selector.is_some() { return Err(Error::InvalidArg("source-macro file commands do not use -d".into())); }
+        return macro_files::run(&args[1..]);
     }
     if command == "update" {
         match secbird_core::update::check()? {

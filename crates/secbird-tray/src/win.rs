@@ -85,6 +85,7 @@ const ID_RESTORE_BUTTONS: u32 = 8;
 const ID_CHECK_UPDATE: u32 = 9;
 const ID_UPDATE_NOTIFY: u32 = 10;
 const ID_GET_UPDATE: u32 = 11;
+const ID_SUPPORT: u32 = 12;
 const ID_PROFILE_BASE: u32 = 1000;
 
 const GUID_DEVINTERFACE_HID: GUID = GUID::from_u128(0x4d1e55b2_f16f_11cf_88cb_001111000030);
@@ -95,6 +96,8 @@ static TASKBAR_CREATED: AtomicU32 = AtomicU32::new(0);
 static TRAY_HWND: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
 
 struct App {
+    shortcuts: crate::global_shortcuts::Runtime,
+    shortcut_sleeping: bool,
     hwnd: HWND,
     icon: HICON,
     /// Shared with the editor's server thread.
@@ -116,7 +119,7 @@ struct App {
     /// Warned about Synapse since it last started.
     synapse_warned: bool,
     /// Devices already warned about low battery (cleared once charging or recovered).
-    low_battery: HashSet<String>,
+    low_battery: crate::battery_notifications::Monitor,
     batteries: Vec<Battery>,
     /// When each mouse last got its lost remaps back (device key -> unix seconds).
     buttons_restored: HashMap<String, u64>,
@@ -274,7 +277,7 @@ pub fn run() {
                 );
                 MessageBoxW(null_mut(), text.as_ptr(), wide(APP_NAME).as_ptr(), MB_ICONINFORMATION);
             }
-            if !running.is_null() {
+            if !running.is_null() && crate::settings::opens_editor(&arguments, &TraySettings::load()) {
                 // Let the running instance bring the browser to the front.
                 AllowSetForegroundWindow(ASFW_ANY);
                 PostMessageW(running, WM_OPEN_EDITOR, 0, 0);
@@ -380,6 +383,8 @@ pub fn run() {
         let (installs_tx, installs) = channel();
         APP.with(|cell| {
             *cell.borrow_mut() = Some(App {
+                shortcuts: crate::global_shortcuts::Runtime::new(hwnd),
+                shortcut_sleeping: false,
                 hwnd,
                 icon,
                 engine: Arc::new(Mutex::new(engine)),
@@ -395,7 +400,7 @@ pub fn run() {
                 apply_all_pending: true,
                 retry_step: 0,
                 synapse_warned: false,
-                low_battery: HashSet::new(),
+                low_battery: Default::default(),
                 buttons_restored: HashMap::new(),
                 batteries: Vec::new(),
                 listening: Arc::new(Mutex::new(HashSet::new())),
@@ -417,6 +422,7 @@ pub fn run() {
         if policy.starts_policies() {
             with_app(|app| app.engine().start_lighting_runtime());
         }
+        if policy.generic_apply(){with_app(|app|{app.shortcuts.publish();app.shortcuts.reload();});}
         // Smoke/serve/native-smoke runs never opt into a scheduling worker.
         if crate::runtime_probe::starts_worker(&arguments) {
             with_app(|app| match crate::uniform_worker::Worker::start(app.engine.clone()) {
@@ -444,7 +450,7 @@ pub fn run() {
             SetTimer(hwnd, TIMER_BUTTONS, BUTTONS_MS, None);
             SetTimer(hwnd, TIMER_LIGHTS, LIGHTS_MS, None);
         }
-        if !std::env::args().any(|a| a == "--tray") {
+        if crate::settings::opens_editor(&arguments, &TraySettings::load()) {
             with_app(|app| app.open_editor());
         }
         let smoke_args: Vec<String> = std::env::args().collect();
@@ -533,9 +539,12 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
         }
         WM_POWERBROADCAST => {
             if wparam as u32 == PBT_APMRESUMEAUTOMATIC {
+                with_app(|app|{app.shortcut_sleeping=false;app.refresh_shortcuts();});
                 log::append("resumed from sleep");
                 schedule_rescan(hwnd, true);
                 start_retries(hwnd);
+            } else if wparam as u32 == PBT_APMSUSPEND {
+                with_app(|app|{app.shortcut_sleeping=true;app.shortcuts.suspend();});
             } else if wparam as u32 == PBT_POWERSETTINGCHANGE {
                 let setting = &*(lparam as *const POWERBROADCAST_SETTING);
                 if same_guid(&setting.PowerSetting, &GUID_CONSOLE_DISPLAY_STATE) {
@@ -556,6 +565,10 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
                 _ => None,
             };
             0
+        }
+        crate::global_shortcuts::RELOAD=>{with_app(|app|app.refresh_shortcuts());0}
+        WM_HOTKEY=>{
+            with_app(|app|{if app.policy.generic_apply()&&!app.locked&&!app.screen_off&&!app.shortcut_sleeping{if let Err(error)=app.shortcuts.dispatch(wparam,lparam){log::append(&error);}}});0
         }
         WM_TIMER if wparam == TIMER_RESCAN => {
             KillTimer(hwnd, TIMER_RESCAN);
@@ -617,7 +630,7 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
         }
         WM_QUERYENDSESSION => TRUE as LRESULT,
         WM_ENDSESSION => {
-            if wparam != 0 { with_app(|app| app.shutdown_lighting()); }
+            if wparam != 0 { with_app(|app|{app.shortcuts.suspend();app.shutdown_lighting();}); }
             0
         }
         WM_CLOSE => {
@@ -626,6 +639,7 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
         }
         WM_DESTROY => {
             with_app(|app| {
+                app.shortcuts.suspend();
                 app.shutdown_lighting();
                 remove_icon(app.hwnd);
             });
@@ -666,6 +680,9 @@ fn schedule_rescan(hwnd: HWND, apply_all: bool) {
 }
 
 impl App {
+    fn refresh_shortcuts(&mut self){
+        if self.policy.generic_apply()&&!self.locked&&!self.screen_off&&!self.shortcut_sleeping{self.shortcuts.resume();}else{self.shortcuts.suspend();}
+    }
     fn engine(&self) -> MutexGuard<'_, Engine> {
         self.engine.lock().unwrap_or_else(|p| p.into_inner())
     }
@@ -789,7 +806,13 @@ impl App {
     /// The lights go down while the PC is locked or its screen is off, if that's set (#48),
     /// and come back after.
     fn set_away(&mut self, locked: bool, screen_off: bool) {
+        let shortcut_changed=self.locked!=locked||self.screen_off!=screen_off;
+        if shortcut_changed {
+            // Establish the dispatch gate before touching other policy work.
+            self.shortcuts.suspend();
+        }
         (self.locked, self.screen_off) = (locked, screen_off);
+        if shortcut_changed {self.refresh_shortcuts();}
         if self.policy.restricted_actions() {
             return;
         }
@@ -933,17 +956,14 @@ impl App {
         self.engine().refresh_battery_lights();
         let batteries = self.engine().batteries();
         let settings = TraySettings::load();
-        let low = settings.low_battery();
+        self.low_battery.begin();
         for b in &batteries {
-            if b.charging || b.percent >= low.saturating_add(10) {
-                self.low_battery.remove(&b.key);
-            } else if b.percent <= low && self.low_battery.insert(b.key.clone()) {
-                log::append(&format!("low battery: {} {}%", b.name, b.percent));
-                if !settings.battery_warning_off {
-                    self.balloon("Battery low", &format!("{}: {}%", b.name, b.percent));
-                }
+            let prefs = crate::battery_notifications::preferences(&settings, &b.key);
+            for title in self.low_battery.observe(&b.key, b.percent, b.charging, &prefs) {
+                self.balloon(title, &format!("{}: {}%", b.name, b.percent));
             }
         }
+        self.low_battery.end();
         self.batteries = batteries;
         self.update_tooltip();
     }
@@ -970,8 +990,9 @@ impl App {
                 }
             }
             let battery = match self.batteries.iter().find(|b| b.key == dev.key()) {
-                Some(b) if b.charging => format!(" · {}% charging", b.percent),
+                Some(b) if b.charging == Some(true) => format!(" · {}% charging", b.percent),
                 Some(b) => format!(" · {}%", b.percent),
+                None if dev.spec.as_ref().is_some_and(|s|s.wireless) => " · battery unknown / unavailable".into(),
                 None => String::new(),
             };
             text.push_str(&format!("\n{}: {active}{battery}", engine.label(dev)));
@@ -1044,7 +1065,7 @@ impl App {
             return;
         }
         settings.firmware_checked = now_secs();
-        settings.save();
+        let _ = settings.save();
         let connected: Vec<u16> = devices.iter().map(|d| d.2).collect();
         let tx = self.firmware_tx.clone();
         let hwnd = self.hwnd as usize;
@@ -1075,7 +1096,7 @@ impl App {
             return;
         }
         settings.update_checked = now_secs();
-        settings.save();
+        let _ = settings.save();
         let tx = self.updates_tx.clone();
         let hwnd = self.hwnd as usize;
         std::thread::spawn(move || {
@@ -1103,7 +1124,7 @@ impl App {
                     let mut settings = TraySettings::load();
                     if manual || settings.update_notified != r.version {
                         settings.update_notified = r.version.clone();
-                        settings.save();
+                        let _ = settings.save();
                         let title = format!("Secretarybird {} is out", r.version);
                         if secbird_core::update::installed() {
                             let body = format!("You have {current}. Click to update now; your settings and profiles are kept.");
@@ -1212,7 +1233,7 @@ impl App {
             }
         }
         if !lines.is_empty() {
-            settings.save();
+            let _ = settings.save();
             self.balloon("Firmware update available", &format!("{}\nOpen the editor for Razer's download link.", lines.join("\n")));
         }
     }
@@ -1255,9 +1276,11 @@ impl App {
         append(menu, MF_STRING, ID_REAPPLY as usize, "Re-apply profiles");
         append(menu, MF_STRING, ID_FOLDER as usize, "Open settings folder");
         append(menu, MF_STRING, ID_RESTORE_BUTTONS as usize, "Restore all mouse buttons");
+        append(menu, MF_STRING, ID_SUPPORT as usize, "Save local support bundle…");
         append(menu, MF_STRING, ID_REPORT as usize, "Make a device report…");
-        let auto = if autostart_enabled() { MF_CHECKED } else { MF_UNCHECKED };
-        append(menu, MF_STRING | auto, ID_AUTOSTART as usize, "Start with Windows");
+        let registration = autostart_enabled();
+        let auto = match &registration { Ok(true)=>MF_CHECKED, Ok(false)=>MF_UNCHECKED, Err(_)=>MF_UNCHECKED|MF_GRAYED };
+        append(menu, MF_STRING | auto, ID_AUTOSTART as usize, if registration.is_err(){"Start with Windows (unavailable; see Settings)"}else{"Start with Windows"});
         AppendMenuW(menu, MF_SEPARATOR, 0, null());
         append(menu, MF_STRING, ID_EXIT as usize, "Exit");
         menu
@@ -1273,6 +1296,7 @@ impl App {
             ID_EDITOR => self.open_editor(),
             ID_FOLDER => open_config_folder(),
             ID_REPORT => self.make_report(),
+            ID_SUPPORT => unsafe { crate::support_bundle::dialog(self.hwnd); },
             ID_RESTORE_BUTTONS => {
                 let results = self.engine().restore_buttons();
                 let lines: Vec<String> = results
@@ -1286,7 +1310,10 @@ impl App {
                 let body = if lines.is_empty() { "No mouse with remappable buttons is connected.".to_string() } else { lines.join("\n") };
                 self.balloon("Mouse buttons restored", &body);
             }
-            ID_AUTOSTART => set_autostart(!autostart_enabled()),
+            ID_AUTOSTART => {
+                let result=autostart_enabled().and_then(|enabled|set_autostart(!enabled));
+                if let Err(error)=result { log::append(&error); self.balloon("Auto Launch was not changed",&error); }
+            },
             ID_CHECK_UPDATE => self.check_update(true),
             ID_GET_UPDATE => {
                 if let Some(r) = self.update.clone() {
@@ -1296,7 +1323,7 @@ impl App {
             ID_UPDATE_NOTIFY => {
                 let mut s = TraySettings::load();
                 s.updates_off = !s.updates_off;
-                s.save();
+                let _ = s.save();
                 if s.updates_off {
                     self.update = None;
                 } else {
@@ -1306,7 +1333,7 @@ impl App {
             ID_FIRMWARE => {
                 let mut s = TraySettings::load();
                 s.firmware_weekly = !s.firmware_weekly;
-                s.save();
+                let _ = s.save();
                 if s.firmware_weekly {
                     self.balloon(
                         "Weekly firmware check on",
@@ -1406,7 +1433,7 @@ unsafe fn is_razer(lparam: LPARAM) -> bool {
 
 
 /// Put text on the clipboard. False if another program holds it.
-fn set_clipboard(text: &str) -> bool {
+pub(crate) fn set_clipboard(text: &str) -> bool {
     use windows_sys::Win32::System::DataExchange::{CloseClipboard, EmptyClipboard, OpenClipboard, SetClipboardData};
     use windows_sys::Win32::System::Memory::{GlobalAlloc, GlobalLock, GlobalUnlock, GMEM_MOVEABLE};
     const CF_UNICODETEXT: u32 = 13;

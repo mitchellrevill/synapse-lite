@@ -1,8 +1,10 @@
 //! Source Customize control geometry from ordered CSS and inert font/DOM replay.
 //! Mouse label bounds are actual source DOM controls, not guessed button boxes.
 //! Evidence: assignment-details-replay.json and mouse-customize source index.
-use super::assignment_layout::{self as shell, Rect, Shell};
+use super::assignment_layout::{Rect, Shell};
 use super::assignment_model::Category;
+#[cfg(test)]
+use super::assignment_layout as shell;
 fn r(x: f64, y: f64, width: f64, height: f64) -> Rect {
     Rect {
         x,
@@ -52,7 +54,9 @@ pub(super) fn form(
                 108.0
             }
         }
+        Some(Category::Windows) => 170.0,
         Some(Category::Disable) => 59.0,
+        Some(Category::Launch) => 240.0,
         Some(Category::Mouse) => {
             if !allow_turbo {
                 116.0
@@ -62,9 +66,10 @@ pub(super) fn form(
                 145.0
             }
         }
+        Some(Category::Keyboard) => if turbo && allow_turbo { 413.0 } else { 320.0 },
         _ => 149.0,
     };
-    Form {
+    let mut form = Form {
         heading: r(x, y + 20.0, 210.0, 19.0),
         display: r(x, y + 59.0, 210.0, 29.0),
         dropdown: r(x, y + 59.0, 210.0, 27.0),
@@ -79,7 +84,12 @@ pub(super) fn form(
         cancel: r(x, y + foot, 100.0, 27.0),
         save: r(x + 110.0, y + foot, 100.0, 27.0),
         bottom: y + foot + 27.0,
+    };
+    if category == Some(Category::Keyboard) {
+        form.dropdown.y += 37.0;
+        for field in [&mut form.checkbox, &mut form.label, &mut form.stepper, &mut form.input, &mut form.up, &mut form.down, &mut form.slider, &mut form.track] {field.y += 175.0;}
     }
+    form
 }
 pub(super) fn options(dropdown: Rect, viewport_bottom: f64) -> Rect {
     let height = 180.0;
@@ -90,9 +100,13 @@ pub(super) fn options(dropdown: Rect, viewport_bottom: f64) -> Rect {
     };
     r(dropdown.x, top, 210.0, height)
 }
+#[cfg(test)]
 pub(super) fn option_rows(panel: Rect, scroll: f64) -> Vec<Rect> {
-    let offset = scroll.clamp(0.0, (250.0 - (panel.height - 2.0)).max(0.0));
-    (0..10)
+    option_rows_count(panel, scroll, 10)
+}
+pub(super) fn option_rows_count(panel: Rect, scroll: f64, count: usize) -> Vec<Rect> {
+    let offset = scroll.clamp(0.0, (count as f64 * 25.0 - (panel.height - 2.0)).max(0.0));
+    (0..count)
         .map(|i| {
             r(
                 panel.x + 1.0,

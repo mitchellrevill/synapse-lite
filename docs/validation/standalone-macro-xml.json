@@ -1,0 +1,304 @@
+{
+  "date": "2026-10-30",
+  "base_commit": "4b305d64450a5c5979df7d8cbae228549b86ad02",
+  "scope": "Standalone v4 macro XML import/export and native file workflow; no live playback activation.",
+  "new_tests": 9,
+  "final_checks": {
+    "core": 572,
+    "core_ignored": 6,
+    "tray": 308,
+    "tray_ignored": 48,
+    "cli": 8,
+    "doc": 1,
+    "optimized_xml_core": 6,
+    "optimized_native_xml": 1,
+    "optimized_workspace_build": "pass"
+  },
+  "verification_order": "Workspace572core/306tray/8CLI/1doc passed; final file-path helper adds two tray tests and then308tray/release build/native release workflow passed. Core/CLI/doc sources did not change after workspace checks.",
+  "logs": {
+    "standalone-macro-xml-workspace.log": {
+      "sha256": "be217c6256b88ac52d96910f9f54b7883f0d78a92306f0c9e28ca43c610f4a60",
+      "results": [
+        "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.37s",
+        "test result: ok. 572 passed; 0 failed; 6 ignored; 0 measured; 0 filtered out; finished in 24.64s",
+        "test result: ok. 306 passed; 0 failed; 48 ignored; 0 measured; 0 filtered out; finished in 6.38s",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s"
+      ]
+    },
+    "standalone-macro-xml-tray-final.log": {
+      "sha256": "777d54718852c7c52fcd6586ff63fd5bdf658adb1c1f204603ddb2a65f5f7c8d",
+      "results": [
+        "test result: ok. 308 passed; 0 failed; 48 ignored; 0 measured; 0 filtered out; finished in 8.88s"
+      ]
+    },
+    "standalone-macro-xml-release-core.log": {
+      "sha256": "9dc976c277999151d9467df0fbec05f6d39378644083da258e2c68b56d46ceec",
+      "results": [
+        "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 572 filtered out; finished in 0.02s"
+      ]
+    },
+    "standalone-macro-xml-release-final.log": {
+      "sha256": "afb13cb138187af788ac473e24f0b0920c58271f9528766e18ad36d945e39365",
+      "results": []
+    },
+    "standalone-macro-xml-native-release.log": {
+      "sha256": "6b3ff995e2bef3952f9ac55a557f654eef27edbc0b487acd378b03850326e9f3",
+      "results": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 355 filtered out; finished in 1.09s"
+      ]
+    }
+  },
+  "fixture_cases": 31,
+  "fixture_sha256": "ed2378802201dd1714c4a65d6a2020a5a02b50c2b3b8bf1143d5f4de3e32c700",
+  "source_projections": {
+    "parent_sha256": "fd20eeea9ac259a741c5deec4cc23f7e293cb99fa8ed658816af50bbd894941d",
+    "projections": [
+      {
+        "file": "source-v4-import.js",
+        "sha256": "b0fc0de2e93dc04c94e673ea4a2a4a143a06c7ec09f87d2bf16fa0ba8b84cf27",
+        "bytes": 4309
+      },
+      {
+        "file": "source-export-handler.js",
+        "sha256": "37d8b2b214d96ec0b9a3bb3193e0472678b663dfc0ac392203658fba47a373eb",
+        "bytes": 629
+      },
+      {
+        "file": "movement-setting.js",
+        "sha256": "e39ae1ebdf12f9e11c16cd0fac8881a1284e8c9edf59c8868eed7f5db1095dcf",
+        "bytes": 101
+      },
+      {
+        "file": "source-unescape.js",
+        "sha256": "2facf59620cc138cda86f502716d1b7fdabdd1318d6e4e9ec2bdc6c2e7b6cd74",
+        "bytes": 268
+      }
+    ]
+  },
+  "bundle_comparison": {
+    "records": [
+      {
+        "name": "main.3f4b9604.js",
+        "sha256": "fd20eeea9ac259a741c5deec4cc23f7e293cb99fa8ed658816af50bbd894941d",
+        "helpers": {
+          "movement_setting": {
+            "utf16_start": 436955,
+            "utf16_end": 437048,
+            "utf8_start": 436963,
+            "bytes": 93,
+            "sha256": "0ae77ae6352bd216e6d4b359e10acb9d3e80818ae705c071d12763b6fd56c9e8"
+          },
+          "v4_import": {
+            "utf16_start": 610856,
+            "utf16_end": 615088,
+            "utf8_start": 610884,
+            "bytes": 4232,
+            "sha256": "e3617bf2c3047e31e2139f27bc7aba5120bad8f4ecedff620a2de4a199aa403c"
+          },
+          "unescape": {
+            "utf16_start": 637176,
+            "utf16_end": 637436,
+            "utf8_start": 637204,
+            "bytes": 260,
+            "sha256": "1e5a111e8a3c74a3f7a58ea242d063af3867fdd3948bf247685d1534d4feb36c"
+          },
+          "export_handler": {
+            "utf16_start": 639430,
+            "utf16_end": 640038,
+            "utf8_start": 639458,
+            "bytes": 608,
+            "sha256": "3587b2280f716d27b068750acdbb4c103a0e2eddae8793b65b8152c96dfa531e"
+          }
+        }
+      },
+      {
+        "name": "main.55c19a92.js",
+        "sha256": "054dc209dded144571f7e2fde8c3fd5c6fd7d65c1aec7bcd675a12fe9e4d19eb",
+        "helpers": {
+          "movement_setting": {
+            "utf16_start": 436951,
+            "utf16_end": 437044,
+            "utf8_start": 436959,
+            "bytes": 93,
+            "sha256": "0ae77ae6352bd216e6d4b359e10acb9d3e80818ae705c071d12763b6fd56c9e8"
+          },
+          "v4_import": {
+            "utf16_start": 610848,
+            "utf16_end": 615080,
+            "utf8_start": 610876,
+            "bytes": 4232,
+            "sha256": "e3617bf2c3047e31e2139f27bc7aba5120bad8f4ecedff620a2de4a199aa403c"
+          },
+          "unescape": {
+            "utf16_start": 637168,
+            "utf16_end": 637428,
+            "utf8_start": 637196,
+            "bytes": 260,
+            "sha256": "1e5a111e8a3c74a3f7a58ea242d063af3867fdd3948bf247685d1534d4feb36c"
+          },
+          "export_handler": {
+            "utf16_start": 639422,
+            "utf16_end": 640030,
+            "utf8_start": 639450,
+            "bytes": 608,
+            "sha256": "3587b2280f716d27b068750acdbb4c103a0e2eddae8793b65b8152c96dfa531e"
+          }
+        }
+      }
+    ],
+    "comparisons": [
+      {
+        "helper": "movement_setting",
+        "identical": true
+      },
+      {
+        "helper": "v4_import",
+        "identical": true
+      },
+      {
+        "helper": "unescape",
+        "identical": true
+      },
+      {
+        "helper": "export_handler",
+        "identical": true
+      }
+    ],
+    "claim": "Literal helper identity across two cached bundles; does not establish which bundle is active or whole-application/current native compatibility."
+  },
+  "rea": {
+    "summary": "ev_19ad5747bd3985c9a4ef09ed93900786dde36f243299a6ab0b4b8a61d9d0eb18",
+    "parent": "ev_8f9b8b6db39cee0a2eca9468881eb47d17001b72acb4f121f56f40a139504b77",
+    "files": 4,
+    "bytes": 5307,
+    "ast_nodes": 1781,
+    "parse_failures": 0,
+    "coverage": "Partial semantic coverage; cached source helpers, not whole-app or current native runtime acceptance."
+  },
+  "native_report": {
+    "existing_dirty_read_only_stale_refused": true,
+    "export_reimports": true,
+    "guid_preserved": true,
+    "owned_dialog_open_cancel": true,
+    "physical_discovery": false,
+    "profiles_unchanged": true,
+    "simulated_device_commands": 0,
+    "standalone_import": true
+  },
+  "native_output_directory": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-27\\what-i-want-you-to-do\\work\\rust-temp\\native-macro-xml-48184-1793331524185479500",
+  "native_capture": {
+    "sha256": "e14e27a0039996019de0df72f73bd08789a2753f85d1409df605302dcb22f9c8",
+    "stock_comparison": "outputs/inventory-2026-10-27/captures/stock-macro-editor-0.jpg",
+    "result": "Reviewed; current macro layout/sidebar and toolbar Export differ from stock ellipsis menu. Full visual parity remains TODO; approved tabs unchanged."
+  },
+  "source_inputs": [
+    {
+      "path": "Cargo.lock",
+      "sha256": "1c001a341639459027b13861e6ba606df9dd85e4d1cc41d2e81308f98a27d774"
+    },
+    {
+      "path": "crates/secbird-core/Cargo.toml",
+      "sha256": "4b4e0d712381d592065ce188badc002c727ab02ad71d456dd13551027c187496"
+    },
+    {
+      "path": "crates/secbird-core/src/profile_compat/macro_library.rs",
+      "sha256": "ff4cf6bac7a60f21df1577495b784dcce7c5ca9573f343b41de6a5798234a61b"
+    },
+    {
+      "path": "crates/secbird-core/src/profile_compat/macro_library/nested.rs",
+      "sha256": "5d135afffe2a81c995fdb016b3ba7828f6e0f185c9a7967ef785783ef0d7451e"
+    },
+    {
+      "path": "crates/secbird-core/src/profile_compat/macro_library/planning.rs",
+      "sha256": "9e71f5f1f2c0f0a9a801776d25a816571b9435e2465ac3c1a9a80e1468b4722b"
+    },
+    {
+      "path": "crates/secbird-core/src/profile_compat/macro_library/xml.rs",
+      "sha256": "9883b39f59152eb7307fa4e53496f5a173b7938b23ede6c1bd60d28f4f0d8d37"
+    },
+    {
+      "path": "crates/secbird-core/src/profile_compat/macro_library/xml/convert.rs",
+      "sha256": "fbcf2b2345eba272e7875db94ca2c951df4bc8aa0853054eec9b50ee3fdf7e7f"
+    },
+    {
+      "path": "crates/secbird-core/src/profile_compat/macro_library/xml/tests.rs",
+      "sha256": "e2158041fab7bc00d8cf10d4ad142dc16fc944bee9bd4aa29419499b784e85c7"
+    },
+    {
+      "path": "crates/secbird-core/tests/fixtures/standalone-macro-xml.json",
+      "sha256": "ed2378802201dd1714c4a65d6a2020a5a02b50c2b3b8bf1143d5f4de3e32c700"
+    },
+    {
+      "path": "crates/secbird-tray/src/native_editor.rs",
+      "sha256": "dd57bbd97c92b10a6edfd9a8ad817fd08798f4a3f36e63d0457b035295633dab"
+    },
+    {
+      "path": "crates/secbird-tray/src/native_editor/interaction_tests.rs",
+      "sha256": "a62b11d6d2ab477b02b8e8a5a451608cb3bbb7710bf87bd1ba1e5bdc3b02baf6"
+    },
+    {
+      "path": "crates/secbird-tray/src/native_editor/macro_view.rs",
+      "sha256": "735e2762dc86a42dcc8d47c6e58e0efac91e91b61b1b3c6043b39c8496255e3a"
+    },
+    {
+      "path": "crates/secbird-tray/src/native_editor/macro_view/xml_files.rs",
+      "sha256": "89038480adac7cd6ee85942c361e2939a502cff56e9cd874f7948dbf09a146c3"
+    },
+    {
+      "path": "crates/secbird-tray/src/native_editor/macro_xml_interaction_tests.rs",
+      "sha256": "6cda7e6c2fa3fcb2eb498971c14649f9aca7161e1c5249abe60103c74311d327"
+    }
+  ],
+  "producer_scripts": [
+    {
+      "path": "work\\standalone-macro-xml-extract.cjs",
+      "sha256": "d270c4866a74a0ab24e176332ee6bc256d9d18f8ccb4c6749909daf25342b737"
+    },
+    {
+      "path": "work\\standalone-macro-xml\\generate.cjs",
+      "sha256": "58feea9b70f2eae0994c301ab9d13f2c45801bc1cdb2ad92e0de463869097853"
+    },
+    {
+      "path": "work\\standalone-macro-xml\\replay.cjs",
+      "sha256": "f6c3849868f0629debf6b404f073d3791c2c0017fbfa6fd07d8e3ee9aebdd02c"
+    },
+    {
+      "path": "work\\standalone-macro-xml\\compare-bundles.cjs",
+      "sha256": "9a0b20263e97e19e3d14144e895929f4a373ece354f7e8d08bc586d70e73a4e7"
+    }
+  ],
+  "release_binaries": [
+    {
+      "path": "target\\release\\secbird.exe",
+      "bytes": 1483776,
+      "sha256": "de74a43f1649e0f9ecec06d03f5518bc8cf1d0ebdfb732c5058410a1850aaa6a"
+    },
+    {
+      "path": "target\\release\\secbird-tray.exe",
+      "bytes": 3325952,
+      "sha256": "ee344ec404b73314c3147d30c9789dbba4fea6f6ebe74009cdfe01b66109b70b"
+    }
+  ],
+  "normal_profiles_changed": false,
+  "device_commands": 0,
+  "driver_loads": 0,
+  "full_goal_complete": false,
+  "remaining": [
+    "Legacy/other-encoding/attributes/phased/structured-delay standalone files",
+    "Stock live re-import and source XML serializer acceptance",
+    "Exact source macro UI layout/menu/icons",
+    "Current native AppEngine ownership/completion/input recovery and remaining runtime modes",
+    "Integration of independent feature branches and three complete-build sub100MB working/private memory runs"
+  ],
+  "initial_failures": [
+    "Quick-xml0.42 string-name API adjusted after compile diagnostics",
+    "Movement-only hint also needed its existing nested-edit guard narrowed; full cache guards retained and tested"
+  ],
+  "vm_prerequisite": {
+    "utc": "2026-10-30T02:55:01.053007+00:00",
+    "available_ram_bytes": 8428621824,
+    "required_ram_bytes": 10737418240,
+    "launch_allowed": false,
+    "vm_started": false
+  }
+}

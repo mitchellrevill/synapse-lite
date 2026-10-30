@@ -10,7 +10,6 @@
 //! remains available and rejects changed names, disconnected interfaces and
 //! reused handles. Windows provides no atomic metadata snapshot across hotplug.
 
-#![cfg(windows)]
 
 use crate::sensor_rotation::{hid_identity, interface_container_id};
 use crate::Device;

@@ -126,6 +126,9 @@ impl Engine {
             .zip(&mut reports)
         {
             let replay = (|| -> Result<()> {
+                if matches!(device.pid, 196 | 197) {
+                    device.require_mouse_identity()?;
+                }
                 let mut store = self.load_store()?;
                 let preference = store
                     .for_device(device)
@@ -361,6 +364,70 @@ mod tests {
         assert!(reports[0].failures.is_empty());
         assert_eq!(first.state().sensor_calibration, Some([0, 0, 4]));
         assert_eq!(second.state().sensor_calibration, Some([1, 1, 0]));
+        cleanup(folder);
+    }
+
+    #[test]
+    fn wireless_lifecycle_releases_handles_and_replays_exact_serial_without_resaving() {
+        let (mut engine, sim, folder) = fixture();
+        seed(&engine, &folder, false);
+        {
+            let mut hardware = sim.state();
+            hardware.firmware_extended = Some([1,10,1,0]);
+            hardware.sensor_rotation = Some([1,0,0]);
+        }
+        let mut store = engine.load_store().unwrap();
+        store.for_device(&engine.devices[0]).active_mut().rotation = Some(Rotation {
+            is_enabled: true, value: 22, ..Default::default()
+        });
+        store.save().unwrap();
+        let original_key = engine.devices[0].key();
+        assert!(engine.apply_connected(&[original_key])[0].failures.is_empty());
+        assert_eq!(sim.state().sensor_rotation, Some([1,1,22]));
+        let before = std::fs::read(folder.join("profiles.json")).unwrap();
+        let db = secbird_core::Db::builtin().unwrap();
+        let unrelated = Sim::wireless_mouse();
+        unrelated.state().serial = "UNRELATED-RECEIVER".into();
+        let old_key = engine.devices[0].key();
+        let old_token = engine.devices[0].connection_id();
+        engine.live_dpi.insert(old_key.clone(), (1200,1200));
+        engine.foreground_profiles.insert(old_key.clone(), "Default".into());
+        engine.relight.insert(old_key.clone(), Instant::now()+RELIGHT_FOR);
+        engine.release_connections();
+        assert_eq!(sim.state().sensor_rotation, Some([1,0,0]));
+        assert!(engine.sensor_rotation.is_empty());
+        assert!(engine.live_dpi.is_empty());
+        assert!(engine.foreground_profiles.is_empty());
+        assert!(engine.relight.is_empty());
+        engine.devices.clear(); // unplug, no reachable mouse
+        assert!(engine.connection_replay_keys(&HashSet::new()).is_empty());
+        sim.state().available = false;
+        assert!(sim.open(197, db.get(197).cloned()).is_none()); // sleep is not presence
+        sim.state().available = true;
+        sim.state().sensor_calibration = Some([0,0,4]);
+        engine.devices.push(sim.open(197, db.get(197).cloned()).unwrap());
+        engine.devices.push(unrelated.open(197, db.get(197).cloned()).unwrap());
+        assert_ne!(engine.devices[0].connection_id(), old_token);
+        let key = engine.devices[0].key();
+        let reports = engine.apply_connected(std::slice::from_ref(&key));
+        assert!(reports[0].failures.is_empty(), "{:?}", reports[0].failures);
+        assert_eq!(sim.state().sensor_calibration, Some([1,1,1]));
+        assert_eq!(sim.state().sensor_rotation, Some([1,1,22]));
+        assert!(unrelated.state().log.iter().all(|c| c.id & 0x80 != 0));
+        assert_eq!(std::fs::read(folder.join("profiles.json")).unwrap(), before);
+        // A same-key reopen must still get the Calibration replay, even when
+        // there was no intermediate rescan that observed the unplug.
+        let previous = engine.all_keys().into_iter().collect();
+        engine.release_connections();
+        engine.devices.clear();
+        engine.devices.push(sim.open(197, db.get(197).cloned()).unwrap());
+        assert_eq!(engine.connection_replay_keys(&previous), vec![key.clone()]);
+        sim.state().sensor_calibration = Some([0,0,4]);
+        sim.state().fail_next_calibration_lift = true;
+        let reports = engine.apply_connected(&[key]);
+        assert!(!reports[0].failures.is_empty());
+        assert_eq!(sim.state().sensor_calibration, Some([0,0,4]));
+        assert_eq!(std::fs::read(folder.join("profiles.json")).unwrap(), before);
         cleanup(folder);
     }
 }

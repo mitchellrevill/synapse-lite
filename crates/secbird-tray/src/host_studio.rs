@@ -147,12 +147,18 @@ impl PreparedStudio {
         })
     }
 
+    // TODO: expose prepared-scene diagnostics; this accessor is verified by fixture tests.
+    #[allow(dead_code)]
     pub(crate) fn identity(&self) -> LayoutIdentity {
         self.map.provenance().identity
     }
+    // TODO: expose prepared-scene diagnostics; this accessor is verified by fixture tests.
+    #[allow(dead_code)]
     pub(crate) fn placement_id(&self) -> &str {
         self.preview.device_id()
     }
+    // TODO: expose prepared-scene diagnostics; this accessor is verified by fixture tests.
+    #[allow(dead_code)]
     pub(crate) fn matches_draft(&self, draft: &Draft) -> bool {
         draft.matches_snapshot(&self.snapshot)
     }
@@ -162,6 +168,8 @@ impl PreparedStudio {
     pub(crate) fn frame_interval(&self) -> Duration {
         Duration::from_millis(40)
     }
+    // TODO: expose prepared-scene diagnostics; this accessor is verified by fixture tests.
+    #[allow(dead_code)]
     pub(crate) fn final_random_state(&self) -> u32 {
         self.preview.final_random_state()
     }
@@ -176,6 +184,8 @@ impl PreparedStudio {
     pub(crate) fn advance(&mut self) -> Result<()> {
         self.preview.advance()
     }
+    // TODO: expose prepared-scene diagnostics; this accessor is verified by fixture tests.
+    #[allow(dead_code)]
     pub(crate) fn storage_bytes(&self) -> usize {
         self.preview.storage_bytes()
             + self.snapshot.json().len()
@@ -191,6 +201,21 @@ mod tests {
     use std::time::Instant;
     const PROFILE: &str =
         include_str!("../../secbird-core/tests/fixtures/studio-preview-profile.json");
+    #[test]
+    fn ambient_synthetic_diagnostic_never_admits_a_physical_program() {
+        let mut raw:Value=serde_json::from_str(PROFILE).unwrap();
+        raw["layers"][0]["name"]="ambient".into();raw["layers"][0]["value"]=11.into();
+        raw["layers"][0]["params"]=json!({});
+        raw["layers"][0]["regions"][0]["params"]=json!({"screen":"full","blur":5});
+        let draft=Draft::open(&raw.to_string()).unwrap();let snapshot=draft.read_snapshot();
+        assert!(Preview::from_snapshot_synthetic_ambient(&snapshot,1).is_ok());
+        match PreparedStudio::build(snapshot,map(),1) {
+            Err(error)=>assert!(error.to_string().contains("unverified")),
+            Ok(_)=>panic!("synthetic Ambient escaped to physical preparation"),
+        }
+        assert!(!draft.is_dirty());
+    }
+
     #[test]
     fn breathing_composition_matches_independent150_physical_frames_and1050_mock_outs() {
         let reference:Value=serde_json::from_str(include_str!("../../secbird-core/tests/fixtures/studio-breathing-reference.json")).unwrap();

@@ -61,7 +61,7 @@ pub struct Battery {
     pub key: String,
     pub name: String,
     pub percent: u8,
-    pub charging: bool,
+    pub charging: Option<bool>,
 }
 
 /// A connected Razer product that can't be controlled (yet), shown so it isn't silently missing.
@@ -140,6 +140,25 @@ impl Engine {
         engine.devices.push(device);
         engine.simulated_only = true;
         Ok(engine)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn with_simulated_wheel(sim: &secbird_core::sim::Sim) -> Result<Self> {
+        HidApi::disable_device_discovery();
+        let mut engine = Self::from_api(HidApi::new()?);
+        let db = Db::builtin()?;
+        let device = sim.open(0x0099, db.get(0x0099).cloned())
+            .ok_or_else(|| secbird_core::Error::InvalidArg("Simulated wheel mouse did not answer".into()))?;
+        assert!(device.path.as_bytes().starts_with(b"sim:"));
+        engine.devices.push(device);
+        engine.simulated_only = true;
+        Ok(engine)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn add_simulated_device(&mut self, device: Device) {
+        assert!(self.simulated_only && device.path.as_bytes().starts_with(b"sim:"));
+        self.devices.push(device);
     }
 
     #[cfg(test)]
@@ -304,8 +323,11 @@ impl Engine {
         self.devices
             .iter()
             .filter_map(|d| {
+                if matches!(d.pid, 196 | 197) && d.require_mouse_identity().is_err() {
+                    return None;
+                }
                 let percent = d.battery().ok().flatten()?;
-                Some(Battery { key: d.key(), name: d.name(), percent, charging: d.charging().unwrap_or(false) })
+                Some(Battery { key: d.key(), name: d.name(), percent, charging: d.charging().ok() })
             })
             .collect()
     }
@@ -344,7 +366,7 @@ impl Engine {
         let foreground = self.foreground.clone();
         for index in 0..self.devices.len() {
             let dev = &self.devices[index];
-            if !dev.matrix().is_some()
+            if dev.matrix().is_none()
                 || !dev.spec.as_ref().is_some_and(|s| {
                     !s.wireless
                         && matches!(
@@ -513,16 +535,13 @@ impl Engine {
         self.frames_paused_until = pause.then(|| Instant::now() + FINDER_PAUSE);
     }
 
-    /// Re-enumerate devices. Returns the keys of devices that were not present before.
+    /// Re-enumerate devices. Return arrivals and scoped mouse handles needing
+    /// reconnection replay, including a reopened identical PID/serial/path.
     pub fn rescan(&mut self) -> Vec<String> {
         #[cfg(test)]
         if self.simulated_only { return Vec::new(); }
-        self.invalidate_studio("device handles replaced by rescan", true);
         let before: HashSet<String> = self.devices.iter().map(|d| d.key()).collect();
-        let rotation_keys:Vec<_>=self.sensor_rotation.keys().cloned().collect();
-        for error in self.shutdown_rotation(){eprintln!("{error}");}
-        self.host_static_results.borrow_mut().clear();
-        self.reset_uniform_handles();
+        let rotation_keys = self.release_connections();
         self.devices.clear(); // close stale handles before reopening
         let _ = self.api.refresh_devices();
         let db = Db::load(Some(&config_dir().join("devices.json")))
@@ -557,7 +576,27 @@ impl Engine {
         }
         self.lighting_runtime.borrow_mut().invalidate_all();
         self.refresh_lighting_runtime();
-        self.devices.iter().map(|d| d.key()).filter(|k| !before.contains(k)).collect()
+        self.connection_replay_keys(&before)
+    }
+
+    fn release_connections(&mut self) -> Vec<String> {
+        self.invalidate_studio("device handles replaced by rescan", true);
+        let rotation_keys = self.sensor_rotation.keys().cloned().collect();
+        for error in self.shutdown_rotation() { eprintln!("{error}"); }
+        self.host_static_results.borrow_mut().clear();
+        self.reset_uniform_handles();
+        // These observations belong to closed handles, even when the new handle
+        // has the same PID, serial and path. Saved profile intent stays on disk.
+        self.live_dpi.clear();
+        self.foreground_profiles.clear();
+        self.relight.clear();
+        rotation_keys
+    }
+
+    fn connection_replay_keys(&self, before: &HashSet<String>) -> Vec<String> {
+        self.devices.iter().filter(|d| {
+            !before.contains(&d.key()) || matches!(d.pid, 196 | 197)
+        }).map(Device::key).collect()
     }
 
     /// A known wireless device is plugged in (its receiver is) but not answering yet.
@@ -570,12 +609,12 @@ impl Engine {
         Store::load(&config_dir().join("profiles.json"))
     }
 
-    fn profile_store_path(&self)->std::path::PathBuf {
+    pub(crate) fn profile_store_path(&self)->std::path::PathBuf {
         #[cfg(test)]
         if let Some(path)=&self.runtime_store_path {return path.clone();}
         config_dir().join("profiles.json")
     }
-    fn load_store(&self) -> Result<Store> {
+    pub(crate) fn load_store(&self) -> Result<Store> {
         Store::load(&self.profile_store_path())
     }
     fn lighting_config(&self, dev: &Device, store: &mut Store) -> LightingConfig {
@@ -829,6 +868,7 @@ impl Engine {
     /// Apply the current profile of each listed device (by [`Device::key`]): the one tied
     /// to the program in front, else the active one.
     pub fn apply(&mut self, keys: &[String]) -> Vec<ApplyReport> {
+        let _support_timer = secbird_core::support_bundle::measure_apply();
         if self.measurement_read_only {
             return Vec::new();
         }
@@ -845,6 +885,12 @@ impl Engine {
             }
             let dev = &self.devices[index];
             let key = dev.key();
+            if matches!(dev.pid, 196 | 197) {
+                if let Err(error) = dev.require_mouse_identity() {
+                    reports.push(ApplyReport { device: dev.name(), profile: String::new(), failures: vec![format!("Connection identity: {error}")] });
+                    continue;
+                }
+            }
             let mut report = match &mut store {
                 Ok(store) => {
                     let config = self.lighting_config(dev, store);
@@ -870,6 +916,7 @@ impl Engine {
                         if let Err(error) =
                             secbird_core::profile_compat::validate_store_budget(store)
                         {
+                            let failure = error.to_string();
                             let result = Err(error);
                             if let Some(color) = color {
                                 self.record_host_static(&key, &name, color, &result);
@@ -877,7 +924,7 @@ impl Engine {
                             reports.push(ApplyReport {
                                 device: dev.name(),
                                 profile: name,
-                                failures: vec![result.unwrap_err().to_string()],
+                                failures: vec![failure],
                             });
                             continue;
                         }

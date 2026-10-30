@@ -610,7 +610,7 @@ async function api(path, body) {
   const r = await fetch(path, {
     method: body ? 'POST' : 'GET',
     headers: { 'X-Secbird-Token': T, 'Content-Type': 'application/json' },
-    body: body ? JSON.stringify({ id: dev && dev.id, ...body }) : undefined,
+    body: body ? JSON.stringify({ id: dev && dev.id, expected_connection: dev && dev.connection_id, ...body }) : undefined,
   });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.error || 'Request failed');
@@ -863,6 +863,8 @@ function sections() {
   if (dev.stages) sens.push({ key: 'stages', label: 'DPI stages' });
   if (dev.polling) sens.push({ key: 'polling', label: 'Polling rate' });
   if (sens.length) s.push({ id: 'sens', name: 'Sensitivity', rows: sens });
+  if (dev.wheel_controls && dev.wheel_controls.length) s.push({ id: 'wheel', name: 'Scroll wheel',
+    rows: dev.wheel_controls.map(c => ({ key: 'wheel:' + c.control, label: c.title })) });
   if (dev.kind === 'mouse' || isBoard()) {
     const list = btnData[dev.id];
     s.push({ id: 'buttons', name: isBoard() ? 'Keys' : 'Buttons', tools: 'layer', loading: !list,
@@ -1236,6 +1238,10 @@ const differs = (key, name) => name !== dev.active && cellValue(key, name) !== c
 // mouse saved. Other columns get their mark from differs().
 function cellView(key, name) {
   const p = prof(name), active = name === dev.active;
+  if (key.startsWith('wheel:')) {
+    const c = (dev.wheel_controls || []).find(c => c.control === key.slice(6));
+    return [c && c.available ? (c.enabled ? 'On' : 'Off') + ' · onboard slot 1' : '<span class="unset">Unavailable</span>'];
+  }
   if (key === 'lighting-control') return [dev.lighting_control ? 'Secretarybird' : '<span class="unset">Not controlled</span>'];
   if (key === 'onboard') {
     const o = onboardData[dev.id];
@@ -1347,6 +1353,7 @@ function buildEditor(host, r) {
   const box = el('div', { className: 'edbox' });
   host.append(box);
   if (r.key === 'lighting-control') lightingControlEditor(box);
+  else if (r.key.startsWith('wheel:')) wheelEditor(box, r.key.slice(6));
   else if (r.key.startsWith('zone:')) zoneEditor(box, r.key.slice(5));
   else if (r.key === 'keys') keysEditor(box);
   else if (r.key === 'dpi') dpiEditor(box);
@@ -1716,6 +1723,24 @@ function sleepOf(name) {
   if (name === dev.active && dev.sleep) return dev.sleep;
   const p = prof(name);
   return p.sleep_minutes || p.auto_sleep != null ? { minutes: p.sleep_minutes, auto: p.auto_sleep } : null;
+}
+
+function wheelEditor(box, control) {
+  const c = (dev.wheel_controls || []).find(c => c.control === control);
+  if (!c) return;
+  const id = dev.id;
+  const button = el('button', { textContent: c.enabled ? 'Turn off' : 'Turn on', disabled: !c.writable,
+    onclick: async () => {
+      button.disabled = true;
+      try {
+        const r = await api('/api/wheel-control', { id, expected_device: id, wheel_control: control, enabled: !c.enabled });
+        const updated = r.state.devices.find(d => d.id === id);
+        if (dev && dev.id === id && updated) { dev.wheel_controls = updated.wheel_controls; render(); }
+        toast('Wheel setting verified');
+      } catch (e) { toast(e.message, true); button.disabled = !c.writable; }
+    } });
+  box.append(el('h3', { textContent: c.title }), button,
+    el('p', { className: 'note', textContent: c.error || 'Onboard slot 1. Source-supported; physical validation pending.' }));
 }
 
 function sleepEditor(box) {
@@ -2278,12 +2303,15 @@ function renderSettings() {
     return [input, el('label', { htmlFor: id, className: 'sr', textContent: label })];
   };
   // A switch the tray keeps: sent, then the page shows what the tray says.
-  const traySwitch = (key, label) => toggle(label, !!a[key], async (on, input) => {
+  const traySwitch = (key, label) => { const controls = toggle(label, !!a[key], async (on, input) => {
     input.disabled = true;
     try { appSettings = await api('/api/settings', { key, on }); toast(label + (on ? ' on' : ' off')); }
     catch (e) { toast(e.message, true); input.checked = !on; }
-    input.disabled = false;
+    renderSettings();
   });
+    controls[0].disabled = !!a.measurement_read_only || !!a.settings_error || (key === 'autostart' && a.autostart == null) || (key === 'start_minimized' && a.autostart !== true);
+    return controls;
+  };
   const seg = (label, options, current, pick) => {
     const g = el('span', { className: 'seg', role: 'group', ariaLabel: label });
     options.forEach(([v, t]) => g.append(el('button', { textContent: t, ariaPressed: v === current, onclick: () => pick(v) })));
@@ -2303,7 +2331,8 @@ function renderSettings() {
 
   // Startup and games
   const startup = group('Startup and games',
-    row('Start with Windows', 'Your settings go back on as soon as you sign in. Off means they only apply while Secretarybird is running.', ...traySwitch('autostart', 'Start with Windows')),
+    row('Start with Windows', a.autostart_error || a.settings_error || 'Your settings go back on as soon as you sign in. Off means they only apply while Secretarybird is running.', ...traySwitch('autostart', 'Start with Windows')),
+    row('Minimize to system tray on startup', 'Applies to Windows sign-in launches. Opening the app normally shows its editor.', ...traySwitch('start_minimized', 'Minimize to system tray on startup')),
     row('Switch profiles with games', 'A profile tied to a program comes up while that program is in front, and goes back after.', ...traySwitch('auto_switch', 'Switch profiles with games')),
     row('Lights when away', 'While the PC is locked or its screen is off, the lights dim to a quarter or turn off, and come back when you return. Nothing is saved on the devices.',
       seg('Lights when away', [['', 'Leave on'], ['dim', 'Dim'], ['off', 'Off']], a.away_lights || '', async v => {
@@ -2368,8 +2397,8 @@ function renderSettings() {
     row('Low battery warning', 'A notification when a wireless device drops to ' + a.battery_warning_at + '%.',
       batteryLevel(),
       ...traySwitch('battery_warning', 'Low battery warning')),
-    row('New version notices', 'Once a day, asks GitHub whether a newer Secretarybird is out. Nothing else is sent.', checkOut, checkBtn, ...traySwitch('updates', 'New version notices')),
-    row('Weekly firmware check', 'Once a week, asks Razer’s website whether newer firmware is out for your devices. It never installs anything.', ...traySwitch('firmware_weekly', 'Weekly firmware check')));
+    row('Manual update check', 'Runs only when Check now is pressed. Automatic update checks are disabled.', checkOut, checkBtn),
+    row('Firmware checks', 'Automatic firmware checks are disabled. Existing raw preferences are retained for compatibility.'));
 
   // Profiles and backup
   const file = el('input', { type: 'file', accept: '.json,application/json', hidden: true, onchange: async e => {

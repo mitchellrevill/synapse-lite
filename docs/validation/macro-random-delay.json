@@ -1,0 +1,120 @@
+{
+  "date": "2026-10-30",
+  "base_commit": "de5a2176be3f5b7a196f0bf87c4d7c1ddf28e248",
+  "feature": "Retained randomized-delay range editing; no random sampling or playback enabled",
+  "regular_checks": {
+    "core": {
+      "passed": 589,
+      "failed": 0,
+      "ignored": 9
+    },
+    "app": {
+      "passed": 319,
+      "failed": 0,
+      "ignored": 50
+    },
+    "cli": {
+      "passed": 9,
+      "failed": 0
+    },
+    "doc": {
+      "passed": 1,
+      "failed": 0
+    },
+    "serial": true,
+    "log": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-27\\what-i-want-you-to-do\\work\\macro-random-delay-source\\workspace-tests.txt",
+    "sha256": "335be2381db676d387446311132ff46b1e23da822cea03204a7aa32433022b07"
+  },
+  "new_core_tests": 4,
+  "domain_check": "All5001 whole-millisecond endpoints0..5000, equal ranges and selected mixed ranges; not every possible pair",
+  "native": {
+    "report": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-27\\what-i-want-you-to-do\\work\\rust-temp\\native-random-delay-42860-1793345997898539100\\interaction.json",
+    "sha256": "8b5bffc94b7dc42e921fe737f31aeffb5305028d0342db175786768cb60aaed3",
+    "result": {
+      "device_commands": 0,
+      "invalid_readonly_stale_refused": true,
+      "native_min_max_fields": true,
+      "opaque_source_preserved": true,
+      "physical_discovery": false,
+      "playback": false,
+      "profiles_unchanged": true,
+      "save_reopen": true,
+      "undo_redo": true
+    },
+    "capture": {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-27\\what-i-want-you-to-do\\work\\rust-temp\\native-random-delay-42860-1793345997898539100\\random-delay.png",
+      "sha256": "65415538145b5bd7b76c24b4c269a09f91c6000af26766c62ba67b39b7145b1c"
+    },
+    "actual_field_text_checked": true,
+    "submillisecond_readonly_checked": true,
+    "capture_limit": "Painter output excludes EDIT child controls; their text/style are checked via HWND APIs"
+  },
+  "source": {
+    "parent_evidence": "ev_7a5ab10206f5bdc262af92d96a72dc14193b301a7b893d7f17d43a96547aa1f9",
+    "semantic_coverage": "partial,100000-node ceiling,8706 unknowns",
+    "summary": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-27\\what-i-want-you-to-do\\work\\macro-random-delay-source\\rea-summary.json",
+    "summary_sha256": "d10e5ab06c3841bc23f4613608d5b022062d3dd150ccc9e9487c681356a8b54b",
+    "provenance": {
+      "parent": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-27\\what-i-want-you-to-do\\work\\synapse-renderer\\cache\\apps.razer.com\\synapse\\macro\\static\\js\\8190.61506f5b.chunk.js",
+      "sha256": "003b116007bb415462e5175c09fc84928d2a20c8d1a7c73113a432643d2cbe9f",
+      "utf8_start": 1213298,
+      "utf8_end": 1432125,
+      "module": "58190",
+      "focused_sha256": "863f572be5a3615bff4531f330323f2c0461cc20d450018fee6297f3821562ea",
+      "kind": "static source slice, not executed"
+    },
+    "source_replay_cases": {
+      "native_projection": 6,
+      "input_handler": 5
+    },
+    "replay_sha256": "bc66f871deec0c46f84d7d368ca3527831715ef5d3d4cd57f899d6021b05981e",
+    "limitations": "Historical renderer slice and controlled pure helpers; no vendor bootstrap/runtime was executed"
+  },
+  "release_build": {
+    "command": "cargo build --release -j 1 --workspace",
+    "exit_code": 0,
+    "log": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-27\\what-i-want-you-to-do\\work\\macro-random-delay-source\\release-build.txt",
+    "sha256": "d2acf62b1be20143a094412e953bab6bfff2e89bbc7f48011c70ccd404551b9f"
+  },
+  "release_binaries": [
+    {
+      "path": "target/release/secbird-tray.exe",
+      "sha256": "2a9f3c07312b5a436c49ef1f38a5a67cf324f0aa6d6ce62a0ac72bb0bac49f7d",
+      "bytes": 3409920
+    },
+    {
+      "path": "target/release/secbird.exe",
+      "sha256": "701e096b92f337d452631b756b9a66a3b1fc0040d3bf012c2ef650c967467d8d",
+      "bytes": 1489920
+    }
+  ],
+  "canonical_sources": [
+    {
+      "path": "crates/secbird-core/src/profile_compat/macro_library/random_delay.rs",
+      "sha256_lf": "bb83103899c904aac9197e28ba4ba2bbfcbdc8cc18e2be801f5a13db43584427"
+    },
+    {
+      "path": "crates/secbird-tray/src/native_editor/macro_view/random_delay.rs",
+      "sha256_lf": "e53f709256e3bce71f304329af4d877a724af3faf46ef2c3ce44aaa28803989c"
+    },
+    {
+      "path": "crates/secbird-tray/src/native_editor/macro_random_delay_interaction_tests.rs",
+      "sha256_lf": "dd1a051d4c02e5dbf4ada25f6bc14e0c33e15175d90b1f6f9ea9119b55b36e2b"
+    },
+    {
+      "path": "crates/secbird-core/tests/fixtures/macro-random-delay-source.json",
+      "sha256_lf": "429240a4731fd505ae36476895d9e768ba7a49990cf20da4f799523abf52cfe0"
+    }
+  ],
+  "development_failure": "First native-test compilation lacked its base64 test dependency; added an already-locked base64 dev-dependency and reran full suite successfully",
+  "visual_limits": [
+    "Native sidebar/min-max milliseconds differ from stock inline seconds fields",
+    "Typing truncation, automatic repair, blur/focus and matched-DPI pixel parity remain TODOs",
+    "Approved tabs unchanged"
+  ],
+  "remaining": [
+    "Random-delay native parsing/distribution/timing and playback",
+    "Recording settings and structured XML variants",
+    "Full device/API/driver/hardware coverage, privacy/visual acceptance and all three complete-build memory runs"
+  ]
+}

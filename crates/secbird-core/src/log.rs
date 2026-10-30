@@ -13,6 +13,7 @@ pub fn path() -> PathBuf {
 }
 
 pub fn append(msg: &str) {
+    crate::support_bundle::observe_log(msg);
     let path = path();
     if let Some(dir) = path.parent() {
         let _ = std::fs::create_dir_all(dir);

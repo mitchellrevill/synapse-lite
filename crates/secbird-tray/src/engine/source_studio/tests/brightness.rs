@@ -235,12 +235,12 @@ fn failed_storage_does_not_commit_brightness_or_invalidate_a_prepared_scene() {
     f.tick();
     let original = std::fs::read(&f.path).unwrap();
     let want = settings(&f, 37);
-    let mut permissions = std::fs::metadata(&f.path).unwrap().permissions();
+    let original_permissions = std::fs::metadata(&f.path).unwrap().permissions();
+    let mut permissions = original_permissions.clone();
     permissions.set_readonly(true);
     std::fs::set_permissions(&f.path, permissions.clone()).unwrap();
     let result = send(&mut f, &want);
-    permissions.set_readonly(false);
-    std::fs::set_permissions(&f.path, permissions).unwrap();
+    std::fs::set_permissions(&f.path, original_permissions).unwrap();
     assert!(
         result.is_err(),
         "read-only profile destination must refuse persistence"

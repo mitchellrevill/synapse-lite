@@ -1,0 +1,110 @@
+{
+  "date": "2026-10-30",
+  "unit": "Manual one-pass saved host macro playback",
+  "status": "verified_supported_host_actions_full_macro_parity_pending",
+  "release_binaries": [
+    {
+      "path": "target/release/secbird.exe",
+      "bytes": 1489920,
+      "sha256": "f3cc9e9ed8af74361239d087f4145d4f02529938d519495c4cb2672db22fa47c"
+    },
+    {
+      "path": "target/release/secbird-tray.exe",
+      "bytes": 3402240,
+      "sha256": "9b3026fe4d9ebcb5783f4dfe9e336b21717e9e2c076f35e0b1ca7a7e33846af8"
+    }
+  ],
+  "logs": [
+    {
+      "name": "macro-host-playback-app-tests.log",
+      "sha256": "18528997d0fe2c7202d66c767f79dcca732bfc642c08f2d3a4887a6789636c00",
+      "results": [
+        "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s",
+        "test result: ok. 318 passed; 0 failed; 49 ignored; 0 measured; 0 filtered out; finished in 6.15s"
+      ]
+    },
+    {
+      "name": "macro-host-playback-optimized-worker.log",
+      "sha256": "ffb510e06f3e78d2668a82175be4bceeb12123e656f3ac5a936dba3fab65e1f0",
+      "results": [
+        "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 357 filtered out; finished in 0.21s"
+      ]
+    },
+    {
+      "name": "macro-host-playback-final-native.log",
+      "sha256": "a34f0d858d6f16b1b9bdaee20f8250405ebcded123a1912eb81f4f01305441c5",
+      "results": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 366 filtered out; finished in 0.91s"
+      ]
+    },
+    {
+      "name": "macro-host-playback-final-build.log",
+      "sha256": "45ced69dee6c29a2793386b8a13072a2a40a519ff14e5ead0db4e6cfab72875d",
+      "results": []
+    }
+  ],
+  "native_workflow": {
+    "actual_play_stop_buttons": true,
+    "close_waits_for_drain": true,
+    "controlled_external_rename_detected": true,
+    "device_commands": 0,
+    "device_profiles_unchanged": true,
+    "owned_fixture_launch": {
+      "completed": 2,
+      "launches": 1,
+      "outcome": "finished",
+      "uncertain": false
+    },
+    "partial_runtime_failure_preserves_accepted_launch_count": true,
+    "physical_discovery": false,
+    "playback_source_writes": 0,
+    "post_close_admission_reused": true,
+    "readonly_dirty_mixed_stale_refused": true,
+    "stop_wakes_delay": true
+  },
+  "private_evidence_directory": "work\\rust-temp\\native-macro-playback-38560-1793340391171048000",
+  "captures": {
+    "final_sha256": "ef5de3338a90bd096b70bf8d88cd805572bc15b7dec63eedfeed7b7362d88b55",
+    "first_debug_sha256": "ef5de3338a90bd096b70bf8d88cd805572bc15b7dec63eedfeed7b7362d88b55",
+    "equal": true,
+    "stock_sha256": "5883ab06483d01ad6b19acbb949750b266ad78981d6e1e1112f6b9f03fe5ff04",
+    "stock_pixel_parity": false
+  },
+  "owned_fixture_sha256": "8a947049f1d874e5eb422c9761426554392c231dd11335f66c49693ab39256b3",
+  "checks": {
+    "regular_cli_passed": 9,
+    "regular_native_app_passed": 318,
+    "regular_native_app_ignored": 49,
+    "optimized_worker_passed": 10,
+    "explicit_optimized_native_workflows": 1,
+    "owned_fixture_launches_in_final_native_workflow": 2,
+    "core_code_unchanged_since": "d4e77d1114184f26187c79fb969d93aa047cac44",
+    "final_change_validation": "After final partial-runtime-failure presentation change, reran optimized native workflow and release build. Earlier regular and optimized-worker suites passed."
+  },
+  "asset_compatibility": {
+    "verified_files": 2044,
+    "missing": 0,
+    "different": 0,
+    "baseline": "6149f7a private preview",
+    "current_stage": "canonical target/native-assets"
+  },
+  "side_effects": {
+    "normal_app_started": false,
+    "personal_commands_or_websites_run": false,
+    "input_generated": false,
+    "physical_discovery": false,
+    "stock_services_changed": false
+  },
+  "visual_limits": [
+    "Stock reference is historical4.0.827 at a different viewport; not matched-DPI4.0.896 proof",
+    "Native Macro action sidebar/record toolbar/menu layout and module icon remain interim",
+    "Painter captures omit child edit-control text; HWND interactions verify those controls"
+  ],
+  "remaining": [
+    "Clipboard/paste ownership and recovery",
+    "Keyboard/mouse routing, physical-held arbitration, device bindings and Hypershift",
+    "Loops/nested/movement/random/repetition and recording coordination",
+    "Full macro visual parity and catalogue hardware/API validation",
+    "Three representative complete replacement runs below100000000 bytes"
+  ]
+}

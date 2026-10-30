@@ -1,0 +1,13 @@
+# Explicit local profile-store backup and restore
+
+General Settings > Local Profile Store offers Back up and Restore. This is a Lite-local recovery extension; it does not claim a stock Synapse backup format or redesign approved tabs. Existing device profile import/export remains separate.
+
+Back up writes the exact validated native file bytes to a fresh file. Choose JSON in the existing Save dialog. Even when the picker offers overwrite, this operation refuses an existing destination. Restore accepts native JSON only, reads at most 2 MiB plus one sentinel byte, validates JSON complexity, native schema and active-profile references, then previews device/profile counts. Confirmation defaults to Cancel and explains whole-store conflict replacement. Nothing is merged, renamed, activated on hardware or sent to a device by the worker operation.
+
+The candidate bytes are held in the preview so changing the input file cannot substitute a different restore. Commit re-reads and compares the current store to the preview, creates a fresh timestamped recovery file beside it, flushes a fresh sibling pending file, checks the store again and replaces it using Windows ReplaceFileW. Failure retains the original and recovery copy; pending cleanup is best effort. This operation uses the same engine worker lock as local operations. It is not a cross-process compare-and-swap lock: simultaneous external editors remain a narrow race between comparison and replacement. Close other profile editors before recovery. A crash can leave a recovery/pending file for manual inspection.
+
+Unknown fields and GUID references survive byte-for-byte, including fields a typed reserialization might normalize. Native validation reuses Store and existing budget checks. No legacy parser or macro XML parser was added. Imported active selections and app links become saved local state; normal runtime behavior after restore is unchanged. The normal store must already exist and be valid; corrupt/missing-store disaster recovery is a TODO requiring a distinct explicit replacement preview.
+
+Validation uses owned temporary stores and simulated transport. No user store, clipboard, physical input, drivers, stock services or other running Lite instance is touched. Full memory acceptance and hardware parity are not established by these checks.
+
+Visual evidence uses the existing isolated native Settings harness. Stock reference is inventory-2026-10-27/captures/stock-synapse-settings-general-0.jpg and recovered shared-shell inventory. The added recovery card is intentionally local functionality; exact stock parity for this new card cannot be claimed. Matched stock geometry/DPI comparison of the surrounding page remains a TODO.

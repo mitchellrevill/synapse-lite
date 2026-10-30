@@ -115,19 +115,11 @@ struct Active {
     failure: Option<Completion>,
 }
 
+#[derive(Default)]
 pub(crate) struct OutputSession {
     control: Control,
     last_applied: u64,
     active: Option<Active>,
-}
-impl Default for OutputSession {
-    fn default() -> Self {
-        Self {
-            control: Control::default(),
-            last_applied: 0,
-            active: None,
-        }
-    }
 }
 impl OutputSession {
     /// Numeric simulator fixture only; production apply must authenticate assets.
@@ -158,6 +150,8 @@ impl OutputSession {
     /// Resolve the saved archive entry, never an editor's mutable Draft. Failed
     /// compilation or a superseded intent leaves the old applied scene intact.
     /// Caller supplies the current handle-generation and has checked ownership.
+    // Keep saved-entry identity, authenticated assets, ownership epoch and source RNG explicit.
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn apply_saved(
         &mut self,
         intent: ApplyIntent,

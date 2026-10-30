@@ -1,0 +1,111 @@
+{
+  "date": "2026-10-30",
+  "base_commit": "33b2c6561305bdbb0baab4a93b359d50bd33add5",
+  "scope": "Recovered native paste protocol compiler and read-only saved-macro CLI contract; no live text playback",
+  "target": {
+    "path": "C:\\Program Files\\Razer\\RazerAppEngine\\app-4.0.896\\CommonDLL\\mapping_engine.dll",
+    "sha256": "c64e539437b50da2b1f2e4155d8cbb0fb1c3e1ebaad894caf509bad97e9857f9"
+  },
+  "native_method": {
+    "tool": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\SDK\\ScopeCppSDK\\vc15\\VC\\bin\\dumpbin.exe",
+    "tool_sha256": "f9bafb2e567708702560350cf41619c1d977af682d5b91d32a862548186706a4",
+    "code_intervals": 23,
+    "index": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-27\\what-i-want-you-to-do\\work\\native-clipboard-assembly\\index.json",
+    "index_sha256": "6264db4f66526e478b3071a13e0651f174759e72518f3a2055370f4cc5995209",
+    "script": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-27\\what-i-want-you-to-do\\work\\native-clipboard-assembly\\extract.py",
+    "script_sha256": "3762fc1252ad95a1d48aa5d6d9568bbaeed14b57ad75f3356da85e63e1d18c9f",
+    "vtable_index": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-27\\what-i-want-you-to-do\\work\\native-clipboard-assembly\\clipboard-vtable.json",
+    "vtable_sha256": "7ff2648f61f35e1cdb1409098167069f24ca4653750494cd11591af429e4aaa7",
+    "imports": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-27\\what-i-want-you-to-do\\work\\native-clipboard-assembly\\import-anchors.json",
+    "imports_sha256": "09f69b4517d5fe119297b9dce3f3e76ab9c7e13e311ce71056921a667138a6fe",
+    "limitations": [
+      "PE unwind intervals can exclude cold/tail-called code; leaf windows are explicitly bounded",
+      "Manual bounded assembly findings supplement existing complete REA dossiers; no new REA native Evidence ID is claimed",
+      "No DLL execution or live clipboard/input observation"
+    ]
+  },
+  "source_fixture": {
+    "path": "crates/secbird-core/tests/fixtures/native-paste-protocol.json",
+    "sha256_lf": "730f1a75d61d0a1519cd714387853ec97b24079d096b781873e1ab6fb9db27e1",
+    "cases": 4,
+    "method": "Static field extraction from complete current-SHA REA dossiers plus machine-code proof of callback order; not native runtime replay"
+  },
+  "tests": {
+    "core_passed": 593,
+    "core_ignored": 9,
+    "app_passed": 319,
+    "app_ignored": 50,
+    "cli_passed": 10,
+    "doc_passed": 1,
+    "test_threads": 1,
+    "new_core_tests": 4,
+    "new_cli_tests": 1,
+    "snapshot_masks": 256,
+    "workspace_log": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-27\\what-i-want-you-to-do\\work\\native-clipboard-assembly\\workspace-tests.txt",
+    "workspace_log_sha256": "ca9b6e29514bc9bcdab9c7cb2083704003adc0640788f8ff191bcc60ab80de2b"
+  },
+  "release_build": {
+    "exit_code": 0,
+    "command": "cargo build --release -j 1 --workspace",
+    "log": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-27\\what-i-want-you-to-do\\work\\native-clipboard-assembly\\release-build.txt",
+    "sha256": "a7178a681c127e6edd5acef02a4baa40e4bbbbdcf66533e41037315c7179f8f2"
+  },
+  "release_binaries": [
+    {
+      "path": "target/release/secbird-tray.exe",
+      "sha256": "4f2dac8ece4bdb7dba7ffeda3ba9e7b16ac46c3036b9c62fac5ec49d2a2d486d",
+      "bytes": 3409920
+    },
+    {
+      "path": "target/release/secbird.exe",
+      "sha256": "8c1c22fb41aaaa63f83e600796447275e9365d25bc05e27bf0afd7ac65f44f10",
+      "bytes": 1495552
+    }
+  ],
+  "canonical_sources": [
+    {
+      "path": "crates/secbird-core/src/native_paste_plan.rs",
+      "sha256_lf": "1e2bdcbe43fab4d31bfb3f872a42a4275d259700c4d2520330bb899e67b32c4c"
+    },
+    {
+      "path": "crates/secbird/src/macro_files/paste_contract.rs",
+      "sha256_lf": "606f1115ea78afd85fc851790828e3cb4421ac169a66ca1a7dc06a3cc23ff2fd"
+    },
+    {
+      "path": "crates/secbird/src/macro_files.rs",
+      "sha256_lf": "02739489daa169eb92043a74a51bde153d75b4c57f022abc8b46af806c2fdb3b"
+    },
+    {
+      "path": "crates/secbird-core/tests/fixtures/native-paste-protocol.json",
+      "sha256_lf": "730f1a75d61d0a1519cd714387853ec97b24079d096b781873e1ab6fb9db27e1"
+    }
+  ],
+  "correction": {
+    "earlier_report": "e79013a private clipboard timing table",
+    "correct_execution_delay_arguments": [
+      30,
+      20,
+      0,
+      10
+    ],
+    "correct_construction_delay_arguments": [
+      10,
+      0,
+      20,
+      30
+    ],
+    "evidence": "paste-build-source.asm; continuation move/invoker helpers",
+    "corrected_private_report": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-27\\what-i-want-you-to-do\\outputs\\native-clipboard-contract\\NATIVE-CLIPBOARD-CONTRACT.md"
+  },
+  "ui_changed": false,
+  "clipboard_read_or_changed": false,
+  "input_generated": false,
+  "physical_key_state_sampled": false,
+  "normal_profiles_changed": false,
+  "remaining": [
+    "Clipboard formats, publication, concurrent copy, cleanup/Stop and restore",
+    "Queued-state versus physical arbitration; identity/routing and terminal completion",
+    "Source runner duration unit/wall-clock acceptance",
+    "Full catalogue/API/driver/hardware/privacy/visual and three complete-build memory runs"
+  ]
+}

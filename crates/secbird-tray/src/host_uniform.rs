@@ -212,6 +212,7 @@ pub(crate) struct ActionTrace {
 
 #[derive(Debug, Clone)]
 pub(crate) struct Playback {
+    #[cfg(test)]
     program: Program,
     generation: u64,
     cycle: Cycle,
@@ -225,6 +226,7 @@ pub(crate) struct Playback {
 impl Playback {
     pub(crate) fn new(program: Program, generation: u64, now: Duration) -> Self {
         Self {
+            #[cfg(test)]
             program,
             generation,
             cycle: program.cycle(),
@@ -236,12 +238,14 @@ impl Playback {
             failure: None,
         }
     }
+    #[cfg(test)]
     pub(crate) fn program(&self) -> Program {
         self.program
     }
     pub(crate) fn frame_count(&self) -> usize {
         self.cycle.frame_count()
     }
+    #[cfg(test)]
     pub(crate) fn interval(&self) -> Duration {
         self.cycle.frame_interval()
     }
@@ -514,8 +518,7 @@ mod tests {
         assert!(!program.opted_in(&profile));
         let decoded = profile.extra[SOURCE]["decoded"].clone();
         let mut store = secbird_core::Store::default();
-        let mut device = secbird_core::profile::DeviceProfiles::default();
-        device.active = "Synthetic".into();
+        let mut device = secbird_core::profile::DeviceProfiles { active: "Synthetic".into(), ..Default::default() };
         device.profiles.clear();
         device.profiles.insert("Synthetic".into(), profile.clone());
         store.devices.insert("025D:synthetic".into(), device);

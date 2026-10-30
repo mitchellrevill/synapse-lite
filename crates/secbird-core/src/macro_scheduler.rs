@@ -1,19 +1,27 @@
-//! Completion-driven, single-run keyboard macro execution state.
+//! Completion-driven, single-run keyboard/mouse macro execution state.
 //!
 //! No thread, clock reads, handles or input sender. A native adapter must prove
 //! routing/ownership and report terminal completion, not submit acceptance.
+pub use crate::keyboard_output_ledger::{Completion, Owner};
+use crate::{keyboard_output_ledger::Failure, keyboard_symbolic_bridge::RoutingIdentity};
+#[cfg(test)]
 use crate::{
-    keyboard_output_ledger::{Command, Completion, Direction, Failure, Ledger, Owner, Ticket},
-    keyboard_symbolic_bridge::{plan_keyboard_packets, ExplicitNativeKeyboard, RoutingIdentity},
     rzcontrol_packet::{InputPacket, KeyboardInput},
-    source_macro::{Event, SymbolicPlan, Transition},
+    source_macro::SymbolicPlan,
 };
-use std::{collections::BTreeSet, time::Duration};
-
-const MAX_STEPS: usize = 512;
+#[cfg(test)]
+use std::time::Duration;
+mod runtime;
+pub use runtime::{Command, Contexts, Direction, Poll, Scheduler, Ticket};
+#[cfg(test)]
+#[path = "macro_scheduler/mixed_tests.rs"]
+mod mixed_tests;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Error {
     RoutingFields,
+    MissingKeyboardContext,
+    MissingMouseContext,
+    TicketExhausted,
     UnsupportedRepetition,
     UnsupportedEvent,
     ConditionalPacket,
@@ -23,6 +31,7 @@ pub enum Error {
     ClockOverflow,
     WrongTicket,
     Ledger(Failure),
+    MouseLedger(crate::mouse_output_ledger::Failure),
 }
 
 /// Explicit native fields, separate from the opaque endpoint routing context.
@@ -281,6 +290,10 @@ mod tests {
         let up = next(&mut s, 2, Direction::Up);
         s.refused_before_dispatch(up.ticket()).unwrap();
         assert_eq!(
+            s.poll(ms(3)),
+            Err(Error::Ledger(Failure::RecoveryUnconfirmed))
+        );
+        assert_eq!(
             s.poll(ms(3)).unwrap(),
             Poll::Stopped {
                 recovery_confirmed: false,
@@ -459,312 +472,5 @@ mod chord_tests {
                 uncertain_delivery: false
             }
         );
-    }
-}
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Poll {
-    Dispatch(Command),
-    Pending,
-    WaitUntil(Duration),
-    Finished,
-    Stopped {
-        recovery_confirmed: bool,
-        uncertain_delivery: bool,
-    },
-}
-#[derive(Clone, Copy)]
-enum Step {
-    Delay(u32),
-    Key {
-        input: KeyboardInput,
-        down: bool,
-        gap: bool,
-    },
-}
-struct Pending {
-    ticket: Ticket,
-    dispatched: bool,
-    source: bool,
-    direction: Direction,
-}
-
-/// Only one macro may use this ledger. Shared output arbitration across concurrent
-/// macros/physical keys is not established by this state machine.
-pub struct Scheduler {
-    steps: Vec<Step>,
-    owner: Owner,
-    identity: RoutingIdentity,
-    ledger: Ledger,
-    cursor: usize,
-    pending: Option<Pending>,
-    last_clock: Option<Duration>,
-    anchor: Duration,
-    deadline: Option<Duration>,
-    gap_paid: bool,
-    stopping: bool,
-    refused_recovery: bool,
-}
-impl Scheduler {
-    /// Atomically admit one balanced keyboard pass. Repeated makes, orphan ups,
-    /// held-at-end keys, mouse events, repetition and conditional E1 packets stay
-    /// explicit TODOs rather than being rewritten into a different macro.
-    pub fn new(plan: &SymbolicPlan, context: NativeContext, owner: Owner) -> Result<Self, Error> {
-        let identity = context.routing;
-        if context.source_unit.unwrap_or(0) != identity.unit_id() {
-            return Err(Error::RoutingFields);
-        }
-        if plan.repeats() != 1 {
-            return Err(Error::UnsupportedRepetition);
-        }
-        if plan.events().len() > MAX_STEPS {
-            return Err(Error::Budget);
-        }
-        let mut steps = Vec::with_capacity(plan.events().len());
-        let mut held = BTreeSet::new();
-        for (index, event) in plan.events().iter().copied().enumerate() {
-            match event {
-                Event::DelayMs(ms) => steps.push(Step::Delay(ms)),
-                Event::Keyboard { transition, .. } => {
-                    let native = ExplicitNativeKeyboard::from_source_event(
-                        event,
-                        context.modifiers,
-                        context.source_unit,
-                    )
-                    .map_err(|_| Error::InvalidSequence)?;
-                    let packet = plan_keyboard_packets(native, identity)
-                        .map_err(|_| Error::InvalidSequence)?;
-                    if packet.has_conditional_second() {
-                        return Err(Error::ConditionalPacket);
-                    }
-                    let InputPacket::Keyboard(mut input) =
-                        InputPacket::from_bytes(packet.first_packet())
-                            .map_err(|_| Error::InvalidSequence)?
-                    else {
-                        return Err(Error::UnsupportedEvent);
-                    };
-                    let down = transition == Transition::Down;
-                    input.flags &= !1;
-                    if !matches!(input.flags, 0 | 2 | 4)
-                        || input.make_code == 0
-                        || input.make_code == 0xff
-                    {
-                        return Err(Error::InvalidSequence);
-                    }
-                    let key = (input.make_code, input.flags);
-                    if (down && !held.insert(key)) || (!down && !held.remove(&key)) {
-                        return Err(Error::InvalidSequence);
-                    }
-                    if held.len() > crate::keyboard_output_ledger::MAX_KEYS {
-                        return Err(Error::Budget);
-                    }
-                    steps.push(Step::Key {
-                        input,
-                        down,
-                        gap: plan.source_keyboard_gap_before_us(index).is_some(),
-                    });
-                }
-                _ => return Err(Error::UnsupportedEvent),
-            }
-        }
-        if !held.is_empty() {
-            return Err(Error::InvalidSequence);
-        }
-        Ok(Self {
-            steps,
-            owner,
-            identity,
-            ledger: Ledger::default(),
-            cursor: 0,
-            pending: None,
-            last_clock: None,
-            anchor: Duration::ZERO,
-            deadline: None,
-            gap_paid: false,
-            stopping: false,
-            refused_recovery: false,
-        })
-    }
-    pub fn identity(&self) -> RoutingIdentity {
-        self.identity
-    }
-    /// Prepared program position; an armed delay can still be waiting.
-    pub fn source_cursor(&self) -> usize {
-        self.cursor
-    }
-    pub fn possibly_held_count(&self) -> usize {
-        self.ledger.possibly_held_count()
-    }
-    pub fn retained_step_bytes(&self) -> usize {
-        self.steps.capacity() * std::mem::size_of::<Step>()
-    }
-    fn clock(&mut self, now: Duration) -> Result<(), Error> {
-        if self.last_clock.is_some_and(|old| now < old) {
-            self.stop();
-            return Err(Error::ClockWentBack);
-        }
-        if self.last_clock.is_none() {
-            self.anchor = now;
-        }
-        self.last_clock = Some(now);
-        Ok(())
-    }
-    fn due(&mut self, delay: Duration, now: Duration) -> Result<bool, Error> {
-        let Some(deadline) = self.anchor.checked_add(delay) else {
-            self.stop();
-            return Err(Error::ClockOverflow);
-        };
-        if now < deadline {
-            self.deadline = Some(deadline);
-            Ok(false)
-        } else {
-            self.anchor = now;
-            Ok(true)
-        }
-    }
-    fn command(&mut self, source: bool) -> Result<Poll, Error> {
-        match self.ledger.next_command().map_err(Error::Ledger)? {
-            Some(command) => {
-                self.pending = Some(Pending {
-                    ticket: command.ticket(),
-                    dispatched: false,
-                    source,
-                    direction: command.direction(),
-                });
-                Ok(Poll::Dispatch(command))
-            }
-            None => Err(Error::InvalidSequence),
-        }
-    }
-    /// Returns a command once. Polling again cannot dispatch a clone; the caller
-    /// must explicitly mark API entry and then report terminal completion.
-    pub fn poll(&mut self, now: Duration) -> Result<Poll, Error> {
-        self.clock(now)?;
-        if self.pending.is_some() {
-            return Ok(Poll::Pending);
-        }
-        if self.stopping {
-            if self.refused_recovery || self.ledger.is_drained() {
-                return Ok(Poll::Stopped {
-                    recovery_confirmed: self.ledger.is_drained(),
-                    uncertain_delivery: self.ledger.has_uncertain_delivery(),
-                });
-            }
-            return self.command(false);
-        }
-        if let Some(deadline) = self.deadline {
-            if now < deadline {
-                return Ok(Poll::WaitUntil(deadline));
-            }
-            self.deadline = None;
-            self.anchor = now;
-        }
-        while let Some(step) = self.steps.get(self.cursor).copied() {
-            match step {
-                Step::Delay(ms) => {
-                    self.cursor += 1;
-                    self.gap_paid = false;
-                    if !self.due(Duration::from_millis(ms.into()), now)? {
-                        return Ok(Poll::WaitUntil(self.deadline.unwrap()));
-                    }
-                }
-                Step::Key { input, down, gap } => {
-                    if gap && !self.gap_paid {
-                        self.gap_paid = true;
-                        if !self.due(Duration::from_millis(10), now)? {
-                            return Ok(Poll::WaitUntil(self.deadline.unwrap()));
-                        }
-                    }
-                    let changed = if down {
-                        self.ledger.press(self.owner, input)
-                    } else {
-                        self.ledger.release(self.owner, input)
-                    };
-                    if let Err(error) = changed {
-                        self.stop();
-                        return Err(Error::Ledger(error));
-                    }
-                    return self.command(true);
-                }
-            }
-        }
-        if !self.ledger.is_drained() {
-            self.stop();
-            return self.poll(now);
-        }
-        Ok(Poll::Finished)
-    }
-    pub fn dispatch_started(&mut self, ticket: Ticket) -> Result<(), Error> {
-        let pending = self
-            .pending
-            .as_mut()
-            .filter(|p| p.ticket == ticket)
-            .ok_or(Error::WrongTicket)?;
-        self.ledger
-            .dispatch_started(ticket)
-            .map_err(Error::Ledger)?;
-        pending.dispatched = true;
-        Ok(())
-    }
-    pub fn complete(
-        &mut self,
-        ticket: Ticket,
-        outcome: Completion,
-        now: Duration,
-    ) -> Result<(), Error> {
-        let pending = self
-            .pending
-            .as_ref()
-            .filter(|p| p.ticket == ticket)
-            .ok_or(Error::WrongTicket)?;
-        if !pending.dispatched {
-            return Err(Error::Ledger(Failure::WrongPhase));
-        }
-        // Retain terminal evidence even when the supplied timestamp regresses.
-        let clock_result = self.clock(now);
-        self.ledger
-            .complete(ticket, outcome)
-            .map_err(Error::Ledger)?;
-        let pending = self.pending.take().unwrap();
-        if outcome == Completion::Uncertain {
-            self.stop();
-        } else if pending.source && !self.stopping {
-            self.cursor += 1;
-            self.gap_paid = false;
-            self.anchor = now;
-        }
-        clock_result
-    }
-    pub fn refused_before_dispatch(&mut self, ticket: Ticket) -> Result<(), Error> {
-        let pending = self
-            .pending
-            .as_ref()
-            .filter(|p| p.ticket == ticket)
-            .ok_or(Error::WrongTicket)?;
-        if pending.dispatched {
-            return Err(Error::Ledger(Failure::WrongPhase));
-        }
-        if !pending.source {
-            self.refused_recovery = true;
-        }
-        self.ledger
-            .refused_before_dispatch(ticket)
-            .map_err(Error::Ledger)?;
-        self.pending = None;
-        self.stop();
-        Ok(())
-    }
-    /// Never performs I/O. A dispatched down remains pending; its late completion
-    /// is followed by an owned release. Undispatched downs become stale tickets.
-    pub fn stop(&mut self) {
-        self.stopping = true;
-        self.deadline = None;
-        self.ledger.stop();
-        if self
-            .pending
-            .as_ref()
-            .is_some_and(|p| !p.dispatched && p.direction == Direction::Down)
-        {
-            self.pending = None;
-        }
     }
 }

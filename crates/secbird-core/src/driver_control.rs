@@ -355,9 +355,7 @@ mod windows {
         };
         let code = unsafe { GetLastError() };
         if success != 0 || code != ERROR_INSUFFICIENT_BUFFER {
-            return Err(io::Error::new(
-                io::ErrorKind::Other,
-                format!("Unexpected SetupAPI sizing result: success={success}, error={code}"),
+            return Err(io::Error::other(format!("Unexpected SetupAPI sizing result: success={success}, error={code}"),
             ));
         }
         if !(6..=MAX_DETAIL_BYTES).contains(&(required as usize)) {

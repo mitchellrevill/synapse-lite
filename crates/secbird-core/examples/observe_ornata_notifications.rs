@@ -165,7 +165,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .open(&args[0])?;
     file.write_all(&serde_json::to_vec_pretty(&report)?)?;
     file.sync_all()?;
-    println!("{}", report);
+    println!("{report}");
     if report["snapshot"]["subscription_enabled"] != true
         || report["snapshot"]["subscription_disabled"] != true
         || report["snapshot"]["pending_drained"] != true

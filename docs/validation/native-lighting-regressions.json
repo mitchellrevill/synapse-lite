@@ -1,0 +1,227 @@
+{
+  "date": "2026-10-29",
+  "objective": "Resolve optimized native Quick Lighting close and Wave dropdown regression checks without weakening expectations",
+  "base_commit": "3d75ea7",
+  "classification": "Test infrastructure: incomplete worker/acknowledgement boundary and editor-message ID collision",
+  "production_lighting_behavior_changed": false,
+  "approved_shared_tabs_changed": false,
+  "baseline": {
+    "unchanged_executable_sha256": "0ac5fafee394663afe49845c4cca4a72b53c5280ce8b109e40a03034d086726b",
+    "same_assets_and_dpi": true,
+    "scale": 1.25,
+    "source_fonts_loaded": 3,
+    "initial_eight_checks": {
+      "setup_failure": "Read-only overlays require checkout-relative private assets",
+      "failed": 3,
+      "passed": 5
+    },
+    "full_same_assets_suite": {
+      "failed": 3,
+      "failures": [
+        "Quick Lighting background acknowledgement race",
+        "Wave initial trigger geometry query consumed by mouse-feedback notification",
+        "Unchanged Reactive layer add check"
+      ],
+      "passed": 22
+    },
+    "diagnostic_close_repeats": {
+      "note": "Includes dropped input, premature acknowledgement, premature editor reopen and focused-close transport assertion",
+      "failed": 6,
+      "passed": 2
+    }
+  },
+  "focused_close_failure": {
+    "diagnostic_sha256": "3648e3904a8e34bd4a0f06eaccd09d74dc9a4d02726e17cc6a3812ee720388c1",
+    "before_after_document_values_equal": true,
+    "changed_document_paths": [],
+    "byte_equality_of_failed_baseline_not_recorded": true,
+    "pending_before_close": 1,
+    "status_before_close": "Working…",
+    "commands_after_snapshot": [
+      "00:84 GET device mode",
+      "05:84 GET active profile slot",
+      "0F:02 SET matrix effect",
+      "0F:82 GET matrix effect"
+    ],
+    "commands_belong_to": "Earlier accepted /api/source-effect from custom-colour Save; close drains the worker",
+    "simulated_region_zero_readback": "NotSupported; no physical effect-application claim"
+  },
+  "wave_failure": {
+    "missing_geometry": "initial trigger.x; entire query output was null",
+    "original_test_message": "WM_APP + 109",
+    "colliding_handler": "mouse_feedback::NOTIFY, handled earlier in window_proc",
+    "replacement_test_message": "WM_APP + 110",
+    "uniqueness_check": "editor_private_messages_have_distinct_ids (23 editor messages)"
+  },
+  "verification": {
+    "optimized_native_suite": {
+      "passed": 25,
+      "studio_checks_passed": 12,
+      "failed": 0,
+      "ignored": 0,
+      "private_stock_fixture_selected": true,
+      "font_assertions_preserved": true
+    },
+    "optimized_close_repeats": {
+      "failed": 0,
+      "passed": 6
+    },
+    "optimized_wave_repeats": {
+      "failed": 0,
+      "passed": 6
+    },
+    "message_id_invariant": {
+      "failed": 0,
+      "ignored": false,
+      "passed": 1
+    },
+    "workspace_parallel": {
+      "tray_ignored": 47,
+      "core_passed": 503,
+      "failure": "dot_background GDI process-wide count: before 5, after 7 while other tests run",
+      "tray_failed": 1,
+      "core_ignored": 6,
+      "tray_passed": 306,
+      "cli_passed": 4
+    },
+    "workspace_serial": {
+      "all_original_assertions_retained": true,
+      "tray_ignored": 47,
+      "cli_passed": 4,
+      "core_passed": 503,
+      "doc_passed": 1,
+      "core_ignored": 6,
+      "tray_failed": 0,
+      "tray_passed": 307
+    },
+    "close": {
+      "background_fault_once_across_user_operation": true,
+      "background_fault_preserves_capture_and_draft": true,
+      "brightness_cancel_no_write": true,
+      "brightness_capture_verified": true,
+      "brightness_no_write_before_release": true,
+      "brightness_release_raw": 114,
+      "cached_status_no_hid_or_store_write": true,
+      "cancelled_color_retained": true,
+      "close_command_delta": 0,
+      "close_store_bytes_unchanged": true,
+      "color_actions_did_not_write_brightness": true,
+      "edited_slot_saved": "#a1b2c3",
+      "evidence": "actual HWND mouse/EDIT notifications and worker persistence; no OS pointer injection or hardware proof",
+      "focused_background_failure_close_acknowledged": true,
+      "focused_edit_destroyed": true,
+      "native_edit_draft_switch_isolated": true,
+      "native_failure_dialog_acknowledged": true,
+      "opaque_slot_preserved": true,
+      "physical_discovery_disabled": true,
+      "saved_close_slot": "#a1b2c3",
+      "scale": 1.25,
+      "source_layout_client_css_width": 1320.0,
+      "source_region0_readback_not_modeled": true,
+      "transport": "simulated only",
+      "unsaved_close_draft": "fedcba"
+    },
+    "wave": {
+      "actual_hwnd": true,
+      "backend_or_pixel_parity_proof": false,
+      "effect_command_sink": "cfg-test only",
+      "narrow_upward_opening": true,
+      "opaque_setting_preserved": true,
+      "physical_io": false,
+      "selected_row_scroll": 122,
+      "source_wave_requests": [
+        2,
+        1,
+        2
+      ],
+      "thumb_drag_start": 0
+    }
+  },
+  "earlier_incomplete_setup_run": "fixed-native.log: 15 passed/10 failed before selecting private Studio fixture; transient Advanced/Macro failures retained. verified-native.log uses full prerequisites and passes all25.",
+  "source_sha256": {
+    "native_editor.rs": "abff023c15b1d92e2cd0beca4567346a762e7fbbf95bda754fc6aeefe6d71a6b",
+    "native_editor/interaction_tests.rs": "acb9d0163c62ab954f3d4ed9ff18ef8ee15e69b2098f268ad50e3ce14dda6051"
+  },
+  "optimized_test_executable_sha256": "1a6b79312de15a2f5bbd8fcec5c40fa3fd937a04e8330209925b26c6f127f214",
+  "asset_sha256": {
+    "RazerF5-Regular.ttf": "3182980316d7527b7ecdac6d782fd12aa8fb4ff9ab9f71e7d01d1b87330d26de",
+    "Roboto-Regular.ttf": "9939ae1ec75415c4b6e8889c95704bfbcbfb9d4245203605c1044ba21845ca36",
+    "Roboto-Light.ttf": "8cb65fe121080cb8721fb9b643f6b096d133d4b72b8575f6529ec458613dcc78",
+    "lighting-value.lut": "406ceeb10db771e9b710cfd710966a277ef5e04ae37c5caec8b539c1cae33db0"
+  },
+  "private_stock_studio_sha256": "7e87b7ed6836e8d9f81686ff426624c4a7be0953d7af17e1f61dcbdb245f9649",
+  "evidence_sha256": {
+    "baseline-native.log": "bc35f0ae1c25c556510e0eeee3b09c76a2518991b5d857f1bc402b336d0a9622",
+    "diagnostic-native.log": "01a9994334af513bd45d6873ac38141185dc3895818612b7b504ab47887cbe6b",
+    "diagnostic-close-repeats.log": "703c770e512d0b600c133c5103e1c093c8026d629621eae365061988a7e448ab",
+    "fixed-native.log": "953b076b8419468fb2380ef6fc0031ce2359f4b6c34e895a2272b0056eb055da",
+    "verified-native.log": "0b15f0383934087550d34259702a91ec2858dc771949307821c85feb0840e9b4",
+    "baseline-same-assets.log": "fb8922ec82745a11e8e22b9bcef6ea185f902794382fb3612193025c017b4d55",
+    "verified-close-repeats.log": "49bdd39fac605d04716d0bbd798a8aadcedfe6cd5a3448c12cd2c629fa0e5abc",
+    "verified-wave-repeats.log": "23bb4a98977dbd3dcce97e9a61b18549b8ec5e1bac3174bf5de31535f3377162",
+    "message-ids.log": "415717d925d963d7cea1c90d64b8e0a5026b97f8f3512c750a7539c0855e60c5",
+    "workspace-tests.log": "2295fac9598b9a21ee8f2378b248d90a5f50ce0e0e8af3c2e2c956e67a8003eb",
+    "workspace-serial-tests.log": "45045cca283aff56e997e34b5d0220a03cedcaf112cd95b5f80a7444e33739be"
+  },
+  "limitations": [
+    "Simulated transport and owned HWNDs only; no physical discovery or device writes",
+    "No normal profile changes",
+    "No production input interception or driver changes",
+    "Source/raw metadata and original assertions preserved",
+    "No pixel-parity, full device support or three-run final memory acceptance claim"
+  ],
+  "complete_product_goal_accepted": false,
+  "integration": {
+    "base_commit": "e6c21c305ed1b7a96869cf9c039950ea19fef59a",
+    "initial_verified_feature_commit": "b98d603d948500a12b4ff6e0d966c915464ffd30",
+    "reason": "Main gained nested-macro references and profile interchange during independent work; feature commit rebased cleanly and all suites reverified",
+    "native_suite": {
+      "status": "FAILED",
+      "passed": 24,
+      "failed": 1,
+      "ignored": 0
+    },
+    "native_failed_checks": [
+      "native_editor::interaction_tests::advanced::native_advanced_modes_curve_drag_rotation_and_recovery"
+    ],
+    "target_regressions_passed": true,
+    "native_suite_limitation": "Unmodified Advanced check timed out at Sensitivity mode; the same timeout occurred in earlier fixed-native.log. Not classified as a product regression or silently retried.",
+    "next_check": "Capture Advanced mode, pending/queued state and simulated transport around each failed mode click; compare normal cross-thread input with acknowledged UI-thread delivery, without weakening mode expectations.",
+    "workspace_serial": {
+      "cli": {
+        "status": "ok",
+        "passed": 4,
+        "failed": 0,
+        "ignored": 0
+      },
+      "core": {
+        "status": "ok",
+        "passed": 509,
+        "failed": 0,
+        "ignored": 6
+      },
+      "tray": {
+        "status": "ok",
+        "passed": 307,
+        "failed": 0,
+        "ignored": 47
+      },
+      "documentation": {
+        "status": "ok",
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    "source_sha256": {
+      "native_editor.rs": "5bb3d1b412c019ef7f99ff6b759aa118875a9802b4ea6bc64b285ec740d9426e",
+      "native_editor/interaction_tests.rs": "acb9d0163c62ab954f3d4ed9ff18ef8ee15e69b2098f268ad50e3ce14dda6051"
+    },
+    "optimized_test_executable_sha256": "d74fa657a0b6c01d1152e55788eb4257249258343be4aa2257160329087d433e",
+    "evidence_sha256": {
+      "integration-native.log": "434c1645c597ded3d2033d0a1addafc1c0269f3b514ef227aca7bf50d2d15ee9",
+      "integration-workspace.log": "b1a0978152c999e45585a9e2db96d281fd59310fe7632de6e48dcb9622a3145b"
+    },
+    "original_baseline_and_repeat_evidence_retained_above": true
+  }
+}

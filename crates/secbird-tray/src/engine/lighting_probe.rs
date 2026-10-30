@@ -472,7 +472,7 @@ mod tests {
         // configured LIVE brightness after a completed frame. It stays 255;
         // no saved brightness, mode, input or firmware effect path is invoked.
         assert!(spy.commands.iter().all(|command| command.id & 0x80 != 0
-            || command.class == 15 && matches!(command.id, 2 | 3 | 4)));
+            || command.class == 15 && matches!(command.id, 2..=4)));
         assert_eq!(f.spy.sim.state().live_brightness[&5], 255);
         assert_eq!(f.spy.sim.state().brightness[&5], 255);
         drop(spy);

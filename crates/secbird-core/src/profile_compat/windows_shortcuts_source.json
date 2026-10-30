@@ -1,0 +1,157 @@
+{
+  "schema": 1,
+  "authority": "inert shipped source; no vendor execution",
+  "rea_parent_evidence_id": "ev_961d21ba17afb8374a9c9c5c377747d47a905de340ff2341bc3caa7624253cae",
+  "artifacts": [
+    {
+      "url": "https://apps.razer.com/synapse/products/605/ui/static/js/main.fcf07de2.js",
+      "sha256": "307e2b199037ed53a8fde90d76fc67a9a3766a9361fb152e7820d8bf05f19c65",
+      "choices_offset_utf8": 1820803
+    },
+    {
+      "url": "https://apps.razer.com/synapse/products/196/ui/static/js/main.bbc961f9.js",
+      "sha256": "f99b1f88ca9496a77cab258d05814a312b876873cb5c586841c28a732db78c42",
+      "choices_offset_utf8": 4875925
+    },
+    {
+      "url": "https://apps.razer.com/synapse/products/605/ui/static/js/MapWindows.9dc9e295.chunk.js",
+      "sha256": "f715271042b8dc562be4f6c8ebd035f2c5c63aa031dcf3966b0020e1ebaa23ee"
+    }
+  ],
+  "choices": [
+    {
+      "id": "Calculator",
+      "label": "Launch Calculator",
+      "localization": "LAUNCH_CALCULATOR"
+    },
+    {
+      "id": "MSPaint",
+      "label": "Launch MSPaint",
+      "localization": "LAUNCH_MSPAINT"
+    },
+    {
+      "id": "Notepad",
+      "label": "Launch Notepad",
+      "localization": "LAUNCH_NOTEPAD"
+    },
+    {
+      "id": "Snipping_Tool",
+      "label": "Launch Snipping Tool",
+      "localization": "LAUNCH_SNIPPING_TOOL"
+    },
+    {
+      "id": "LaunchTaskManager",
+      "label": "Launch Task Manager",
+      "localization": "LAUNCH_TASK_MANAGER"
+    },
+    {
+      "id": "MSCopilot",
+      "label": "Launch Windows Copilot",
+      "localization": "LAUNCH_WINDOWS_COPILOT"
+    },
+    {
+      "id": "User_Directory",
+      "label": "Open User Directory",
+      "localization": "OPEN_USER_DIRECTORY"
+    },
+    {
+      "id": "PowerUserMenu",
+      "label": "Open System Utility Settings Menu",
+      "localization": "OPEN_SYSTEM_UTILITY"
+    },
+    {
+      "id": "ShowDesktop",
+      "label": "Show Desktop",
+      "localization": "SHOW_DESKTOP"
+    },
+    {
+      "id": "CycleApps",
+      "label": "Cycle Apps",
+      "localization": "CYCLE_APPS"
+    },
+    {
+      "id": "SwitchApps",
+      "label": "Switch Apps",
+      "localization": "SWITCH_APPS"
+    },
+    {
+      "id": "CloseApp",
+      "label": "Close App",
+      "localization": "CLOSE_APP"
+    },
+    {
+      "id": "Cut",
+      "label": "Cut",
+      "localization": "CUT"
+    },
+    {
+      "id": "Copy",
+      "label": "Copy",
+      "localization": "COPY"
+    },
+    {
+      "id": "Paste",
+      "label": "Paste",
+      "localization": "PASTE"
+    },
+    {
+      "id": "Mail",
+      "label": "Mail",
+      "localization": "MAIL"
+    },
+    {
+      "id": "ThisPC",
+      "label": "This PC",
+      "localization": "THIS_PC"
+    },
+    {
+      "id": "Refresh",
+      "label": "Refresh",
+      "localization": "REFRESH"
+    },
+    {
+      "id": "DisplayBrightnessUp",
+      "label": "Display Brightness Up",
+      "localization": "DISPLAY_BRIGHTNESS_UP"
+    },
+    {
+      "id": "DisplayBrightnessDown",
+      "label": "Display Brightness Down",
+      "localization": "DISPLAY_BRIGHTNESS_DOWN"
+    },
+    {
+      "id": "File_Explorer",
+      "label": "Open File Explorer",
+      "localization": "OPEN_FILE_EXPLORER"
+    },
+    {
+      "id": "LockComputer",
+      "label": "Lock Computer",
+      "localization": "LOCK_COMPUTER"
+    },
+    {
+      "id": "WindowsZoomIn",
+      "label": "Windows Zoom In",
+      "localization": "WINDOWS_ZOOM_IN"
+    },
+    {
+      "id": "WindowsZoomOut",
+      "label": "Windows Zoom Out",
+      "localization": "WINDOWS_ZOOM_OUT"
+    },
+    {
+      "id": "OfficeZoomIn",
+      "label": "Office Zoom In",
+      "localization": "OFFICE_ZOOM_IN"
+    },
+    {
+      "id": "OfficeZoomOut",
+      "label": "Office Zoom Out",
+      "localization": "OFFICE_ZOOM_OUT"
+    }
+  ],
+  "limits": [
+    "Standard 605/196 list only. Additional Windows shortcuts absent from these product exports; advanced-multidial conditional additions excluded.",
+    "Static source does not prove native delivery, physical trigger routing or OS execution."
+  ]
+}

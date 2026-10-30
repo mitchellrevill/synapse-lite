@@ -1,0 +1,82 @@
+{
+  "format": "synapse-lite-chroma-dashboard-v1",
+  "date": "2026-10-29",
+  "base_commit": "e6c21c3",
+  "regular_workspace": {
+    "cli_passed": 4,
+    "core_passed": 509,
+    "core_ignored": 6,
+    "tray_passed": 309,
+    "tray_ignored": 49,
+    "doc_passed": 1,
+    "failed": 0
+  },
+  "native_interaction_tests_passed": 2,
+  "native_scenarios": {
+    "two_exact_device_global_selection": true,
+    "first_device_modal_selection_isolated": true,
+    "inactive_profile_and_active_identity_preserved": true,
+    "selection_survives_engine_and_window_recreation": true,
+    "navigation_does_not_apply_output": true,
+    "later_target_stale_profile_refused_before_any_set": true,
+    "read_only_control_inert": true,
+    "native_studio_navigation": true,
+    "actual_shared_worker_apply": true,
+    "studio_quick_ownership_conflict": true,
+    "dashboard_stop_drains_studio": true,
+    "saved_quick_resumes": true,
+    "unsaved_studio_navigation_keeps_draft_and_window": true
+  },
+  "regular_model_tests": [
+    "unknown/disabled/nonlighting/unavailable filtering and exact profile binding",
+    "opaque settings retained; 64-target budget",
+    "mode-specific global membership and aggregate 2 MiB settings budget"
+  ],
+  "simulation": {
+    "physical_discovery": "disabled",
+    "global_persistence_fixture": "source-aware mock handles and worker-ready signal; no worker thread",
+    "studio_fixture": "source-aware mock handles with actual shared worker",
+    "external_process_observer": "clear only for explicit mock paths in test builds; production unchanged",
+    "normal_profiles_changed": false,
+    "unrelated_processes_stopped": false,
+    "raw_input_audio_or_desktop_capture": false
+  },
+  "private_native_evidence_directories": [
+    "native-chroma-58852-1793300939560826900",
+    "native-chroma-studio-58852-1793300942268908200"
+  ],
+  "visual_review": {
+    "owned_window_render": true,
+    "source_capture": "stock-chroma-dashboard-lower-0.jpg",
+    "source_capture_sha256": "bd87d817abf0c3035938327620fa7d89c96ea8c0eccc637348432def04da1f53",
+    "normalization": "1120px content width only; stock DPI unknown; no pixel identity metric",
+    "native_client_pixels": [
+      1600,
+      900
+    ],
+    "native_dpi_scale": 1.25,
+    "source_gdi_fonts_registered_in_frame": 0,
+    "source_geometry_smoke_matched": true,
+    "pixel_parity_proven": false,
+    "gaps": [
+      "source circular effect icons and Chroma tab ring",
+      "source modal/picker and tooltip styling",
+      "collapsible/reorderable groups",
+      "card geometry and responsive spacing",
+      "full source typography"
+    ],
+    "images_kept_outside_git": true
+  },
+  "rea_parent_evidence_id": "ev_5f4b6e4acc40d19f9b502667f48cb8410c27ce9be51280d30a2c22f3a0f61e04",
+  "physical_optical_acceptance": false,
+  "all_device_compatibility": false,
+  "complete_build_three_run_memory_gate": false,
+  "workspace_debug_build": {
+    "passed": true,
+    "offline": true,
+    "target": "x86_64-pc-windows-msvc",
+    "tray_sha256": "3944d71a71ea36de8ce3f6b590f5a3a891279ee1115323a7451004257167bc3a",
+    "cli_sha256": "50f2bd1d422e1dd21567747d3210e9f0eb4cb596c4e1520d37f0f6bafde1cbfd",
+    "run_for_memory_acceptance": false
+  }
+}

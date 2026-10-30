@@ -30,16 +30,25 @@ mod osd;
 #[cfg(windows)]
 mod native_editor;
 #[cfg(windows)]
+mod host_macro_worker;
+#[cfg(windows)]
 mod server;
 #[cfg(windows)]
 mod settings;
 #[cfg(windows)]
+mod battery_notifications;
+#[cfg(windows)]
 mod runtime_probe;
 #[cfg(windows)]
 mod win;
+#[cfg(windows)]
+mod support_bundle;
+#[cfg(windows)]
+mod global_shortcuts;
 
 #[cfg(windows)]
 fn main() {
+    secbird_core::support_bundle::start();
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.iter().any(|arg|arg=="--audio-capture-default") {
         if let Err(error)=audio_capture::diagnostic(&args){eprintln!("{error}");std::process::exit(2);}return;
@@ -121,5 +130,6 @@ fn serve() {
 
 #[cfg(not(windows))]
 fn main() {
+    secbird_core::support_bundle::start();
     eprintln!("secbird-tray only runs on Windows");
 }

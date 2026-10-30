@@ -21,6 +21,12 @@ fn read(path: &Path) -> Result<Vec<u8>, Error> {
     Ok(bytes)
 }
 pub(super) fn run(args: &[String]) -> Result<(), Error> {
+    if args.len() == 2 && args[0] == "inspect-archive" {
+        let bytes = read(Path::new(&args[1]))?;
+        let report = profile_compat::legacy_archive::preview_archive(&bytes)?;
+        println!("{}", serde_json::to_string_pretty(&report).map_err(invalid)?);
+        return Ok(());
+    }
     if args.len() != 5 || args[0] != "recover-macros" {
         return Err(invalid(
             "use profiles recover-macros NATIVE_BACKUP SOURCE_EXPORT EXACT_DEVICE_KEY NEW_OUTPUT",

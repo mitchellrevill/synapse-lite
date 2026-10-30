@@ -2,19 +2,39 @@
 use super::*;
 use std::collections::BTreeMap;
 
+#[path = "clipboard.rs"]
+mod clipboard;
+pub use clipboard::PropertyClipboard;
+
 #[path = "spectrum.rs"]
 mod spectrum;
 #[path = "breathing_gradient.rs"]
 mod breathing_gradient;
+#[path = "ambient.rs"]
+mod ambient;
+pub use ambient::{AmbientEdit, AmbientProperty, AmbientValue, SelectedAmbientValue, AmbientRect, AMBIENT_PRESETS, AMBIENT_SCALE};
+pub use breathing_gradient::{BreathingEdit, BreathingSettings, SelectedBreathing};
+#[path = "tidal.rs"]
+mod tidal;
+pub use tidal::{TidalDescriptor, TidalProperty, SelectedTidalValue, TidalLayout, TIDAL_NONE};
 #[path = "reactive.rs"]
 mod reactive;
 pub use reactive::{ReactiveProperty, SelectedReactiveValue, REACTIVE_DURATIONS};
+#[path = "audio.rs"]
+mod audio;
+pub use audio::{AudioProperty, SelectedAudioValue, audio_preset};
 #[path = "starlight.rs"]
 mod starlight;
-pub use starlight::{StarlightProperty, SelectedStarlightValue, STARLIGHT_DURATIONS};
+pub use starlight::{StarlightDescriptor, StarlightProperty, SelectedStarlightValue, STARLIGHT_DURATIONS};
+#[path = "ripple.rs"]
+mod ripple;
+pub use ripple::{RippleProperty, SelectedRippleValue, RippleStart, RippleEnd, RipplePlayback, SelectedRipplePlayback, ripple_preset};
 #[path = "wave.rs"]
 mod wave;
 pub use wave::{WaveProperty, SelectedWaveValue, wave_preset};
+#[path = "wheel.rs"]
+mod wheel;
+pub use wheel::{WheelProperty, SelectedWheelValue, wheel_preset, WheelGeometry};
 pub use spectrum::{
     GradientStop, SelectedDuration, SelectedGradient, StopEdit, SPECTRUM_DURATIONS,
 };
@@ -59,22 +79,36 @@ impl ColorProperty {
 
 #[derive(Clone, Copy)]
 enum RegionEdit<'a> {
+    Properties(&'a Object, &'a [&'a str], Option<&'a Object>),
     Erase,
     Color(ColorProperty, Option<u32>),
     Spectrum(spectrum::Edit<'a>, &'a Object),
     BreathingDuration(u32),
     BreathingGradient(StopEdit, &'a Object),
+    Wheel(wheel::Edit, &'a Object),
+    Breathing(BreathingEdit, &'a Object),
+    Ripple(ripple::Edit, &'a Object),
     Wave(wave::Edit, &'a Object),
+    Ambient(AmbientEdit, &'a Object),
+    Tidal(tidal::Edit, &'a Object),
     Reactive(reactive::Edit, &'a Object),
     Starlight(starlight::Edit, &'a Object),
+    Audio(audio::Edit, &'a Object),
 }
 impl RegionEdit<'_> {
     fn assigns(self) -> bool {
         !matches!(self, Self::Erase)
     }
     fn apply(self, params: &mut Object, new: bool) -> Result<()> {
+        if let Self::Properties(copied, clear, _) = self {
+            for field in clear { params.set(field, None); }
+            for (field, value) in &copied.0 { params.set(field, Some(value)); }
+        }
         if let Self::Color(property, color) = self {
             // None is an explicit source picker clear, never JSON null.
+            let color = if property.effect().0 == "breathing" {
+                Some(color.unwrap_or(0x64000000))
+            } else {color};
             let encoded = color.map(|color| encode(&color)).transpose()?;
             params.set(property.field(), encoded.as_deref());
         }
@@ -88,6 +122,8 @@ impl RegionEdit<'_> {
         }
         if let Self::BreathingDuration(value)=self { params.set("duration",Some(&encode(&value)?)); }
         if let Self::BreathingGradient(edit,defaults)=self { breathing_gradient::apply(params,defaults,edit)?; }
+        if let Self::Breathing(edit,defaults)=self { breathing_gradient::apply_settings(params,defaults,edit,new)?; }
+        if let Self::Ripple(edit,projection)=self {edit.apply(params,projection,new)?;}
         if let Self::Wave(edit,projection)=self {
             if new {for (name,value) in &projection.0 {params.set(name,Some(value));}}
             if matches!(edit,wave::Edit::Stop(_)) && params.get("colorStops").is_none() {
@@ -95,8 +131,18 @@ impl RegionEdit<'_> {
             }
             edit.apply(params)?;
         }
+        if let Self::Ambient(edit,projection)=self {edit.apply(params,projection,new)?;}
+        if let Self::Wheel(edit,projection)=self {
+            if new {for (name,value) in &projection.0 {params.set(name,Some(value));}}
+            if matches!(edit,wheel::Edit::Stop(_)) && params.get("colorStops").is_none() {
+                params.set("colorStops",projection.get("colorStops"));
+            }
+            edit.apply(params)?;
+        }
+        if let Self::Tidal(edit,projection)=self {edit.apply(params,projection,new)?;}
         if let Self::Reactive(edit,projection)=self {edit.apply(params,projection,new)?;}
         if let Self::Starlight(edit,projection)=self {edit.apply(params,projection,new)?;}
+        if let Self::Audio(edit,projection)=self {edit.apply(params,projection,new)?;}
         Ok(())
     }
 }
@@ -154,8 +200,8 @@ fn property_color(region: &Object, property: ColorProperty) -> Result<Option<u32
         .transpose()
 }
 fn breathing_color_fields(params: &Object) -> Result<()> {
-    if params.get("colorStops").is_some() || params.get("randomColor").is_some_and(|raw|raw.get()!="false") {
-        return Err(invalid("Breathing custom gradients and random colour editing are not implemented; imported parameters were preserved"));
+    if params.get("colorStops").is_some_and(|raw|raw.get()!="null") || params.get("randomColor").is_some_and(|raw|raw.get()!="false") {
+        return Err(invalid("Use Playback to turn off Random or reset to two colours before editing colour fields; imported parameters were preserved"));
     }
     Ok(())
 }
@@ -240,9 +286,12 @@ impl Draft {
             return Ok(SelectedColor::Empty);
         }
         let item = layer(self, id, Some(property))?;
-        if property.effect().0=="breathing" {
-            if let Some(raw)=item.get("params") { breathing_color_fields(&Object::parse(raw)?)?; }
-        }
+        let breathing = property.effect().0 == "breathing";
+        let defaults = if breathing {
+            breathing_gradient::merged(&item, None)?
+        } else {
+            Object(vec![])
+        };
         inventory(self, &selection)?;
         let mut colors: BTreeMap<LedSelection, Option<u32>> = BTreeMap::new();
         for raw in entries(&item, "regions")? {
@@ -259,10 +308,16 @@ impl Draft {
                 }
             }
             if !matching.is_empty() {
-                if property.effect().0=="breathing" {
-                    breathing_color_fields(&Object::parse(region.get("params").ok_or_else(||invalid("region has no params"))?)?)?;
-                }
-                let color = property_color(&region, property)?;
+                let color = if breathing {
+                    let combined = breathing_gradient::merged(&item, Some(&region))?;
+                    breathing_color_fields(&combined)?;
+                    let color = combined.get(property.field())
+                        .map(|raw| serde_json::from_str(raw.get()).map_err(invalid))
+                        .transpose()?;
+                    let color = color.filter(|color| *color != 0x64000000);
+                    crate::lighting_pixels::Pixel::from_studio_color(color)?;
+                    color
+                } else { property_color(&region, property)? };
                 for key in matching {
                     if colors.insert(key, color).is_some() {
                         return Err(invalid("overlapping selected region memberships"));
@@ -270,9 +325,20 @@ impl Draft {
                 }
             }
         }
+        let inherited = if breathing && colors.len() < selection.len() {
+            breathing_color_fields(&defaults)?;
+            let color = defaults.get(property.field())
+                .map(|raw| serde_json::from_str(raw.get()).map_err(invalid))
+                .transpose()?;
+            let color = color.filter(|color| *color != 0x64000000);
+            crate::lighting_pixels::Pixel::from_studio_color(color)?;
+            color
+        } else {
+            None
+        };
         let mut values = selection
             .iter()
-            .map(|key| colors.get(key).copied().flatten());
+            .map(|key| colors.get(key).copied().unwrap_or(inherited));
         let first = values.next().unwrap();
         Ok(if values.all(|value| value == first) {
             SelectedColor::Uniform(first)
@@ -331,17 +397,19 @@ impl Draft {
         }
         let property = match edit {
             RegionEdit::Color(property, _) => Some(property),
-            RegionEdit::Erase | RegionEdit::Spectrum(..) | RegionEdit::BreathingDuration(_) | RegionEdit::BreathingGradient(..) | RegionEdit::Wave(..) | RegionEdit::Starlight(..) | RegionEdit::Reactive(..) => None,
+            RegionEdit::Properties(..) | RegionEdit::Ambient(..) | RegionEdit::Tidal(..) | RegionEdit::Erase | RegionEdit::Spectrum(..) | RegionEdit::BreathingDuration(_) | RegionEdit::BreathingGradient(..) | RegionEdit::Breathing(..) | RegionEdit::Ripple(..) | RegionEdit::Wave(..) | RegionEdit::Wheel(..) | RegionEdit::Starlight(..) | RegionEdit::Reactive(..) | RegionEdit::Audio(..) => None,
         };
         let item = layer(self, id, property)?;
         if matches!(edit, RegionEdit::Spectrum(..)) {
             spectrum::validate_layer(&item)?;
         }
+        if matches!(edit,RegionEdit::Ripple(..)) {ripple::validate_layer(&item)?;}
         if matches!(edit,RegionEdit::Wave(..)) {wave::validate_layer(&item)?;}
+        if matches!(edit,RegionEdit::Wheel(..)) {wheel::validate_layer(&item)?;}
         if matches!(edit,RegionEdit::BreathingDuration(_)) && (item.text("name")?!="breathing" || item.get("value").is_some_and(|value|value.get()!="5")) {
             return Err(invalid("selected layer is not Studio Breathing5"));
         }
-        if matches!(edit,RegionEdit::BreathingGradient(..)) {breathing_gradient::validate_layer(&item)?;}
+        if matches!(edit,RegionEdit::BreathingGradient(..)|RegionEdit::Breathing(..)) {breathing_gradient::validate_layer(&item)?;}
         let available = inventory(self, &selection)?;
         let mut seen = BTreeSet::new();
         let mut kept = Vec::new();
@@ -441,12 +509,18 @@ impl Draft {
         if merged.len() > MAX_LAYERS {
             return Err(invalid("region partition exceeds 512 entries"));
         }
-        self.commit(vec![Change {
+        let mut changes = vec![Change {
             id: id.into(),
             field: "regions",
             before: item.get("regions").map(RawValue::to_owned),
             after: encode(&merged)?,
-        }])
+        }];
+        if let RegionEdit::Properties(_, _, Some(base)) = edit {
+            changes.push(Change { id: id.into(), field: "params",
+                before: item.get("params").map(RawValue::to_owned), after: encode(base)? });
+        }
+        changes.retain(|change| change.before.as_ref().map(|v|v.get()) != Some(change.after.get()));
+        self.commit(changes)
     }
 }
 
@@ -454,14 +528,14 @@ impl Draft {
 /// numeric spellings must not be discarded to make two encodings look equal.
 fn merge_regions(regions: Vec<Box<RawValue>>) -> Result<Vec<Box<RawValue>>> {
     let mut result: Vec<Box<RawValue>> = Vec::new();
-    let mut indexes = BTreeMap::new();
+    let mut indexes: BTreeMap<String, usize> = BTreeMap::new();
     for raw in regions {
         let mut region = Object::parse(&raw)?;
         let devices = entries(&region, "devices")?;
         region.set("devices", None);
         let signature = encode(&region)?.get().to_owned();
         if let Some(&index) = indexes.get(&signature) {
-            let existing: &Box<RawValue> = &result[index];
+            let existing: &RawValue = result[index].as_ref();
             let mut prior = Object::parse(existing)?;
             let mut all = entries(&prior, "devices")?;
             for raw in devices {

@@ -54,7 +54,8 @@ impl Graph {
     pub(super) fn issues(&self)->usize {self.nodes.keys().filter(|id|self.walk(id,&mut BTreeSet::new(),&mut BTreeSet::new()).is_err()).count()}
     fn closure(&self,roots:&BTreeSet<String>)->BTreeSet<String> {
         let mut found=BTreeSet::new();let mut pending:Vec<_>=roots.iter().cloned().collect();
-        while let Some(id)=pending.pop(){if !found.insert(id.clone()){continue;}if let Some(node)=self.nodes.get(&id){pending.extend(node.targets.iter().cloned());}}
+        while let Some(id)=pending.pop(){if !found.insert(id.clone()){continue;}
+        if let Some(node)=self.nodes.get(&id){pending.extend(node.targets.iter().cloned());}}
         found
     }
 }
@@ -66,7 +67,8 @@ pub fn targets(record:&Value,context:&[Value])->Result<Vec<Target>> {
 }
 pub(crate) fn required(records:&BTreeMap<String,Value>,roots:&BTreeSet<String>)->Result<BTreeSet<String>> {
     let mut selected=BTreeMap::new();let mut pending:Vec<_>=roots.iter().cloned().collect();
-    while let Some(id)=pending.pop(){if selected.contains_key(&id){continue;}if selected.len()>=MAX_MACROS{return Err(invalid("Selected macro dependencies exceed library bounds"));}let record=records.get(&id).ok_or_else(||invalid("Selected nested macro definition is missing"))?;let (children,_)=info(&decode_record(record)?)?;pending.extend(children);selected.insert(id,record.clone());}
+    while let Some(id)=pending.pop(){if selected.contains_key(&id){continue;}
+        if selected.len()>=MAX_MACROS{return Err(invalid("Selected macro dependencies exceed library bounds"));}let record=records.get(&id).ok_or_else(||invalid("Selected nested macro definition is missing"))?;let (children,_)=info(&decode_record(record)?)?;pending.extend(children);selected.insert(id,record.clone());}
     let graph=Graph::new(&selected)?;for root in roots {graph.walk(root,&mut BTreeSet::new(),&mut BTreeSet::new())?;}Ok(graph.closure(roots))
 }
 pub(crate) fn rewrite_guids(body:&mut Value,renames:&BTreeMap<String,(String,String)>)->Result<()> {
@@ -93,7 +95,8 @@ pub(super) fn validate_change(old:Option<&Value>,new:&Value,records:&BTreeMap<St
     let new_body=decode_record(new)?;let (new_targets,bad)=info(&new_body)?;
     let old_body=old.map(decode_record).transpose()?;
     let (old_targets,mut old_bad)=old_body.as_ref().map(info).transpose()?.unwrap_or_default();
-    if old_body.as_ref().is_some_and(|old|old.get("appEngine").is_some()||new_body.get("appEngine").is_some())&&old_body.as_ref().is_some_and(|old|old["macroEvents"]!=new_body["macroEvents"]){return Err(invalid("Native event cache invalidation needs verification before event edits"));}
+    let cached=|body:&Value|body.get("appEngine").is_some_and(|engine|!movement_only_hint(engine));
+    if old_body.as_ref().is_some_and(|old|cached(old)||cached(&new_body))&&old_body.as_ref().is_some_and(|old|old["macroEvents"]!=new_body["macroEvents"]){return Err(invalid("Native event cache invalidation needs verification before event edits"));}
     for row in bad {let Some(index)=old_bad.iter().position(|old|old==&row) else{return Err(invalid("New nested event has no verified target"));};old_bad.remove(index);}
     let mut check:BTreeSet<_>=new_targets.difference(&old_targets).cloned().collect();
     if old_body.as_ref().is_some_and(|old|old.get("macroPlaybackOption")!=new_body.get("macroPlaybackOption")){check.extend(new_targets);}
