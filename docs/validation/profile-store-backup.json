@@ -1,0 +1,52 @@
+{
+  "feature": "explicit-local-profile-store-backup-restore",
+  "base": "7b99930",
+  "branch": "feat/local-store-backup-batch4",
+  "core_recovery_tests": {
+    "passed": 3,
+    "serial": true
+  },
+  "native_worker_test": {
+    "passed": 1,
+    "simulated_device_commands": 0
+  },
+  "native_settings_window_test": {
+    "passed": 1,
+    "initial_attempt": "four-second window-readiness timeout",
+    "retry": "passed in 4.75 seconds",
+    "capture": "profile-backup-settings.png"
+  },
+  "restricted_environment_attempts": [
+    "store replacement denied; original and recovery retained",
+    "release temporary archive rename denied; rerun with owned temporary directory"
+  ],
+  "visual": {
+    "capture_pixels": [
+      1600,
+      900
+    ],
+    "stock_reference_pixels": [
+      2048,
+      1104
+    ],
+    "matched_geometry": false,
+    "source_typography": "fallback",
+    "parity_claimed": false
+  },
+  "normal_store_modified": false,
+  "hardware_tested": false,
+  "full_memory_budget_verified": false,
+  "remaining": [
+    "cross-process compare/replace race",
+    "corrupt or missing current-store recovery",
+    "native-only backup picker filter",
+    "matched geometry/DPI and source-font comparison",
+    "final complete-build memory acceptance"
+  ],
+  "release_build": {
+    "sha256": "E07B17FD4BDF12DF786A662CDDC5FBC9CFAB0978F206DE4F39E67220265C8C15",
+    "warnings": 24,
+    "command": "cargo build --release -p secbird-tray -j 1",
+    "passed": true
+  }
+}

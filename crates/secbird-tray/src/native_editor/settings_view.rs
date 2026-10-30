@@ -18,6 +18,8 @@ pub enum Control {
     Lighting(String, String, bool),
     Help,
     License,
+    Backup,
+    Restore,
 }
 #[derive(Default)]
 pub(super) struct View {
@@ -60,6 +62,17 @@ pub(super) unsafe fn receive(state: &mut State, result: Result<Value, String>) {
     state.settings.busy = false;
     match result {
         Ok(data) => {
+            if data["backup_preview"] == true {
+                let text=format!("Restore {} devices and {} profiles?\n\nThis replaces the whole local store, including active selections and opaque metadata. Current profiles with conflicting names are replaced. Nothing is merged or renamed. A recovery copy is retained beside the store. Cancel keeps the current store. No device commands are sent by this operation.",data["devices"],data["profiles"]);
+                if MessageBoxW(state.hwnd,wide(&text).as_ptr(),wide("Preview whole-store restore").as_ptr(),MB_YESNO|MB_DEFBUTTON2)==IDYES {
+                    let mut body=data;body["key"]=json!("store_restore");request(state,Some(body));
+                }
+                return;
+            }
+            if let Some(message)=data["backup_message"].as_str() {
+                state.settings.message=message.into();state.settings.failed=false;
+                InvalidateRect(state.hwnd,null(),0);return;
+            }
             state.settings.data = Some(data);
             state.settings.failed = false;
             state.settings.message.clear();
@@ -92,6 +105,16 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
         }
         Control::Help => {
             MessageBoxW(state.hwnd,wide("Auto Launch registers this copy at sign-in. Minimize to system tray affects sign-in launches; opening Synapse Lite normally shows its window. Closing the editor leaves the tray running. Exit in the tray stops it.\n\nProfile notifications, low battery warnings and automatic game profiles are independent. Away lighting applies at lock/screen-off and restores saved lighting on return.\n\nDevice Lighting: in Settings, uncheck a device to leave its RGB to another application. Sensor and button settings still work.\n\nProfile import/export is available from each device's profile menu. Additional languages and Windows Dynamic Lighting handoff are not yet available.").as_ptr(),wide("Local Help").as_ptr(),MB_OK);
+        }
+        Control::Backup | Control::Restore => {
+            if state.read_only_smoke || state.restricted_actions || state.state["measurement_read_only"] == true { return; }
+            let restore=matches!(control,Control::Restore);
+            let choice=if restore { profile_files::choose_import(state.hwnd) } else { profile_files::choose_export(state.hwnd).map(|v|v.map(|(p,_)|p)) };
+            match choice {
+                Ok(Some(path))=>request(state,Some(json!({"key":if restore {"store_preview"} else {"store_backup"},"path":path}))),
+                Ok(None)=>{},
+                Err(e)=>{state.settings.message=e;state.settings.failed=true;}
+            }
         }
         Control::License => {
             MessageBoxW(state.hwnd,wide(concat!("Synapse Lite is MIT OR Apache-2.0.\n\n",include_str!("../../../../LICENSE-MIT"),"\nApache-2.0 alternative and third-party licenses: see the distribution's LICENSE-APACHE and dependency notices.\nComplete offline dependency notices are not yet packaged.")).as_ptr(),wide("License and notices").as_ptr(),MB_OK);
@@ -240,9 +263,9 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, width: i32, heigh
     let columns = width >= 1100;
     let bottom = if v.general {
         if columns {
-            472
+            622
         } else {
-            814
+            964
         }
     } else if columns {
         150 + 529.max(lighting_height + 339)
@@ -463,7 +486,12 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, width: i32, heigh
             Action::Settings(Control::Help),
             false,
         );
-        let about = if columns { top } else { top + 342 };
+        card(p,x,top+342,w,130,"LOCAL PROFILE STORE");
+        if enabled {
+            p.button("Back up",x+30,top+406,110,Action::Settings(Control::Backup),false);
+            p.button("Restore…",x+155,top+406,110,Action::Settings(Control::Restore),false);
+        }
+        let about = if columns { top } else { top + 492 };
         card(p, right, about, w, 322, "ABOUT");
         p.text(
             "SYNAPSE LITE",
@@ -507,6 +535,8 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, width: i32, heigh
                     | Control::Lighting(..)
                     | Control::Help
                     | Control::License
+                    | Control::Backup
+                    | Control::Restore
             )
         ) {
             hit.rect.top = hit.rect.top.max(r.top);
@@ -532,7 +562,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, width: i32, heigh
             }
         }
     }
-    let message = if v.failed {
+    let message = if !v.message.is_empty() {
         v.message.as_str()
     } else if let Some(error) = a["settings_error"].as_str() {
         error
@@ -560,4 +590,52 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, width: i32, heigh
         },
         DT_LEFT,
     );
+}
+
+/// Runs under the engine worker lock; no apply/refresh or device transport calls.
+pub(super) fn store_work(engine: &Engine, body: &Value) -> Result<Value,String> {
+    use secbird_core::profile::backup;
+    let run=|| -> Result<Value,String> {
+        if engine.is_measurement_read_only() {return Err("Read-only mode refuses store recovery".into());}
+        let path=engine.profile_store_path();
+        let current=backup::read(&path).map_err(|e|e.to_string())?;
+        let input=body["path"].as_str().map(PathBuf::from);
+        match body["key"].as_str().unwrap_or("") {
+            "store_backup"=>{
+                backup::create(input.as_deref().ok_or("Missing destination")?,&current).map_err(|e|e.to_string())?;
+                Ok(json!({"backup_message":"Backup saved. Existing files are never overwritten."}))
+            },
+            "store_preview"=>{
+                let incoming=backup::read(input.as_deref().ok_or("Missing backup")?).map_err(|e|e.to_string())?;
+                let store=backup::validate(&incoming).map_err(|e|e.to_string())?;
+                Ok(json!({"backup_preview":true,"devices":store.devices.len(),"profiles":store.devices.values().map(|d|d.profiles.len()).sum::<usize>(),"expected":String::from_utf8(current).map_err(|e|e.to_string())?,"incoming":String::from_utf8(incoming).map_err(|e|e.to_string())?}))
+            },
+            "store_restore"=>{
+                let expected=body["expected"].as_str().ok_or("Missing preview")?.as_bytes();
+                let incoming=body["incoming"].as_str().ok_or("Missing candidate")?.as_bytes();
+                let stamp=std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_err(|e|e.to_string())?.as_nanos();
+                let recovery=path.with_extension(format!("recovery-{stamp}.json"));
+                backup::restore(&path,expected,incoming,&recovery).map_err(|e|e.to_string())?;
+                Ok(json!({"backup_message":format!("Store restored. Recovery: {}. Reopen device pages to see restored selections.",recovery.display())}))
+            },
+            _=>Err("Unknown backup operation".into())
+        }
+    };run()
+}
+
+#[cfg(test)] mod backup_tests {
+ use super::*;
+ #[test] fn worker_preview_restore_and_backup_preserve_opaque_data_without_device_commands() {
+ let dir=std::env::temp_dir().join(format!("backup-worker-{}",std::process::id()));std::fs::create_dir_all(&dir).unwrap();
+ let path=dir.join("profiles.json");let input=dir.join("incoming.json");let output=dir.join("backup.json");
+ let old=br#"{"devices":{},"future":{"id":"old"}}"#;let new=br#"{"devices":{},"future":{"id":"new","guid":"opaque"}}"#;
+ std::fs::write(&path,old).unwrap();std::fs::write(&input,new).unwrap();
+ let sim=secbird_core::sim::Sim::keyboard();
+ let engine=Engine::with_simulated_keyboard(&sim,path.clone()).unwrap();sim.state().log.clear();
+ store_work(&engine,&json!({"key":"store_backup","path":output})).unwrap();assert_eq!(std::fs::read(&output).unwrap(),old);
+ let mut preview=store_work(&engine,&json!({"key":"store_preview","path":input})).unwrap();assert_eq!(std::fs::read(&path).unwrap(),old);
+ preview["key"]=json!("store_restore");store_work(&engine,&preview).unwrap();assert_eq!(std::fs::read(&path).unwrap(),new);
+ assert!(store_work(&engine,&preview).is_err());assert!(sim.state().log.is_empty());
+ for entry in std::fs::read_dir(&dir).unwrap() {std::fs::remove_file(entry.unwrap().path()).unwrap();}std::fs::remove_dir(dir).unwrap();
+ }
 }
