@@ -12,6 +12,7 @@ pub(super) enum Control {
     Open(Input, Anchor),
     Close,
     Cancel,
+    Save,
     Category(Category),
     Options,
     Option(usize),
@@ -372,12 +373,16 @@ unsafe fn trace_keyboard_selection(
     viewport: source_layout::Viewport,
     scale: f64,
 ) -> bool {
-    layout.trace_key_path(dc, input_id, source_layout::Viewport {
-        left: viewport.left * scale,
-        top: viewport.top * scale,
-        width: viewport.width * scale,
-        height: viewport.height * scale,
-    })
+    layout.trace_key_path(
+        dc,
+        input_id,
+        source_layout::Viewport {
+            left: viewport.left * scale,
+            top: viewport.top * scale,
+            width: viewport.width * scale,
+            height: viewport.height * scale,
+        },
+    )
 }
 
 pub(super) unsafe fn paint_customize(s: &State, p: &mut Painter) -> bool {
@@ -389,8 +394,18 @@ pub(super) unsafe fn paint_customize(s: &State, p: &mut Painter) -> bool {
     IntersectClipRect(p.dc, 0, p.px(128), s.width, s.height);
     let center = geo::keyboard_center(w, s.assignment.drawer) - s.assignment.scroll_x;
     let width = (w - if s.assignment.drawer { 230.0 } else { 0.0 }).clamp(770.0, 1220.0);
-    let background = r(center - width / 2.0, 148.0 - s.assignment.scroll_y, width, 340.0);
-    s.customize_background.borrow_mut().draw(p.dc, box_px(p, background), background, p.scale as f64);
+    let background = r(
+        center - width / 2.0,
+        148.0 - s.assignment.scroll_y,
+        width,
+        340.0,
+    );
+    s.customize_background.borrow_mut().draw(
+        p.dc,
+        box_px(p, background),
+        background,
+        p.scale as f64,
+    );
     if s.device().is_some_and(|d| d["pid"] == "025D") {
         let v = viewport(s);
         if s.keyboard_customize.is_none() || s.keyboard_layout.is_none() {
@@ -700,15 +715,15 @@ pub(super) unsafe fn paint_customize(s: &State, p: &mut Painter) -> bool {
                 DT_CENTER | DT_VCENTER | DT_SINGLELINE,
             );
             fill(p, r(55.0, row.y + 9.0, 1.0, 32.0), 0x707070);
-            let category = context.as_ref().and_then(|context| {
+            let row_draft = context.as_ref().map(|context| {
                 Draft::new(
                     context.clone(),
                     i.clone(),
                     Anchor::Drawer(i.input_id.clone()),
                     s.assignment.hyper,
                 )
-                .category
             });
+            let category = row_draft.as_ref().and_then(|d| d.category);
             text(
                 p,
                 category.map(Category::title).unwrap_or("UNKNOWN"),
@@ -719,7 +734,13 @@ pub(super) unsafe fn paint_customize(s: &State, p: &mut Painter) -> bool {
             );
             text(
                 p,
-                &i.default_label,
+                row_draft
+                    .as_ref()
+                    .filter(|d| d.category == Some(Category::Media))
+                    .and_then(|d| d.media_option)
+                    .and_then(|i| secbird_core::profile_compat::multimedia::CHOICES.get(i))
+                    .map(|(_, label)| *label)
+                    .unwrap_or(&i.default_label),
                 r(61.0, row.y + 25.0, 160.0, 16.0),
                 p.fonts.normal,
                 if i.enabled { 0xcccccc } else { 0x555555 },
@@ -838,6 +859,28 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
             );
         }
         Some(Category::Disable) => {}
+        Some(Category::Media) => {
+            border(p, f.dropdown, 0x515151);
+            baseline_text(
+                p,
+                d.media_option
+                    .and_then(|i| secbird_core::profile_compat::multimedia::CHOICES.get(i))
+                    .map(|(_, label)| *label)
+                    .unwrap_or("Unknown command (retained)"),
+                r(f.dropdown.x + 10.0, f.dropdown.y, 185.0, 27.0),
+                p.fonts.normal,
+                0xcccccc,
+                DT_VCENTER | DT_SINGLELINE,
+                Role::Dropdown,
+            );
+            image(
+                s,
+                p,
+                "expand",
+                r(f.dropdown.x + 190.0, f.dropdown.y + 8.0, 10.0, 10.0),
+            );
+            hit(p, f.dropdown, Control::Options);
+        }
         Some(Category::Mouse) => {
             border(p, f.dropdown, 0x515151);
             baseline_text(
@@ -947,7 +990,16 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
         }
     }
     button(p, "CANCEL", f.cancel, Some(Control::Cancel));
-    button(p, "SAVE", f.save, None);
+    button(
+        p,
+        "SAVE",
+        f.save,
+        if !s.restricted_actions && d.dirty && d.media_valid() && s.pending == 0 {
+            Some(Control::Save)
+        } else {
+            None
+        },
+    );
     text(
         p,
         d.save_reason(),
@@ -1024,10 +1076,22 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
             }
             baseline_text(
                 p,
-                model::MOUSE_ACTIONS[i].1,
+                if d.category == Some(Category::Media) {
+                    secbird_core::profile_compat::multimedia::CHOICES[i].1
+                } else {
+                    model::MOUSE_ACTIONS[i].1
+                },
                 r(row.x + 10.0, row.y, row.width - 20.0, row.height),
                 p.fonts.normal,
-                if i == d.mouse_option { GREEN } else { 0xcccccc },
+                if if d.category == Some(Category::Media) {
+                    d.media_option == Some(i)
+                } else {
+                    i == d.mouse_option
+                } {
+                    GREEN
+                } else {
+                    0xcccccc
+                },
                 DT_SINGLELINE | DT_VCENTER,
                 Role::Options,
             );
@@ -1197,6 +1261,20 @@ pub(super) unsafe fn action(s: &mut State, c: Control) {
             }
         }
         Control::Cancel => s.assignment.cancel(),
+        Control::Save => {
+            if !s.restricted_actions && s.pending == 0 {
+                if let Some(d) = &s.assignment.draft {
+                    if d.dirty && d.media_valid() {
+                        let owner = d.context.owner.clone();
+                        let edit = d.media_edit().unwrap();
+                        s.queue(Job::Action(
+                            "/api/customize-multimedia",
+                            json!({"id":owner.device,"expected_profile":owner.profile,"data":edit}),
+                        ));
+                    }
+                }
+            }
+        }
         Control::Drawer => {
             if let Some(t) = s
                 .assignment
@@ -1579,8 +1657,13 @@ pub(super) unsafe fn font_diagnostics(s: &State) -> Value {
             // The linked bridge's pixel/metric test validates that renderer;
             // here exercise the real assignment call site and its font state.
             let emitted = baseline_text(
-                &painter, "A", r(0.0, 0.0, 200.0, height), font,
-                0xcccccc, DT_SINGLELINE, role,
+                &painter,
+                "A",
+                r(0.0, 0.0, 200.0, height),
+                font,
+                0xcccccc,
+                DT_SINGLELINE,
+                role,
             );
             let metrics = s.fonts.source_text.metrics();
             let expected = (source_baseline * s.scale as f64).round() as i32;
@@ -1664,34 +1747,48 @@ mod keyboard_selection_tests {
                  "d":"M637 209H662V260H637Z"}
             ]
         });
-        let layout = source_layout::SourceLayout::from_slice(
-            &serde_json::to_vec(&fixture).unwrap(),
-        ).unwrap();
+        let layout =
+            source_layout::SourceLayout::from_slice(&serde_json::to_vec(&fixture).unwrap())
+                .unwrap();
         unsafe {
             let dc = CreateCompatibleDC(std::ptr::null_mut());
             assert!(!dc.is_null());
             for scale in [1.0, 1.25, 1.5, 2.0] {
-                for (width, drawer, scroll_x, scroll_y) in [
-                    (1280.0, false, 0.0, 0.0),
-                    (1000.0, true, 73.0, 41.0),
-                ] {
+                for (width, drawer, scroll_x, scroll_y) in
+                    [(1280.0, false, 0.0, 0.0), (1000.0, true, 73.0, 41.0)]
+                {
                     let viewport = source_layout::Viewport {
                         left: geo::keyboard_center(width, drawer) - 365.0 - scroll_x,
-                        top: 154.0 - scroll_y, width: 730.0, height: 387.0,
+                        top: 154.0 - scroll_y,
+                        width: 730.0,
+                        height: 387.0,
                     };
-                    for (id, x, y) in [("ESC", 68.0, 95.0), ("A", 114.0, 182.0), ("NUM", 637.0, 209.0)] {
+                    for (id, x, y) in [
+                        ("ESC", 68.0, 95.0),
+                        ("A", 114.0, 182.0),
+                        ("NUM", 637.0, 209.0),
+                    ] {
                         // The same point in the image and logical hitmap must be
                         // the first physical GDI point of the selection outline.
-                        let hit = layout.hit_test(source_layout::Point {
-                            x: viewport.left + x + 12.0, y: viewport.top + y + 12.0,
-                        }, viewport).unwrap();
+                        let hit = layout
+                            .hit_test(
+                                source_layout::Point {
+                                    x: viewport.left + x + 12.0,
+                                    y: viewport.top + y + 12.0,
+                                },
+                                viewport,
+                            )
+                            .unwrap();
                         assert_eq!(hit.input_id, id);
                         assert!(trace_keyboard_selection(&layout, dc, id, viewport, scale));
                         let count = GetPath(dc, std::ptr::null_mut(), std::ptr::null_mut(), 0);
                         assert!(count > 0);
                         let mut points = vec![POINT { x: 0, y: 0 }; count as usize];
                         let mut types = vec![0u8; count as usize];
-                        assert_eq!(GetPath(dc, points.as_mut_ptr(), types.as_mut_ptr(), count), count);
+                        assert_eq!(
+                            GetPath(dc, points.as_mut_ptr(), types.as_mut_ptr(), count),
+                            count
+                        );
                         assert_eq!(points[0].x, ((viewport.left + x) * scale).round() as i32);
                         assert_eq!(points[0].y, ((viewport.top + y) * scale).round() as i32);
                         AbortPath(dc);

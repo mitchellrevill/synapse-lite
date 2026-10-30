@@ -1,0 +1,104 @@
+{
+  "base_commit": "6149f7a9422ae93322365ed12df46ab681dc40a8",
+  "branch": "feat/customize-multimedia-review-20261030",
+  "tests": {
+    "published_main": {
+      "cli_passed": 4,
+      "core_passed": 519,
+      "core_ignored": 6,
+      "tray_passed": 307,
+      "tray_ignored": 48,
+      "doc_passed": 1
+    },
+    "integration_base_7b99930": {
+      "cli_passed": 5,
+      "core_passed": 578,
+      "core_ignored": 6,
+      "tray_passed": 323,
+      "tray_ignored": 58,
+      "doc_passed": 1
+    },
+    "source_helper_cases": 20,
+    "native_optimized": {
+      "cancel_bytes_unchanged": true,
+      "client_height": 1104,
+      "client_width": 2048,
+      "device_set_commands_added": 0,
+      "dpi": 120.0,
+      "readonly_no_submission": true,
+      "save_reopen": true,
+      "snapshot_queries_added": 8,
+      "status": "Saved locally. Multimedia device/host output is unavailable."
+    }
+  },
+  "native_test_exe_sha256": "524c4647eeeb9ed3cedc8e7c791e3451b1c2cc4eda7337572161af27c73c1246",
+  "source_sha256": {
+    "crates\\secbird-core\\src\\profile_compat\\multimedia.rs": "daf0f700107bd9f2221843dc1987dc334b853ef44f33dd8b0c0650f36b4ed848",
+    "crates\\secbird-tray\\src\\native_editor\\multimedia_interaction_tests.rs": "375175f439e99e563ce99e7a95646470b8c11a482e7b43a44e6ee230908c2e8d"
+  },
+  "historical_failures": [
+    {
+      "run": "default restricted temporary folder",
+      "core_passed": 531,
+      "core_failed": 47,
+      "cause": "Access denied replacing temporary profile files; resolved by workspace-owned TEMP/TMP; original log retained."
+    },
+    {
+      "run": "first native window workflow",
+      "cause": "Overbroad zero-command assertion rejected eight snapshot GETs after successful Save/reopen/Cancel/read-only checks. Corrected to zero SETs and retained query count; optimized rerun passes."
+    }
+  ],
+  "safety": {
+    "physical_discovery": false,
+    "physical_input_interception_or_injection": false,
+    "hardware_writes": false,
+    "driver_changes": false,
+    "normal_profile_changes": false,
+    "other_lite_instances_stopped_or_replaced": false,
+    "clipboard_access": false
+  },
+  "visual": {
+    "native_pixels": [
+      2048,
+      1104
+    ],
+    "native_dpi": 120,
+    "stock_pixels": [
+      2048,
+      1104
+    ],
+    "stock_dpi": "not retained; equal DPI cannot be claimed",
+    "findings": [
+      "Recovered popup/dropdown/rail assets and command order retained; microphone labels expanded.",
+      "Different selected key and popup/scroll states; source Requires Synapse badge not reproduced; exact typography/position/DPI parity unaccepted."
+    ]
+  },
+  "remaining": [
+    "Device/host execution unavailable; local desired-profile authoring only.",
+    "Dedicated media/dial identities and native mapping cache rewrite remain refused.",
+    "Live stock re-import and device acceptance unverified.",
+    "Keyboard dropdown navigation and exact badge/position/type parity remain TODO.",
+    "Complete-build working set and private memory below100,000,000 bytes across three runs remain unverified."
+  ],
+  "release_build": {
+    "passed": true,
+    "command": "cargo build --release --workspace -j 1",
+    "binaries": {
+      "secbird.exe": {
+        "bytes": 1377280,
+        "sha256": "037480cb1e05edea8e5158f083373a2574aa52e1984b1ee9d216eaf47c18e5a7"
+      },
+      "secbird-tray.exe": {
+        "bytes": 3261440,
+        "sha256": "6cafbdea293ff6f50b41873c63be01ee102a577cc05d3bb60292fde88cce9390"
+      }
+    }
+  },
+  "commands": [
+    "Set TEMP and TMP to a task-owned writable directory",
+    "cargo test --workspace -j 1 -- --test-threads=1",
+    "Set SYNAPSE_LITE_ASSETS to provisioned source assets",
+    "cargo test --release -j 1 -p secbird-tray native_multimedia_save_cancel_and_readonly -- --ignored --test-threads=1 --nocapture",
+    "cargo build --release --workspace -j 1"
+  ]
+}

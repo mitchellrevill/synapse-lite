@@ -705,11 +705,11 @@ fn worker(
                         );
                         failed = true;
                     }
+                    if !failed {
+                        status = answer.get("status").and_then(Value::as_str).unwrap_or("Settings applied").into();
+                    }
                     if answer.get("buttons").is_some() {
                         buttons = Some(answer);
-                    }
-                    if !failed {
-                        status = "Settings applied".into();
                     }
                     server::dispatch(&mut engine, "GET", "/api/state", &[])
                 }
@@ -3932,7 +3932,7 @@ unsafe extern "system" fn window_proc(
             }
             let draft = state.assignment.draft.as_ref();
             let g = assignment_view::shell(&state);
-            *(lparam as *mut Value) = json!({"view":assignment_view::diagnostics(&state),"open":draft.is_some(),"input":draft.map(|d|&d.input.input_id),"category":draft.and_then(|d|d.category).map(|c|c.key()),"dirty":draft.is_some_and(|d|d.dirty),"prompt":state.assignment.pending.is_some(),"speed":draft.map(|d|d.speed),"source_original":draft.map(|d|&d.context.original_profile),"popup":g.map(|g|json!({"x":g.popup.x,"y":g.popup.y,"height":g.popup.height})),"pending":state.pending});
+            *(lparam as *mut Value) = json!({"view":assignment_view::diagnostics(&state),"open":draft.is_some(),"input":draft.map(|d|&d.input.input_id),"category":draft.and_then(|d|d.category).map(|c|c.key()),"dirty":draft.is_some_and(|d|d.dirty),"prompt":state.assignment.pending.is_some(),"speed":draft.map(|d|d.speed),"media_option":draft.and_then(|d|d.media_option),"categories":draft.map(|d|d.categories.iter().map(|c|c.key()).collect::<Vec<_>>()),"save_reason":draft.map(|d|d.save_reason()),"status":state.status,"source_original":draft.map(|d|&d.context.original_profile),"popup":g.map(|g|json!({"x":g.popup.x,"y":g.popup.y,"height":g.popup.height})),"pending":state.pending});
         }
         return 0;
     }

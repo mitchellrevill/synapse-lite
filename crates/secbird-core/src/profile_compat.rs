@@ -17,6 +17,7 @@ pub mod macro_library;
 mod dependencies;
 pub use dependencies::{recover_macro_dependencies,MacroRecoveryReport};
 mod mappings;
+pub mod multimedia;
 mod settings;
 
 pub(crate) fn source_key_usage(id: &str) -> Option<u8> {

@@ -302,6 +302,7 @@ pub(super) struct Draft {
     pub category: Option<Category>,
     pub original_records: Vec<Value>,
     pub mouse_option: usize,
+    pub media_option: Option<usize>,
     pub turbo: bool,
     pub speed: u8,
     pub speed_draft: String,
@@ -369,6 +370,18 @@ impl Draft {
             hyper,
             categories,
             category,
+            media_option: if category == Some(Category::Media) {
+                original_records
+                    .first()
+                    .and_then(|r| r["multimediaGroup"]["multimediaAssignment"].as_str())
+                    .and_then(|id| {
+                        secbird_core::profile_compat::multimedia::CHOICES
+                            .iter()
+                            .position(|(v, _)| *v == id)
+                    })
+            } else {
+                Some(0)
+            },
             original_records,
             mouse_option,
             turbo,
@@ -403,16 +416,29 @@ impl Draft {
         );
         if initial.category == Some(category) {
             self.mouse_option = initial.mouse_option;
+            self.media_option = initial.media_option;
             self.turbo = initial.turbo;
             self.speed = initial.speed;
         } else {
             self.mouse_option = 0;
+            self.media_option = Some(0);
             self.turbo = false;
             self.speed = 7;
         }
         self.speed_draft = self.speed.to_string();
+        if category == Category::Media {
+            self.dirty = true;
+        }
     }
     pub fn select_mouse(&mut self, index: usize) {
+        if self.category == Some(Category::Media) {
+            if index < secbird_core::profile_compat::multimedia::CHOICES.len() {
+                self.media_option = Some(index);
+                self.dirty = true;
+                self.options_open = false;
+            }
+            return;
+        }
         if index < MOUSE_ACTIONS.len() {
             self.mouse_option = index;
             self.dirty = true;
@@ -473,7 +499,46 @@ impl Draft {
         let n = self.speed_draft.parse::<i32>().unwrap_or(0).clamp(1, 20) as u8;
         self.set_speed(n);
     }
+    pub fn media_edit(&self) -> Option<secbird_core::profile_compat::multimedia::Edit> {
+        if self.category != Some(Category::Media) || !self.input.enabled {
+            return None;
+        }
+        Some(secbird_core::profile_compat::multimedia::Edit {
+            input_id: self.input.input_id.clone(),
+            input_type: self.input.input_type.clone(),
+            hyper: self.hyper,
+            command: secbird_core::profile_compat::multimedia::CHOICES
+                .get(self.media_option?)?
+                .0
+                .into(),
+            expected: self.context.original_profile.clone(),
+        })
+    }
+    pub fn media_valid(&self) -> bool {
+        let Some(edit) = self.media_edit() else {
+            return false;
+        };
+        serde_json::from_value::<secbird_core::profile::Profile>(
+            self.context.original_profile.clone(),
+        )
+        .ok()
+        .is_some_and(|profile| {
+            secbird_core::profile_compat::multimedia::candidate(
+                &profile,
+                self.context.owner.pid,
+                &edit,
+            )
+            .is_ok()
+        })
+    }
     pub fn save_reason(&self) -> &'static str {
+        if self.category == Some(Category::Media) {
+            return if self.media_valid() {
+                "Save keeps this assignment in the local profile. Device and host output are unavailable."
+            } else {
+                "Choose a known command. Protected, ambiguous or cached input data cannot be edited; original retained."
+            };
+        }
         if self.context.owner.pid == 605 {
             "Saving assignments is unavailable: Ornata mapping readback is unsupported. No command will be sent."
         } else {
@@ -670,5 +735,28 @@ mod tests {
         current["active"] = json!("A");
         current["profile"]["opaque"] = json!({"changed":true});
         assert!(!ctx.still_current(&current));
+    }
+    #[test]
+    fn multimedia_unknown_is_retained_until_explicit_selection_and_cancel_is_local() {
+        let raw = json!([{"inputID":"KEY_A","inputType":"KeyInput","isHyperShift":false,"outputType":"multimediaGroup","multimediaGroup":{"multimediaAssignment":"FutureCommand","opaque":42}}]);
+        let ctx = context(raw.clone());
+        let mut input = input();
+        input.functions.push("MULTIMEDIA".into());
+        let mut d = Draft::new(ctx.clone(), input, Anchor::Key("KEY_A".into()), false);
+        assert_eq!(d.category, Some(Category::Media));
+        assert_eq!(d.media_option, None);
+        assert!(!d.media_valid());
+        d.select_mouse(99);
+        assert_eq!(d.media_option, None);
+        assert!(!d.dirty);
+        d.select_mouse(7);
+        assert_eq!(d.media_edit().unwrap().command, "Play");
+        assert!(d.media_valid());
+        assert!(d.dirty);
+        let mut view = View::default();
+        view.draft = Some(d);
+        view.cancel();
+        assert!(view.draft.is_none());
+        assert_eq!(ctx.mappings.as_ref().unwrap(), raw.as_array().unwrap());
     }
 }

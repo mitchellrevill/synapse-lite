@@ -440,6 +440,15 @@ fn buttons_json(dev: &Device, store: &mut Store) -> Value {
 fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
     let b: Body = serde_json::from_slice(body).map_err(|e| Error::InvalidArg(e.to_string()))?;
     if path=="/api/profile" && b.action=="paths" && (b.id.is_empty() || b.expected_device.as_deref()!=Some(&b.id) || !engine.devices().iter().any(|dev|dev.key()==b.id)) {return Err(Error::InvalidArg("Executable links require the selected device identity".into()));}
+    if path == "/api/customize-multimedia" {
+        let dev = engine.devices().iter().find(|d| d.key() == b.id).ok_or_else(|| Error::InvalidArg("Selected device disconnected".into()))?;
+        let profile = b.expected_profile.as_deref().filter(|p| !p.is_empty()).ok_or_else(|| Error::InvalidArg("Selected profile identity required".into()))?;
+        let edit = serde_json::from_value(b.data).map_err(|e| Error::InvalidArg(format!("Invalid multimedia assignment: {e}")))?;
+        let mut store = Store::load(&config_dir().join("profiles.json"))?;
+        secbird_core::profile_compat::multimedia::update(&mut store,&b.id,profile,dev.pid,&edit)?;
+        store.save()?;
+        return Ok(json!({"ok":true,"status":"Saved locally. Multimedia device/host output is unavailable.","state":state(engine)}));
+    }
     if path=="/api/sensor-rotation" {
         if b.id.is_empty() || b.expected_device.as_deref()!=Some(&b.id){return Err(Error::InvalidArg("Rotation requires the selected device identity".into()));}
         let profile=b.expected_profile.as_deref().filter(|p|!p.is_empty()).ok_or_else(||Error::InvalidArg("Rotation requires the selected profile identity".into()))?;
