@@ -19,6 +19,7 @@ use std::{
 
 #[path = "regions.rs"]
 mod regions;
+pub use regions::PropertyClipboard;
 pub use regions::{
     ColorProperty, GradientStop, LedSelection, SelectedColor, SelectedDuration, SelectedGradient,
     StopEdit, SPECTRUM_DURATIONS,
@@ -35,7 +36,10 @@ mod preview;
 mod tree;
 #[path = "devices.rs"]
 mod devices;
-pub use tree::NewEffect;
+pub use tree::{DropPosition, NewEffect};
+#[path = "remap.rs"]
+mod remap;
+pub use remap::RemapPreview;
 pub use preview::Preview;
 
 pub const MAX_HISTORY: usize = 20;
@@ -249,6 +253,7 @@ struct Change {
 }
 enum Edit {
     Fields(Vec<Change>),
+    Composition { before: Box<RawValue>, after: Box<RawValue> },
     Layers { before: Box<RawValue>, after: Box<RawValue> },
     Devices { before: Box<RawValue>, after: Box<RawValue> },
 }
@@ -257,7 +262,7 @@ impl Edit {
         match self {
             Self::Fields(changes) => changes.iter().map(|change|change.id.len() + change.after.get().len()
                 + change.before.as_ref().map_or(0, |raw|raw.get().len())).sum(),
-            Self::Layers {before, after} | Self::Devices {before, after} => before.get().len() + after.get().len(),
+            Self::Composition {before, after} | Self::Layers {before, after} | Self::Devices {before, after} => before.get().len() + after.get().len(),
         }
     }
 }
@@ -273,6 +278,8 @@ fn regions_equal(left: &RawValue, right: &RawValue) -> Result<bool> {
         kind: Option<&'a RawValue>,
         #[serde(borrow)]
         regions: Option<&'a RawValue>,
+        #[serde(borrow)]
+        params: Option<&'a RawValue>,
         #[serde(borrow)]
         layers: Option<&'a RawValue>,
     }
@@ -294,7 +301,8 @@ fn regions_equal(left: &RawValue, right: &RawValue) -> Result<bool> {
             }
             match kind_a.as_deref() {
                 Some("layer") => {
-                    return Ok(a.regions.map(RawValue::get) == b.regions.map(RawValue::get))
+                    return Ok(a.regions.map(RawValue::get) == b.regions.map(RawValue::get)
+                        && a.params.map(RawValue::get) == b.params.map(RawValue::get))
                 }
                 Some("group") => {}
                 _ => return Ok(true),
@@ -341,6 +349,7 @@ fn item(raw: &RawValue, id: &str) -> Result<Option<Object>> {
 
 fn rewrite(raw: &RawValue, edit: &Edit, inverse: bool) -> Result<Box<RawValue>> {
     let changes = match edit {
+        Edit::Composition {before, after} => return Ok(if inverse {before.clone()} else {after.clone()}),
         Edit::Devices {before, after} => {
             let mut root = Object::parse(raw)?;
             root.set("devices", Some(if inverse {before} else {after}));

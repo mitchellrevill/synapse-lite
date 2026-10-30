@@ -16,6 +16,7 @@ use std::{
 };
 
 pub mod document;
+pub mod library;
 pub mod inventory;
 pub mod reactive_input;
 pub mod reactive_replay;

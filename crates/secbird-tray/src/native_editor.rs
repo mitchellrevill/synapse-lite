@@ -667,7 +667,7 @@ fn worker(
             }
             Job::Studio(request) => {
                 // Drop the device lock before reading/writing composition or bookmark files.
-                let read_only=matches!(&request,studio_view::Request::Save{..}|studio_view::Request::Remember{..})
+                let read_only=matches!(&request,studio_view::Request::Save{..}|studio_view::Request::Export{..}|studio_view::Request::Remember{..})
                     && engine.lock().map(|engine|engine.is_measurement_read_only()).unwrap_or(true);
                 if replies.send(WorkerReply::Studio(studio_view::work(request,read_only))).is_err() {break;}
                 continue;
@@ -3873,6 +3873,8 @@ unsafe extern "system" fn window_proc(
                 7=>studio_view::output_test_dirty_apply(&mut state),
                 8=>{let value=&*(lparam as *const Value);studio_view::add_preset_test(&mut state,(value[0].as_u64().unwrap() as u16,value[1].as_u64().unwrap() as u16,value[2].as_u64().unwrap() as u16));},
                 9=>{EndMenu();},
+                studio_view::TEST_NAVIGATION=>{*(lparam as *mut Value)=match studio_canvas::navigation_test(&mut state) {Ok(())=>json!({"ok":true}),Err(error)=>json!({"error":error})};},
+                studio_view::TEST_REMAP=>studio_view::remap_fixture_test(&mut state),
                 _=>{},
             }
         }
@@ -4312,7 +4314,7 @@ unsafe extern "system" fn window_proc(
     if message==WM_COMMAND && (shortcuts::command(&mut state,(wparam&0xffff)as u16,((wparam>>16)&0xffff)as u16) || macro_view::command(&mut state,(wparam&0xffff)as u16,((wparam>>16)&0xffff)as u16) || linked_games::command(&mut state,(wparam&0xffff)as u16,((wparam>>16)&0xffff)as u16) || studio_view::command(&mut state,(wparam&0xffff)as u16,((wparam>>16)&0xffff)as u16)) {return 0;}
     if message==WM_MOUSEWHEEL && studio_view::wheel(&mut state,((wparam>>16)as u16 as i16)as i32,
         POINT{x:(lparam as u32&0xffff)as i16 as i32,y:((lparam as u32>>16)&0xffff)as i16 as i32}) {return 0;}
-    if studio_view::layer_pointer(&mut state,message,lparam) {return 0;}
+    if studio_view::layer_pointer(&mut state,message,lparam,wparam) {return 0;}
     if studio_canvas::Canvas::pointer(&mut state,message,lparam) {return 0;}
     if onboard_view::pointer(&mut state,message,lparam,wparam) { return 0; }
     if state.restricted_actions
@@ -5424,7 +5426,7 @@ fn run_window(
                 break;
             }
             if message.message == WM_KEYDOWN && GetKeyState(18) >= 0 {
-                let studio_action=studio_view::key(&state.borrow(),message.wParam,GetKeyState(17)<0,matches!(GetDlgCtrlID(message.hwnd)as u16,studio_view::NAME|studio_view::COLOR));
+                let studio_action=studio_view::key(&state.borrow(),message.wParam,GetKeyState(17)<0,state.borrow().fields.values().any(|&field| field == message.hwnd));
                 if let Some(control)=studio_action {state.borrow_mut().action(Action::Studio(control));continue;}
                 let action = host_tabs::shortcut_action(&state.borrow(), message.wParam,
                     GetKeyState(17) < 0, GetKeyState(16) < 0);

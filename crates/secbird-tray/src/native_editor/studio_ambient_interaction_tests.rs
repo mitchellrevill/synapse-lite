@@ -81,7 +81,7 @@ fn native_studio_ambient_region_blur_save_history_and_invalid_values() {
                 lighting_click(
                     hwnd,
                     width / 2. + (67. - 480.) * fit,
-                    (168. + height) / 2. + (76. - 180.) * fit,
+                    (118. + height) / 2. + (76. - 180.) * fit,
                     scale,
                 );
                 lighting_click(hwnd, right + 112., 290., scale); // Left strip + source defaults.

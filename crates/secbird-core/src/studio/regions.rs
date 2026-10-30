@@ -2,6 +2,10 @@
 use super::*;
 use std::collections::BTreeMap;
 
+#[path = "clipboard.rs"]
+mod clipboard;
+pub use clipboard::PropertyClipboard;
+
 #[path = "spectrum.rs"]
 mod spectrum;
 #[path = "breathing_gradient.rs"]
@@ -65,6 +69,7 @@ impl ColorProperty {
 
 #[derive(Clone, Copy)]
 enum RegionEdit<'a> {
+    Properties(&'a Object, &'a [&'a str], Option<&'a Object>),
     Erase,
     Color(ColorProperty, Option<u32>),
     Spectrum(spectrum::Edit<'a>, &'a Object),
@@ -81,6 +86,10 @@ impl RegionEdit<'_> {
         !matches!(self, Self::Erase)
     }
     fn apply(self, params: &mut Object, new: bool) -> Result<()> {
+        if let Self::Properties(copied, clear, _) = self {
+            for field in clear { params.set(field, None); }
+            for (field, value) in &copied.0 { params.set(field, Some(value)); }
+        }
         if let Self::Color(property, color) = self {
             // None is an explicit source picker clear, never JSON null.
             let encoded = color.map(|color| encode(&color)).transpose()?;
@@ -341,7 +350,7 @@ impl Draft {
         }
         let property = match edit {
             RegionEdit::Color(property, _) => Some(property),
-            RegionEdit::Ambient(..) | RegionEdit::Erase | RegionEdit::Spectrum(..) | RegionEdit::BreathingDuration(_) | RegionEdit::BreathingGradient(..) | RegionEdit::Wave(..) | RegionEdit::Starlight(..) | RegionEdit::Reactive(..) | RegionEdit::Audio(..) => None,
+            RegionEdit::Properties(..) | RegionEdit::Ambient(..) | RegionEdit::Erase | RegionEdit::Spectrum(..) | RegionEdit::BreathingDuration(_) | RegionEdit::BreathingGradient(..) | RegionEdit::Wave(..) | RegionEdit::Starlight(..) | RegionEdit::Reactive(..) | RegionEdit::Audio(..) => None,
         };
         let item = layer(self, id, property)?;
         if matches!(edit, RegionEdit::Spectrum(..)) {
@@ -451,12 +460,18 @@ impl Draft {
         if merged.len() > MAX_LAYERS {
             return Err(invalid("region partition exceeds 512 entries"));
         }
-        self.commit(vec![Change {
+        let mut changes = vec![Change {
             id: id.into(),
             field: "regions",
             before: item.get("regions").map(RawValue::to_owned),
             after: encode(&merged)?,
-        }])
+        }];
+        if let RegionEdit::Properties(_, _, Some(base)) = edit {
+            changes.push(Change { id: id.into(), field: "params",
+                before: item.get("params").map(RawValue::to_owned), after: encode(base)? });
+        }
+        changes.retain(|change| change.before.as_ref().map(|v|v.get()) != Some(change.after.get()));
+        self.commit(changes)
     }
 }
 

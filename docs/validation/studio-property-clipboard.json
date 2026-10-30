@@ -1,0 +1,71 @@
+{
+  "date": "2026-10-30",
+  "feature": "Studio property clipboard/context reset/removal",
+  "base_commit": "7b99930f9c63e659f1bcf3a51d9d9ca6a456904e",
+  "unit": "Implement layer-scoped property clipboard and reversible native context workflows",
+  "checkpoints": [
+    "Recover eligibility/default/reset/remove contracts",
+    "Implement raw-preserving atomic draft operations",
+    "Route native menu and shortcuts",
+    "Verify core/native interactions and screenshot comparison"
+  ],
+  "tests": {
+    "studio_document": {
+      "passed": 84,
+      "failed": 0,
+      "new_clipboard_tests": 7
+    },
+    "native_studio_view_regressions": {
+      "passed": 10,
+      "failed": 0
+    },
+    "native_window": {
+      "copy_read_only": true,
+      "paste": true,
+      "physical_discovery_disabled": true,
+      "remove": true,
+      "reset": true,
+      "saved": true,
+      "simulated_device_requests": 0,
+      "undo_redo": true
+    },
+    "source_replay": {
+      "default_cases": 26,
+      "action_cases": 19
+    },
+    "build": {
+      "package": "secbird-tray",
+      "profile": "dev",
+      "locked": true,
+      "offline": true,
+      "jobs": 1,
+      "result": "passed"
+    }
+  },
+  "environment_limits": [
+    "Restricted-session temporary atomic file replacement was denied; the same native/session tests passed with access to their own temp files.",
+    "Existing unrelated unused-code warnings remain."
+  ],
+  "visual": {
+    "reference": "network-blocked inert DOM/CSS and local recovered Roboto; no vendor app execution",
+    "source_menu_width_css": 256.328125,
+    "source_row_height_css": 27.03125,
+    "native_width_css": 256,
+    "native_row_height_css": 27,
+    "source_scale": 1.0,
+    "native_scale": 1.25,
+    "native_image_sha256": "6b970b59a362cd7b362e9ea1c6e98b9adb314e4e22f67c94211f7758d82d2edf",
+    "review": "Four native actions and helper text visible, source-derived black/grey styling and divider; fractional metrics/full stock composition not verified."
+  },
+  "remaining": [
+    "Pixel-perfect stock-screen/menu parity",
+    "Identify/Move/Refresh/rotation outside this property workflow",
+    "Keyboard-focused native accessibility/navigation parity",
+    "Placement near child EDIT controls",
+    "Physical hardware validation and whole-app memory gate outside this local editing feature"
+  ],
+  "publication": {
+    "status": "local coherent commit and patch prepared",
+    "limitation": "GitHub main is 6149f7a9422ae93322365ed12df46ab681dc40a8; isolated baseline 7b99930 is not on the remote. CLI authentication reports invalid tokens. A PR against remote main would include unrelated unpublished integration work, so no draft PR was created."
+  }
+}

@@ -1,10 +1,17 @@
 //! Layer actions over source-shaped, bounded local draft operations.
 use super::*;
-use secbird_core::studio::document::NewEffect;
+use secbird_core::studio::document::{DropPosition, NewEffect};
 use windows_sys::Win32::Security::Cryptography::{BCryptGenRandom, BCRYPT_USE_SYSTEM_PREFERRED_RNG};
 
 #[derive(Clone)]
-pub enum Control { Menu, Dismiss, Add(NewEffect), Group, Duplicate, Delete, Move(i8) }
+pub enum Control { Menu, Dismiss, Add(NewEffect), Group, Duplicate, Delete, Move(i8), Drop(String, String, DropPosition) }
+
+pub(super) struct Drag {
+    id: String,
+    origin: POINT,
+    active: bool,
+    target: Option<(String, DropPosition, i32)>,
+}
 
 pub(super) fn identity() -> Result<String, String> {
     let mut bytes = [0u8; 6];
@@ -111,6 +118,9 @@ pub(super) fn action(state: &mut State, control: Control) {
                 draft.move_item(view.selected.as_deref().ok_or("Select a layer or group")?, direction)
                     .map_err(|error|error.to_string())?;
             }
+            Control::Drop(id, target, placement) => {
+                draft.drop_item(&id, &target, placement).map_err(|error| error.to_string())?;
+            }
             Control::Menu | Control::Dismiss => {}
         }
         if clear_selection { view.canvas.clear_selection(); }
@@ -154,8 +164,9 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter) {
     }
 }
 
-pub(super) unsafe fn pointer(state: &mut State, message: u32, lparam: isize) -> bool {
-    if !state.studio.open || !state.studio.layer_menu { return false; }
+pub(super) unsafe fn pointer(state: &mut State, message: u32, lparam: isize, wparam: usize) -> bool {
+    if !state.studio.open { return false; }
+    if !state.studio.layer_menu { return drag_pointer(state, message, lparam, wparam); }
     match message {
         WM_LBUTTONDOWN => true,
         WM_LBUTTONUP => {
@@ -169,6 +180,89 @@ pub(super) unsafe fn pointer(state: &mut State, message: u32, lparam: isize) -> 
         WM_CANCELMODE => { state.studio.layer_menu=false; InvalidateRect(state.hwnd,null(),0); true }
         _ => false,
     }
+}
+
+fn drop_target(state: &State, point: POINT) -> Option<(String, DropPosition, i32)> {
+    let x = point.x as f32 / state.scale;
+    let y = point.y as f32 / state.scale;
+    if !(0.0..250.0).contains(&x) || y < 168.0 || point.y >= state.height { return None; }
+    let slot = ((y - 168.0) / 40.0) as usize;
+    let ids = state.studio.visible_ids();
+    let target = ids.get(state.studio.scroll + slot)?;
+    let row = state.studio.draft.as_ref()?.layers().iter().find(|row| row.id == *target)?;
+    let within = (y - 168.0) % 40.0;
+    let placement = if row.kind == Kind::Group && (10.0..30.0).contains(&within) {
+        DropPosition::Into
+    } else if within < 20.0 { DropPosition::Before } else { DropPosition::After };
+    let source_id = &state.studio.layer_drag.as_ref()?.id;
+    let source = state.studio.draft.as_ref()?.layers().iter()
+        .find(|row| row.id == *source_id)?;
+    if source.id == *target || (source.kind == Kind::Group
+        && (placement == DropPosition::Into || row.parent.is_some()))
+        || (placement == DropPosition::Into && source.parent.as_deref() == Some(target)) { return None; }
+    Some((target.clone(), placement, 168 + slot as i32 * 40))
+}
+
+pub(super) unsafe fn paint_drop(state: &State, p: &mut Painter) {
+    if let Some(drag) = &state.studio.layer_drag {
+        if let Some((_, placement, y)) = &drag.target {
+            if *placement == DropPosition::Into {
+                p.fill(28, *y, 150, 2, GREEN);
+                p.fill(28, *y + 38, 150, 2, GREEN);
+            } else { p.fill(28, *y + if *placement == DropPosition::After { 38 } else { 0 }, 150, 2, GREEN); }
+        }
+    }
+}
+
+unsafe fn drag_pointer(state: &mut State, message: u32, lparam: isize, wparam: usize) -> bool {
+    let point = POINT { x: (lparam as u32 & 0xffff) as i16 as i32,
+        y: ((lparam as u32 >> 16) & 0xffff) as i16 as i32 };
+    if state.studio.layer_drag.is_some() {
+        match message {
+            WM_CANCELMODE | WM_CAPTURECHANGED => {
+                state.studio.layer_drag = None;
+                if message == WM_CANCELMODE { ReleaseCapture(); }
+                InvalidateRect(state.hwnd, null(), 0); return true;
+            }
+            WM_KEYDOWN if wparam == 27 => {
+                state.studio.layer_drag = None; ReleaseCapture();
+                InvalidateRect(state.hwnd, null(), 0); return true;
+            }
+            WM_MOUSEMOVE | WM_LBUTTONUP => {
+                let drag = state.studio.layer_drag.as_mut().unwrap();
+                drag.active |= (point.x - drag.origin.x).abs().max((point.y - drag.origin.y).abs())
+                    >= (4.0 * state.scale).ceil() as i32;
+                let active = drag.active;
+                let target = active.then(|| drop_target(state, point)).flatten();
+                state.studio.layer_drag.as_mut().unwrap().target = target;
+                if message == WM_LBUTTONUP {
+                    let drag = state.studio.layer_drag.take().unwrap();
+                    ReleaseCapture();
+                    if !state.read_only_smoke && !state.restricted_actions && state.studio.editable()
+                        && !state.studio.output.busy {
+                        if let Some((target, placement, _)) = drag.target {
+                            state.action(Action::Studio(super::Control::Layers(Control::Drop(drag.id, target, placement))));
+                        }
+                    }
+                }
+                InvalidateRect(state.hwnd, null(), 0); return true;
+            }
+            _ => {}
+        }
+    }
+    if message != WM_LBUTTONDOWN || state.read_only_smoke || state.restricted_actions
+        || !state.studio.editable() || state.studio.output.busy || state.studio.dropdown || state.studio.renaming {
+        return false;
+    }
+    let selected = state.hits.iter().rev().find(|hit| PtInRect(&hit.rect, point) != 0)
+        .and_then(|hit| match &hit.action { Action::Studio(super::Control::Select(id)) => Some(id.clone()), _ => None });
+    if let Some(id) = selected {
+        state.action(Action::Studio(super::Control::Select(id.clone())));
+        state.studio.status = "Drag above/below a row, or onto the middle of a group; Escape cancels".into();
+        state.studio.layer_drag = Some(Drag { id, origin: point, active: false, target: None });
+        SetFocus(state.hwnd); SetCapture(state.hwnd); return true;
+    }
+    false
 }
 
 #[cfg(test)]

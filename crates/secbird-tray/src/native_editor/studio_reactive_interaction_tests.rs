@@ -19,7 +19,7 @@ fn native_studio_reactive_color_random_duration_save_and_history_preserve_source
             lighting_click(hwnd,775.,100.,scale);lighting_click(hwnd,800.,440.,scale);
             let id=query()["selected"].as_str().ok_or("Reactive not selected")?.to_owned();
             if !query()["rows"].as_array().unwrap().iter().any(|r|r["id"]==id&&r["title"]=="REACTIVE"){return Err("Reactive layer was not added".into());}
-            let fit=((width-540.)/960.).min((height-250.)/360.).clamp(0.05,4.);lighting_click(hwnd,width/2.+(67.-480.)*fit,(168.+height)/2.+(76.-180.)*fit,scale);
+            let fit=((width-540.)/960.).min((height-250.)/360.).clamp(0.05,4.);lighting_click(hwnd,width/2.+(67.-480.)*fit,(118.+height)/2.+(76.-180.)*fit,scale);
             lighting_click(hwnd,right+195.,461.,scale);
             let field=GetDlgItem(hwnd,2109);if field.is_null(){return Err("Reactive colour field missing".into());}
             SendMessageW(field,WM_SETTEXT,0,wide("112233").as_ptr() as isize);lighting_click(hwnd,right+65.,338.,scale);
