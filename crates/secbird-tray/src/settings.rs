@@ -212,6 +212,21 @@ pub fn change(
         "battery_warning_at" if BATTERY_RANGE.contains(&value) => {
             settings.battery_warning_at = Some(value)
         }
+        "battery_device" if !data.is_empty() && BATTERY_RANGE.contains(&value) => {
+            let devices = settings.extra.entry("battery_devices").or_insert_with(|| serde_json::json!({}));
+            let devices = devices.as_object_mut().ok_or("Invalid battery preferences object")?;
+            let mut prefs = devices.get(data).and_then(|v|serde_json::from_value::<crate::battery_notifications::Preferences>(v.clone()).ok()).unwrap_or_default();
+            prefs.enabled = on;
+            prefs.threshold = value;
+            devices.insert(data.into(), serde_json::to_value(prefs).map_err(|e|e.to_string())?);
+        }
+        "battery_charging" if !data.is_empty() => {
+            let devices = settings.extra.entry("battery_devices").or_insert_with(|| serde_json::json!({}));
+            let devices = devices.as_object_mut().ok_or("Invalid battery preferences object")?;
+            let mut prefs = devices.get(data).and_then(|v|serde_json::from_value::<crate::battery_notifications::Preferences>(v.clone()).ok()).unwrap_or_default();
+            prefs.charging = on;
+            devices.insert(data.into(), serde_json::to_value(prefs).map_err(|e|e.to_string())?);
+        }
         "auto_switch" => settings.auto_switch_off = !on,
         "away_lights" if data.is_empty() || AWAY_LIGHTS.iter().any(|(key, _)| *key == data) => {
             settings.away_lights = (!data.is_empty()).then(|| data.to_owned())
