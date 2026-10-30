@@ -24,6 +24,9 @@ pub struct TraySettings {
     pub extra: std::collections::BTreeMap<String, serde_json::Value>,
     #[serde(skip)]
     pub read_error: Option<String>,
+    /// Local per-device battery policy; opaque leaves remain intact.
+    #[serde(default = "empty_battery_devices")]
+    pub battery_devices: serde_json::Value,
     /// Check Razer's product pages for newer firmware once a week. Off until turned on.
     #[serde(default)]
     pub firmware_weekly: bool,
@@ -63,6 +66,8 @@ pub struct TraySettings {
     pub away_lights: Option<String>,
 }
 
+fn empty_battery_devices() -> serde_json::Value { serde_json::json!({}) }
+
 fn updates_disabled() -> bool {
     true
 }
@@ -76,6 +81,7 @@ impl Default for TraySettings {
             start_minimized: true,
             extra: Default::default(),
             read_error: None,
+            battery_devices: empty_battery_devices(),
             firmware_weekly: false,
             firmware_checked: 0,
             firmware_notified: Default::default(),
@@ -213,17 +219,25 @@ pub fn change(
             settings.battery_warning_at = Some(value)
         }
         "battery_device" if !data.is_empty() && BATTERY_RANGE.contains(&value) => {
-            let devices = settings.extra.entry("battery_devices").or_insert_with(|| serde_json::json!({}));
-            let devices = devices.as_object_mut().ok_or("Invalid battery preferences object")?;
-            let mut prefs = devices.get(data).and_then(|v|serde_json::from_value::<crate::battery_notifications::Preferences>(v.clone()).ok()).unwrap_or_default();
+            let inherited_threshold = settings.low_battery();
+            let devices = settings.battery_devices.as_object_mut().ok_or("Invalid battery preferences object")?;
+            let mut prefs = match devices.get(data) {
+                Some(value) => serde_json::from_value::<crate::battery_notifications::Preferences>(value.clone())
+                    .map_err(|_| "Invalid device battery preferences; existing settings were preserved")?,
+                None => crate::battery_notifications::Preferences { threshold: inherited_threshold, ..Default::default() },
+            };
             prefs.enabled = on;
             prefs.threshold = value;
             devices.insert(data.into(), serde_json::to_value(prefs).map_err(|e|e.to_string())?);
         }
         "battery_charging" if !data.is_empty() => {
-            let devices = settings.extra.entry("battery_devices").or_insert_with(|| serde_json::json!({}));
-            let devices = devices.as_object_mut().ok_or("Invalid battery preferences object")?;
-            let mut prefs = devices.get(data).and_then(|v|serde_json::from_value::<crate::battery_notifications::Preferences>(v.clone()).ok()).unwrap_or_default();
+            let inherited_threshold = settings.low_battery();
+            let devices = settings.battery_devices.as_object_mut().ok_or("Invalid battery preferences object")?;
+            let mut prefs = match devices.get(data) {
+                Some(value) => serde_json::from_value::<crate::battery_notifications::Preferences>(value.clone())
+                    .map_err(|_| "Invalid device battery preferences; existing settings were preserved")?,
+                None => crate::battery_notifications::Preferences { threshold: inherited_threshold, ..Default::default() },
+            };
             prefs.charging = on;
             devices.insert(data.into(), serde_json::to_value(prefs).map_err(|e|e.to_string())?);
         }
@@ -348,6 +362,43 @@ mod tests {
         }
         assert_eq!(std::fs::read(path).unwrap(), before);
     }
+    #[test]
+    fn battery_device_edits_preserve_inheritance_unknowns_and_refuse_corruption() {
+        let folder = Folder::new();
+        let path = folder.file();
+        let mut backend = Fake::default();
+        let initial = serde_json::json!({"battery_warning_at":27,"future":[1,null],
+            "battery_devices":{"other":{"threshold":20,"future":{"opaque":true}}}});
+        std::fs::write(&path, serde_json::to_vec(&initial).unwrap()).unwrap();
+        let saved = change(&path, &mut backend, "battery_charging", true, 0, "mouse", false).unwrap();
+        assert_eq!(saved.battery_devices["mouse"]["threshold"], 27);
+        assert_eq!(saved.battery_devices["mouse"]["charging"], true);
+        let saved = change(&path, &mut backend, "battery_device", false, 19, "other", false).unwrap();
+        assert_eq!(saved.battery_devices["other"]["future"], initial["battery_devices"]["other"]["future"]);
+        assert_eq!(saved.battery_devices["mouse"]["threshold"], 27);
+        assert_eq!(saved.extra["future"], initial["future"]);
+        let before = std::fs::read(&path).unwrap();
+        for (key, on, threshold, device, read_only) in [
+            ("battery_device", true, 0, "mouse", false),
+            ("battery_device", true, 96, "mouse", false),
+            ("battery_device", true, 20, "", false),
+            ("battery_charging", false, 0, "mouse", true),
+        ] {
+            assert!(change(&path, &mut backend, key, on, threshold, device, read_only).is_err());
+            assert_eq!(std::fs::read(&path).unwrap(), before);
+        }
+        for malformed in [serde_json::json!(null), serde_json::json!({"threshold":"future-format","opaque":42})] {
+            let damaged = serde_json::json!({"battery_devices":{"mouse":malformed}});
+            let bytes = serde_json::to_vec(&damaged).unwrap();
+            std::fs::write(&path, &bytes).unwrap();
+            for key in ["battery_device", "battery_charging"] {
+                assert!(change(&path, &mut backend, key, true, 20, "mouse", false).is_err());
+                assert_eq!(std::fs::read(&path).unwrap(), bytes);
+            }
+        }
+        assert_eq!(backend.writes, 0);
+    }
+
     #[test]
     fn damaged_oversize_and_failed_writes_preserve_original() {
         let folder = Folder::new();

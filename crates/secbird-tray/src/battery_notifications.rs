@@ -13,7 +13,7 @@ impl Default for Preferences {
     fn default() -> Self { Self { enabled: true, threshold: 15, charging: false, extra: BTreeMap::new() } }
 }
 pub fn preferences(settings: &crate::settings::TraySettings, key: &str) -> Preferences {
-    let mut p = settings.extra.get("battery_devices").and_then(|v| v.get(key)).and_then(|v| serde_json::from_value::<Preferences>(v.clone()).ok()).unwrap_or_else(|| Preferences { threshold: settings.low_battery(), ..Default::default() });
+    let mut p = settings.battery_devices.get(key).and_then(|v| serde_json::from_value::<Preferences>(v.clone()).ok()).unwrap_or_else(|| Preferences { threshold: settings.low_battery(), ..Default::default() });
     p.enabled &= !settings.battery_warning_off;
     if !(1..=95).contains(&p.threshold) { p.threshold = settings.low_battery(); }
     p
