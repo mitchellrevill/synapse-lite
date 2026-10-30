@@ -1,142 +1,22 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Secretarybird: Razer gear, minus the bloat</title>
-<meta name="description" content="A free, tiny replacement for Razer Synapse on Windows. Lighting, DPI and profiles without background services, pop-ups or ads.">
-<link rel="icon" type="image/png" href="favicon.png">
-<meta property="og:title" content="Secretarybird">
-<meta property="og:description" content="Your Razer gear, minus the bloat. Free and open source, for Windows.">
-<meta property="og:image" content="https://infinityinfinite.github.io/secbird/overview.webp">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Synapse Lite</title>
+<meta name="description" content="A native Rust peripheral manager with local profiles, lighting and the existing secbird CLI.">
+<link rel="icon" href="favicon.png">
 <style>
-  :root {
-    --bg: #0c0c0e; --panel: #15151a; --line: #26262e; --text: #f2f2f4; --muted: #9a9ca3;
-    --accent: #f26b21; --accent-text: #f26b21; --accent-ink: #0c0c0e; --ok: #4ade80;
-    color-scheme: dark;
-  }
-  @media (prefers-color-scheme: light) {
-    :root { --bg: #ffffff; --panel: #f5f5f7; --line: #e3e3e9; --text: #16161a; --muted: #62626d; --accent: #e05a12; --accent-text: #b4470c; --accent-ink: #16161a; --ok: #15803d; color-scheme: light; }
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.6 "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif; }
-  main { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
-  a { color: inherit; }
-
-  .hero { text-align: center; padding: 72px 0 40px; }
-  .hero img.logo { width: 112px; height: 112px; border-radius: 26px; box-shadow: 0 18px 50px #0006; }
-  h1 { font-size: clamp(40px, 7vw, 68px); letter-spacing: -.035em; line-height: 1.05; margin: 22px 0 10px; }
-  .tag { font-size: clamp(19px, 2.6vw, 24px); color: var(--muted); margin: 0; }
-  .tag b { color: var(--accent-text); font-weight: 600; }
-  .cta { display: inline-flex; align-items: center; gap: 12px; margin-top: 34px; padding: 16px 30px; border-radius: 14px; background: var(--accent); color: var(--accent-ink); font-size: 20px; font-weight: 650; text-decoration: none; box-shadow: 0 10px 30px color-mix(in srgb, var(--accent) 35%, transparent); transition: transform .15s; }
-  .cta:hover { transform: translateY(-2px); }
-  .cta svg { width: 22px; height: 22px; }
-  .small { color: var(--muted); font-size: 14.5px; margin-top: 14px; }
-  .small a { color: var(--muted); }
-  .small.linux { margin-top: 4px; }
-  .oss { display: inline-flex; align-items: center; gap: 8px; margin: 18px 0 0; padding: 8px 16px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); font-size: 15px; }
-  .oss svg { width: 18px; height: 18px; flex: none; }
-  .oss a { color: var(--accent-text); font-weight: 600; text-decoration: none; }
-
-  .shot { margin: 28px auto 0; }
-  .shot img { width: 100%; height: auto; display: block; border-radius: 16px; border: 1px solid var(--line); box-shadow: 0 30px 80px #0007; }
-  .shot figcaption { text-align: center; color: var(--muted); font-size: 13px; margin-top: 10px; }
-  .shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
-  .shots figure { margin: 0; }
-  .shots img { width: 100%; height: auto; display: block; border-radius: 12px; border: 1px solid var(--line); box-shadow: 0 18px 50px #0006; }
-  .shots figcaption { color: var(--muted); font-size: 14.5px; margin-top: 10px; }
-
-  h2 { font-size: 28px; letter-spacing: -.02em; margin: 0 0 18px; }
-  section { padding: 56px 0 0; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 20px; }
-  .card b { display: block; font-size: 22px; letter-spacing: -.01em; margin-bottom: 4px; }
-  .card span { color: var(--muted); font-size: 15.5px; }
-
-  ol.steps { list-style: none; counter-reset: s; margin: 0; padding: 0; display: grid; gap: 12px; }
-  ol.steps li { counter-increment: s; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px 18px 66px; position: relative; }
-  ol.steps li::before { content: counter(s); position: absolute; left: 20px; top: 16px; width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-weight: 700; }
-  ol.steps strong { display: block; }
-  ol.steps span { color: var(--muted); font-size: 15.5px; }
-
-  .note { border: 1px solid var(--line); border-left: 4px solid var(--accent); background: var(--panel); border-radius: 12px; padding: 18px 20px; }
-  .note p { margin: 0; }
-  .note p + p { margin-top: 8px; color: var(--muted); font-size: 15.5px; }
-  .btn2 { display: inline-block; margin-top: 14px; padding: 10px 18px; border: 1px solid var(--line); border-radius: 10px; text-decoration: none; font-weight: 600; background: var(--bg); }
-  .btn2:hover { border-color: var(--accent); }
-
-  footer { margin: 72px 0 40px; padding-top: 22px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; display: flex; flex-wrap: wrap; gap: 8px 22px; justify-content: space-between; }
-  footer a { color: var(--muted); display: inline-block; padding: 6px 0; margin: -6px 0; }
+:root{color-scheme:dark;--bg:#0e110e;--fg:#eef1ee;--muted:#a0ada0;--green:#55dd33}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.65 system-ui,sans-serif}
+main{max-width:1050px;margin:auto;padding:72px 24px}header{padding:30px 0 56px}.logo{width:112px;height:112px;object-fit:contain}
+h1{font-size:clamp(42px,7vw,76px);letter-spacing:-.05em;line-height:1.05;margin:20px 0}p{max-width:720px}a{color:var(--green);text-underline-offset:4px}nav{display:flex;gap:24px;flex-wrap:wrap;margin-top:28px}
+.tag{font-size:25px;color:var(--muted)}.note{border-left:2px solid var(--green);padding:12px 20px;color:var(--muted)}section{padding:20px 0}h2{font-size:28px}code{background:#202720;padding:3px 6px;border-radius:4px}footer{margin-top:48px;border-top:1px solid #2b342b;padding-top:24px;color:var(--muted);font-size:14px}
 </style>
 </head>
-<body>
-<main>
-  <header class="hero">
-    <img class="logo" src="logo.webp" alt="Secretarybird logo" width="112" height="112">
-    <h1>Secretarybird</h1>
-    <p class="tag">Your Razer gear, <b>minus the bloat.</b></p>
-    <a class="cta" id="download" href="https://github.com/infinityInfinite/secbird/releases/latest">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M6 10l6 6 6-6M4 20h16"/></svg>
-      Download for Windows
-    </a>
-    <p class="small">Free · Windows 10 and 11 · 2.6 MB</p>
-    <p class="small linux">On Linux: <a href="https://github.com/infinityInfinite/secbird#linux-command-line-beta">the command line, in beta</a></p>
-    <p class="oss"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-      <span>The project is fully open source. Read every line of code <a href="https://github.com/infinityInfinite/secbird">on GitHub</a>.</span></p>
-  </header>
-
-  <figure class="shot">
-    <img src="overview.webp" alt="The Secretarybird editor showing all connected devices" width="1280" height="800">
-    <figcaption>All devices at a glance. A real Basilisk V3 next to the simulated devices built into the app.</figcaption>
-  </figure>
-
-  <section>
-    <h2>Lighting, DPI, buttons and profiles. Without the rest of Synapse.</h2>
-    <div class="grid">
-      <div class="card"><b>No background services</b><span>An optional cleanup command turns Razer's services off. Your devices keep working, and it can be undone.</span></div>
-      <div class="card"><b>No pop-ups, no ads</b><span>No account, no tracking. It only goes online to check for a new version once a day, and you can turn that off.</span></div>
-      <div class="card"><b>Tiny</b><span>A 1 MB app that uses about 12 MB of memory while it sits in the tray.</span></div>
-      <div class="card"><b>No restarts</b><span>Finds your devices in about a second. Settings come back after unplugging, sleep and reboot.</span></div>
-    </div>
-  </section>
-
-  <section>
-    <h2>One editor for every device</h2>
-    <div class="shots">
-      <figure>
-        <img src="mouse.webp" alt="A mouse with three profiles side by side: lighting, DPI and button remaps, differences highlighted" width="1280" height="800" loading="lazy">
-        <figcaption><b>Profiles side by side.</b> Lighting, DPI and button remaps for every profile, editable in place. Games switch profiles automatically.</figcaption>
-      </figure>
-      <figure>
-        <img src="keyboard.webp" alt="Keyboard page: painting colors onto individual keys" width="1280" height="900" loading="lazy">
-        <figcaption><b>Keyboard.</b> Paint colors key by key on per-key keyboards (simulated device shown).</figcaption>
-      </figure>
-    </div>
-  </section>
-
-  <section>
-    <h2>Install in a minute</h2>
-    <ol class="steps">
-      <li><strong>Click "Download for Windows" above.</strong><span>On the page that opens, click <b>Secretarybird-Setup-….exe</b>.</span></li>
-      <li><strong>Run the file you downloaded.</strong><span>If Windows says "Windows protected your PC", click <b>More info</b>, then <b>Run anyway</b>. This appears because the app is new and not code-signed yet; it doesn't mean it found a problem.</span></li>
-      <li><strong>Click Next until it's done.</strong><span>No administrator password needed. Close Razer Synapse if it's running, so the two don't fight over your settings.</span></li>
-      <li><strong>Click the bird in the taskbar tray</strong><span>(near the clock; click <b>^</b> if it's hidden) and choose <b>Open editor</b>.</span></li>
-    </ol>
-  </section>
-
-  <section>
-    <div class="note">
-      <p><strong>Help us test it.</strong> It's a beta. Ten Razer devices are confirmed working so far, mice, keyboards and a keypad among them (<a href="https://github.com/infinityInfinite/secbird#help-us-support-your-device">see the list</a>). Others should work but haven't been tried yet.</p>
-      <p>If you try it, tell us how it went, working or not. It takes two minutes and helps us a lot.</p>
-      <a class="btn2" href="https://github.com/infinityInfinite/secbird/issues/new?template=device-report.yml">Report how your device works</a>
-    </div>
-  </section>
-
-  <footer>
-    <span>Secretarybird is free and open source (MIT / Apache-2.0).</span>
-    <span>Not affiliated with or endorsed by Razer. Razer and Synapse are trademarks of Razer Inc.</span>
-    <a href="https://github.com/infinityInfinite/secbird">GitHub</a>
-  </footer>
-</main>
-</body>
-</html>
+<body><main>
+<header><img class="logo" src="logo.png" alt="Synapse Lite logo"><h1>Synapse Lite</h1><p class="tag">Your peripherals. Less overhead.</p><p>A native Rust peripheral manager with familiar controls, local profiles, a lighting editor and the existing <code>secbird</code> CLI.</p><nav><a href="https://github.com/mitchellrevill/synapse-lite">Source &amp; screenshots</a><a href="https://github.com/mitchellrevill/synapse-lite/blob/main/docs/development.md">Build guide</a><a href="https://github.com/mitchellrevill/synapse-lite/issues">Issues</a></nav></header>
+<p class="note">In development. Device support varies. Some lighting and input features remain incomplete; full parity and the final memory target are not yet established.</p>
+<section><h2>Local control</h2><p>Device settings, profiles, macros and supported Studio effects. No advertising, account requirement or telemetry in the native app. Windows desktop and CLI; Linux CLI support.</p></section>
+<section><h2>The same tooling</h2><p>Keep your scripts. The command remains <code>secbird</code>, with device selection, profile backup/import and local file inspection. Read <a href="https://github.com/mitchellrevill/synapse-lite/blob/main/docs/cli.md">the CLI guide</a> for examples.</p></section>
+<footer>Built on <a href="https://github.com/infinityInfinite/secbird">Secretarybird</a> by infinityInfinite and contributors. Protocol facts draw on <a href="https://github.com/openrazer/openrazer">OpenRazer</a>. MIT or Apache-2.0. Independent project; not affiliated with or endorsed by Razer. Razer, Synapse and Chroma are Razer trademarks.</footer>
+</main></body></html>

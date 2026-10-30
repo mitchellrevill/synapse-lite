@@ -1,0 +1,194 @@
+{
+  "frames": 200,
+  "bounds": [
+    2,
+    1,
+    21,
+    6
+  ],
+  "stops": [
+    0,
+    33,
+    66,
+    100
+  ],
+  "colors": [
+    15732768,
+    null,
+    2130175,
+    15732768
+  ],
+  "cases": [
+    {
+      "angle": 0,
+      "speed": 15,
+      "width": 100,
+      "pause": 0,
+      "length": 41,
+      "rgba_md5": "2738df187be3c6651f024c1333833e31"
+    },
+    {
+      "angle": 0,
+      "speed": 50,
+      "width": 125,
+      "pause": 79,
+      "length": 16,
+      "rgba_md5": "d466f98adb1c8df575598b7352fd97f0"
+    },
+    {
+      "angle": 0,
+      "speed": 1,
+      "width": 400,
+      "pause": 160,
+      "length": 2504,
+      "rgba_md5": "91dc1784b730c61cbf5f1c7694d517f8"
+    },
+    {
+      "angle": 0,
+      "speed": 0,
+      "width": 100,
+      "pause": 0,
+      "length": 125,
+      "rgba_md5": "1392a751be4bbe49ff96364abf48480e"
+    },
+    {
+      "angle": 0,
+      "speed": 25,
+      "width": 100,
+      "pause": 120,
+      "length": 28,
+      "rgba_md5": "f6f39e9a7e4c506c1c8cbcc6013220e3"
+    },
+    {
+      "angle": 90,
+      "speed": 15,
+      "width": 100,
+      "pause": 0,
+      "length": 41,
+      "rgba_md5": "8c7733efb9204168890a1a7e470683d3"
+    },
+    {
+      "angle": 90,
+      "speed": 50,
+      "width": 125,
+      "pause": 79,
+      "length": 16,
+      "rgba_md5": "b3f55f098f25b793f8579aa95912dc47"
+    },
+    {
+      "angle": 90,
+      "speed": 1,
+      "width": 400,
+      "pause": 160,
+      "length": 2504,
+      "rgba_md5": "b5fa16bf98bcb1105781bac095bab01f"
+    },
+    {
+      "angle": 90,
+      "speed": 0,
+      "width": 100,
+      "pause": 0,
+      "length": 475,
+      "rgba_md5": "02b0bb192722be6b22175ed3a364f0a6"
+    },
+    {
+      "angle": 90,
+      "speed": 25,
+      "width": 100,
+      "pause": 120,
+      "length": 28,
+      "rgba_md5": "bfe9a1c6360a97e5b6bf270bc19e0efc"
+    },
+    {
+      "angle": 180,
+      "speed": 15,
+      "width": 100,
+      "pause": 0,
+      "length": 41,
+      "rgba_md5": "5bf51aef66e9dc6bb51c02d904b723c5"
+    },
+    {
+      "angle": 180,
+      "speed": 50,
+      "width": 125,
+      "pause": 79,
+      "length": 16,
+      "rgba_md5": "0d1c9736f56edf33c20ddc264bddcb75"
+    },
+    {
+      "angle": 180,
+      "speed": 1,
+      "width": 400,
+      "pause": 160,
+      "length": 2504,
+      "rgba_md5": "1a1d63a827a41e8bb802661fd8ac8896"
+    },
+    {
+      "angle": 180,
+      "speed": 0,
+      "width": 100,
+      "pause": 0,
+      "length": 125,
+      "rgba_md5": "52b5739519206a09b1eede8e14012f8b"
+    },
+    {
+      "angle": 180,
+      "speed": 25,
+      "width": 100,
+      "pause": 120,
+      "length": 28,
+      "rgba_md5": "596192059b26a00a68c8a1a4a9881d33"
+    },
+    {
+      "angle": 270,
+      "speed": 15,
+      "width": 100,
+      "pause": 0,
+      "length": 41,
+      "rgba_md5": "fe95c4cdd75245bc59a80538956c8e0b"
+    },
+    {
+      "angle": 270,
+      "speed": 50,
+      "width": 125,
+      "pause": 79,
+      "length": 16,
+      "rgba_md5": "23a8039832f8f55a4b3a7cf15fc3b312"
+    },
+    {
+      "angle": 270,
+      "speed": 1,
+      "width": 400,
+      "pause": 160,
+      "length": 2504,
+      "rgba_md5": "0d9e20519a66ddf6e73e91016a409e7b"
+    },
+    {
+      "angle": 270,
+      "speed": 0,
+      "width": 100,
+      "pause": 0,
+      "length": 475,
+      "rgba_md5": "6e24544c1d7f01115538bb89f65b904b"
+    },
+    {
+      "angle": 270,
+      "speed": 25,
+      "width": 100,
+      "pause": 120,
+      "length": 28,
+      "rgba_md5": "e5e852cb6b8eb7bced9e84f117384ca7"
+    }
+  ],
+  "composition": {
+    "frames": 200,
+    "logical_rgb_md5": "b5f3fddd2ba1f943449a2bbc84c7edad",
+    "physical_rgb_md5": "78353c6d3685272aecdc4a1a05140edd",
+    "bounds": [
+      1,
+      0,
+      23,
+      6
+    ]
+  }
+}

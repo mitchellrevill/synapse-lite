@@ -1,8 +1,7 @@
-<!--
-Adding or fixing a device in devices.json? Please open a device report instead:
-https://github.com/infinityInfinite/secbird/issues/new?template=device-report.yml
-with the output of `secbird report` (or tray → Make a device report…). Every entry is checked
-against a report before it ships.
+## Change
 
-For code changes: what does it fix, and what did you test it on?
--->
+Describe the problem and resulting behavior. Keep device capability claims separate from simulator or physical verification.
+
+## Validation
+
+List relevant checks and any remaining limits. For UI changes, attach a capture from the running app without private data.

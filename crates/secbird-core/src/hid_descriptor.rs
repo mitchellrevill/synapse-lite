@@ -26,19 +26,28 @@ pub fn feature_reports(desc: &[u8]) -> Vec<(u8, usize)> {
             continue;
         }
         let len = [0, 1, 2, 4][(prefix & 0x03) as usize];
-        let Some(data) = desc.get(i + 1..i + 1 + len) else { break };
+        let Some(data) = desc.get(i + 1..i + 1 + len) else {
+            break;
+        };
         let value = data.iter().rev().fold(0u32, |v, &b| v << 8 | b as u32);
         match prefix & 0xFC {
-            0x74 => g.size = value,        // Report Size
-            0x94 => g.count = value,       // Report Count
-            0x84 => g.id = value as u8,    // Report ID
-            0xA4 => stack.push(g),         // Push
+            0x74 => g.size = value,               // Report Size
+            0x94 => g.count = value,              // Report Count
+            0x84 => g.id = value as u8,           // Report ID
+            0xA4 => stack.push(g),                // Push
             0xB4 => g = stack.pop().unwrap_or(g), // Pop
             0xB0 => {
                 // Feature
-                let add = g.size * g.count;
+                let Some(add) = g.size.checked_mul(g.count) else {
+                    return Vec::new();
+                };
                 match bits.iter_mut().find(|b| b.0 == g.id) {
-                    Some(b) => b.1 += add,
+                    Some(b) => {
+                        let Some(total) = b.1.checked_add(add) else {
+                            return Vec::new();
+                        };
+                        b.1 = total;
+                    }
                     None => bits.push((g.id, add)),
                 }
             }
@@ -46,7 +55,9 @@ pub fn feature_reports(desc: &[u8]) -> Vec<(u8, usize)> {
         }
         i += 1 + len;
     }
-    bits.into_iter().map(|(id, b)| (id, b.div_ceil(8) as usize)).collect()
+    bits.into_iter()
+        .map(|(id, b)| (id, b.div_ceil(8) as usize))
+        .collect()
 }
 
 #[cfg(test)]
@@ -80,5 +91,13 @@ mod tests {
     fn truncated_descriptor_does_not_panic() {
         assert!(feature_reports(&[0x75]).is_empty());
         assert!(feature_reports(&[0xFE, 0x40]).is_empty());
+    }
+
+    #[test]
+    fn overflowing_feature_dimensions_are_rejected() {
+        assert!(
+            feature_reports(&[0x77, 255, 255, 255, 255, 0x97, 255, 255, 255, 255, 0xB1, 2])
+                .is_empty()
+        );
     }
 }

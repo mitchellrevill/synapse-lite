@@ -1,0 +1,287 @@
+{
+  "provenance": "Controlled replay of source-projected pure JS conversion only; no native DLL, UI runtime or device execution",
+  "converter_module": 13139,
+  "converter_parent_sha256": "fd20eeea9ac259a741c5deec4cc23f7e293cb99fa8ed658816af50bbd894941d",
+  "cases": [
+    {
+      "input": {
+        "Type": 0,
+        "Number": "0.0016"
+      },
+      "output": [
+        {
+          "type": "delay",
+          "ms": 2
+        }
+      ]
+    },
+    {
+      "input": {
+        "Type": 0,
+        "Number": "0.0004"
+      },
+      "output": [
+        {
+          "type": "delay",
+          "ms": 0
+        }
+      ]
+    },
+    {
+      "input": {
+        "Type": 0,
+        "Number": "1.234"
+      },
+      "output": [
+        {
+          "type": "delay",
+          "ms": 1234
+        }
+      ]
+    },
+    {
+      "input": {
+        "Type": 0,
+        "Number": {
+          "min": 0.01,
+          "max": 0.025
+        }
+      },
+      "output": [
+        {
+          "type": "randomDelay",
+          "minMs": 10,
+          "maxMs": 25
+        }
+      ]
+    },
+    {
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 0,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 1
+        }
+      ]
+    },
+    {
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 0,
+          "State": 1
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 2
+        }
+      ]
+    },
+    {
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 1,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 4
+        }
+      ]
+    },
+    {
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 6,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 2048,
+          "data": 65416
+        }
+      ]
+    },
+    {
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 7,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 2048,
+          "data": 120
+        }
+      ]
+    },
+    {
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 5,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 1
+        },
+        {
+          "type": "mouse",
+          "id": 2
+        },
+        {
+          "type": "delay",
+          "ms": 10
+        },
+        {
+          "type": "mouse",
+          "id": 1
+        },
+        {
+          "type": "mouse",
+          "id": 2
+        }
+      ]
+    }
+  ],
+  "playback": [
+    {
+      "option": "Once",
+      "output": {
+        "downOutput": {
+          "type": "macro",
+          "guid": "synthetic-macro-id",
+          "flag": 0,
+          "repeat": 1,
+          "toggle": 0
+        },
+        "upOutput": {
+          "type": "disabled"
+        }
+      }
+    },
+    {
+      "option": "NTimes",
+      "output": {
+        "downOutput": {
+          "type": "macro",
+          "guid": "synthetic-macro-id",
+          "flag": 0,
+          "repeat": 3,
+          "toggle": 0
+        },
+        "upOutput": {
+          "type": "disabled"
+        }
+      }
+    },
+    {
+      "option": "ContinuousHeld",
+      "output": {
+        "downOutput": {
+          "type": "macro",
+          "guid": "synthetic-macro-id",
+          "flag": 0,
+          "toggle": 0
+        },
+        "upOutput": {
+          "type": "macro",
+          "guid": "synthetic-macro-id",
+          "flag": 1
+        }
+      }
+    },
+    {
+      "option": "ContinuousToggle",
+      "output": {
+        "downOutput": {
+          "type": "macro",
+          "guid": "synthetic-macro-id",
+          "flag": 2,
+          "toggle": 2
+        },
+        "upOutput": {
+          "type": "disabled"
+        }
+      }
+    },
+    {
+      "option": "Sequence",
+      "output": {
+        "downOutput": {
+          "type": "macro",
+          "guid": "synthetic-macro-id",
+          "flag": 3,
+          "toggle": 3
+        },
+        "upOutput": {
+          "type": "disabled"
+        }
+      }
+    },
+    {
+      "option": "Queue",
+      "output": {
+        "downOutput": {
+          "type": "macro",
+          "guid": "synthetic-macro-id",
+          "flag": 4,
+          "toggle": 4
+        },
+        "upOutput": {
+          "type": "disabled"
+        }
+      }
+    },
+    {
+      "option": "Phased",
+      "output": {
+        "downOutput": {
+          "type": "phasedMacro",
+          "guid": "synthetic-macro-id",
+          "flag": 0,
+          "toggle": 0
+        },
+        "upOutput": {
+          "type": "phasedMacro",
+          "guid": "synthetic-macro-id",
+          "flag": 1
+        }
+      }
+    },
+    {
+      "option": "PhasedMacro",
+      "output": {
+        "downOutput": {
+          "type": "macro",
+          "guid": "synthetic-macro-id",
+          "flag": 5,
+          "toggle": 5
+        },
+        "upOutput": {
+          "type": "disabled"
+        }
+      }
+    }
+  ]
+}

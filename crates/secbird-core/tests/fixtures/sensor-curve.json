@@ -1,0 +1,604 @@
+{
+  "schema": 1,
+  "authority": "controlled replay of exact extracted pure functions; no vendor bootstrap",
+  "source": {
+    "path": "work/synapse-renderer/cache/apps.razer.com/synapse/products/196/ui/static/js/main.bbc961f9.js",
+    "sha256": "f99b1f88ca9496a77cab258d05814a312b876873cb5c586841c28a732db78c42",
+    "math_character_range": [
+      4621977,
+      4624900
+    ],
+    "sample_character_start": 4628279,
+    "drag_character_start": 4629222
+  },
+  "coordinate_domain": {
+    "x_unit": "count/ms",
+    "y_unit": "output/input ratio",
+    "x_max": 280,
+    "y_min": 0.1,
+    "y_max": 6
+  },
+  "curves": [
+    {
+      "name": "classic-seed",
+      "points": [
+        {
+          "x": 0,
+          "y": 1
+        },
+        {
+          "x": 20,
+          "y": 1.1
+        },
+        {
+          "x": 40,
+          "y": 1.2
+        },
+        {
+          "x": 70,
+          "y": 1.35
+        },
+        {
+          "x": 100,
+          "y": 1.5
+        }
+      ],
+      "checkpoints": [
+        {
+          "index": 0,
+          "value": 1.0025025025025025
+        },
+        {
+          "index": 1,
+          "value": 1.0075075075075075
+        },
+        {
+          "index": 4,
+          "value": 1.0225225225225225
+        },
+        {
+          "index": 9,
+          "value": 1.0475475475475475
+        },
+        {
+          "index": 19,
+          "value": 1.0975975975975978
+        },
+        {
+          "index": 34,
+          "value": 1.1726726726726726
+        },
+        {
+          "index": 69,
+          "value": 1.347847847847848
+        },
+        {
+          "index": 99,
+          "value": 1.497997997997998
+        },
+        {
+          "index": 149,
+          "value": 1.497997997997998
+        },
+        {
+          "index": 249,
+          "value": 1.497997997997998
+        }
+      ],
+      "float32_le_hex": "0152803f02f6803f039a813f043e823f05e2823f0686833f072a843f08ce843f0972853f0a16863f0bba863f0c5e873f0d02883f0ea6883f0f4a893f10ee893f11928a3f12368b3f13da8b3f147e8c3f15228d3f16c68d3f176a8e3f180e8f3f19b28f3f1a56903f1bfa903f1c9e913f1d42923f1ee6923f1f8a933f202e943f21d2943f2276953f231a963f24be963f2562973f2606983f27aa983f284e993f2af2993f2b969a3f2c3a9b3f2dde9b3f2e829c3f2f269d3f30ca9d3f316e9e3f32129f3f33b69f3f345aa03f35fea03f36a2a13f3746a23f38eaa23f398ea33f3a32a43f3bd6a43f3c7aa53f3d1ea63f3ec2a63f3f66a73f400aa83f41aea83f4252a93f43f6a93f449aaa3f453eab3f46e2ab3f4786ac3f482aad3f49cead3f4a72ae3f4b16af3f4cbaaf3f4d5eb03f4e02b13f4fa6b13f504ab23f51eeb23f5392b33f5436b43f55dab43f567eb53f5722b63f58c6b63f596ab73f5a0eb83f5bb2b83f5c56b93f5dfab93f5e9eba3f5f42bb3f60e6bb3f618abc3f622ebd3f63d2bd3f6476be3f651abf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f66bebf3f",
+      "float32_sha256": "a1b615b32289337ec84ffb17147c67493dfdb734bbeb6a2a2558a83f09dbe834"
+    },
+    {
+      "name": "natural-seed",
+      "points": [
+        {
+          "x": 0,
+          "y": 1
+        },
+        {
+          "x": 11,
+          "y": 1.45
+        },
+        {
+          "x": 20,
+          "y": 1.5
+        },
+        {
+          "x": 35,
+          "y": 1.5
+        },
+        {
+          "x": 100,
+          "y": 1.5
+        }
+      ],
+      "checkpoints": [
+        {
+          "index": 0,
+          "value": 1.0300233581238223
+        },
+        {
+          "index": 1,
+          "value": 1.088745981224372
+        },
+        {
+          "index": 4,
+          "value": 1.2489836497929194
+        },
+        {
+          "index": 9,
+          "value": 1.4273627245878662
+        },
+        {
+          "index": 19,
+          "value": 1.4998193588827542
+        },
+        {
+          "index": 34,
+          "value": 1.5
+        },
+        {
+          "index": 69,
+          "value": 1.5
+        },
+        {
+          "index": 99,
+          "value": 1.5
+        },
+        {
+          "index": 149,
+          "value": 1.5
+        },
+        {
+          "index": 249,
+          "value": 1.5
+        }
+      ],
+      "float32_le_hex": "ced7833f075c8b3f3596923fe872993fb2de9f3f24c6a53fcf15ab3f45baaf3f15a0b33fd2b3b63f0de2b83f2137ba3f255cbb3fc369bc3f2a5cbd3f872fbe3f05e0be3fd469bf3f1fc9bf3f15fabf3f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f",
+      "float32_sha256": "ee29996ebcd85fbf8dd1a8061e1388f067c0c043e551a2b1e9edb11ea2c0912e"
+    },
+    {
+      "name": "jump-seed",
+      "points": [
+        {
+          "x": 0,
+          "y": 1
+        },
+        {
+          "x": 9,
+          "y": 1
+        },
+        {
+          "x": 21,
+          "y": 1.5
+        },
+        {
+          "x": 24,
+          "y": 1.5
+        },
+        {
+          "x": 100,
+          "y": 1.5
+        }
+      ],
+      "checkpoints": [
+        {
+          "index": 0,
+          "value": 1
+        },
+        {
+          "index": 1,
+          "value": 1
+        },
+        {
+          "index": 4,
+          "value": 1
+        },
+        {
+          "index": 9,
+          "value": 1.0026276216937557
+        },
+        {
+          "index": 19,
+          "value": 1.4790463809044923
+        },
+        {
+          "index": 34,
+          "value": 1.5
+        },
+        {
+          "index": 69,
+          "value": 1.5
+        },
+        {
+          "index": 99,
+          "value": 1.5
+        },
+        {
+          "index": 149,
+          "value": 1.5
+        },
+        {
+          "index": 249,
+          "value": 1.5
+        }
+      ],
+      "float32_le_hex": "0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f1a56803f72c9823f9e3c873f7f3d8d3ff659943fe51f9c3f2e1da43fb0dfab3f4ff5b23feaebb83f6451bd3f9eb3bf3f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f0000c03f",
+      "float32_sha256": "28305e810587c69e12ca312d18b3c67090f4641f9b1aca8cd0027e717648dce0"
+    },
+    {
+      "name": "flat",
+      "points": [
+        {
+          "x": 0,
+          "y": 1
+        },
+        {
+          "x": 50,
+          "y": 1
+        },
+        {
+          "x": 100,
+          "y": 1
+        }
+      ],
+      "checkpoints": [
+        {
+          "index": 0,
+          "value": 1
+        },
+        {
+          "index": 1,
+          "value": 1
+        },
+        {
+          "index": 4,
+          "value": 1
+        },
+        {
+          "index": 9,
+          "value": 1
+        },
+        {
+          "index": 19,
+          "value": 1
+        },
+        {
+          "index": 34,
+          "value": 1
+        },
+        {
+          "index": 69,
+          "value": 1
+        },
+        {
+          "index": 99,
+          "value": 1
+        },
+        {
+          "index": 149,
+          "value": 1
+        },
+        {
+          "index": 249,
+          "value": 1
+        }
+      ],
+      "float32_le_hex": "0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f",
+      "float32_sha256": "5a6a96316cd781e79cdf8dd9a04657137e2c5a5616070096f3aff5cdecf2054e"
+    },
+    {
+      "name": "floor",
+      "points": [
+        {
+          "x": 0,
+          "y": 0.1
+        },
+        {
+          "x": 50,
+          "y": 0.1
+        },
+        {
+          "x": 100,
+          "y": 0.1
+        }
+      ],
+      "checkpoints": [
+        {
+          "index": 0,
+          "value": 0.1
+        },
+        {
+          "index": 1,
+          "value": 0.1
+        },
+        {
+          "index": 4,
+          "value": 0.1
+        },
+        {
+          "index": 9,
+          "value": 0.1
+        },
+        {
+          "index": 19,
+          "value": 0.1
+        },
+        {
+          "index": 34,
+          "value": 0.1
+        },
+        {
+          "index": 69,
+          "value": 0.1
+        },
+        {
+          "index": 99,
+          "value": 0.1
+        },
+        {
+          "index": 149,
+          "value": 0.1
+        },
+        {
+          "index": 249,
+          "value": 0.1
+        }
+      ],
+      "float32_le_hex": "cdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3dcdcccc3d",
+      "float32_sha256": "5c2f8a0d157b669ba2ae35b3fcdd95a6b5fbaf43b27f6f0f42c6253f725810dc"
+    },
+    {
+      "name": "nonmonotone",
+      "points": [
+        {
+          "x": 0,
+          "y": 0.1
+        },
+        {
+          "x": 20,
+          "y": 2.5
+        },
+        {
+          "x": 40,
+          "y": 0.75
+        },
+        {
+          "x": 100,
+          "y": 1.1
+        }
+      ],
+      "checkpoints": [
+        {
+          "index": 0,
+          "value": 0.2108859528114619
+        },
+        {
+          "index": 1,
+          "value": 0.4259599723631322
+        },
+        {
+          "index": 4,
+          "value": 1.0153985980136455
+        },
+        {
+          "index": 9,
+          "value": 1.7971825678530382
+        },
+        {
+          "index": 19,
+          "value": 2.4984317623903154
+        },
+        {
+          "index": 34,
+          "value": 1.0706344550323659
+        },
+        {
+          "index": 69,
+          "value": 0.791893756242315
+        },
+        {
+          "index": 99,
+          "value": 1.0930396491177419
+        },
+        {
+          "index": 149,
+          "value": 1.0930396491177419
+        },
+        {
+          "index": 249,
+          "value": 1.0930396491177419
+        }
+      ],
+      "float32_le_hex": "7df2573e6d17da3e2ec4213f0116543f95f8813fd1a2983fb101ae3f340dc23f56bdd43f140ae63f6cebf53fad2c0240eea50840775d0e40474f13405d771740b7d11a40535a1d40310d1f404ee61f40bfc61f406d271e40bb1a1b40cccb1640c5651140c7130b40f7000440eeb0f83fd48ae83fe8e5d73f6f18c73fb078b63ff15ca63f791b973f8d0a893fe700793fe7a6633fa6b3523fb1d3463f93b3403f0400403f6400403fbf01403fba04403ff809403f1c12403fcb1d403fa82d403f5742403f7b5c403fb77c403fb0a3403f09d2403f6508413f6947413fb78f413ff4e1413fc33e423fc7a6423fa41a433fff9a433f7928443fb8c3443f5e6d453f1026463f70ee463f22c7473fcbb0483f0dac493f8db94a3fedd94b3fd10d4d3fde554e3fb6b24f3ffe24513f58ad523f694c543fd402563f3cd1573f46b8593f94b85b3fcbd25d3f8e07603f8057623f46c3643f834b673fdaf0693fefb36c3f65956f3fe195723f06b6753f78f6783fd9577c3fceda7f3ffdbf813f01a4833fc399853f97a1873fcebb893fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3fb9e88b3f",
+      "float32_sha256": "c16d1d130169241155667c159941709c15349782c2b94660d703bdf31ac07adb"
+    },
+    {
+      "name": "long-range",
+      "points": [
+        {
+          "x": 0,
+          "y": 0.1
+        },
+        {
+          "x": 140,
+          "y": 6
+        },
+        {
+          "x": 280,
+          "y": 1
+        }
+      ],
+      "checkpoints": [
+        {
+          "index": 0,
+          "value": 0.14536525631855196
+        },
+        {
+          "index": 1,
+          "value": 0.2356141142359794
+        },
+        {
+          "index": 4,
+          "value": 0.48047696895643954
+        },
+        {
+          "index": 9,
+          "value": 0.8492643433863934
+        },
+        {
+          "index": 19,
+          "value": 1.5911557843769337
+        },
+        {
+          "index": 34,
+          "value": 2.6025971746349787
+        },
+        {
+          "index": 69,
+          "value": 4.4476155465405975
+        },
+        {
+          "index": 99,
+          "value": 5.4865791266290875
+        },
+        {
+          "index": 149,
+          "value": 5.9781457863999865
+        },
+        {
+          "index": 249,
+          "value": 2.988186287090597
+        }
+      ],
+      "float32_le_hex": "a1da143ed444713ee8129b3e51b4c83e1401f63e7fe10b3f983d223fbce6323f46f8483f6369593f16306f3ff265823f46728a3f8a1a953f960a9d3f138da73fbc60af3f4ebdb93f2604c43ffeaacb3fb3cbd53fe455dd3f5350e73fc2bdee3fc691f83f58e2ff3fe8c704409893094018250d4065dd1140556015402e051a4080791d40d20a2240f490264032ee2940b2602e4030af3140fb0d3640ab4d3940b1983d4062d84140b3004540832c4940e4454c40bf5d504023685340f96b574056645b4011575e404c3b6240e71e6540efee68405cc36b401f7f6f40442f7340beeb754082877940ac347c40fdbb7f40e52c81404be682407d2d844098dc8540cd858740d4c08840b05f8a40f0928b406a278d40de528e40ecdc8f400361914027809240c4f993400a11954026809640878f974017f498409d529a408a559b4077a99c406da49d40b8ed9e40b2e09f40531fa140d757a240363ea340016ca440524aa5405c6da6409943a740d85ba840e96da9406637aa409e3eab40f5ffab404cfcac4076b5ad40e2a6ae400e92af40533eb040871eb1408ec2b140c097b2408333b340abfdb3402391b4403850b540f608b640588fb640f43cb740fabab7406d5db84010d3b840506ab94025fbb9408d63ba4022e9ba401649bb4061c3bb40db1abc40d389bc404ef2bc40683cbd408399bd4010dbbd40c22cbe40bd65be40fcabbe40acebbe402117bf40514bbf40236ebf40c996bf40f1b0bf4005cebf4079e4bf40f4f0bf40c8fbbf4088ffbf4011ffbf407afbbf407ef2bf4099e8bf4032d7bf40f6c0bf401dadbf40688ebf403074bf40f84cbf405b2cbf4098fcbe40efc7be40379dbe40f55fbe40c62ebe40e1e8bd4036b1bd40a662bd401d0fbd4032cdbc40f070bc407728bc4073c3bb406574bb409606bb40bc93ba40483aba4096beb9407c5eb940e7d9b8402173b840a1e5b7400553b740b4e1b6401f46b6400fceb5407929b540a4aab44003fdb3406377b340aec0b240c504b2406b74b14061afb0402a18b040f549af40daabae4072d4ad40c4f7ac40c94eac40da68ab40ebb8aa40b1c9a940c712a940391aa840541ca740645aa6401e53a540228aa4407179a34062a9a2403e8fa140b06fa04076949f40676b9e4008899d406f569c40e66c9b40ba309a4012ef984038fa9740efae9640d9b29540e65d94408e5a9340e8fb9140b4979040e6888f40f11a8e40ce048d40108d8b40936f8a4002ee884024c98740b83d8640a6ac8440217c834026e181402fa9804083087e40a4897b40d22b784090c274401a2c7240c6ae6e403b096c40c277684016c36540671d6240256c5e40969f5b4001da57402efe54403524514011394e40a34a4a407c5046402a4d4340723e3f40",
+      "float32_sha256": "f6af57d0616224cc4ddbb9f12822bcc9eced7c956931ef671c09a032796bae6e"
+    },
+    {
+      "name": "short-range",
+      "points": [
+        {
+          "x": 0,
+          "y": 0.2
+        },
+        {
+          "x": 15,
+          "y": 1.3
+        },
+        {
+          "x": 35,
+          "y": 0.4
+        }
+      ],
+      "checkpoints": [
+        {
+          "index": 0,
+          "value": 0.2646583155363207
+        },
+        {
+          "index": 1,
+          "value": 0.38228389981150046
+        },
+        {
+          "index": 4,
+          "value": 0.7130968666223643
+        },
+        {
+          "index": 9,
+          "value": 1.1250258759938983
+        },
+        {
+          "index": 19,
+          "value": 1.27198994403844
+        },
+        {
+          "index": 34,
+          "value": 0.45415976647010403
+        },
+        {
+          "index": 69,
+          "value": 0.45415976647010403
+        },
+        {
+          "index": 99,
+          "value": 0.45415976647010403
+        },
+        {
+          "index": 149,
+          "value": 0.45415976647010403
+        },
+        {
+          "index": 249,
+          "value": 0.45415976647010403
+        }
+      ],
+      "float32_le_hex": "4b81873eb7bac33ee1aeff3e35771b3f848d363fb3154f3f11a8663f17337c3f2376873fd900903fa90f973f7d0f9d3f3283a13f0ea8a43f5633a63f345ca63f750da63f6e60a53fce4aa43f91d0a23f5ecba03f12549e3f40329b3f6692973fe826933f02338e3fce50883f5cdd813fc9ae743f24d5633f44c4513f291b3d3ff930273f505e0e3fa187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83ea187e83e",
+      "float32_sha256": "89ee409233757f390e4351f9239df63e687c98e053a49f71b93a555859d89b49"
+    },
+    {
+      "name": "minimum-spacing",
+      "points": [
+        {
+          "x": 0,
+          "y": 0.2
+        },
+        {
+          "x": 2,
+          "y": 1
+        },
+        {
+          "x": 4,
+          "y": 0.3
+        },
+        {
+          "x": 6,
+          "y": 1.2
+        }
+      ],
+      "checkpoints": [
+        {
+          "index": 0,
+          "value": 0.5456465961944414
+        },
+        {
+          "index": 1,
+          "value": 0.9479678228129382
+        },
+        {
+          "index": 4,
+          "value": 0.3620260874461021
+        },
+        {
+          "index": 9,
+          "value": 0.8213123737053074
+        },
+        {
+          "index": 19,
+          "value": 0.8213123737053074
+        },
+        {
+          "index": 34,
+          "value": 0.8213123737053074
+        },
+        {
+          "index": 69,
+          "value": 0.8213123737053074
+        },
+        {
+          "index": 99,
+          "value": 0.8213123737053074
+        },
+        {
+          "index": 149,
+          "value": 0.8213123737053074
+        },
+        {
+          "index": 249,
+          "value": 0.8213123737053074
+        }
+      ],
+      "float32_le_hex": "7faf0b3f05ae723f6a8b633f304cd13e7c5bb93e8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f8741523f",
+      "float32_sha256": "f253e16c981319a5e5d64e298649e7308ba7e0d6294bb9af76a75b95ee7d6372"
+    }
+  ]
+}

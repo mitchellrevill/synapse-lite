@@ -1,0 +1,135 @@
+{
+  "provenance": "Static-derived vectors, not a vendor runtime capture. mapping_engine SHA256 6eabdfdedf797e042738b630d827c06f7a45dbe560ebaec96c66698f88f3320a; 10BFED/10D8A8/10E18C/10E2F8 fresh-object fields; 112C60 and 134C80 byte copies; 1219DC metadata. Hex byte groups transcribed independently of Rust encoder. Mouse metadata mask0x777 maps once to0x1C7; mask0x10 maps once to0x100. No physical input was generated.",
+  "vectors": [
+    {
+      "label": "LeftDown",
+      "id": 1,
+      "button": "Left",
+      "transition": "Down",
+      "unit": 4660,
+      "modifiers": 1911,
+      "packet_hex": "00 00 00 00 02 00 00 00 34 12 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 c7 01 00 00"
+    },
+    {
+      "label": "LeftUp",
+      "id": 2,
+      "button": "Left",
+      "transition": "Up",
+      "unit": 4660,
+      "modifiers": 1911,
+      "packet_hex": "00 00 00 00 02 00 00 00 34 12 00 00 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 c7 01 00 00"
+    },
+    {
+      "label": "RightDown",
+      "id": 4,
+      "button": "Right",
+      "transition": "Down",
+      "unit": 4660,
+      "modifiers": 1911,
+      "packet_hex": "00 00 00 00 02 00 00 00 34 12 00 00 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 c7 01 00 00"
+    },
+    {
+      "label": "RightUp",
+      "id": 8,
+      "button": "Right",
+      "transition": "Up",
+      "unit": 4660,
+      "modifiers": 1911,
+      "packet_hex": "00 00 00 00 02 00 00 00 34 12 00 00 08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 c7 01 00 00"
+    },
+    {
+      "label": "MiddleDown",
+      "id": 16,
+      "button": "Middle",
+      "transition": "Down",
+      "unit": 4660,
+      "modifiers": 1911,
+      "packet_hex": "00 00 00 00 02 00 00 00 34 12 00 00 10 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 c7 01 00 00"
+    },
+    {
+      "label": "MiddleUp",
+      "id": 32,
+      "button": "Middle",
+      "transition": "Up",
+      "unit": 4660,
+      "modifiers": 1911,
+      "packet_hex": "00 00 00 00 02 00 00 00 34 12 00 00 20 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 c7 01 00 00"
+    },
+    {
+      "label": "Button4Down",
+      "id": 64,
+      "button": "Button4",
+      "transition": "Down",
+      "unit": 4660,
+      "modifiers": 1911,
+      "packet_hex": "00 00 00 00 02 00 00 00 34 12 00 00 40 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 c7 01 00 00"
+    },
+    {
+      "label": "Button4Up",
+      "id": 128,
+      "button": "Button4",
+      "transition": "Up",
+      "unit": 4660,
+      "modifiers": 1911,
+      "packet_hex": "00 00 00 00 02 00 00 00 34 12 00 00 80 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 c7 01 00 00"
+    },
+    {
+      "label": "Button5Down",
+      "id": 256,
+      "button": "Button5",
+      "transition": "Down",
+      "unit": 4660,
+      "modifiers": 1911,
+      "packet_hex": "00 00 00 00 02 00 00 00 34 12 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 c7 01 00 00"
+    },
+    {
+      "label": "Button5Up",
+      "id": 512,
+      "button": "Button5",
+      "transition": "Up",
+      "unit": 4660,
+      "modifiers": 1911,
+      "packet_hex": "00 00 00 00 02 00 00 00 34 12 00 00 00 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 c7 01 00 00"
+    },
+    {
+      "label": "Vertical120",
+      "id": 1024,
+      "axis": "Vertical",
+      "delta": 120,
+      "raw_data": 120,
+      "unit": 0,
+      "modifiers": 16,
+      "packet_hex": "00 00 00 00 02 00 00 00 00 00 00 00 00 04 78 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 00 00"
+    },
+    {
+      "label": "Vertical-120",
+      "id": 1024,
+      "axis": "Vertical",
+      "delta": -120,
+      "raw_data": 65416,
+      "unit": 0,
+      "modifiers": 16,
+      "packet_hex": "00 00 00 00 02 00 00 00 00 00 00 00 00 04 88 ff 00 00 00 00 00 00 00 00 00 00 00 00 00 01 00 00"
+    },
+    {
+      "label": "Horizontal120",
+      "id": 2048,
+      "axis": "Horizontal",
+      "delta": 120,
+      "raw_data": 120,
+      "unit": 0,
+      "modifiers": 16,
+      "packet_hex": "00 00 00 00 02 00 00 00 00 00 00 00 00 08 78 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 00 00"
+    },
+    {
+      "label": "Horizontal-120",
+      "id": 2048,
+      "axis": "Horizontal",
+      "delta": -120,
+      "raw_data": 65416,
+      "unit": 0,
+      "modifiers": 16,
+      "packet_hex": "00 00 00 00 02 00 00 00 00 00 00 00 00 08 88 ff 00 00 00 00 00 00 00 00 00 00 00 00 00 01 00 00"
+    }
+  ]
+}

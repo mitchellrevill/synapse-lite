@@ -3,6 +3,8 @@
 use crate::error::Result;
 use std::time::Duration;
 
+pub(crate) const MAX_FEATURE_BYTES: usize = 4096;
+
 pub trait Transport: Send {
     /// Write one feature report (byte 0 is the HID report id).
     fn send_feature_report(&self, data: &[u8]) -> Result<()>;
@@ -29,6 +31,11 @@ pub struct NumberedReport<T: Transport> {
 
 impl<T: Transport> Transport for NumberedReport<T> {
     fn send_feature_report(&self, data: &[u8]) -> Result<()> {
+        if !(crate::proto::REPORT_LEN..=MAX_FEATURE_BYTES).contains(&self.len) || data.is_empty() {
+            return Err(crate::Error::InvalidArg(
+                "Invalid numbered feature report size".into(),
+            ));
+        }
         let mut buf = vec![0u8; self.len + 1];
         buf[0] = self.id;
         let n = data.len().saturating_sub(1).min(self.len);
@@ -37,9 +44,18 @@ impl<T: Transport> Transport for NumberedReport<T> {
     }
 
     fn get_feature_report(&self, buf: &mut [u8]) -> Result<usize> {
+        if !(crate::proto::REPORT_LEN..=MAX_FEATURE_BYTES).contains(&self.len) || buf.is_empty() {
+            return Err(crate::Error::InvalidArg(
+                "Invalid numbered feature report size".into(),
+            ));
+        }
         let mut raw = vec![0u8; self.len + 1];
         raw[0] = self.id;
-        let n = self.inner.get_feature_report(&mut raw)?.min(buf.len());
+        let n = self
+            .inner
+            .get_feature_report(&mut raw)?
+            .min(buf.len())
+            .min(raw.len());
         buf[..n].copy_from_slice(&raw[..n]);
         buf[0] = 0;
         Ok(n)
@@ -79,7 +95,9 @@ pub fn feature_reports(api: &hidapi::HidApi, path: &std::ffi::CStr) -> Vec<(u8, 
     }
     #[cfg(not(windows))]
     {
-        let Ok(hid) = api.open_path(path) else { return Vec::new() };
+        let Ok(hid) = api.open_path(path) else {
+            return Vec::new();
+        };
         let mut desc = [0u8; 4096];
         match hid.get_report_descriptor(&mut desc) {
             Ok(n) => crate::hid_descriptor::feature_reports(&desc[..n]),
@@ -92,13 +110,23 @@ pub fn feature_reports(api: &hidapi::HidApi, path: &std::ffi::CStr) -> Vec<(u8, 
 fn windows_feature_reports(path: &std::ffi::CStr) -> Vec<(u8, usize)> {
     use windows_sys::Win32::Devices::HumanInterfaceDevice::*;
     use windows_sys::Win32::Foundation::{CloseHandle, INVALID_HANDLE_VALUE};
-    use windows_sys::Win32::Storage::FileSystem::{CreateFileA, FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING};
+    use windows_sys::Win32::Storage::FileSystem::{
+        CreateFileA, FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING,
+    };
 
     // SAFETY: the handle and preparsed data are released before returning; buffers are
     // sized from the counts the driver gives.
     unsafe {
         // Access 0: enough to read caps, even for collections Windows keeps for itself.
-        let handle = CreateFileA(path.as_ptr().cast(), 0, FILE_SHARE_READ | FILE_SHARE_WRITE, std::ptr::null(), OPEN_EXISTING, 0, std::ptr::null_mut());
+        let handle = CreateFileA(
+            path.as_ptr().cast(),
+            0,
+            FILE_SHARE_READ | FILE_SHARE_WRITE,
+            std::ptr::null(),
+            OPEN_EXISTING,
+            0,
+            std::ptr::null_mut(),
+        );
         if handle == INVALID_HANDLE_VALUE {
             return Vec::new();
         }
@@ -106,20 +134,26 @@ fn windows_feature_reports(path: &std::ffi::CStr) -> Vec<(u8, usize)> {
         let mut data: PHIDP_PREPARSED_DATA = 0;
         if HidD_GetPreparsedData(handle, &mut data) != 0 {
             let mut caps: HIDP_CAPS = std::mem::zeroed();
-            if HidP_GetCaps(data, &mut caps) == HIDP_STATUS_SUCCESS && caps.FeatureReportByteLength > 1 {
+            if HidP_GetCaps(data, &mut caps) == HIDP_STATUS_SUCCESS
+                && caps.FeatureReportByteLength > 1
+            {
                 let len = caps.FeatureReportByteLength as usize - 1;
                 let mut ids = Vec::new();
                 let mut n = caps.NumberFeatureValueCaps;
                 if n > 0 {
                     let mut list: Vec<HIDP_VALUE_CAPS> = vec![std::mem::zeroed(); n as usize];
-                    if HidP_GetValueCaps(HidP_Feature, list.as_mut_ptr(), &mut n, data) == HIDP_STATUS_SUCCESS {
+                    if HidP_GetValueCaps(HidP_Feature, list.as_mut_ptr(), &mut n, data)
+                        == HIDP_STATUS_SUCCESS
+                    {
                         ids.extend(list[..n as usize].iter().map(|c| c.ReportID));
                     }
                 }
                 let mut n = caps.NumberFeatureButtonCaps;
                 if n > 0 {
                     let mut list: Vec<HIDP_BUTTON_CAPS> = vec![std::mem::zeroed(); n as usize];
-                    if HidP_GetButtonCaps(HidP_Feature, list.as_mut_ptr(), &mut n, data) == HIDP_STATUS_SUCCESS {
+                    if HidP_GetButtonCaps(HidP_Feature, list.as_mut_ptr(), &mut n, data)
+                        == HIDP_STATUS_SUCCESS
+                    {
                         ids.extend(list[..n as usize].iter().map(|c| c.ReportID));
                     }
                 }
@@ -155,7 +189,9 @@ mod tests {
         fn send_feature_report(&self, data: &[u8]) -> Result<()> {
             self.sent.lock().unwrap().push(data.len());
             if data[0] != 5 || data.len() != 92 {
-                return Err(crate::Error::InvalidArg("report id 0 isn't declared".into()));
+                return Err(crate::Error::InvalidArg(
+                    "report id 0 isn't declared".into(),
+                ));
             }
             let mut usb = [0u8; REPORT_LEN + 1];
             usb[1..].copy_from_slice(&data[1..=REPORT_LEN]);
@@ -178,14 +214,58 @@ mod tests {
     #[test]
     fn numbered_report_reaches_a_bluetooth_collection() {
         let open = |t: Box<dyn Transport>| {
-            crate::Device::open(t, MOUSE_PID, -1, c"bt".into(), &crate::device::TXID_CANDIDATES, Sim::spec_for(MOUSE_PID))
+            crate::Device::open(
+                t,
+                MOUSE_PID,
+                -1,
+                c"bt".into(),
+                &crate::device::TXID_CANDIDATES,
+                Sim::spec_for(MOUSE_PID),
+            )
         };
-        let plain = Bluetooth { sim: Sim::mouse(), sent: Mutex::new(Vec::new()) };
-        assert!(open(Box::new(plain)).is_none(), "report id 0 is refused, as on Windows");
+        let plain = Bluetooth {
+            sim: Sim::mouse(),
+            sent: Mutex::new(Vec::new()),
+        };
+        assert!(
+            open(Box::new(plain)).is_none(),
+            "report id 0 is refused, as on Windows"
+        );
 
-        let bt = NumberedReport { inner: Bluetooth { sim: Sim::mouse(), sent: Mutex::new(Vec::new()) }, id: 5, len: 91 };
+        let bt = NumberedReport {
+            inner: Bluetooth {
+                sim: Sim::mouse(),
+                sent: Mutex::new(Vec::new()),
+            },
+            id: 5,
+            len: 91,
+        };
         let dev = open(Box::new(bt)).expect("answers under report id 5");
         assert_eq!(dev.report_id(), 5);
         assert_eq!(dev.dpi().unwrap(), (800, 800));
+    }
+
+    #[test]
+    fn invalid_numbered_reports_are_refused_before_transport_io() {
+        for len in [0, REPORT_LEN - 1, MAX_FEATURE_BYTES + 1, usize::MAX] {
+            let sim = Sim::mouse();
+            let report = NumberedReport {
+                inner: sim.clone(),
+                id: 5,
+                len,
+            };
+            assert!(report.send_feature_report(&[0; REPORT_LEN + 1]).is_err());
+            assert!(report.get_feature_report(&mut [0; REPORT_LEN + 1]).is_err());
+            assert!(sim.state().log.is_empty());
+        }
+        let sim = Sim::mouse();
+        let report = NumberedReport {
+            inner: sim.clone(),
+            id: 5,
+            len: REPORT_LEN,
+        };
+        assert!(report.send_feature_report(&[]).is_err());
+        assert!(report.get_feature_report(&mut []).is_err());
+        assert!(sim.state().log.is_empty());
     }
 }

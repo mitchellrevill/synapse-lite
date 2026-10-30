@@ -18,7 +18,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: Secretarybird version
+      label: Synapse Lite version
       description: "`secbird --version`, or hover the tray icon"
     validations:
       required: true
@@ -36,5 +36,5 @@ body:
     id: log
     attributes:
       label: Last lines of secbird.log
-      description: 'In %APPDATA%\Secretarybird\secbird.log (tray menu: Open settings folder)'
+      description: 'In %APPDATA%\SynapseLite\secbird.log (tray menu: Open settings folder)'
       render: text

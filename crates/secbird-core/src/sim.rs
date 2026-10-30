@@ -52,6 +52,17 @@ pub type SimMacro = (Vec<u8>, Vec<u8>);
 /// Everything the simulated device remembers. Tests read and tweak it via [`Sim::state`].
 #[derive(Debug, Clone)]
 pub struct SimState {
+    /// Deterministic sleep/unplug/failure boundary. Refuses I/O before mutation.
+    pub available: bool,
+    pub unavailable_commands: Vec<Command>,
+    /// Explicit196/197 sensor mock [proximityState,liftMode,rawHeight].
+    pub sensor_calibration: Option<[u8; 3]>,
+    /// Opt-in Advanced register bank: enable, mode, exact 250 float32 samples.
+    pub sensor_dynamic: Option<(u8,u8,Vec<u8>)>,
+    pub sensor_rotation: Option<[u8;3]>,
+    pub firmware_extended: Option<[u8;4]>,
+    pub fail_next_dynamic_curve: bool,
+    pub fail_next_calibration_lift: bool,
     /// The only transaction id the device answers; others get no reply.
     pub txid: u8,
     /// A mouse dock's own light, answering [`crate::device::DOCK_TXID`] like the #39 dock:
@@ -63,16 +74,27 @@ pub struct SimState {
     /// `None` = the device has no DPI sensor (keyboards).
     pub dpi: Option<(u16, u16)>,
     pub polling_code: u8,
+    /// Explicit wheel fixture only: mode, acceleration, Smart Reel.
+    pub wheel_controls: Option<[u8; 3]>,
+    /// Opt-in Device196 profile polling bank; no generic-family OBM inference.
+    pub onboard_polling: Option<u8>,
     /// High-speed polling code (`00:C0`), or `None` when the device doesn't have it.
     pub polling_hs: Option<u8>,
     /// DPI stages as the device reports them: `(active, [(x, y)])`.
     pub dpi_stages: Option<(u8, Vec<(u16, u16)>)>,
     /// Sleep timer in seconds (`07:83`), and the auto-sleep switch where there is one.
     pub idle_seconds: Option<u16>,
+    /// Raw low-power threshold byte (07:81/01), when explicitly configured.
+    pub critical_threshold: Option<u8>,
     /// Laptops: Smart Dimming as (enabled, level), level 0 half, 1 quarter, 2 dark.
     pub smart_dimming: Option<(u8, u8)>,
     /// Keyboards: gaming mode bits (`00:08`); `None` where the device has none.
     pub game_mode: Option<u8>,
+    /// Read-only mode query (00:84); no mode setter is simulated.
+    pub device_mode: Option<u8>,
+    /// Explicit mock GET00:86 response in wire order [layout, edition]. None
+    /// remains unsupported; no country/layout is inferred for a simulator.
+    pub ornata_layout_edition: Option<[u8; 2]>,
     pub auto_sleep: Option<bool>,
     /// The auto-sleep switch saved in the on-board slot, which the live one starts from.
     pub auto_sleep_saved: Option<bool>,
@@ -120,18 +142,31 @@ pub struct SimState {
 impl SimState {
     fn new(serial: &str) -> Self {
         SimState {
+            available: true,
+            unavailable_commands: Vec::new(),
             txid: 0x1F,
             serial: serial.into(),
             firmware: (1, 2),
             dpi: None,
             polling_code: 0x01,
+            wheel_controls: None,
             polling_hs: None,
+            onboard_polling: None,
             dpi_stages: None,
             macros: None,
             macro_recyclable: 0,
             idle_seconds: None,
+            critical_threshold: None,
+            sensor_calibration: None,
+            sensor_dynamic: None,
+            sensor_rotation: None,
+            firmware_extended: None,
+            fail_next_dynamic_curve: false,
+            fail_next_calibration_lift: false,
             smart_dimming: None,
             game_mode: None,
+            device_mode: None,
+            ornata_layout_edition: None,
             auto_sleep: None,
             auto_sleep_saved: None,
             active_slot: None,
@@ -267,12 +302,37 @@ impl SimState {
         let ok = |v: Vec<u8>| (Success, v);
         // Each device speaks one lighting generation and ignores the other.
         let old_lighting = c.class == 0x03 && c.id & 0x80 == 0;
-        if (self.standard && c.class == 0x0F) || (!self.standard && old_lighting) {
+        let gaming_indicator = (c == cmd::LED_STATE || c == cmd::LED_STATE.get())
+            && a[0] == 0 && a[1] == 8 && self.leds.contains(&8);
+        if (self.standard && c.class == 0x0F) || (!self.standard && old_lighting && !gaming_indicator) {
             return (NotSupported, vec![]);
         }
         let known = |s: &Self, led: u8| s.leds.contains(&led);
         match c {
+            c if c.class == 2 && matches!(c.id & 0x7f, 0x14 | 0x16 | 0x17) => {
+                let index = match c.id & 0x7f { 0x14 => 0, 0x16 => 1, _ => 2 };
+                let expected_size = if index == 2 { 80 } else { 2 };
+                let Some(values) = self.wheel_controls.as_mut() else { return (NotSupported, vec![]) };
+                if size != expected_size || a[0] != 1 || a[1] > 1 || a[2..usize::from(size)].iter().any(|b| *b != 0) {
+                    return (Failed, vec![]);
+                }
+                if c.id & 0x80 == 0 { values[index] = a[1]; }
+                let mut reply = vec![0; usize::from(size)];
+                reply[..2].copy_from_slice(&[1, values[index]]);
+                ok(reply)
+            },
             c if c == cmd::FIRMWARE.get() => ok(vec![self.firmware.0, self.firmware.1]),
+            c if c == cmd::FIRMWARE_EXT.get()=>match self.firmware_extended {Some(version)=>ok(version.to_vec()),None=>(NotSupported,vec![])},
+            c if c==cmd::SENSOR_ANGLE.get()=>match self.sensor_rotation{Some(raw) if size==3&&a[0]==1=>ok(raw.to_vec()),_=>(NotSupported,vec![])},
+            cmd::SENSOR_ANGLE=>match &mut self.sensor_rotation{Some(raw) if size==3&&a[0]==1&&a[1]<=1=>{raw.copy_from_slice(&a[..3]);ok(raw.to_vec())},_=>(NotSupported,vec![])},
+            c if c == Command::new(0, 0x84) => match self.device_mode {
+                Some(mode) => ok(vec![mode]),
+                None => (NotSupported, vec![]),
+            },
+            c if c == Command::new(0, 0x86) => match self.ornata_layout_edition {
+                Some(tuple) => ok(tuple.to_vec()),
+                None => (NotSupported, vec![]),
+            },
             c if c == cmd::SERIAL.get() => {
                 let mut v = self.serial.as_bytes().to_vec();
                 v.resize(cmd::SERIAL_SIZE as usize, 0);
@@ -337,6 +397,16 @@ impl SimState {
                 (None, true) => (NotSupported, vec![]),
                 (None, false) => ok(vec![1]),
             },
+            c if c == Command::new(0,0x8e) => match self.onboard_polling {
+                Some(code) if size==2 && a[0]==1 => ok(vec![1,code]),
+                _ => (NotSupported,vec![]),
+            },
+            c if c == Command::new(0,0x0e) => match self.onboard_polling {
+                Some(_) if size==2 && a[0]==1 && crate::onboard::polling_hz(a[1]).is_some() => {
+                    self.onboard_polling=Some(a[1]);ok(a[..2].to_vec())
+                },
+                _ => (NotSupported,vec![]),
+            },
             c if c == cmd::POLLING.get() => ok(vec![self.polling_code]),
             cmd::POLLING => {
                 if cmd::polling_hz(a[0]).is_none() {
@@ -378,6 +448,54 @@ impl SimState {
                     }
                 }
             }
+            c if c.class==0x0b && matches!(c.id,0x90|0x91|0x10|0x11|0x93|0x13) => {
+                if let Some((state,mode,curve))=&mut self.sensor_dynamic {
+                    if matches!(c.id,0x90|0x91|0x10|0x11) && size==2 && a[0]==1 {
+                        match c.id {0x90=>ok(vec![1,*state]),0x91=>ok(vec![1,*mode]),0x10 if a[1]<=1=>{*state=a[1];ok(a[..2].to_vec())},0x11=>{*mode=a[1];ok(a[..2].to_vec())},_=>(Failed,vec![])}
+                    } else if size==37 && a[..3]==[1,3,250] && a[4]>0 && a[4]<=8 && usize::from(a[3])+usize::from(a[4])<=250 && curve.len()==1000 {
+                        let start=usize::from(a[3])*4;let end=start+usize::from(a[4])*4;
+                        if c.id==0x93 {let mut result=a[..37].to_vec();result[5..5+end-start].copy_from_slice(&curve[start..end]);ok(result)}
+                        else if self.fail_next_dynamic_curve {self.fail_next_dynamic_curve=false;(Failed,vec![])}
+                        else {curve[start..end].copy_from_slice(&a[5..5+end-start]);ok(a[..37].to_vec())}
+                    } else {(Failed,vec![])}
+                } else {(NotSupported,vec![])}
+            },
+            c if c == cmd::PROXIMITY_STATE.get() => match self.sensor_calibration {
+                Some(raw) if size==3 && a[..2]==[0,4] => ok(vec![0,4,raw[0]]),
+                _ => (NotSupported,vec![]),
+            },
+            c if c == cmd::PROXIMITY_LIFT.get() => match self.sensor_calibration {
+                Some(raw) if size==4 && a[..2]==[0,4] => ok(vec![0,4,raw[1],raw[2]]),
+                _ => (NotSupported,vec![]),
+            },
+            cmd::PROXIMITY_STATE => match &mut self.sensor_calibration {
+                Some(raw) if size==3 && a[..2]==[0,4] && a[2]<=1 => { raw[0]=a[2];ok(a[..3].to_vec()) },
+                _ => (NotSupported,vec![]),
+            },
+            cmd::PROXIMITY_LIFT => {
+                if self.fail_next_calibration_lift {
+                    self.fail_next_calibration_lift=false;
+                    (Failed,vec![])
+                } else {
+                    match &mut self.sensor_calibration {
+                        Some(raw) if size==4 && a[..2]==[0,4] => { raw[1]=a[2];raw[2]=a[3];ok(a[..4].to_vec()) },
+                        _ => (NotSupported,vec![]),
+                    }
+                }
+            },
+            c if c == cmd::CRITICAL_LEVEL.get() => match (self.critical_threshold, size) {
+                (Some(raw), 1) => ok(vec![raw]),
+                (None, _) => (NotSupported, vec![]),
+                _ => (Failed, vec![]),
+            },
+            cmd::CRITICAL_LEVEL => match (self.critical_threshold, size) {
+                (Some(_), 1) => {
+                    self.critical_threshold = Some(a[0]);
+                    ok(vec![a[0]])
+                }
+                (None, _) => (NotSupported, vec![]),
+                _ => (Failed, vec![]),
+            },
             c if c == cmd::IDLE_TIME.get() => match self.idle_seconds {
                 Some(secs) => ok(secs.to_be_bytes().to_vec()),
                 None => (NotSupported, vec![]),
@@ -514,6 +632,12 @@ impl SimState {
             cmd::LED_STATE | cmd::LED_RGB | cmd::LED_EFFECT | cmd::LED_BRIGHTNESS if !known(self, a[1]) => {
                 (Failed, vec![])
             }
+            c if c == cmd::LED_STATE.get() => {
+                if size != 3 || a[0] != 0 || !known(self, a[1]) {
+                    return (Failed, vec![]);
+                }
+                ok(vec![0, a[1], u8::from(self.led_on.get(&a[1]).copied().unwrap_or(false))])
+            }
             cmd::LED_STATE => {
                 self.led_on.insert(a[1], a[2] != 0);
                 ok(a[..3].to_vec())
@@ -649,6 +773,7 @@ impl Sim {
         s.leds = vec![5];
         s.matrix = Some((6, 22, vec![[0; 3]; 6 * 22]));
         s.game_mode = Some(0);
+        s.device_mode = Some(0);
         with_keys(&mut s);
         Sim::new(s)
     }
@@ -683,7 +808,8 @@ impl Sim {
     /// Open as a [`Device`], probing the txid like real discovery does.
     pub fn open(&self, pid: u16, spec: Option<DeviceSpec>) -> Option<Device> {
         let path = CString::new(format!("sim:{pid:04X}")).expect("no NUL");
-        Device::open(Box::new(self.clone()), pid, 0, path, &TXID_CANDIDATES, spec)
+        let interface = spec.as_ref().and_then(|spec| spec.interface).unwrap_or(0);
+        Device::open(Box::new(self.clone()), pid, interface, path, &TXID_CANDIDATES, spec)
     }
 }
 
@@ -697,6 +823,10 @@ impl Transport for Sim {
         let req = Report(body);
         let mut s = self.state();
         let command = req.command();
+        if !s.available || s.unavailable_commands.contains(&command) {
+            s.reply = None;
+            return Err(Error::NoReply(command));
+        }
 
         let to_dock = req.txid() == crate::device::DOCK_TXID && req.txid() != s.txid && s.dock_light.is_some();
         if req.txid() != s.txid && !to_dock {
@@ -712,6 +842,11 @@ impl Transport for Sim {
             s.handle(command, req.args(), body[5])
         };
         let mut reply = Report::request(req.txid(), command, body[5], &args);
+        if command == Command::new(0, 0x86) && status == Status::Success {
+            // The observed device declares two bytes even though the source
+            // request declares three. Do not turn padding into firmware ID.
+            reply.0[5] = 2;
+        }
         reply.0[0] = match status {
             Status::New => 0,
             Status::Busy => 1,
@@ -766,14 +901,20 @@ pub fn from_env() -> Vec<Device> {
 }
 
 /// Every preset `SECBIRD_SIM=all` loads.
-pub const PRESETS: [&str; 14] =
-    ["mouse", "wireless", "keyboard", "old-keyboard", "naga", "cobra", "dock", "dock-v2", "hyperpolling", "blackwidow", "goliathus", "firefly", "blade", "base-station"];
+pub const PRESETS: [&str; 16] =
+    ["mouse", "wireless", "keyboard", "old-keyboard", "naga", "cobra", "dock", "dock-v2", "hyperpolling", "blackwidow", "goliathus", "firefly", "blade", "base-station", "basilisk-v3", "basilisk-v3-pro"];
 
 /// A simulated device by name. The later ones copy devices users reported, under their real
 /// product ids, so the editor treats them exactly as it treats the hardware.
 pub fn preset(name: &str) -> Option<(Sim, u16)> {
     Some(match name {
         "mouse" => (Sim::mouse(), MOUSE_PID),
+        "basilisk-v3" | "basilisk-v3-pro" => {
+            let sim = Sim::mouse();
+            sim.state().wheel_controls = Some([0; 3]);
+            sim.state().active_slot = Some(1);
+            (sim, if name == "basilisk-v3" { 0x0099 } else { 0x00aa })
+        },
         "wireless" => (Sim::wireless_mouse(), WIRELESS_MOUSE_PID),
         "keyboard" => (Sim::keyboard(), KEYBOARD_PID),
         "old-keyboard" => (Sim::old_keyboard(), OLD_KEYBOARD_PID),
@@ -904,6 +1045,29 @@ mod tests {
     use crate::features::Rgb;
     use crate::profile::{Profile, Zone};
 
+    #[test]
+    fn explicit_ornata_identity_mock_preserves_two_declared_bytes_without_sets() {
+        let sim = Sim::keyboard();
+        let mut device = sim.open(605, crate::Db::builtin().unwrap().get(605).cloned()).unwrap();
+        device.interface = 2;
+        device.enforce_query_only();
+        assert!(matches!(device.ornata_edition_readback(), Err(Error::Device { status: Status::NotSupported, .. })));
+        let before_mode = sim.state().device_mode;
+        let before_brightness = sim.state().brightness.clone();
+        for tuple in [[6, 0], [250, 251]] {
+            sim.state().ornata_layout_edition = Some(tuple);
+            sim.state().log.clear();
+            let observed = device.ornata_edition_readback().unwrap();
+            assert_eq!(observed.declared_args(), tuple);
+            assert_eq!(observed.declared_size(), 2);
+            assert_eq!(observed.firmware_id(), None);
+            let state = sim.state();
+            assert_eq!(state.log, [Command::new(0, 0x86)]);
+            assert_eq!(state.device_mode, before_mode);
+            assert_eq!(state.brightness, before_brightness);
+        }
+    }
+
     fn open(sim: &Sim, pid: u16) -> Device {
         sim.open(pid, Sim::spec_for(pid)).expect("simulator answers")
     }
@@ -1031,19 +1195,19 @@ mod tests {
         let sim = Sim::mouse();
         let dev = open(&sim, MOUSE_PID);
         let read = dev.dpi_stages().unwrap();
-        assert_eq!(read, DpiStages { active: 2, stages: vec![(400, 400), (800, 800), (1000, 1000), (1300, 1300), (6400, 6400)] });
+        assert_eq!(read, DpiStages { active: 2, stages: vec![(400, 400), (800, 800), (1000, 1000), (1300, 1300), (6400, 6400)], ..Default::default() });
 
-        let want = DpiStages { active: 3, stages: vec![(450, 450), (1234, 1234), (30000, 26050)] };
+        let want = DpiStages { active: 3, stages: vec![(450, 450), (1234, 1234), (30000, 26050)], ..Default::default() };
         let sent = dev.set_dpi_stages(&want).unwrap();
         assert_eq!(sent.stages, [(450, 450), (1250, 1250), (26000, 26000)], "snapped to the 26000 max");
         assert_eq!(dev.dpi_stages().unwrap(), sent);
         assert_eq!(dev.dpi().unwrap(), (26000, 26000), "mouse moved to the active stage");
 
         for bad in [
-            DpiStages { active: 1, stages: vec![] },
-            DpiStages { active: 1, stages: vec![(800, 800); 6] },
-            DpiStages { active: 0, stages: vec![(800, 800)] },
-            DpiStages { active: 2, stages: vec![(800, 800)] },
+            DpiStages { active: 1, stages: vec![], ..Default::default() },
+            DpiStages { active: 1, stages: vec![(800, 800); 6], ..Default::default() },
+            DpiStages { active: 0, stages: vec![(800, 800)], ..Default::default() },
+            DpiStages { active: 2, stages: vec![(800, 800)], ..Default::default() },
         ] {
             assert!(matches!(dev.set_dpi_stages(&bad), Err(Error::InvalidArg(_))), "{bad:?}");
         }
@@ -1056,7 +1220,7 @@ mod tests {
         let sim = Sim::mouse();
         let dev = open(&sim, MOUSE_PID);
         let mut store = crate::Store::default();
-        let stages = DpiStages { active: 1, stages: vec![(500, 500), (1500, 1500)] };
+        let stages = DpiStages { active: 1, stages: vec![(500, 500), (1500, 1500)], ..Default::default() };
         // A store with no path can't save; record by hand what actions::set_dpi_stages would.
         let p = store.for_device(&dev).active_mut();
         p.dpi_stages = Some(stages.clone());
@@ -1558,22 +1722,28 @@ mod tests {
     }
 
     #[test]
-    fn gaming_mode_blocks_keys_and_is_kept_in_the_profile() {
+    fn ornata_gaming_mode_refuses_unproven_firmware_mask_without_saving_or_io() {
         use crate::GameMode;
         let sim = Sim::keyboard();
-        let dev = open(&sim, KEYBOARD_PID);
-        assert_eq!(dev.game_mode().unwrap(), Some(GameMode::default()));
-        let path = std::env::temp_dir().join(format!("secbird-gaming-{}.json", std::process::id()));
+        let dev = crate::Device::open(Box::new(sim.clone()), 605, 2,
+            std::ffi::CString::new("sim-ornata-gaming").unwrap(), &[0xff],
+            Sim::spec_for(KEYBOARD_PID)).unwrap();
+        sim.state().log.clear();
+        assert!(dev.game_mode().is_err());
+        let path = std::env::temp_dir().join(format!("secbird-gaming-{}-{}.json", std::process::id(),
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
         let mut store = crate::Store::load(&path).unwrap();
-        let want: GameMode = "win,alt-tab".parse().unwrap();
-        crate::actions::set_game_mode(&dev, &mut store, want).unwrap();
-        let _ = std::fs::remove_file(&path);
-        assert_eq!(sim.state().game_mode, Some(1 | 4 | 8), "Synapse's bits");
-        assert_eq!(dev.game_mode().unwrap(), Some(want));
-        assert_eq!(store.for_device(&dev).active_mut().game_mode.as_deref(), Some("win,alt-tab"));
-
-        dev.set_game_mode(GameMode::default()).unwrap();
-        assert_eq!(sim.state().game_mode, Some(0), "off is all bits clear");
+        store.for_device(&dev);
+        let before = serde_json::to_value(&store).unwrap();
+        for want in ["off", "win", "alt-tab", "alt-f4", "win,alt-tab,alt-f4"] {
+            let mode: GameMode = want.parse().unwrap();
+            assert!(dev.set_game_mode(mode).is_err());
+            assert!(crate::actions::set_game_mode(&dev, &mut store, mode).is_err());
+        }
+        assert_eq!(serde_json::to_value(&store).unwrap(), before);
+        assert!(sim.state().log.is_empty(), "No GET or SET before unsupported result");
+        assert_eq!(sim.state().game_mode, Some(0));
+        assert!(!path.exists(), "A refused action must not create a profile store");
         assert_eq!(GameMode::default().to_string(), "off");
         assert_eq!("off".parse::<GameMode>().unwrap(), GameMode::default());
         assert!("ctrl".parse::<GameMode>().is_err());
@@ -1659,8 +1829,8 @@ mod tests {
         let sim = Sim::mouse();
         let dev = open(&sim, MOUSE_PID);
         let mut p = Profile { dpi: Some((3200, 3200)), polling: Some(125), ..Default::default() };
-        p.lighting.insert("logo".into(), Zone { color: Some(Rgb(255, 0, 0)), off: false, brightness: Some(100), effect: None });
-        p.lighting.insert("underglow".into(), Zone { color: None, off: true, brightness: None, effect: None });
+        p.lighting.insert("logo".into(), Zone { color: Some(Rgb(255, 0, 0)), off: false, brightness: Some(100), effect: None, ..Default::default() });
+        p.lighting.insert("underglow".into(), Zone { color: None, off: true, brightness: None, effect: None, ..Default::default() });
         let results = p.apply(&dev);
         assert!(results.iter().all(|r| r.result.is_ok()), "{:?}", results.iter().map(|r| &r.result).collect::<Vec<_>>());
         let s = sim.state();

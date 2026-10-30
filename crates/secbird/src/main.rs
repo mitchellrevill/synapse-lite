@@ -1,10 +1,41 @@
 use secbird_core::{actions, config_dir, discover, hidapi::HidApi, Db, Device, Error, Rgb, Store};
 use std::process::ExitCode;
 
+#[cfg(windows)]
+mod control_probe;
+mod studio_files;
+mod catalog_files;
+mod profile_files;
+mod macro_files;
+mod linked_game_files;
+
 const USAGE: &str = "\
-Secretarybird - minimal control for Razer peripherals
+Synapse Lite - device controls based on Secretarybird beta
 
 USAGE: secbird [-d PID] <command> [args]
+
+LOCAL FILES (does not open hardware or apply device settings):
+  source-macro list PROFILE_DOCUMENT
+                            List saved macro names, GUIDs and references
+  source-macro plan PROFILE_DOCUMENT BINDING_JSON NEW_OUTPUT
+                            Prepare saved GUI macro events for inspection;
+                            does not open hardware, run input or install profiles
+  profiles inspect-archive FILE  Inspect stored ZIP members; no conversion or activation
+
+  linked-games preview BACKUP SOURCE SELECTIONS
+  linked-games prepare BACKUP SOURCE SELECTIONS NEW_OUTPUT
+                            Offline explicit GUID migration; never installs the store
+
+STUDIO FILES (local interchange only; does not apply lighting):
+  profiles recover-macros NATIVE_BACKUP SOURCE_EXPORT EXACT_DEVICE_KEY NEW_OUTPUT
+                            Attach verified referenced macro definitions to a new backup;
+                            does not activate profiles, run macros or install the store
+  catalog inspect FILE      Inspect a local Razer catalogue without opening hardware
+  studio inspect FILE       List compositions in a JSON-v1 .ChromaEffects file
+  studio starlight FILE NUMBER LAYER_ID
+                            Inspect prepared Starlight region descriptors (no playback)
+  studio export INPUT OUTPUT all|NUMBER...
+                            Export selected compositions to a new file (1-based numbers)
 
 DEVICE:
   list                      Connected devices
@@ -16,6 +47,10 @@ DEVICE:
                             (apps.razer.com); never installs anything
   report [--json]           Read-only description of connected Razer hardware, to share
                             when a device is missing or misbehaves (serials shortened)
+  driver-control list       List installed RZCONTROL interfaces (Windows, read-only)
+  driver-control probe N [LIMIT]
+                            Read up to LIMIT hook selectors on interface N (1..64)
+                            in a supervised child; no hooks or input writes
   dock-test <red|spectrum|battery|off>
                             Test: set a mouse dock's own light once (#39)
 
@@ -81,15 +116,19 @@ MACROS (stored on the device, shared by all profiles):
 PROFILES:
   profile [list]            Profiles for this device (* = active)
   profile new <name>        New profile, copied from the active one
+  profile rename <old> <new> Rename a profile without changing its settings
   profile use <name>        Switch to a profile and apply it
   profile delete <name>     Delete a profile
   profile show [name]       Settings stored in a profile
   profile apps <name> [program ...]
                             Switch to <name> while one of these programs is in front
                             (e.g. cs2.exe); no programs clears the list
+  profile paths <name> [absolute.exe ...]
+                            Link exact executable locations; no paths clears only these links
   apply                     Re-send the active profile to the device
   export <file>             Save all profiles of all devices to a file
-  import <file>             Add profiles from an exported file (keeps yours)
+  export-synapse4 <file>     Re-export a selected device's imported Synapse 4 profiles
+  import <file>             Import Secretarybird JSON or Synapse 4 (keeps yours)
 
 CLEANUP (Razer's background services and startup entries; drivers are never touched):
   debloat                   Show what Razer runs in the background (changes nothing)
@@ -107,7 +146,7 @@ OPTIONS:
 Set SECBIRD_SIM=all (or a list: mouse,wireless,keyboard,old-keyboard,naga,cobra,dock,blackwidow,
 goliathus,firefly,blade,base-station) to add simulated devices (no hardware needed).
 
-Files live in %APPDATA%\\Secretarybird (profiles.json, devices.json).
+Files live in %APPDATA%\\SynapseLite (profiles.json, devices.json).
 ";
 
 fn main() -> ExitCode {
@@ -145,6 +184,26 @@ fn run(mut args: Vec<String>) -> Result<(), Error> {
         return Ok(());
     }
 
+    if command == "studio" {
+        if selector.is_some() { return Err(Error::InvalidArg("studio file commands do not use -d".into())); }
+        return studio_files::run(&args[1..]);
+    }
+    if command == "linked-games" {
+        if selector.is_some() { return Err(Error::InvalidArg("Linked Games file commands do not use -d".into())); }
+        return linked_game_files::run(&args[1..]);
+    }
+    if command == "catalog" {
+        if selector.is_some() { return Err(Error::InvalidArg("catalog file commands do not use -d".into())); }
+        return catalog_files::run(&args[1..]);
+    }
+    if command == "profiles" {
+        if selector.is_some(){return Err(Error::InvalidArg("profiles file commands require an exact stored key, without -d".into()));}
+        return profile_files::run(&args[1..]);
+    }
+    if command == "source-macro" {
+        if selector.is_some() { return Err(Error::InvalidArg("source-macro file commands do not use -d".into())); }
+        return macro_files::run(&args[1..]);
+    }
     if command == "update" {
         match secbird_core::update::check()? {
             Some(r) => println!("Secretarybird {} is out (you have {}).
@@ -156,26 +215,46 @@ Download: {}", r.version, secbird_core::update::CURRENT, r.url),
     if command == "debloat" {
         return debloat_cmd(&args[1..]);
     }
-    if command == "export" || command == "import" {
+    #[cfg(windows)]
+    if command == "driver-control" || command == "--driver-control-child" {
+        if selector.is_some() { return Err(Error::InvalidArg("driver-control uses the interface index from its list command, without -d".into())); }
+        return control_probe::run(&args[1..], command == "--driver-control-child");
+    }
+    if command == "export" || command == "import" || command == "export-synapse4" {
         let file = args.get(1).ok_or_else(|| Error::InvalidArg(format!("usage: {command} <file>")))?;
         let path = std::path::Path::new(file);
         let mut store = Store::load(&config_dir().join("profiles.json"))?;
-        if command == "export" {
-            let text = serde_json::to_string_pretty(&store).map_err(|e| Error::Db(e.to_string()))?;
-            std::fs::write(path, text).map_err(|e| Error::Db(format!("{file}: {e}")))?;
+        if command == "export-synapse4" {
+            let keys: Vec<_> = store.devices.keys().filter(|key| {
+                let (pid, serial) = key.split_once(':').unwrap_or((key, ""));
+                u16::from_str_radix(pid, 16).is_ok_and(|pid| selects(pid, key, serial))
+            }).collect();
+            if keys.len() != 1 {
+                return Err(Error::InvalidArg("choose exactly one saved device with -d PID or -d SERIAL".into()));
+            }
+            let report = secbird_core::profile_compat::export_synapse4(&store, keys[0])?;
+            std::fs::write(path, report.bytes).map_err(|e| Error::Db(format!("{file}: {e}")))?;
+            for warning in report.warnings { eprintln!("Preserved without translation: {warning}"); }
+            println!("Exported Synapse 4 profile document to {file}");
+        } else if command == "export" {
+            let bytes = store.native_bytes()?;
+            std::fs::write(path, bytes).map_err(|e| Error::Db(format!("{file}: {e}")))?;
             let count: usize = store.devices.values().map(|d| d.profiles.len()).sum();
             println!("Exported {count} profile(s) for {} device(s) to {file}", store.devices.len());
         } else {
             if !path.exists() {
                 return Err(Error::NotFound(file.clone()));
             }
-            let incoming = Store::load(path)?;
+            let incoming = read_profile_document(path)?;
             let connected: Vec<String> = match (HidApi::new(), Db::load(Some(&config_dir().join("devices.json")))) {
-                (Ok(api), Ok(db)) => discover(&api, &db).iter().map(Device::key).collect(),
+                (Ok(api), Ok(db)) => discover(&api, &db).iter().filter(|dev| selects(dev.pid, &dev.key(), &dev.serial)).map(Device::key).collect(),
                 _ => Vec::new(),
             };
-            let added = store.import_for(incoming, &connected);
+            incoming.store.validate_import_targets(&connected)?;
+            let added = store.import_for(incoming.store, &connected);
+            secbird_core::profile_compat::validate_store_budget(&store)?;
             store.save()?;
+            for warning in incoming.warnings { eprintln!("Preserved without translation: {warning}"); }
             println!("Imported {added} profile(s). Existing profiles were kept; clashing names got \"(imported)\".");
         }
         return Ok(());
@@ -363,7 +442,7 @@ Note: Razer Synapse is running ({}). It can overwrite these settings;", synapse.
                 None => 1,
             };
             let stages = values.iter().map(|v| parse_dpi(v)).collect::<Result<Vec<_>, _>>()?;
-            let sent = actions::set_dpi_stages(dev, &mut store, &secbird_core::DpiStages { active, stages })?;
+            let sent = actions::set_dpi_stages(dev, &mut store, &secbird_core::DpiStages { active, stages, ..Default::default() })?;
             let list: Vec<String> = sent.stages.iter().map(|(x, y)| if x == y { x.to_string() } else { format!("{x}x{y}") }).collect();
             println!("DPI stages set to {} (stage {} in use)", list.join(", "), sent.active);
             Ok(())
@@ -471,6 +550,18 @@ Note: Razer Synapse is running ({}). It can overwrite these settings;", synapse.
     }
 }
 
+fn read_profile_document(path: &std::path::Path) -> Result<secbird_core::profile_compat::ImportReport, Error> {
+    use std::io::Read;
+    let file = std::fs::File::open(path).map_err(|e| Error::Db(format!("{}: {e}", path.display())))?;
+    let mut bytes = Vec::new();
+    file.take(2 * 1024 * 1024 + 1).read_to_end(&mut bytes)
+        .map_err(|e| Error::Db(format!("{}: {e}", path.display())))?;
+    if bytes.len() > 2 * 1024 * 1024 {
+        return Err(Error::InvalidArg("Profile document exceeds 2 MiB".into()));
+    }
+    secbird_core::profile_compat::import_document(&bytes)
+}
+
 fn profile_cmd(dev: &Device, store: &mut Store, rest: &[String]) -> Result<(), Error> {
     let sub = rest.first().map(String::as_str).unwrap_or("list");
     let name = rest.get(1).map(String::as_str);
@@ -523,6 +614,7 @@ fn profile_cmd(dev: &Device, store: &mut Store, rest: &[String]) -> Result<(), E
                 let bright = z.brightness.map(|b| format!(", {b}%")).unwrap_or_default();
                 println!("  {zone:<10} {state}{bright}");
             }
+            if !p.app_paths.is_empty() { println!("  paths      {}",p.app_paths.join(", ")); }
             if !p.apps.is_empty() {
                 println!("  apps       {}", p.apps.join(", "));
             }
@@ -541,6 +633,15 @@ fn profile_cmd(dev: &Device, store: &mut Store, rest: &[String]) -> Result<(), E
             println!("Created profile '{name}' (copy of the active one). Switch with: secbird profile use {name}");
             Ok(())
         }
+        "rename" => {
+            let previous = name.ok_or_else(need_name)?;
+            let name = rest.get(2).ok_or_else(|| Error::InvalidArg("usage: profile rename <old> <new>".into()))?;
+            profiles.rename(previous, name.trim())?;
+            secbird_core::profile_compat::validate_store_budget(store)?;
+            store.save()?;
+            println!("Renamed profile '{previous}' to '{}'", name.trim());
+            Ok(())
+        }
         "use" => {
             let name = name.ok_or_else(need_name)?;
             profiles.switch(name)?;
@@ -548,6 +649,15 @@ fn profile_cmd(dev: &Device, store: &mut Store, rest: &[String]) -> Result<(), E
             store.save()?;
             println!("Active profile: {name}");
             report_apply(results)
+        }
+        "paths" => {
+            let name=name.ok_or_else(||Error::InvalidArg("usage: profile paths <name> [absolute.exe ...]".into()))?;
+            profiles.set_app_paths(name,&rest[2..])?;
+            let count=profiles.profiles[name].app_paths.len();
+            secbird_core::profile_compat::validate_store_budget(store)?;
+            store.save()?;
+            println!("Profile '{name}' has {count} exact executable link(s). Active selection was not changed.");
+            Ok(())
         }
         "apps" => {
             let name = name.ok_or_else(|| Error::InvalidArg("usage: profile apps <name> [program ...]".into()))?;

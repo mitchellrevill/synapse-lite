@@ -1,0 +1,193 @@
+{
+  "scope": "selected JS converter executed in isolated vm with stubbed AddEffect; no DLL, app, account, network or hardware access",
+  "cases": [
+    {
+      "input": {
+        "effect": 4,
+        "params": {
+          "colorStops": [
+            {
+              "Stop": 80,
+              "Color": 16711680
+            },
+            {
+              "Stop": 20,
+              "Color": 65280
+            }
+          ],
+          "duration": 37740
+        }
+      },
+      "output": {
+        "effect": 4,
+        "params": {
+          "Mode": 0,
+          "ColorStops": [
+            {
+              "Stop": 0,
+              "Color": 16711680
+            },
+            {
+              "Stop": 80,
+              "Color": 16711680
+            },
+            {
+              "Stop": 20,
+              "Color": 65280
+            },
+            {
+              "Stop": 100,
+              "Color": 65280
+            }
+          ],
+          "Duration": 37740,
+          "Cycles": -1,
+          "Pause": 0
+        }
+      }
+    },
+    {
+      "input": {
+        "effect": 4,
+        "params": {
+          "colorStops": [
+            {
+              "Stop": 0,
+              "Color": 1
+            },
+            {
+              "Stop": 50,
+              "Color": 2
+            },
+            {
+              "Stop": 50
+            },
+            {
+              "Stop": 100,
+              "Color": 3
+            }
+          ],
+          "duration": 18870
+        }
+      },
+      "output": {
+        "effect": 4,
+        "params": {
+          "Mode": 0,
+          "ColorStops": [
+            {
+              "Stop": 0,
+              "Color": 1
+            },
+            {
+              "Stop": 50,
+              "Color": 2
+            },
+            {
+              "Stop": 50,
+              "Color": 1677721600
+            },
+            {
+              "Stop": 100,
+              "Color": 3
+            }
+          ],
+          "Duration": 18870,
+          "Cycles": -1,
+          "Pause": 0
+        }
+      }
+    },
+    {
+      "input": {
+        "effect": 4,
+        "params": {
+          "duration": 37740
+        }
+      },
+      "output": {
+        "effect": 4,
+        "params": {
+          "Mode": 0,
+          "Duration": 37740,
+          "Cycles": -1,
+          "Pause": 0
+        }
+      }
+    },
+    {
+      "input": {
+        "effect": 8,
+        "params": {
+          "color2": 1122867
+        }
+      },
+      "output": {
+        "effect": 8,
+        "params": {
+          "Mode": 0,
+          "ColorStops": [
+            {
+              "Stop": 0,
+              "Color": 1122867
+            },
+            {
+              "Stop": 50,
+              "Color": 1122867
+            },
+            {
+              "Stop": 100,
+              "Color": 0
+            }
+          ],
+          "Rate": 160,
+          "Seed": 100,
+          "Cycles": -1
+        }
+      }
+    },
+    {
+      "input": {
+        "effect": 8,
+        "params": {
+          "color": 0
+        }
+      },
+      "output": {
+        "effect": 8,
+        "params": {
+          "Mode": 0,
+          "ColorStops": [
+            {
+              "Stop": 0,
+              "Color": 0
+            },
+            {
+              "Stop": 50,
+              "Color": 1677721600
+            },
+            {
+              "Stop": 100,
+              "Color": 0
+            }
+          ],
+          "Rate": 160,
+          "Seed": 100,
+          "Cycles": -1
+        }
+      }
+    },
+    {
+      "input": {
+        "effect": 6,
+        "params": {}
+      },
+      "output": {
+        "effect": 6,
+        "params": {
+          "Color": 1677721600
+        }
+      }
+    }
+  ]
+}

@@ -80,6 +80,11 @@ pub const DPI_STAGES: Command = Command::new(0x04, 0x06);
 pub const DPI_STAGES_SIZE: u8 = 0x26;
 pub const MAX_DPI_STAGES: usize = 5;
 
+/// DeathAdder V3 HyperSpeed low-power threshold, a raw 0..255 battery fraction.
+/// Source middleware uses GET 07:81, SET 07:01, one argument byte.
+pub const CRITICAL_LEVEL: Command = Command::new(0x07, 0x01);
+pub const CRITICAL_LEVEL_SIZE: u8 = 0x01;
+
 /// Seconds idle before a wireless device sleeps: `[hi, lo]`. GET seen in user reports.
 pub const IDLE_TIME: Command = Command::new(0x07, 0x03);
 pub const IDLE_TIME_SIZE: u8 = 0x02;
@@ -92,9 +97,10 @@ pub const AUTO_SLEEP_SIZE: u8 = 0x02;
 /// `[profile 1, enabled, level]`).
 pub const SMART_DIMMING: Command = Command::new(0x07, 0x13);
 pub const SMART_DIMMING_SIZE: u8 = 0x03;
-/// Keyboards: gaming mode, `[bits, ...]` (Synapse's "Game Mode State"; reply `[bits, key
-/// cover, lifted, 0]`). Bits from Synapse's `getGameModeBit`: 1 on, 4 Windows key, 8 Alt+Tab,
-/// 16 Alt+F4 blocked.
+/// Generic SDK Game Mode State command; reply includes gameMode/keyCover/lifted.
+/// `getGameModeBit` is a host profile fingerprint, not an established firmware
+/// shortcut mask. Ornata025D uses host mappings and a separate gaming LED command;
+/// its public GameMode API refuses this legacy shortcut projection before I/O.
 pub const GAME_MODE: Command = Command::new(0x00, 0x08);
 pub const GAME_MODE_SIZE: u8 = 0x04;
 
@@ -167,6 +173,9 @@ pub const KEY_IDS: Command = Command::new(0x02, 0x8F);
 /// Only newer mice have it; Synapse rotates in software on the rest.
 pub const SENSOR_ANGLE: Command = Command::new(0x0B, 0x14);
 pub const SENSOR_ANGLE_SIZE: u8 = 0x03;
+/// Selected196 Orca5Plus sensor registers: class0, Avago sensor4.
+pub const PROXIMITY_STATE: Command = Command::new(0x0B, 0x03);
+pub const PROXIMITY_LIFT: Command = Command::new(0x0B, 0x0B);
 /// Button slot 0 is live and unsaved, and wins over the saved profile slots 1-5.
 /// Verified (Basilisk V3): a remap in slot 0 took effect while slot 1 was active.
 pub const BUTTON_LIVE_SLOT: u8 = 0x00;

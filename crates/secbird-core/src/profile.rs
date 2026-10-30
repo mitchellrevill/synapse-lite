@@ -1,7 +1,7 @@
 //! Named settings profiles, kept per device and re-applied on demand.
 //!
-//! Every setting the user changes is recorded in the device's active profile, so the
-//! store always mirrors what was last sent to the hardware.
+//! Profile settings are recorded in the active profile. Device-wide Power preferences
+//! live beside the profiles and are not replayed when the active profile changes.
 
 use crate::device::Device;
 use crate::error::{Error, Result};
@@ -10,10 +10,19 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
+mod storage;
+mod navigation;
+pub use navigation::NavigationStatus;
+mod applications;
+pub use applications::{normalize_app_path, foreground_app_identity};
+
 pub const DEFAULT_PROFILE: &str = "Default";
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Zone {
+    /// Fields introduced by a newer compatible editor are retained on every save.
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, serde_json::Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color: Option<Rgb>,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
@@ -28,12 +37,23 @@ pub struct Zone {
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Profile {
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub snap_tap: Option<crate::snap_tap::Settings>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dynamic_sensitivity: Option<crate::dynamic_sensitivity::DynamicSensitivity>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rotation: Option<crate::dynamic_sensitivity::Rotation>,
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, serde_json::Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dpi: Option<(u16, u16)>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub polling: Option<u32>,
     /// What the DPI button cycles through.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dpi_stages: Option<DpiStages>,
+    /// Synapse stage intent, including hidden rows and the stage-cycling switch.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub performance: Option<crate::performance::Performance>,
     /// Minutes idle before a wireless device sleeps.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sleep_minutes: Option<u16>,
@@ -45,12 +65,16 @@ pub struct Profile {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dimming: Option<String>,
     /// Keyboards: the keys gaming mode blocks (`off`, or like `win,alt-tab`), see
-    /// [`crate::GameMode`]. Per profile, so a profile tied to a game can turn it on.
+    /// [`crate::GameMode`]. Ornata retains this legacy projection but reports the
+    /// missing host mapping runtime instead of sending firmware shortcut bits.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub game_mode: Option<String>,
     /// Lighting zone name (or numeric id) -> state.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub lighting: BTreeMap<String, Zone>,
+    /// Source brightness enable/value and retained host switch-off policy flags.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lighting_settings: Option<crate::lighting::LightingSettings>,
     /// Per-key colors, row-major over the device's matrix. Empty when unused.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub keys: Vec<Rgb>,
@@ -58,6 +82,9 @@ pub struct Profile {
     /// profile while their window is in front.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub apps: Vec<String>,
+    /// Explicit absolute executable locations for local foreground profile switching.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub app_paths: Vec<String>,
     /// Button remaps: setting key (`side-forward`, `sniper/hypershift`, see
     /// [`crate::buttons::setting_key`]) -> action text (`key:ctrl+c`, `turbo:left@15`).
     /// Buttons not listed keep their saved on-board setting.
@@ -75,8 +102,25 @@ pub fn normalize_app(name: &str) -> String {
     }
 }
 
+/// Device-wide Power intent. It is not re-applied when the active profile changes.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct DevicePower {
+    #[serde(default, flatten)]
+    pub extra: BTreeMap<String, serde_json::Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub critical_threshold_percent: Option<u8>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceProfiles {
+    /// Installed-family register originals; never replayed by profile apply.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub onboard_settings: Option<crate::onboard::Recovery>,
+    /// Smart Tracking is device-wide, not part of named profile exports/replay.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sensor_calibration: Option<crate::mouse_sensor::CalibrationPreferences>,
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, serde_json::Value>,
     pub active: String,
     pub profiles: BTreeMap<String, Profile>,
     /// Leave this device's lighting to another app, across every profile.
@@ -85,12 +129,17 @@ pub struct DeviceProfiles {
     /// Button remaps written into the mouse's own memory with "Save to mouse".
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub onboard: Option<OnboardSave>,
+    /// Power settings shared by every profile for this physical device.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub power: Option<DevicePower>,
 }
 
 /// A profile's button remaps saved in one of the mouse's on-board slots, so they work
 /// without Secretarybird (on another PC, on Linux, before the tray starts, after sleep).
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct OnboardSave {
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, serde_json::Value>,
     /// The on-board slot written: the one active when saving (1-5).
     pub slot: u8,
     /// The profile saved, and its remaps as saved, to tell when it changed since.
@@ -106,10 +155,14 @@ pub struct OnboardSave {
 impl Default for DeviceProfiles {
     fn default() -> Self {
         Self {
+            extra: BTreeMap::new(),
             active: DEFAULT_PROFILE.into(),
+            sensor_calibration: None,
             profiles: BTreeMap::from([(DEFAULT_PROFILE.into(), Profile::default())]),
             lighting_off: false,
             onboard: None,
+            onboard_settings: None,
+            power: None,
         }
     }
 }
@@ -125,12 +178,36 @@ impl DeviceProfiles {
 
     /// Create `name` as a copy of the active profile.
     pub fn create(&mut self, name: &str) -> Result<()> {
+        if name.trim().is_empty() { return Err(Error::InvalidArg("profile name cannot be empty".into())); }
         if self.profiles.contains_key(name) {
             return Err(Error::InvalidArg(format!("profile '{name}' already exists")));
         }
         // A program belongs to one profile, so the copy starts without any.
-        let copy = Profile { apps: Vec::new(), ..self.active().clone() };
+        let mut copy = Profile { apps: Vec::new(), app_paths: Vec::new(), ..self.active().clone() };
+        crate::profile_compat::renew_profile_identity(&mut copy)?;
         self.profiles.insert(name.into(), copy);
+        Ok(())
+    }
+
+    /// Renaming changes identity labels, never device settings or recovery data.
+    pub fn rename(&mut self, previous: &str, name: &str) -> Result<()> {
+        if !self.profiles.contains_key(previous) {
+            return Err(Error::NotFound(format!("profile '{previous}'")));
+        }
+        if name.trim().is_empty() { return Err(Error::InvalidArg("profile name cannot be empty".into())); }
+        if previous == name { return Ok(()); }
+        if self.profiles.contains_key(name) {
+            return Err(Error::InvalidArg(format!("profile '{name}' already exists")));
+        }
+        let profile = self.profiles.remove(previous).expect("profile checked above");
+        self.profiles.insert(name.to_string(), profile);
+        if self.active == previous { self.active = name.to_string(); }
+        if let Some(onboard) = self.onboard.as_mut().filter(|saved| saved.profile == previous) {
+            onboard.profile = name.to_string();
+        }
+        if let Some(onboard) = self.onboard_settings.as_mut().filter(|saved| saved.profile == previous) {
+            onboard.profile = name.to_string();
+        }
         Ok(())
     }
 
@@ -152,9 +229,9 @@ impl DeviceProfiles {
         Ok(())
     }
 
-    /// The profile tied to a program (a normalized exe name), if any.
+    /// The profile tied to an exact executable location or legacy name, if any.
     pub fn for_app(&self, exe: &str) -> Option<&str> {
-        self.profiles.iter().find(|(_, p)| p.apps.iter().any(|a| a == exe)).map(|(n, _)| n.as_str())
+        applications::profile_for(self,exe)
     }
 
     /// The profile to show right now: the one tied to the program in front, else the active one.
@@ -256,8 +333,10 @@ impl DeviceProfiles {
 }
 
 /// All profiles on disk, keyed by device (`"0099:SERIAL"`, or `"0099"` without a serial).
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Store {
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, serde_json::Value>,
     #[serde(default)]
     pub devices: BTreeMap<String, DeviceProfiles>,
     #[serde(skip)]
@@ -265,21 +344,24 @@ pub struct Store {
 }
 
 impl Store {
+    /// Bounded native JSON for saving or lossless backup. Near the byte limit,
+    /// compact formatting preserves data that pretty whitespace would displace.
+    pub fn native_bytes(&self) -> Result<Vec<u8>> {
+        storage::encode(self)
+    }
+
+    /// Validate the exact persistence budget before a caller sends hardware SETs.
+    /// This performs no file operation or device access.
+    pub fn validate_save(&self) -> Result<()> {
+        self.native_bytes().map(drop)
+    }
+
     pub fn load(path: &Path) -> Result<Self> {
-        let mut store: Store = match std::fs::read_to_string(path) {
-            // Notepad and PowerShell 5 may save with a UTF-8 BOM.
-            Ok(text) => serde_json::from_str(text.trim_start_matches('\u{feff}'))
-                .map_err(|e| Error::Db(format!("{}: {e}", path.display())))?,
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Store::default(),
-            Err(e) => return Err(Error::Db(format!("{}: {e}", path.display()))),
-        };
-        store.path = path.to_path_buf();
-        store.rename_old_buttons();
-        Ok(store)
+        storage::load(path)
     }
 
     /// Button 128 was saved as `top-extra` before 0.5; it is the extra side button (#54).
-    fn rename_old_buttons(&mut self) {
+    pub(crate) fn rename_old_buttons(&mut self) {
         let rename = |map: &mut BTreeMap<String, String>| {
             let old: Vec<String> = map.keys().filter(|k| k.split('/').next() == Some("top-extra")).cloned().collect();
             for key in old {
@@ -298,14 +380,7 @@ impl Store {
 
     /// Write atomically: a crash mid-save never leaves a half-written file.
     pub fn save(&self) -> Result<()> {
-        let io = |e: std::io::Error| Error::Db(format!("{}: {e}", self.path.display()));
-        if let Some(dir) = self.path.parent() {
-            std::fs::create_dir_all(dir).map_err(io)?;
-        }
-        let tmp = self.path.with_extension("json.tmp");
-        let text = serde_json::to_string_pretty(self).map_err(|e| Error::Db(e.to_string()))?;
-        std::fs::write(&tmp, text).map_err(io)?;
-        std::fs::rename(&tmp, &self.path).map_err(io)
+        storage::save(self)
     }
 
     /// Add every profile from `other` (an export). A name that already exists for that
@@ -313,14 +388,47 @@ impl Store {
     /// profiles are left alone. Returns how many profiles were added.
     pub fn import(&mut self, other: Store) -> usize {
         let mut added = 0;
+        crate::profile_compat::merge_extensions(&mut self.extra, other.extra);
         for (key, incoming) in other.devices {
             let target = self.devices.entry(key).or_insert_with(|| DeviceProfiles {
+                extra: incoming.extra.clone(),
                 active: incoming.active.clone(),
                 profiles: BTreeMap::new(),
                 lighting_off: incoming.lighting_off,
                 // The only copy of what the mouse's slot held before a "Save to mouse".
                 onboard: incoming.onboard.clone(),
+                onboard_settings: incoming.onboard_settings.clone(),
+                power: incoming.power.clone(),
+                sensor_calibration: incoming.sensor_calibration.clone(),
             });
+            crate::profile_compat::merge_extensions(&mut target.extra, incoming.extra);
+            if let Some(incoming_power) = incoming.power {
+                match target.power.as_mut() {
+                    None => target.power = Some(incoming_power),
+                    Some(current) => {
+                        if current.critical_threshold_percent.is_some()
+                            && current.critical_threshold_percent != incoming_power.critical_threshold_percent
+                            && incoming_power.critical_threshold_percent.is_some()
+                        {
+                            // Keep current device intent; retain conflicting imported
+                            // configuration in the native backup without applying it.
+                            crate::profile_compat::merge_extensions(&mut target.extra,
+                                BTreeMap::from([("_synapseLiteImported:power".into(), serde_json::to_value(&incoming_power).expect("DevicePower serializes"))]));
+                        }
+                        crate::profile_compat::merge_extensions(&mut current.extra, incoming_power.extra);
+                        if current.critical_threshold_percent.is_none() {
+                            current.critical_threshold_percent = incoming_power.critical_threshold_percent;
+                        }
+                    }
+                }
+            }
+
+            if let Some(incoming_recovery) = incoming.onboard_settings {
+                if target.onboard_settings.as_ref() != Some(&incoming_recovery) {
+                    crate::profile_compat::merge_extensions(&mut target.extra,
+                        BTreeMap::from([("_synapseLiteImported:onboard_settings".into(), serde_json::to_value(incoming_recovery).expect("Recovery serializes"))]));
+                }
+            }
             for (name, profile) in incoming.profiles {
                 let mut unique = name.clone();
                 let mut n = 1;
@@ -341,15 +449,25 @@ impl Store {
     /// [`Store::import`] for a backup made on another PC. Devices are keyed by serial, so
     /// profiles saved for a unit that isn't connected here go to a connected device of the
     /// same model that the backup has nothing for (#40). `connected` are device keys.
+    pub fn validate_import_targets(&self, connected: &[String]) -> Result<()> {
+        for key in self.devices.keys().filter(|key| !connected.contains(key)) {
+            let targets = connected.iter().filter(|target| profile_family(target) == profile_family(key) && !self.devices.contains_key(*target)).count();
+            if targets > 1 {
+                return Err(Error::InvalidArg(format!("profile device '{key}' matches several connected devices; choose the target device explicitly")));
+            }
+        }
+        Ok(())
+    }
+
     pub fn import_for(&mut self, mut other: Store, connected: &[String]) -> usize {
-        let pid = |key: &str| key.split(':').next().unwrap_or(key).to_string();
         let keys: Vec<String> = other.devices.keys().cloned().collect();
         for key in keys.into_iter().filter(|k| !connected.contains(k)) {
-            let Some(target) = connected.iter().find(|c| pid(c) == pid(&key) && !other.devices.contains_key(*c)) else {
+            let targets: Vec<_> = connected.iter().filter(|c| profile_family(c) == profile_family(&key) && !other.devices.contains_key(*c)).collect();
+            let [target] = targets.as_slice() else {
                 continue;
             };
             if let Some(profiles) = other.devices.remove(&key) {
-                other.devices.insert(target.clone(), profiles);
+                other.devices.insert((*target).clone(), profiles);
             }
         }
         self.import(other)
@@ -360,6 +478,18 @@ impl Store {
     /// product id; the first device of that model to ask takes them over.
     pub fn profiles_for(&mut self, key: &str, pid: u16) -> &mut DeviceProfiles {
         let legacy = format!("{pid:04X}");
+        // A nonempty matching serial identifies the same physical DeathAdder
+        // across its two connection modes. Never merge unrelated units by PID.
+        if !self.devices.contains_key(key) {
+            if let Some((_, serial)) = key.split_once(':').filter(|(_, serial)| !serial.is_empty()) {
+                let peer = match pid { 0x00c4 => Some(0x00c5), 0x00c5 => Some(0x00c4), _ => None };
+                if let Some(peer) = peer {
+                    if let Some(profile) = self.devices.remove(&format!("{peer:04X}:{serial}")) {
+                        self.devices.insert(key.to_string(), profile);
+                    }
+                }
+            }
+        }
         if key != legacy && !self.devices.contains_key(key) {
             if let Some(old) = self.devices.remove(&legacy) {
                 self.devices.insert(key.to_string(), old);
@@ -378,8 +508,15 @@ impl Store {
 
     /// Every program tied to a profile of any device.
     pub fn apps(&self) -> std::collections::HashSet<String> {
-        self.devices.values().flat_map(|d| d.profiles.values()).flat_map(|p| p.apps.iter().cloned()).collect()
+        self.devices.values().flat_map(|d| d.profiles.values()).flat_map(|p|
+            p.apps.iter().map(|app|normalize_app(app)).filter(|app|!app.is_empty())
+            .chain(p.app_paths.iter().filter_map(|path|normalize_app_path(path).ok()))).collect()
     }
+}
+
+fn profile_family(key: &str) -> String {
+    let pid = key.split(':').next().unwrap_or(key).to_ascii_uppercase();
+    if matches!(pid.as_str(), "00C4" | "00C5") { "00C4".into() } else { pid }
 }
 
 /// Outcome of applying one setting from a profile.
@@ -390,6 +527,26 @@ pub struct Applied {
 }
 
 impl Profile {
+    /// Source Static semantics use the current native color projection. Native
+    /// per-key/off/effect overrides remain authoritative and are not re-enabled.
+    pub fn source_static_color(&self, pid: u16) -> Option<Rgb> {
+        if pid != 605
+            || !self.keys.is_empty()
+            || crate::profile_compat::source_quick_effects(self)?
+                .get("selectedEffectId")?
+                .as_u64()?
+                != 1
+        {
+            return None;
+        }
+        let zone = self.lighting.get("backlight")?;
+        if zone.off || zone.effect.is_some() {
+            None
+        } else {
+            zone.color
+        }
+    }
+
     /// Send every recorded setting to the device. Keeps going past individual failures.
     /// For stored profiles, use [`DeviceProfiles::apply`] to respect lighting ownership.
     pub fn apply(&self, dev: &Device) -> Vec<Applied> {
@@ -403,12 +560,19 @@ impl Profile {
         if let Some(hz) = self.polling {
             push(format!("polling {hz} Hz"), dev.set_polling_rate(hz));
         }
-        // Stages first: setting them also moves the mouse to the active stage's DPI.
-        if let Some(stages) = &self.dpi_stages {
-            push(format!("dpi stages ({})", stages.stages.len()), dev.set_dpi_stages(stages).map(|_| ()));
+        if let Some(intent)=&self.dynamic_sensitivity {
+            push("Dynamic Sensitivity".into(),dev.apply_dynamic_sensitivity(intent));
         }
-        if let Some((x, y)) = self.dpi {
-            push(format!("dpi {x}x{y}"), dev.set_dpi(x, y).map(|_| ()));
+        if let Some(performance) = &self.performance {
+            push("DPI stage intent".into(), performance.apply(dev).map(|_| ()));
+        } else {
+            // Legacy stages first: their active stage changes the current DPI.
+            if let Some(stages) = &self.dpi_stages {
+                push(format!("dpi stages ({})", stages.stages.len()), dev.set_dpi_stages(stages).map(|_| ()));
+            }
+            if let Some((x, y)) = self.dpi {
+                push(format!("dpi {x}x{y}"), dev.set_dpi(x, y).map(|_| ()));
+            }
         }
         if let Some(on) = self.auto_sleep {
             push(format!("auto sleep {}", if on { "on" } else { "off" }), dev.set_auto_sleep(on));
@@ -419,8 +583,52 @@ impl Profile {
         if let Some(d) = &self.dimming {
             push(format!("keyboard when idle: {d}"), d.parse().and_then(|d| dev.set_dimming(d)));
         }
-        if let Some(g) = &self.game_mode {
+        if dev.pid == 0x025d
+            && (self.game_mode.is_some() || crate::profile_compat::source_gaming_mode(self).is_some())
+        {
+            push("Gaming Mode".into(), Err(Error::Unsupported(
+                "Ornata Gaming Mode intent is retained; host shortcut blocking and recovery are not yet implemented".into(),
+            )));
+        } else if let Some(g) = &self.game_mode {
             push(format!("gaming mode: {g}"), g.parse().and_then(|g| dev.set_game_mode(g)));
+        }
+        if self.snap_tap.is_some() || crate::profile_compat::source_snap_tap(self).is_some() {
+            push("Snap Tap".into(), Err(Error::Unsupported(
+                "Snap Tap intent is retained; selected-device host input routing and recovery are not yet implemented".into(),
+            )));
+        }
+        // No firmware color/effect projection may brighten an old driver-mode
+        // frame before reporting the host-runtime limitation. Host shadows clear
+        // their handled color/effect fields; brightness/per-key-only paths stay
+        // separate. Preserve the prior source-Static wrong-interface refusal.
+        let firmware_projection = self
+            .lighting
+            .values()
+            .any(|zone| !zone.off && (zone.color.is_some() || zone.effect.is_some()));
+        let needs_mode_guard = self.source_static_color(dev.pid).is_some()
+            || (dev.pid == 605 && dev.interface == 2 && firmware_projection);
+        let lighting = if lighting && needs_mode_guard {
+            match dev.ornata_mode_readback() {
+                Ok(mode) if mode.mode() == 0 => true,
+                Ok(mode) => {
+                    push("Ornata firmware color/effect".into(),Err(Error::Unsupported(format!("Ornata firmware color/effect in mode{} requires the running tray host-frame runtime and an explicit supported host choice; lighting projection was not applied",mode.mode()))));
+                    false
+                }
+                Err(error) => {
+                    push("Ornata firmware lighting mode preflight".into(), Err(error));
+                    false
+                }
+            }
+        } else {
+            lighting
+        };
+        if lighting {
+            if let Some(settings) = &self.lighting_settings {
+                push("source brightness".into(), settings.apply_brightness(dev).map(|_| ()));
+                if settings.needs_runtime() {
+                    push("source idle/display lighting policy".into(), Err(Error::Unsupported("idle/display lighting policies require a running host runtime".into())));
+                }
+            }
         }
         for (name, zone) in self.lighting.iter().filter(|_| lighting) {
             let led = match dev.led_id(name) {
@@ -430,8 +638,10 @@ impl Profile {
                     continue;
                 }
             };
-            if let Some(pct) = zone.brightness {
-                push(format!("{name} brightness {pct}%"), dev.set_brightness(led, pct));
+            if name != "backlight" || self.lighting_settings.is_none() {
+                if let Some(pct) = zone.brightness {
+                    push(format!("{name} brightness {pct}%"), dev.set_brightness(led, pct));
+                }
             }
             if zone.off {
                 push(format!("{name} off"), dev.lights_off(led));
@@ -644,7 +854,7 @@ mod tests {
         dev.active_mut().polling = Some(500);
         dev.active_mut().lighting.insert(
             "logo".into(),
-            Zone { color: Some(Rgb(255, 0, 0)), off: false, brightness: Some(40), effect: None },
+            Zone { color: Some(Rgb(255, 0, 0)), off: false, brightness: Some(40), effect: None, ..Default::default() },
         );
         store.save().unwrap();
 
@@ -699,4 +909,116 @@ mod tests {
         // Nothing connected of that model: kept as it was, for when it's plugged in.
         assert!(mine.devices.contains_key("0084:UNPLUGGED"));
     }
+
+    #[test]
+    fn rename_keeps_recovery_data_and_profile_identity() {
+        let mut profiles = DeviceProfiles::default();
+        profiles.active_mut().extra.insert("future-setting".into(), serde_json::json!({"opaque": 42}));
+        profiles.onboard = Some(OnboardSave { profile: "Default".into(), before: BTreeMap::from([("left".into(), "default".into())]), ..Default::default() });
+        let original = profiles.active().clone();
+        let recovery = profiles.onboard.as_ref().unwrap().before.clone();
+        profiles.rename("Default", "Work").unwrap();
+        assert_eq!(profiles.active, "Work");
+        assert_eq!(profiles.active(), &original);
+        assert_eq!(profiles.onboard.as_ref().unwrap().profile, "Work");
+        assert_eq!(profiles.onboard.as_ref().unwrap().before, recovery);
+        profiles.create("Taken").unwrap();
+        assert!(profiles.rename("Work", "Taken").is_err());
+        assert!(profiles.rename("Work", "  ").is_err());
+        assert!(profiles.rename("Missing", "New").is_err());
+        assert_eq!(profiles.active, "Work");
+    }
+
+    #[test]
+    fn connection_modes_share_profiles_only_for_the_same_serial() {
+        let mut store = Store::default();
+        store.profiles_for("00C4:UNIT1", 0x00c4).active_mut().dpi = Some((800, 800));
+        assert_eq!(store.profiles_for("00C5:UNIT2", 0x00c5).active().dpi, None);
+        assert_eq!(store.profiles_for("00C5:UNIT1", 0x00c5).active().dpi, Some((800, 800)));
+        assert!(!store.devices.contains_key("00C4:UNIT1"));
+        assert!(store.devices.contains_key("00C5:UNIT2"));
+    }
+
+    #[test]
+    fn foreign_mouse_import_accepts_receiver_alias_and_rejects_ambiguous_units() {
+        let mut incoming = Store::default();
+        incoming.profiles_for("00C4:FOREIGN", 0x00c4).active_mut().dpi = Some((1200, 1200));
+        assert!(incoming.validate_import_targets(&["00C5:ONE".into(), "00C5:TWO".into()]).is_err());
+        let target = ["00C5:ONE".into()];
+        incoming.validate_import_targets(&target).unwrap();
+        let mut local = Store::default();
+        local.import_for(incoming, &target);
+        assert_eq!(local.devices["00C5:ONE"].active().dpi, Some((1200, 1200)));
+        assert!(!local.devices.contains_key("00C4:FOREIGN"));
+    }
 }
+
+#[cfg(test)]
+mod ornata_projection_guard_tests {
+    use super::*;
+    use crate::{
+        commands as cmd,
+        effects::Effect,
+        sim::{Sim, KEYBOARD_PID},
+    };
+    fn device(mode: Option<u8>) -> (Sim, Device) {
+        let sim = Sim::keyboard();
+        sim.state().device_mode = mode;
+        let mut dev = sim.open(605, Sim::spec_for(KEYBOARD_PID)).unwrap();
+        dev.interface = 2;
+        sim.state().brightness.insert(5, 255);
+        sim.state().live_brightness.insert(5, 255);
+        sim.state().log.clear();
+        (sim, dev)
+    }
+    fn profile(effect: bool) -> Profile {
+        let mut profile = Profile::default();
+        let zone = profile.lighting.entry("backlight".into()).or_default();
+        zone.brightness = Some(25);
+        if effect {
+            zone.effect = Some(Effect::Spectrum);
+        } else {
+            zone.color = Some(Rgb(1, 2, 3));
+        }
+        profile
+    }
+    #[test]
+    fn legacy_and_source_uniform_projection_refuse_driver_mode_before_brightness() {
+        for mode in [Some(3), None] {
+            for effect in [false, true] {
+                let (sim, dev) = device(mode);
+                let results = profile(effect).apply(&dev);
+                assert!(results.iter().any(|r| r.result.is_err()));
+                let state = sim.state();
+                assert_eq!(state.brightness[&5], 255);
+                assert!(!state.log.contains(&cmd::MATRIX_BRIGHTNESS));
+                assert!(!state.log.contains(&cmd::MATRIX_EFFECT));
+            }
+        }
+        let (sim, dev) = device(Some(3));
+        let profile = crate::profile_compat::new_native_profile(605, "Imported").unwrap();
+        let results = profile.apply(&dev);
+        assert!(results.iter().any(|r| r
+            .result
+            .as_ref()
+            .err()
+            .is_some_and(|e| e.to_string().contains("explicit supported host choice"))));
+        assert!(!sim.state().log.contains(&cmd::MATRIX_BRIGHTNESS));
+        assert!(!sim.state().log.contains(&cmd::MATRIX_EFFECT));
+    }
+    #[test]
+    fn normal_mode_and_brightness_only_keep_their_existing_projection() {
+        let (sim, dev) = device(Some(0));
+        assert!(profile(false).apply(&dev).iter().all(|r| r.result.is_ok()));
+        assert!(sim.state().log.contains(&cmd::MATRIX_BRIGHTNESS));
+        assert!(sim.state().log.contains(&cmd::MATRIX_EFFECT));
+        let (sim, dev) = device(Some(3));
+        let mut p = profile(false);
+        p.lighting.get_mut("backlight").unwrap().color = None;
+        assert!(p.apply(&dev).iter().all(|r| r.result.is_ok()));
+        assert!(!sim.state().log.contains(&cmd::DEVICE_MODE.get()));
+        assert!(sim.state().log.contains(&cmd::MATRIX_BRIGHTNESS));
+    }
+}
+
+pub mod backup;

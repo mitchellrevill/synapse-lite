@@ -10,7 +10,7 @@ use serde::Deserialize;
 const HOST: &str = "api.github.com";
 /// The version running now.
 pub const CURRENT: &str = env!("CARGO_PKG_VERSION");
-/// The public half of the key each installer is signed with (tools/sign-release.ps1, which
+/// The public half of the key each installer is signed with (the release signing tool, which
 /// keeps the private half off GitHub): P-256, X then Y. A GitHub account taken over can
 /// replace a release's files, but can't sign them.
 const SIGNING_KEY: &str = "59c20fc1f6cab033661b93ac0fdac277aa51f3f2f721a82ff127920e221a1b2d006dca701090e953e34cbf24990b3a2d967c72f9a7fbccb0a81fd0e2abeec37b";
@@ -204,7 +204,7 @@ mod tests {
         assert!(newer_than("0.4.0", moved).unwrap().is_some(), "the organization the repository moves to");
     }
 
-    /// Signed with the release key, the way tools/sign-release.ps1 signs.
+    /// Signed with the release key, the way the release signing tool signs.
     #[test]
     #[cfg(windows)]
     fn only_a_signed_installer_passes() {

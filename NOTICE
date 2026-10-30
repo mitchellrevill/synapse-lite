@@ -1,4 +1,9 @@
-Secretarybird contains no code or assets from Razer Inc.
+Synapse Lite is based on Secretarybird by infinityInfinite and contributors.
+The upstream MIT and Apache-2.0 licenses and authorship are retained.
+
+The public source tree excludes proprietary application bundles, fonts and device
+artwork. Optional local packs are provisioned separately. The custom Synapse Lite
+logo is project branding.
 
 crates/secbird-core/devices.json restates hardware facts (USB product ids, names,
 device types, DPI limits, lighting zones, key-grid sizes, lighting command set)
@@ -6,5 +11,5 @@ documented by the OpenRazer project (https://github.com/openrazer/openrazer,
 GPL-2.0), checkout 477f4d6 from 2026-10-05. The facts were extracted with
 tools/restate_openrazer.py; no OpenRazer code is included or executed.
 
-Razer, Synapse, Chroma and product names are trademarks of Razer Inc. Secretarybird
+Razer, Synapse, Chroma and product names are trademarks of Razer Inc. Synapse Lite
 is an independent project and is not affiliated with or endorsed by Razer.

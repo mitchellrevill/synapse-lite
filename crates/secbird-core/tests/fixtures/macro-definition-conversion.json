@@ -1,0 +1,9104 @@
+{
+  "parent_sha256": "fd20eeea9ac259a741c5deec4cc23f7e293cb99fa8ed658816af50bbd894941d",
+  "module": 13139,
+  "descriptor_module": 629,
+  "descriptor_table_sha256": "9fe2da05f5544766d98eab1ddd996a641c4f0a467ad118e2f0d2c8da2cec33ab",
+  "f_sha256": "345b2a35fd06f5e4371bdefcb9018e23deeeae4de868fecba4bf98112b3a3530",
+  "m_sha256": "ca583a9a4f21d72252384255a7f932d570bba3a2e906633fb36580f687847433",
+  "provenance": "Controlled replay of literal source descriptors and pure f/m functions only; no vendor bootstrap, native DLL, clipboard, program/browser or input execution.",
+  "cases": [
+    {
+      "name": "mouse-0-0",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 0,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 1
+        }
+      ]
+    },
+    {
+      "name": "mouse-0-1",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 0,
+          "State": 1
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 2
+        }
+      ]
+    },
+    {
+      "name": "mouse-0-null",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 0,
+          "State": null
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 2
+        },
+        {
+          "type": "mouse",
+          "id": 1
+        }
+      ]
+    },
+    {
+      "name": "mouse-1-0",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 1,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 4
+        }
+      ]
+    },
+    {
+      "name": "mouse-1-1",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 1,
+          "State": 1
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 8
+        }
+      ]
+    },
+    {
+      "name": "mouse-1-null",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 1,
+          "State": null
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 8
+        },
+        {
+          "type": "mouse",
+          "id": 4
+        }
+      ]
+    },
+    {
+      "name": "mouse-2-0",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 2,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 16
+        }
+      ]
+    },
+    {
+      "name": "mouse-2-1",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 2,
+          "State": 1
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 32
+        }
+      ]
+    },
+    {
+      "name": "mouse-2-null",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 2,
+          "State": null
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 32
+        },
+        {
+          "type": "mouse",
+          "id": 16
+        }
+      ]
+    },
+    {
+      "name": "mouse-3-0",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 3,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 64
+        }
+      ]
+    },
+    {
+      "name": "mouse-3-1",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 3,
+          "State": 1
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 128
+        }
+      ]
+    },
+    {
+      "name": "mouse-3-null",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 3,
+          "State": null
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 128
+        },
+        {
+          "type": "mouse",
+          "id": 64
+        }
+      ]
+    },
+    {
+      "name": "mouse-4-0",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 4,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 256
+        }
+      ]
+    },
+    {
+      "name": "mouse-4-1",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 4,
+          "State": 1
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 512
+        }
+      ]
+    },
+    {
+      "name": "mouse-4-null",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 4,
+          "State": null
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 512
+        },
+        {
+          "type": "mouse",
+          "id": 256
+        }
+      ]
+    },
+    {
+      "name": "mouse-5-0",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 5,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 1
+        },
+        {
+          "type": "mouse",
+          "id": 2
+        },
+        {
+          "type": "delay",
+          "ms": 10
+        },
+        {
+          "type": "mouse",
+          "id": 1
+        },
+        {
+          "type": "mouse",
+          "id": 2
+        }
+      ]
+    },
+    {
+      "name": "mouse-5-1",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 5,
+          "State": 1
+        }
+      },
+      "output": []
+    },
+    {
+      "name": "mouse-5-null",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 5,
+          "State": null
+        }
+      },
+      "output": []
+    },
+    {
+      "name": "mouse-6-0",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 6,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 2048,
+          "data": 65416
+        }
+      ]
+    },
+    {
+      "name": "mouse-6-1",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 6,
+          "State": 1
+        }
+      },
+      "output": []
+    },
+    {
+      "name": "mouse-6-null",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 6,
+          "State": null
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 2048,
+          "data": 65416
+        }
+      ]
+    },
+    {
+      "name": "mouse-7-0",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 7,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 2048,
+          "data": 120
+        }
+      ]
+    },
+    {
+      "name": "mouse-7-1",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 7,
+          "State": 1
+        }
+      },
+      "output": []
+    },
+    {
+      "name": "mouse-7-null",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 7,
+          "State": null
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 2048,
+          "data": 120
+        }
+      ]
+    },
+    {
+      "name": "mouse-8-0",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 8,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 1024,
+          "data": 120
+        }
+      ]
+    },
+    {
+      "name": "mouse-8-1",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 8,
+          "State": 1
+        }
+      },
+      "output": []
+    },
+    {
+      "name": "mouse-8-null",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 8,
+          "State": null
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 1024,
+          "data": 120
+        }
+      ]
+    },
+    {
+      "name": "mouse-9-0",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 9,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 1024,
+          "data": 65416
+        }
+      ]
+    },
+    {
+      "name": "mouse-9-1",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 9,
+          "State": 1
+        }
+      },
+      "output": []
+    },
+    {
+      "name": "mouse-9-null",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 9,
+          "State": null
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 1024,
+          "data": 65416
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_A",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 65,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 30,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 30,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_B",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 66,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 48,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 48,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_C",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 67,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 46,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 46,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_D",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 68,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 32,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 32,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_E",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 69,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 18,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 18,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_F",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 70,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 33,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 33,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_G",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 71,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 34,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 34,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_H",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 72,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 35,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 35,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_I",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 73,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 23,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 23,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_J",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 74,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 36,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 36,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_K",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 75,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 37,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 37,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_L",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 76,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 38,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 38,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_M",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 77,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 50,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 50,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_N",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 78,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 49,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 49,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_O",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 79,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 24,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 24,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_P",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 80,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 25,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 25,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_Q",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 81,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 16,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 16,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_R",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 82,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 19,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 19,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_S",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 83,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 31,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 31,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_T",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 84,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 20,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 20,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_U",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 85,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 22,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 22,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_V",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 86,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 47,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 47,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_W",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 87,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 17,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 17,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_X",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 88,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 45,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 45,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_Y",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 89,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 21,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 21,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_Z",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 90,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 44,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 44,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_0",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 48,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 11,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 11,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_1",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 49,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 2,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 2,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_2",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 50,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 3,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 3,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_3",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 51,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 4,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 4,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_4",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 52,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 5,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 5,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_5",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 53,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 6,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 6,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_6",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 54,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 7,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 7,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_7",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 55,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 8,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 8,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_8",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 56,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 9,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 9,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_9",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 57,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 10,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 10,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_F1",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 112,
+          "State": 0,
+          "Type": "Function"
+        },
+        "ScanCode": 59,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 59,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_F2",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 113,
+          "State": 0,
+          "Type": "Function"
+        },
+        "ScanCode": 60,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 60,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_F3",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 114,
+          "State": 0,
+          "Type": "Function"
+        },
+        "ScanCode": 61,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 61,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_F4",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 115,
+          "State": 0,
+          "Type": "Function"
+        },
+        "ScanCode": 62,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 62,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_F5",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 116,
+          "State": 0,
+          "Type": "Function"
+        },
+        "ScanCode": 63,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 63,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_F6",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 117,
+          "State": 0,
+          "Type": "Function"
+        },
+        "ScanCode": 64,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 64,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_F7",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 118,
+          "State": 0,
+          "Type": "Function"
+        },
+        "ScanCode": 65,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 65,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_F8",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 119,
+          "State": 0,
+          "Type": "Function"
+        },
+        "ScanCode": 66,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 66,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_F9",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 120,
+          "State": 0,
+          "Type": "Function"
+        },
+        "ScanCode": 67,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 67,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_F10",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 121,
+          "State": 0,
+          "Type": "Function"
+        },
+        "ScanCode": 68,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 68,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_F11",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 122,
+          "State": 0,
+          "Type": "Function"
+        },
+        "ScanCode": 87,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 87,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_F12",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 123,
+          "State": 0,
+          "Type": "Function"
+        },
+        "ScanCode": 88,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 88,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_F13",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 124,
+          "State": 0,
+          "Type": "Function"
+        },
+        "ScanCode": 100,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 100,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_F14",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 125,
+          "State": 0,
+          "Type": "Function"
+        },
+        "ScanCode": 101,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 101,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_F15",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 126,
+          "State": 0,
+          "Type": "Function"
+        },
+        "ScanCode": 102,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 102,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_F16",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 127,
+          "State": 0,
+          "Type": "Function"
+        },
+        "ScanCode": 103,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 103,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_F17",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 128,
+          "State": 0,
+          "Type": "Function"
+        },
+        "ScanCode": 104,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 104,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_F18",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 129,
+          "State": 0,
+          "Type": "Function"
+        },
+        "ScanCode": 105,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 105,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_F19",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 130,
+          "State": 0,
+          "Type": "Function"
+        },
+        "ScanCode": 106,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 106,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_F20",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 131,
+          "State": 0,
+          "Type": "Function"
+        },
+        "ScanCode": 107,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 107,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_F21",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 132,
+          "State": 0,
+          "Type": "Function"
+        },
+        "ScanCode": 108,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 108,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_F22",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 133,
+          "State": 0,
+          "Type": "Function"
+        },
+        "ScanCode": 109,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 109,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_F23",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 134,
+          "State": 0,
+          "Type": "Function"
+        },
+        "ScanCode": 110,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 110,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_F24",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 135,
+          "State": 0,
+          "Type": "Function"
+        },
+        "ScanCode": 118,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 118,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_NUMPAD_NUM_LOCK",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 144,
+          "State": 0,
+          "Type": "Numpad"
+        },
+        "ScanCode": 69,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 69,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_NUMPAD_0",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 96,
+          "State": 0,
+          "Type": "Numpad"
+        },
+        "ScanCode": 82,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 82,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_NUMPAD_1",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 97,
+          "State": 0,
+          "Type": "Numpad"
+        },
+        "ScanCode": 79,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 79,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_NUMPAD_2",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 98,
+          "State": 0,
+          "Type": "Numpad"
+        },
+        "ScanCode": 80,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 80,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_NUMPAD_3",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 99,
+          "State": 0,
+          "Type": "Numpad"
+        },
+        "ScanCode": 81,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 81,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_NUMPAD_4",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 100,
+          "State": 0,
+          "Type": "Numpad"
+        },
+        "ScanCode": 75,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 75,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_NUMPAD_5",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 101,
+          "State": 0,
+          "Type": "Numpad"
+        },
+        "ScanCode": 76,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 76,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_NUMPAD_6",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 102,
+          "State": 0,
+          "Type": "Numpad"
+        },
+        "ScanCode": 77,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 77,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_NUMPAD_7",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 103,
+          "State": 0,
+          "Type": "Numpad"
+        },
+        "ScanCode": 71,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 71,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_NUMPAD_8",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 104,
+          "State": 0,
+          "Type": "Numpad"
+        },
+        "ScanCode": 72,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 72,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_NUMPAD_9",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 105,
+          "State": 0,
+          "Type": "Numpad"
+        },
+        "ScanCode": 73,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 73,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_NUMPAD_SLASH",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 111,
+          "State": 0,
+          "Type": "Numpad"
+        },
+        "ScanCode": 53,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 53,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_NUMPAD_ASTERISK",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 106,
+          "State": 0,
+          "Type": "Numpad"
+        },
+        "ScanCode": 55,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 55,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_NUMPAD_DASH",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 109,
+          "State": 0,
+          "Type": "Numpad"
+        },
+        "ScanCode": 74,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 74,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_NUMPAD_PLUS",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 107,
+          "State": 0,
+          "Type": "Numpad"
+        },
+        "ScanCode": 78,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 78,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_NUMPAD_PERIOD",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 110,
+          "State": 0,
+          "Type": "Numpad"
+        },
+        "ScanCode": 83,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 83,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_NUMPAD_ENTER",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 13,
+          "State": 0,
+          "Type": "Numpad"
+        },
+        "ScanCode": 28,
+        "flag": 1
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 28,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_UP_ARROW",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 38,
+          "State": 0,
+          "Type": "Navigation"
+        },
+        "ScanCode": 72,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 72,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_DOWN_ARROW",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 40,
+          "State": 0,
+          "Type": "Navigation"
+        },
+        "ScanCode": 80,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 80,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_LEFT_ARROW",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 37,
+          "State": 0,
+          "Type": "Navigation"
+        },
+        "ScanCode": 75,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 75,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_RIGHT_ARROW",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 39,
+          "State": 0,
+          "Type": "Navigation"
+        },
+        "ScanCode": 77,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 77,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_UP_DPAD",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 38,
+          "State": 0,
+          "Type": "Navigation"
+        },
+        "ScanCode": 72,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 72,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_DOWN_DPAD",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 40,
+          "State": 0,
+          "Type": "Navigation"
+        },
+        "ScanCode": 80,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 80,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_LEFT_DPAD",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 37,
+          "State": 0,
+          "Type": "Navigation"
+        },
+        "ScanCode": 75,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 75,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_RIGHT_DPAD",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 39,
+          "State": 0,
+          "Type": "Navigation"
+        },
+        "ScanCode": 77,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 77,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_UP_RIGHT_ARROW",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 255,
+          "State": 0,
+          "Type": "Navigation"
+        },
+        "ScanCode": 0,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": null,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_UP_LEFT_ARROW",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 255,
+          "State": 0,
+          "Type": "Navigation"
+        },
+        "ScanCode": 0,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": null,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_DOWN_RIGHT_ARROW",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 255,
+          "State": 0,
+          "Type": "Navigation"
+        },
+        "ScanCode": 0,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": null,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_DOWN_LEFT_ARROW",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 255,
+          "State": 0,
+          "Type": "Navigation"
+        },
+        "ScanCode": 0,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": null,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_PAGE_UP",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 33,
+          "State": 0,
+          "Type": "Navigation"
+        },
+        "ScanCode": 73,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 73,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_PAGE_DOWN",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 34,
+          "State": 0,
+          "Type": "Navigation"
+        },
+        "ScanCode": 81,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 81,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_BACKSPACE",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 8,
+          "State": 0,
+          "Type": "Navigation"
+        },
+        "ScanCode": 14,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 14,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_TAB",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 9,
+          "State": 0,
+          "Type": "Navigation"
+        },
+        "ScanCode": 15,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 15,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_SPACEBAR",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 32,
+          "State": 0,
+          "Type": "Navigation"
+        },
+        "ScanCode": 57,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 57,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_ENTER",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 13,
+          "State": 0,
+          "Type": "Navigation"
+        },
+        "ScanCode": 28,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 28,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_ESC",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 27,
+          "State": 0,
+          "Type": "Navigation"
+        },
+        "ScanCode": 1,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 1,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_INSERT",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 45,
+          "State": 0,
+          "Type": "Navigation"
+        },
+        "ScanCode": 82,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 82,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_HOME",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 36,
+          "State": 0,
+          "Type": "Navigation"
+        },
+        "ScanCode": 71,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 71,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_DELETE",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 46,
+          "State": 0,
+          "Type": "Navigation"
+        },
+        "ScanCode": 83,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 83,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_END",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 35,
+          "State": 0,
+          "Type": "Navigation"
+        },
+        "ScanCode": 79,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 79,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_PRINT_SCREEN",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 44,
+          "State": 0,
+          "Type": "Navigation"
+        },
+        "ScanCode": 55,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 55,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_PAUSE",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 19,
+          "State": 0,
+          "Type": "Navigation"
+        },
+        "ScanCode": 29,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 29,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_CANCEL",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 3,
+          "State": 0,
+          "Type": "Navigation"
+        },
+        "ScanCode": 70,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 70,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_APPLICATION",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 93,
+          "State": 0,
+          "Type": "Navigation"
+        },
+        "ScanCode": 93,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 93,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_LEFT_CTRL",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 17,
+          "State": 0,
+          "Type": "Modifiers"
+        },
+        "ScanCode": 29,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 29,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_RIGHT_CTRL",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 17,
+          "State": 0,
+          "Type": "Modifiers"
+        },
+        "ScanCode": 29,
+        "flag": 2
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 29,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_LEFT_SHIFT",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 16,
+          "State": 0,
+          "Type": "Modifiers"
+        },
+        "ScanCode": 42,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 42,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_RIGHT_SHIFT",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 16,
+          "State": 0,
+          "Type": "Modifiers"
+        },
+        "ScanCode": 54,
+        "flag": 2
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 54,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_LEFT_ALT",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 18,
+          "State": 0,
+          "Type": "Modifiers"
+        },
+        "ScanCode": 56,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 56,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_RIGHT_ALT",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 18,
+          "State": 0,
+          "Type": "Modifiers"
+        },
+        "ScanCode": 56,
+        "flag": 2
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 56,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_LEFT_GUI",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 91,
+          "State": 0,
+          "Type": "Modifiers"
+        },
+        "ScanCode": 91,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 91,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_CAPS_LOCK",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 20,
+          "State": 0,
+          "Type": "Modifiers"
+        },
+        "ScanCode": 58,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 58,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_SCROLL_LOCK",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 145,
+          "State": 0,
+          "Type": "Modifiers"
+        },
+        "ScanCode": 70,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 70,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_TILDE",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 192,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 41,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 41,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-undefined",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 192,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 41,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 41,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-undefined",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 49,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 2,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 2,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-undefined",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 50,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 3,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 3,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_NON_US_POUND",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 51,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 43,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 43,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-undefined",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 52,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 5,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 5,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-undefined",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 53,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 6,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 6,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-undefined",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 54,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 7,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 7,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-undefined",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 55,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 8,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 8,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-undefined",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 56,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 9,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 9,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-undefined",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 57,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 10,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 10,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-undefined",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 48,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 11,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 11,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_HYPEN",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 189,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 12,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 12,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_EQUAL",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 187,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 13,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 13,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-undefined",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 189,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 12,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 12,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-undefined",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 187,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 13,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 13,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_OPEN_SQUARE_BRACKET",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 219,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 26,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 26,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_CLOSE_SQUARE_BRACKET",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 221,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 27,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 27,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_BACKSLASH",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 220,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 43,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 43,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-undefined",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 219,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 26,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 26,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-undefined",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 221,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 27,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 27,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-undefined",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 220,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 43,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 43,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_SEMICOLON",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 186,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 39,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 39,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_APOSTROPHE",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 222,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 40,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 40,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-undefined",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 186,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 39,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 39,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-undefined",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 222,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 40,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 40,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_COMMA",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 188,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 51,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 51,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_PERIOD",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 190,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 52,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 52,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_SLASH",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 191,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 53,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 53,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-undefined",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 190,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 52,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 52,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-undefined",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 191,
+          "State": 0,
+          "Type": "Symbols"
+        },
+        "ScanCode": 53,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 53,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_YEN",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 255,
+          "State": 0,
+          "Type": ""
+        },
+        "ScanCode": 125,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 125,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_RO",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 255,
+          "State": 0,
+          "Type": ""
+        },
+        "ScanCode": 115,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 115,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_MUHENKAN",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 255,
+          "State": 0,
+          "Type": ""
+        },
+        "ScanCode": 123,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 123,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_HENKAN",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 255,
+          "State": 0,
+          "Type": ""
+        },
+        "ScanCode": 121,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 121,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_KATAKANA_HIRAGANA",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 255,
+          "State": 0,
+          "Type": ""
+        },
+        "ScanCode": 112,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 112,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "descriptor-KEY_NON_US_BACKSLASH",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 226,
+          "State": 0,
+          "Type": ""
+        },
+        "ScanCode": 86,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 86,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_A-65",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 65,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 30,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_A-65",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 65,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 30,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_B-66",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 66,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 48,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_B-66",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 66,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 48,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_C-67",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 67,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 46,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_C-67",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 67,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 46,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_D-68",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 68,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 32,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_D-68",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 68,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 32,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_E-69",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 69,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 18,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_E-69",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 69,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 18,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_F-70",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 70,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 33,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_F-70",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 70,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 33,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_G-71",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 71,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 34,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_G-71",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 71,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 34,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_H-72",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 72,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 35,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_H-72",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 72,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 35,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_I-73",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 73,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 23,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_I-73",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 73,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 23,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_J-74",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 74,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 36,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_J-74",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 74,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 36,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_K-75",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 75,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 37,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_K-75",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 75,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 37,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_L-76",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 76,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 38,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_L-76",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 76,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 38,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_M-77",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 77,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 50,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_M-77",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 77,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 50,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_N-78",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 78,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 49,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_N-78",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 78,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 49,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_O-79",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 79,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 24,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_O-79",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 79,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 24,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_P-80",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 80,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 25,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_P-80",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 80,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 25,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_Q-81",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 81,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 16,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_Q-81",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 81,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 16,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_R-82",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 82,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 19,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_R-82",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 82,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 19,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_S-83",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 83,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 31,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_S-83",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 83,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 31,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_T-84",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 84,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 20,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_T-84",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 84,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 20,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_U-85",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 85,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 22,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_U-85",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 85,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 22,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_V-86",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 86,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 47,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_V-86",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 86,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 47,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_W-87",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 87,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 17,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_W-87",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 87,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 17,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_X-88",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 88,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 45,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_X-88",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 88,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 45,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_Y-89",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 89,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 21,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_Y-89",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 89,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 21,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_Z-90",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 90,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 44,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_Z-90",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 90,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 44,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_0-48",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 48,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 11,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_0-48",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 48,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 11,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_1-49",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 49,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 2,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_1-49",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 49,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 2,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_2-50",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 50,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 3,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_2-50",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 50,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 3,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_3-51",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 51,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 4,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_3-51",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 51,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 4,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_4-52",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 52,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 5,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_4-52",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 52,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 5,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_5-53",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 53,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 6,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_5-53",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 53,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 6,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_6-54",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 54,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 7,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_6-54",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 54,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 7,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_7-55",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 55,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 8,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_7-55",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 55,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 8,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_8-56",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 56,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 9,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_8-56",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 56,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 9,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_9-57",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 57,
+          "State": 0,
+          "Type": "Alphanumeric"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 10,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_9-57",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 57,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 10,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_F1-112",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 112,
+          "State": 0,
+          "Type": "Function"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 59,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_F1-112",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 112,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 59,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_F2-113",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 113,
+          "State": 0,
+          "Type": "Function"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 60,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_F2-113",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 113,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 60,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_F3-114",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 114,
+          "State": 0,
+          "Type": "Function"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 61,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_F3-114",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 114,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 61,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_F4-115",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 115,
+          "State": 0,
+          "Type": "Function"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 62,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_F4-115",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 115,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 62,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_F5-116",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 116,
+          "State": 0,
+          "Type": "Function"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 63,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_F5-116",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 116,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 63,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_F6-117",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 117,
+          "State": 0,
+          "Type": "Function"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 64,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_F6-117",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 117,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 64,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_F7-118",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 118,
+          "State": 0,
+          "Type": "Function"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 65,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_F7-118",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 118,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 65,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_F8-119",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 119,
+          "State": 0,
+          "Type": "Function"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 66,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_F8-119",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 119,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 66,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_F9-120",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 120,
+          "State": 0,
+          "Type": "Function"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 67,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_F9-120",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 120,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 67,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_F10-121",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 121,
+          "State": 0,
+          "Type": "Function"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 68,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_F10-121",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 121,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 68,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_F11-122",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 122,
+          "State": 0,
+          "Type": "Function"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 87,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_F11-122",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 122,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 87,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_F12-123",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 123,
+          "State": 0,
+          "Type": "Function"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 88,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_F12-123",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 123,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 88,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_F13-124",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 124,
+          "State": 0,
+          "Type": "Function"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 100,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_F13-124",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 124,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 100,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_F14-125",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 125,
+          "State": 0,
+          "Type": "Function"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 101,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_F14-125",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 125,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 101,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_F15-126",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 126,
+          "State": 0,
+          "Type": "Function"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 102,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_F15-126",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 126,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 102,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_F16-127",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 127,
+          "State": 0,
+          "Type": "Function"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 103,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_F16-127",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 127,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 103,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_F17-128",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 128,
+          "State": 0,
+          "Type": "Function"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 104,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_F17-128",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 128,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 104,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_F18-129",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 129,
+          "State": 0,
+          "Type": "Function"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 105,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_F18-129",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 129,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 105,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_F19-130",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 130,
+          "State": 0,
+          "Type": "Function"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 106,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_F19-130",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 130,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 106,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_F20-131",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 131,
+          "State": 0,
+          "Type": "Function"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 107,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_F20-131",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 131,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 107,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_F21-132",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 132,
+          "State": 0,
+          "Type": "Function"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 108,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_F21-132",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 132,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 108,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_F22-133",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 133,
+          "State": 0,
+          "Type": "Function"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 109,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_F22-133",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 133,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 109,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_F23-134",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 134,
+          "State": 0,
+          "Type": "Function"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 110,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_F23-134",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 134,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 110,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_F24-135",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 135,
+          "State": 0,
+          "Type": "Function"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 118,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_F24-135",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 135,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 118,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_NUMPAD_NUM_LOCK-144",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 144,
+          "State": 0,
+          "Type": "Numpad"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 69,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_NUMPAD_NUM_LOCK-144",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 144,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 69,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_NUMPAD_0-96",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 96,
+          "State": 0,
+          "Type": "Numpad"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 82,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_NUMPAD_0-96",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 96,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 82,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_NUMPAD_1-97",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 97,
+          "State": 0,
+          "Type": "Numpad"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 79,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_NUMPAD_1-97",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 97,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 79,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_NUMPAD_2-98",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 98,
+          "State": 0,
+          "Type": "Numpad"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 80,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_NUMPAD_2-98",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 98,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 80,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_NUMPAD_3-99",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 99,
+          "State": 0,
+          "Type": "Numpad"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 81,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_NUMPAD_3-99",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 99,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 81,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_NUMPAD_4-100",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 100,
+          "State": 0,
+          "Type": "Numpad"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 75,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_NUMPAD_4-100",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 100,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 75,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_NUMPAD_5-101",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 101,
+          "State": 0,
+          "Type": "Numpad"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 76,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_NUMPAD_5-101",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 101,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 76,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_NUMPAD_6-102",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 102,
+          "State": 0,
+          "Type": "Numpad"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 77,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_NUMPAD_6-102",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 102,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 77,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_NUMPAD_7-103",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 103,
+          "State": 0,
+          "Type": "Numpad"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 71,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_NUMPAD_7-103",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 103,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 71,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_NUMPAD_8-104",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 104,
+          "State": 0,
+          "Type": "Numpad"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 72,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_NUMPAD_8-104",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 104,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 72,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_NUMPAD_9-105",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 105,
+          "State": 0,
+          "Type": "Numpad"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 73,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_NUMPAD_9-105",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 105,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 73,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_NUMPAD_SLASH-111",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 111,
+          "State": 0,
+          "Type": "Numpad"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 53,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_NUMPAD_SLASH-111",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 111,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 53,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_NUMPAD_ASTERISK-106",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 106,
+          "State": 0,
+          "Type": "Numpad"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 55,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_NUMPAD_ASTERISK-106",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 106,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 55,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_NUMPAD_DASH-109",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 109,
+          "State": 0,
+          "Type": "Numpad"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 74,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_NUMPAD_DASH-109",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 109,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 74,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_NUMPAD_PLUS-107",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 107,
+          "State": 0,
+          "Type": "Numpad"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 78,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_NUMPAD_PLUS-107",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 107,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 78,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_NUMPAD_PERIOD-110",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 110,
+          "State": 0,
+          "Type": "Numpad"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 83,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_NUMPAD_PERIOD-110",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 110,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 83,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_NUMPAD_ENTER-13",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 13,
+          "State": 0,
+          "Type": "Numpad"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 28,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_NUMPAD_ENTER-13",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 13,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 28,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_UP_ARROW-38",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 38,
+          "State": 0,
+          "Type": "Navigation"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 72,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_UP_ARROW-38",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 38,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 72,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_DOWN_ARROW-40",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 40,
+          "State": 0,
+          "Type": "Navigation"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 80,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_DOWN_ARROW-40",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 40,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 80,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_LEFT_ARROW-37",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 37,
+          "State": 0,
+          "Type": "Navigation"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 75,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_LEFT_ARROW-37",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 37,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 75,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_RIGHT_ARROW-39",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 39,
+          "State": 0,
+          "Type": "Navigation"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 77,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_RIGHT_ARROW-39",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 39,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 77,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_UP_DPAD-38",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 38,
+          "State": 0,
+          "Type": "Navigation"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 72,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_UP_DPAD-38",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 38,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 72,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_DOWN_DPAD-40",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 40,
+          "State": 0,
+          "Type": "Navigation"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 80,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_DOWN_DPAD-40",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 40,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 80,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_LEFT_DPAD-37",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 37,
+          "State": 0,
+          "Type": "Navigation"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 75,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_LEFT_DPAD-37",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 37,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 75,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_RIGHT_DPAD-39",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 39,
+          "State": 0,
+          "Type": "Navigation"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 77,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_RIGHT_DPAD-39",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 39,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 77,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_PAGE_UP-33",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 33,
+          "State": 0,
+          "Type": "Navigation"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 73,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_PAGE_UP-33",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 33,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 73,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_PAGE_DOWN-34",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 34,
+          "State": 0,
+          "Type": "Navigation"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 81,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_PAGE_DOWN-34",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 34,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 81,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_BACKSPACE-8",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 8,
+          "State": 0,
+          "Type": "Navigation"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 14,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_BACKSPACE-8",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 8,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 14,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_TAB-9",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 9,
+          "State": 0,
+          "Type": "Navigation"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 15,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_TAB-9",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 9,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 15,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_SPACEBAR-32",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 32,
+          "State": 0,
+          "Type": "Navigation"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 57,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_SPACEBAR-32",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 32,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 57,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_ENTER-13",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 13,
+          "State": 0,
+          "Type": "Navigation"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 28,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_ENTER-13",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 13,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 28,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_ESC-27",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 27,
+          "State": 0,
+          "Type": "Navigation"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 1,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_ESC-27",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 27,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 1,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_INSERT-45",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 45,
+          "State": 0,
+          "Type": "Navigation"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 82,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_INSERT-45",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 45,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 82,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_HOME-36",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 36,
+          "State": 0,
+          "Type": "Navigation"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 71,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_HOME-36",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 36,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 71,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_DELETE-46",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 46,
+          "State": 0,
+          "Type": "Navigation"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 83,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_DELETE-46",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 46,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 83,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_END-35",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 35,
+          "State": 0,
+          "Type": "Navigation"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 79,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_END-35",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 35,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 79,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_PRINT_SCREEN-44",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 44,
+          "State": 0,
+          "Type": "Navigation"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 55,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_PRINT_SCREEN-44",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 44,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 55,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_PAUSE-19",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 19,
+          "State": 0,
+          "Type": "Navigation"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 29,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_PAUSE-19",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 19,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 29,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_CANCEL-3",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 3,
+          "State": 0,
+          "Type": "Navigation"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 70,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_CANCEL-3",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 3,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 70,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_APPLICATION-93",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 93,
+          "State": 0,
+          "Type": "Navigation"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 93,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_APPLICATION-93",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 93,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 93,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_LEFT_CTRL-17",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 17,
+          "State": 0,
+          "Type": "Modifiers"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 29,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_LEFT_CTRL-17",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 17,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 29,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_RIGHT_CTRL-17",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 17,
+          "State": 0,
+          "Type": "Modifiers"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 29,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_RIGHT_CTRL-17",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 17,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 29,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_LEFT_SHIFT-16",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 16,
+          "State": 0,
+          "Type": "Modifiers"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 42,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_LEFT_SHIFT-16",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 16,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 42,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_RIGHT_SHIFT-16",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 16,
+          "State": 0,
+          "Type": "Modifiers"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 42,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_RIGHT_SHIFT-16",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 16,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 42,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_LEFT_ALT-18",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 18,
+          "State": 0,
+          "Type": "Modifiers"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 56,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_LEFT_ALT-18",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 18,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 56,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_RIGHT_ALT-18",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 18,
+          "State": 0,
+          "Type": "Modifiers"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 56,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_RIGHT_ALT-18",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 18,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 56,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_LEFT_GUI-91",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 91,
+          "State": 0,
+          "Type": "Modifiers"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 91,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_LEFT_GUI-91",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 91,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 91,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_CAPS_LOCK-20",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 20,
+          "State": 0,
+          "Type": "Modifiers"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 58,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_CAPS_LOCK-20",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 20,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 58,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_SCROLL_LOCK-145",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 145,
+          "State": 0,
+          "Type": "Modifiers"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 70,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_SCROLL_LOCK-145",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 145,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 70,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_TILDE-192",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 192,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 41,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_TILDE-192",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 192,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 41,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-undefined-192",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 192,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 41,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-undefined-192",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 192,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 41,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-undefined-49",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 49,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 2,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-undefined-49",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 49,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 2,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-undefined-50",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 50,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 3,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-undefined-50",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 50,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 3,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_NON_US_POUND-51",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 51,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 43,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_NON_US_POUND-51",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 51,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 4,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-undefined-52",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 52,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 5,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-undefined-52",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 52,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 5,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-undefined-53",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 53,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 6,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-undefined-53",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 53,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 6,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-undefined-54",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 54,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 7,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-undefined-54",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 54,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 7,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-undefined-55",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 55,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 8,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-undefined-55",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 55,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 8,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-undefined-56",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 56,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 9,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-undefined-56",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 56,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 9,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-undefined-57",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 57,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 10,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-undefined-57",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 57,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 10,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-undefined-48",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 48,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 11,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-undefined-48",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 48,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 11,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_HYPEN-189",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 189,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 12,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_HYPEN-189",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 189,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 12,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_EQUAL-187",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 187,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 13,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_EQUAL-187",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 187,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 13,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-undefined-189",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 189,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 12,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-undefined-189",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 189,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 12,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-undefined-187",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 187,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 13,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-undefined-187",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 187,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 13,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_OPEN_SQUARE_BRACKET-219",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 219,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 26,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_OPEN_SQUARE_BRACKET-219",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 219,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 26,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_CLOSE_SQUARE_BRACKET-221",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 221,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 27,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_CLOSE_SQUARE_BRACKET-221",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 221,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 27,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_BACKSLASH-220",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 220,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 43,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_BACKSLASH-220",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 220,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 43,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-undefined-219",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 219,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 26,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-undefined-219",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 219,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 26,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-undefined-221",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 221,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 27,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-undefined-221",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 221,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 27,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-undefined-220",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 220,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 43,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-undefined-220",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 220,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 43,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_SEMICOLON-186",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 186,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 39,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_SEMICOLON-186",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 186,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 39,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_APOSTROPHE-222",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 222,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 40,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_APOSTROPHE-222",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 222,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 40,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-undefined-186",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 186,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 39,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-undefined-186",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 186,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 39,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-undefined-222",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 222,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 40,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-undefined-222",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 222,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 40,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_COMMA-188",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 188,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 51,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_COMMA-188",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 188,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 51,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_PERIOD-190",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 190,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 52,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_PERIOD-190",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 190,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 52,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_SLASH-191",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 191,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 53,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_SLASH-191",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 191,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 53,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-undefined-190",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 190,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 52,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-undefined-190",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 190,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 52,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-undefined-191",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 191,
+          "State": 0,
+          "Type": "Symbols"
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 53,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-undefined-191",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 191,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 53,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-category-KEY_NON_US_BACKSLASH-226",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 226,
+          "State": 0,
+          "Type": ""
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 86,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "legacy-default-KEY_NON_US_BACKSLASH-226",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 226,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 86,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "special-256-0",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 256,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 42,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "special-256-1",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 256,
+          "State": 1
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 42,
+          "flag": 1
+        }
+      ]
+    },
+    {
+      "name": "special-256-null",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 256,
+          "State": null
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 42,
+          "flag": 0
+        },
+        {
+          "type": "keyboard",
+          "scancode": 42,
+          "flag": 1
+        }
+      ]
+    },
+    {
+      "name": "special-257-0",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 257,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 29,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "special-257-1",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 257,
+          "State": 1
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 29,
+          "flag": 1
+        }
+      ]
+    },
+    {
+      "name": "special-257-null",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 257,
+          "State": null
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 29,
+          "flag": 0
+        },
+        {
+          "type": "keyboard",
+          "scancode": 29,
+          "flag": 1
+        }
+      ]
+    },
+    {
+      "name": "special-258-0",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 258,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 56,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "special-258-1",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 258,
+          "State": 1
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 56,
+          "flag": 1
+        }
+      ]
+    },
+    {
+      "name": "special-258-null",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 258,
+          "State": null
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 56,
+          "flag": 0
+        },
+        {
+          "type": "keyboard",
+          "scancode": 56,
+          "flag": 1
+        }
+      ]
+    },
+    {
+      "name": "special-285-0",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 285,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 29,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "special-285-1",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 285,
+          "State": 1
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 29,
+          "flag": 1
+        }
+      ]
+    },
+    {
+      "name": "special-285-null",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 285,
+          "State": null
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 29,
+          "flag": 0
+        },
+        {
+          "type": "keyboard",
+          "scancode": 29,
+          "flag": 1
+        }
+      ]
+    },
+    {
+      "name": "special-310-0",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 310,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 54,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "special-310-1",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 310,
+          "State": 1
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 54,
+          "flag": 1
+        }
+      ]
+    },
+    {
+      "name": "special-310-null",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 310,
+          "State": null
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 54,
+          "flag": 0
+        },
+        {
+          "type": "keyboard",
+          "scancode": 54,
+          "flag": 1
+        }
+      ]
+    },
+    {
+      "name": "special-312-0",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 312,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 56,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "special-312-1",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 312,
+          "State": 1
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 56,
+          "flag": 1
+        }
+      ]
+    },
+    {
+      "name": "special-312-null",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 312,
+          "State": null
+        }
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 56,
+          "flag": 0
+        },
+        {
+          "type": "keyboard",
+          "scancode": 56,
+          "flag": 1
+        }
+      ]
+    },
+    {
+      "name": "scan-fallback",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 65,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 48,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 48,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "unknown-code-scan-fallback",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 65530,
+          "State": 0
+        },
+        "ScanCode": 125,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 125,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "failed-fallback-keeps-primary",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 65,
+          "State": 0
+        },
+        "ScanCode": 999,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 30,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "null-stored-scan-keeps-primary",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 65,
+          "State": 0
+        },
+        "ScanCode": null,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 30,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "null-stored-scan-no-guess",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 65530,
+          "State": 0
+        },
+        "ScanCode": null,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": null,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "empty-key-placeholder",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": null,
+          "State": null
+        }
+      },
+      "output": []
+    },
+    {
+      "name": "empty-mouse-placeholder",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": null,
+          "State": null
+        }
+      },
+      "output": []
+    },
+    {
+      "name": "delay-0",
+      "input": {
+        "Type": 0,
+        "Number": 0
+      },
+      "output": [
+        {
+          "type": "delay",
+          "ms": 0
+        }
+      ]
+    },
+    {
+      "name": "delay-0.0004",
+      "input": {
+        "Type": 0,
+        "Number": 0.0004
+      },
+      "output": [
+        {
+          "type": "delay",
+          "ms": 0
+        }
+      ]
+    },
+    {
+      "name": "delay-0.0016",
+      "input": {
+        "Type": 0,
+        "Number": 0.0016
+      },
+      "output": [
+        {
+          "type": "delay",
+          "ms": 2
+        }
+      ]
+    },
+    {
+      "name": "delay-1.234",
+      "input": {
+        "Type": 0,
+        "Number": 1.234
+      },
+      "output": [
+        {
+          "type": "delay",
+          "ms": 1234
+        }
+      ]
+    },
+    {
+      "name": "delay-\"0.0016\"",
+      "input": {
+        "Type": 0,
+        "Number": "0.0016"
+      },
+      "output": [
+        {
+          "type": "delay",
+          "ms": 2
+        }
+      ]
+    },
+    {
+      "name": "delay-\" 0.25 \"",
+      "input": {
+        "Type": 0,
+        "Number": " 0.25 "
+      },
+      "output": [
+        {
+          "type": "delay",
+          "ms": 250
+        }
+      ]
+    },
+    {
+      "name": "delay-\"1e-3\"",
+      "input": {
+        "Type": 0,
+        "Number": "1e-3"
+      },
+      "output": [
+        {
+          "type": "delay",
+          "ms": 1
+        }
+      ]
+    },
+    {
+      "name": "delay-\"\"",
+      "input": {
+        "Type": 0,
+        "Number": ""
+      },
+      "output": [
+        {
+          "type": "delay",
+          "ms": 0
+        }
+      ]
+    },
+    {
+      "name": "delay-null",
+      "input": {
+        "Type": 0,
+        "Number": null
+      },
+      "output": [
+        {
+          "type": "delay",
+          "ms": 0
+        }
+      ]
+    },
+    {
+      "name": "delay-0.0004999999999999999",
+      "input": {
+        "Type": 0,
+        "Number": 0.0004999999999999999
+      },
+      "output": [
+        {
+          "type": "delay",
+          "ms": 0
+        }
+      ]
+    },
+    {
+      "name": "delay-0.0005",
+      "input": {
+        "Type": 0,
+        "Number": 0.0005
+      },
+      "output": [
+        {
+          "type": "delay",
+          "ms": 1
+        }
+      ]
+    },
+    {
+      "name": "delay--0.0005",
+      "input": {
+        "Type": 0,
+        "Number": -0.0005
+      },
+      "output": [
+        {
+          "type": "delay",
+          "ms": 0
+        }
+      ]
+    },
+    {
+      "name": "float-number-scan-fallback",
+      "input_json": "{\"Type\":1.0,\"KeyEvent\":{\"Makecode\":65.0,\"State\":0.0,\"Type\":\"Alphanumeric\"},\"ScanCode\":48.0,\"flag\":0.0}",
+      "input": {
+        "Type": 1,
+        "KeyEvent": {
+          "Makecode": 65,
+          "State": 0,
+          "Type": "Alphanumeric"
+        },
+        "ScanCode": 48,
+        "flag": 0
+      },
+      "output": [
+        {
+          "type": "keyboard",
+          "scancode": 48,
+          "flag": 0
+        }
+      ]
+    },
+    {
+      "name": "float-number-mouse",
+      "input_json": "{\"Type\":2.0,\"MouseEvent\":{\"MouseButton\":5.0,\"State\":0.0}}",
+      "input": {
+        "Type": 2,
+        "MouseEvent": {
+          "MouseButton": 5,
+          "State": 0
+        }
+      },
+      "output": [
+        {
+          "type": "mouse",
+          "id": 1
+        },
+        {
+          "type": "mouse",
+          "id": 2
+        },
+        {
+          "type": "delay",
+          "ms": 10
+        },
+        {
+          "type": "mouse",
+          "id": 1
+        },
+        {
+          "type": "mouse",
+          "id": 2
+        }
+      ]
+    }
+  ]
+}

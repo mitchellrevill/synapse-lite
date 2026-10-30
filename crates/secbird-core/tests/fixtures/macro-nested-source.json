@@ -1,0 +1,16 @@
+{
+  "provenance": "Controlled replay of recovered literal template and pure converter only; no bootstrap/native/input execution",
+  "row": {
+    "Type": 7,
+    "MPIndex": null,
+    "guid": "synthetic-child",
+    "selected": false
+  },
+  "output": [
+    {
+      "type": "macro",
+      "guid": "synthetic-child",
+      "flag": 0
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 name: Device report
-description: Tell us how Secretarybird works with your Razer device (working or not)
+description: Tell us how Synapse Lite works with your Razer device (working or not)
 labels: [device]
 body:
   - type: markdown
@@ -8,7 +8,7 @@ body:
         Thanks! Reports like this are how devices get marked as verified and new features
         (like Blade fan and power controls) get built.
 
-        **Easiest:** right-click the Secretarybird tray icon → **Make a device report…**. It copies
+        **Easiest:** right-click the Synapse Lite tray icon â†’ **Make a device reportâ€¦**. It copies
         the report and opens this page; paste it into the report box below.
 
         The report only sends read commands to your devices and shortens serial numbers.
@@ -38,7 +38,7 @@ body:
     id: report
     attributes:
       label: Output of `secbird report`
-      description: 'From the tray menu (Make a device report…), or run `secbird report` in a terminal. The installed copy is in %LOCALAPPDATA%\Programs\Secretarybird.'
+      description: 'From the tray menu (Make a device reportâ€¦), or run `secbird report` in a terminal. The installed copy is in %LOCALAPPDATA%\Programs\Synapse Lite.'
       render: text
     validations:
       required: true
@@ -50,6 +50,6 @@ body:
   - type: input
     id: version
     attributes:
-      label: Secretarybird version
+      label: Synapse Lite version
       description: "`secbird --version`, or hover the tray icon"
       placeholder: "0.1.0"

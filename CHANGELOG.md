@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased] — Synapse Lite
+
+- Native Windows editor, local profile interchange, macro library and Studio composition editing.
+- Supported Studio playback with explicit lighting ownership and restoration.
+- Distinct app/tray branding, desktop screenshots and maintained contributor documentation.
+- Existing `secbird` CLI commands and upstream device database retained.
+
+The versioned entries below are the upstream Secretarybird changelog. They do not establish physical verification of every feature in this fork.
+
 ## [0.5.1] - 2026-10-30
 
 ### Added
@@ -19,7 +28,7 @@
 
 ### Fixed
 - A mouse on a mouse dock gets its mouse picture in the device list, not the dock's.
-- Buttons: "Play a macro…" is offered only on devices with macro memory. Before, it showed on
+- Buttons: "Play a macroâ€¦" is offered only on devices with macro memory. Before, it showed on
   every mouse and pointed to a Macros section that devices without macro memory don't have
   (#67, thanks FRNVR). Picking it before any macro is made now opens the Macros section.
 - Lights when away: a device that misses the write that dims it is tried again every 3 s for
@@ -34,14 +43,14 @@
 
 ### Added
 - Lights when away: while the PC is locked or its screen is off, the lights dim to a quarter or
-  turn off, and come back when you return (Settings → Lights when away; #48, thanks a3k7dotmd).
+  turn off, and come back when you return (Settings â†’ Lights when away; #48, thanks a3k7dotmd).
   Nothing is saved on the devices, so a replug brings the normal lights back. Devices with the
   older lighting commands stay lit. Tested on the Basilisk V3.
 - Gaming mode on keyboards and keypads: block the Windows key, Alt+Tab and Alt+F4 (the new Gaming
   section, or `secbird gaming win,alt-tab`). It's saved per profile, so a profile tied to a game
   turns it on while you play. The keyboard does the blocking, the way Synapse asks it to; the
   section shows only on keyboards that answer for it. Not tested on a keyboard yet.
-- Save to mouse: Buttons → Saved on the mouse writes a profile's button remaps into the mouse's
+- Save to mouse: Buttons â†’ Saved on the mouse writes a profile's button remaps into the mouse's
   on-board memory, so they work without Secretarybird (another PC, Linux, macOS, before the tray
   starts) and survive sleep. What the mouse held before is kept, and "Put back what the mouse
   had" restores it; Restore all puts it back too. Remaps stay live-only until you click, and
@@ -177,8 +186,8 @@
 ## [0.4.6] - 2026-10-18
 
 ### Added
-- Pick your own low battery warning level: Settings → Low battery warning takes any level from
-  1% to 95% (it was always 15%). Type it, or use − and +.
+- Pick your own low battery warning level: Settings â†’ Low battery warning takes any level from
+  1% to 95% (it was always 15%). Type it, or use âˆ’ and +.
 - All devices is easier to read: bigger cards grouped by kind (mice, keyboards and keypads,
   headsets, everything else), each with an icon for its kind, and DPI, polling rate and battery
   at a glance. Long device names no longer get cut off.
@@ -196,7 +205,7 @@
 
 ### Added
 - Update from the tray: click the new-version notice, **Update to X** in the tray menu, or
-  Settings → Update now in the editor. Secretarybird downloads the installer, checks it carries
+  Settings â†’ Update now in the editor. Secretarybird downloads the installer, checks it carries
   the release signature, installs it quietly and starts again with your settings. A download
   without a valid signature is never run. The unzipped (portable) copy still opens the release
   page instead.
@@ -214,7 +223,7 @@
 - Smart Dimming on Blade laptops (#20): the editor's Power section has "Keyboard when idle"
   (stays lit, half, a quarter, or off), and the CLI has `secbird dimming`. Not yet tried on a
   real laptop; please tell us if it works on yours.
-- Turn off lighting control per device (#19, thanks Monratis): Lighting → Control lighting, or
+- Turn off lighting control per device (#19, thanks Monratis): Lighting â†’ Control lighting, or
   `secbird lighting off`. Secretarybird then never touches that device's lights, so another RGB
   app can run them. DPI, buttons and the rest keep working.
 - HyperPolling dongle (#17, thanks Monratis): the editor names the mouse paired to it, and polling
@@ -241,7 +250,7 @@
   the weekly firmware check, each with an on/off switch; back up every profile to a file and
   restore from one; open the settings folder; copy a device report and open a GitHub issue; put
   every mouse button back to what the mouse stores.
-- Use a zone's lighting elsewhere: a zone's panel has "Use this lighting on: All zones · Every
+- Use a zone's lighting elsewhere: a zone's panel has "Use this lighting on: All zones Â· Every
   device", which copies its colour or effect (with its options, like wave direction or the
   breathing colour). Effects start together on every device, so a mouse, keyboard, mousepad and
   dock cycle in step; each device keeps its own timer, so they can drift apart over time, and
@@ -252,7 +261,7 @@
 - `secbird report` reads the mouse's own button list.
 
 ### Changed
-- DPI panel: one readout card with − and + (steps of 50) and the value typed in place, a
+- DPI panel: one readout card with âˆ’ and + (steps of 50) and the value typed in place, a
   full-width slider with the range at its ends, and presets in an even row with the current one
   filled. Sliders everywhere take the theme's colours instead of the browser's default bar.
 - Themes: each has its own colour for what is active (the live profile, current section,
@@ -274,7 +283,7 @@
 
 ### Added
 - New-version notice: once a day the tray asks GitHub whether a newer Secretarybird is out and
-  shows a notification once per version; click it, or "Get Secretarybird …" at the top of the
+  shows a notification once per version; click it, or "Get Secretarybird â€¦" at the top of the
   tray menu, for the download. On by default; turn it off with "Tell me when a new version is
   out" in the tray menu. "Check for updates now" checks right away, and `secbird update` does
   the same from the command line. It sends nothing but the request and installs nothing.
@@ -341,7 +350,7 @@
   generic settings that work for any of them.
 
 ### Changed
-- Device reports without a terminal: tray menu → "Make a device report…" copies the report and
+- Device reports without a terminal: tray menu â†’ "Make a device reportâ€¦" copies the report and
   opens the GitHub form.
 - `secbird report` on Blade laptops (and devices not in the list) also reads fan, performance,
   GPU and battery-limit settings, so owners' reports show what fan and power controls need.
@@ -353,7 +362,7 @@
 ## [0.3.3] - 2026-10-14
 
 ### Changed
-- Device reports without a terminal: tray menu → "Make a device report…" copies the report and
+- Device reports without a terminal: tray menu â†’ "Make a device reportâ€¦" copies the report and
   opens the GitHub form; paste it in.
 - `secbird report` on Razer Blade laptops (and devices not in the list) also reads fan,
   performance, GPU and battery-limit settings, so owners' reports show what fan and power

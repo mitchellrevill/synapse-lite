@@ -1,0 +1,2790 @@
+{
+  "cases": [
+    {
+      "name": "all-types",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-all-types",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 0,
+            "Number": "1.2345",
+            "selected": false
+          },
+          {
+            "Type": 1,
+            "Id": 18,
+            "KeyEvent": {
+              "Makecode": 65,
+              "State": 0,
+              "Type": 0
+            },
+            "ScanCode": 30,
+            "flag": 0,
+            "selected": false,
+            "isPairing": false
+          },
+          {
+            "Type": 1,
+            "Id": 18,
+            "KeyEvent": {
+              "Makecode": 65,
+              "State": 1,
+              "Type": 0
+            },
+            "ScanCode": 30,
+            "flag": 0,
+            "selected": false,
+            "isPairing": false
+          },
+          {
+            "Type": 2,
+            "Id": 19,
+            "MouseEvent": {
+              "MouseButton": 0,
+              "State": 0
+            },
+            "selected": false,
+            "isPairing": false
+          },
+          {
+            "Type": 2,
+            "Id": 19,
+            "MouseEvent": {
+              "MouseButton": 0,
+              "State": 1
+            },
+            "selected": false,
+            "isPairing": false
+          },
+          {
+            "Type": 3,
+            "Id": 20,
+            "Number": "0.015",
+            "MouseEvent": {
+              "Buffer": [
+                {
+                  "time": 5,
+                  "x": -4,
+                  "y": 2
+                },
+                {
+                  "time": 10,
+                  "x": 6,
+                  "y": -8
+                }
+              ]
+            },
+            "selected": false
+          },
+          {
+            "Type": 4,
+            "Text": " first\ntext & <angle> \"quote\" 😃 ",
+            "selected": false
+          },
+          {
+            "Type": 5,
+            "TextCommand": "echo harmless fixture",
+            "selected": false
+          },
+          {
+            "Type": 6,
+            "Id": 21,
+            "Number": 2,
+            "LoopEvent": {
+              "State": 0
+            },
+            "selected": false,
+            "isPairing": false
+          },
+          {
+            "Type": 6,
+            "Id": 21,
+            "Number": 2,
+            "LoopEvent": {
+              "State": 1
+            },
+            "selected": false,
+            "isPairing": false
+          },
+          {
+            "Type": 7,
+            "MPIndex": "child",
+            "guid": "child",
+            "selected": false
+          },
+          {
+            "Type": 10,
+            "RadioIndex": 0,
+            "Content0": "C:\\fixture\\program.exe",
+            "Content1": "",
+            "selected": false
+          },
+          {
+            "Type": 10,
+            "RadioIndex": 1,
+            "Content0": "",
+            "Content1": "https://example.invalid/test?q=1&x=2",
+            "selected": false
+          }
+        ],
+        "delaySetting": 0,
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {},
+                "selected": false
+              },
+              {
+                "Type": 0,
+                "Number": "1.2345",
+                "selected": false
+              },
+              {
+                "Type": 1,
+                "Id": 18,
+                "KeyEvent": {
+                  "Makecode": 65,
+                  "State": 0,
+                  "Type": 0
+                },
+                "ScanCode": 30,
+                "flag": 0,
+                "selected": false,
+                "isPairing": false
+              },
+              {
+                "Type": 1,
+                "Id": 18,
+                "KeyEvent": {
+                  "Makecode": 65,
+                  "State": 1,
+                  "Type": 0
+                },
+                "ScanCode": 30,
+                "flag": 0,
+                "selected": false,
+                "isPairing": false
+              },
+              {
+                "Type": 2,
+                "Id": 19,
+                "MouseEvent": {
+                  "MouseButton": 0,
+                  "State": 0
+                },
+                "selected": false,
+                "isPairing": false
+              },
+              {
+                "Type": 2,
+                "Id": 19,
+                "MouseEvent": {
+                  "MouseButton": 0,
+                  "State": 1
+                },
+                "selected": false,
+                "isPairing": false
+              },
+              {
+                "Type": 3,
+                "Id": 20,
+                "Number": "0.015",
+                "MouseEvent": {
+                  "Buffer": [
+                    {
+                      "time": 5,
+                      "x": -4,
+                      "y": 2
+                    },
+                    {
+                      "time": 10,
+                      "x": 6,
+                      "y": -8
+                    }
+                  ]
+                },
+                "selected": false
+              },
+              {
+                "Type": 4,
+                "Text": " first\ntext & <angle> \"quote\" 😃 ",
+                "selected": false
+              },
+              {
+                "Type": 5,
+                "TextCommand": "echo harmless fixture",
+                "selected": false
+              },
+              {
+                "Type": 6,
+                "Id": 21,
+                "Number": 2,
+                "LoopEvent": {
+                  "State": 0
+                },
+                "selected": false,
+                "isPairing": false
+              },
+              {
+                "Type": 6,
+                "Id": 21,
+                "Number": 2,
+                "LoopEvent": {
+                  "State": 1
+                },
+                "selected": false,
+                "isPairing": false
+              },
+              {
+                "Type": 7,
+                "MPIndex": "child",
+                "guid": "child",
+                "selected": false
+              },
+              {
+                "Type": 10,
+                "RadioIndex": 0,
+                "Content0": "C:\\fixture\\program.exe",
+                "Content1": "",
+                "selected": false
+              },
+              {
+                "Type": 10,
+                "RadioIndex": 1,
+                "Content0": "",
+                "Content1": "https://example.invalid/test?q=1&x=2",
+                "selected": false
+              }
+            ]
+          },
+          "DelaySetting": 0,
+          "Guid": "xml-all-types",
+          "Version": 4,
+          "MouseMoveType": "none"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile></recordProfile><selected>false</selected></MacroEvent><MacroEvent><Type>0</Type><Number>1.2345</Number><selected>false</selected></MacroEvent><MacroEvent><Type>1</Type><Id>18</Id><KeyEvent><Makecode>65</Makecode><State>0</State><Type>0</Type></KeyEvent><ScanCode>30</ScanCode><flag>0</flag><selected>false</selected><isPairing>false</isPairing></MacroEvent><MacroEvent><Type>1</Type><Id>18</Id><KeyEvent><Makecode>65</Makecode><State>1</State><Type>0</Type></KeyEvent><ScanCode>30</ScanCode><flag>0</flag><selected>false</selected><isPairing>false</isPairing></MacroEvent><MacroEvent><Type>2</Type><Id>19</Id><MouseEvent><MouseButton>0</MouseButton><State>0</State></MouseEvent><selected>false</selected><isPairing>false</isPairing></MacroEvent><MacroEvent><Type>2</Type><Id>19</Id><MouseEvent><MouseButton>0</MouseButton><State>1</State></MouseEvent><selected>false</selected><isPairing>false</isPairing></MacroEvent><MacroEvent><Type>3</Type><Id>20</Id><Number>0.015</Number><MouseEvent><Buffer><time>5</time><x>-4</x><y>2</y></Buffer><Buffer><time>10</time><x>6</x><y>-8</y></Buffer></MouseEvent><selected>false</selected></MacroEvent><MacroEvent><Type>4</Type><Text> first\ntext &amp; &lt;angle&gt; &quot;quote&quot; 😃 </Text><selected>false</selected></MacroEvent><MacroEvent><Type>5</Type><TextCommand>echo harmless fixture</TextCommand><selected>false</selected></MacroEvent><MacroEvent><Type>6</Type><Id>21</Id><Number>2</Number><LoopEvent><State>0</State></LoopEvent><selected>false</selected><isPairing>false</isPairing></MacroEvent><MacroEvent><Type>6</Type><Id>21</Id><Number>2</Number><LoopEvent><State>1</State></LoopEvent><selected>false</selected><isPairing>false</isPairing></MacroEvent><MacroEvent><Type>7</Type><MPIndex>child</MPIndex><guid>child</guid><selected>false</selected></MacroEvent><MacroEvent><Type>10</Type><RadioIndex>0</RadioIndex><Content0>C:\\fixture\\program.exe</Content0><Content1></Content1><selected>false</selected></MacroEvent><MacroEvent><Type>10</Type><RadioIndex>1</RadioIndex><Content0></Content0><Content1>https://example.invalid/test?q=1&amp;x=2</Content1><selected>false</selected></MacroEvent></MacroEvents><DelaySetting>0</DelaySetting><Guid>xml-all-types</Guid><Version>4</Version><MouseMoveType>none</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-all-types",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 0,
+            "Number": "1.234",
+            "selected": false
+          },
+          {
+            "Type": 1,
+            "Id": 0,
+            "KeyEvent": {
+              "Makecode": 65,
+              "State": 0
+            },
+            "selected": false,
+            "isPairing": false
+          },
+          {
+            "Type": 1,
+            "Id": 0,
+            "KeyEvent": {
+              "Makecode": 65,
+              "State": 1
+            },
+            "selected": false,
+            "isPairing": false
+          },
+          {
+            "Type": 2,
+            "Id": 1,
+            "MouseEvent": {
+              "MouseButton": 0,
+              "State": 0
+            },
+            "selected": false,
+            "isPairing": false
+          },
+          {
+            "Type": 2,
+            "Id": 1,
+            "MouseEvent": {
+              "MouseButton": 0,
+              "State": 1
+            },
+            "selected": false,
+            "isPairing": false
+          },
+          {
+            "Type": 3,
+            "Id": 2,
+            "Number": "0.015",
+            "MouseEvent": {
+              "Buffer": [
+                {
+                  "time": 5,
+                  "x": -4,
+                  "y": 2
+                },
+                {
+                  "time": 10,
+                  "x": 6,
+                  "y": -8
+                }
+              ]
+            },
+            "selected": false
+          },
+          {
+            "Type": 4,
+            "Text": " first\ntext & <angle> \"quote\" 😃 ",
+            "selected": false
+          },
+          {
+            "Type": 5,
+            "TextCommand": "echo harmless fixture",
+            "selected": false
+          },
+          {
+            "Type": 6,
+            "Id": null,
+            "Number": 2,
+            "LoopEvent": {
+              "State": 0
+            },
+            "selected": false,
+            "isPairing": false
+          },
+          {
+            "Type": 6,
+            "Id": null,
+            "Number": 2,
+            "LoopEvent": {
+              "State": 1
+            },
+            "selected": false,
+            "isPairing": false
+          },
+          {
+            "Type": 7,
+            "MPIndex": "child",
+            "guid": "child",
+            "selected": false
+          },
+          {
+            "Type": 10,
+            "RadioIndex": 0,
+            "Content0": "C:\\fixture\\program.exe",
+            "Content1": "",
+            "selected": false
+          },
+          {
+            "Type": 10,
+            "RadioIndex": 1,
+            "Content0": "",
+            "Content1": "https://example.invalid/test?q=1&x=2",
+            "selected": false
+          }
+        ],
+        "delaySetting": 0,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      }
+    },
+    {
+      "name": "delay-1",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-delay-1",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 0,
+            "Number": "0",
+            "selected": false
+          }
+        ],
+        "delaySetting": 0,
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {},
+                "selected": false
+              },
+              {
+                "Type": 0,
+                "Number": "0",
+                "selected": false
+              }
+            ]
+          },
+          "DelaySetting": 0,
+          "Guid": "xml-delay-1",
+          "Version": 4,
+          "MouseMoveType": "none"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile></recordProfile><selected>false</selected></MacroEvent><MacroEvent><Type>0</Type><Number>0</Number><selected>false</selected></MacroEvent></MacroEvents><DelaySetting>0</DelaySetting><Guid>xml-delay-1</Guid><Version>4</Version><MouseMoveType>none</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-delay-1",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 0,
+            "Number": "0.000",
+            "selected": false
+          }
+        ],
+        "delaySetting": 0,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      }
+    },
+    {
+      "name": "delay-2",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-delay-2",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 0,
+            "Number": "0.0005",
+            "selected": false
+          }
+        ],
+        "delaySetting": 0,
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {},
+                "selected": false
+              },
+              {
+                "Type": 0,
+                "Number": "0.0005",
+                "selected": false
+              }
+            ]
+          },
+          "DelaySetting": 0,
+          "Guid": "xml-delay-2",
+          "Version": 4,
+          "MouseMoveType": "none"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile></recordProfile><selected>false</selected></MacroEvent><MacroEvent><Type>0</Type><Number>0.0005</Number><selected>false</selected></MacroEvent></MacroEvents><DelaySetting>0</DelaySetting><Guid>xml-delay-2</Guid><Version>4</Version><MouseMoveType>none</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-delay-2",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 0,
+            "Number": "0.001",
+            "selected": false
+          }
+        ],
+        "delaySetting": 0,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      }
+    },
+    {
+      "name": "delay-3",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-delay-3",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 0,
+            "Number": "1.0005",
+            "selected": false
+          }
+        ],
+        "delaySetting": 0,
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {},
+                "selected": false
+              },
+              {
+                "Type": 0,
+                "Number": "1.0005",
+                "selected": false
+              }
+            ]
+          },
+          "DelaySetting": 0,
+          "Guid": "xml-delay-3",
+          "Version": 4,
+          "MouseMoveType": "none"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile></recordProfile><selected>false</selected></MacroEvent><MacroEvent><Type>0</Type><Number>1.0005</Number><selected>false</selected></MacroEvent></MacroEvents><DelaySetting>0</DelaySetting><Guid>xml-delay-3</Guid><Version>4</Version><MouseMoveType>none</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-delay-3",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 0,
+            "Number": "1.000",
+            "selected": false
+          }
+        ],
+        "delaySetting": 0,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      }
+    },
+    {
+      "name": "delay-4",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-delay-4",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 0,
+            "Number": "1.2345",
+            "selected": false
+          }
+        ],
+        "delaySetting": 0,
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {},
+                "selected": false
+              },
+              {
+                "Type": 0,
+                "Number": "1.2345",
+                "selected": false
+              }
+            ]
+          },
+          "DelaySetting": 0,
+          "Guid": "xml-delay-4",
+          "Version": 4,
+          "MouseMoveType": "none"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile></recordProfile><selected>false</selected></MacroEvent><MacroEvent><Type>0</Type><Number>1.2345</Number><selected>false</selected></MacroEvent></MacroEvents><DelaySetting>0</DelaySetting><Guid>xml-delay-4</Guid><Version>4</Version><MouseMoveType>none</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-delay-4",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 0,
+            "Number": "1.234",
+            "selected": false
+          }
+        ],
+        "delaySetting": 0,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      }
+    },
+    {
+      "name": "delay-5",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-delay-5",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 0,
+            "Number": "1.2345000000000002",
+            "selected": false
+          }
+        ],
+        "delaySetting": 0,
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {},
+                "selected": false
+              },
+              {
+                "Type": 0,
+                "Number": "1.2345000000000002",
+                "selected": false
+              }
+            ]
+          },
+          "DelaySetting": 0,
+          "Guid": "xml-delay-5",
+          "Version": 4,
+          "MouseMoveType": "none"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile></recordProfile><selected>false</selected></MacroEvent><MacroEvent><Type>0</Type><Number>1.2345000000000002</Number><selected>false</selected></MacroEvent></MacroEvents><DelaySetting>0</DelaySetting><Guid>xml-delay-5</Guid><Version>4</Version><MouseMoveType>none</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-delay-5",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 0,
+            "Number": "1.235",
+            "selected": false
+          }
+        ],
+        "delaySetting": 0,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      }
+    },
+    {
+      "name": "delay-6",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-delay-6",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 0,
+            "Number": "0.0004999999999999999",
+            "selected": false
+          }
+        ],
+        "delaySetting": 0,
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {},
+                "selected": false
+              },
+              {
+                "Type": 0,
+                "Number": "0.0004999999999999999",
+                "selected": false
+              }
+            ]
+          },
+          "DelaySetting": 0,
+          "Guid": "xml-delay-6",
+          "Version": 4,
+          "MouseMoveType": "none"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile></recordProfile><selected>false</selected></MacroEvent><MacroEvent><Type>0</Type><Number>0.0004999999999999999</Number><selected>false</selected></MacroEvent></MacroEvents><DelaySetting>0</DelaySetting><Guid>xml-delay-6</Guid><Version>4</Version><MouseMoveType>none</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-delay-6",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 0,
+            "Number": "0.000",
+            "selected": false
+          }
+        ],
+        "delaySetting": 0,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      }
+    },
+    {
+      "name": "delay-7",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-delay-7",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 0,
+            "Number": "5e-324",
+            "selected": false
+          }
+        ],
+        "delaySetting": 0,
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {},
+                "selected": false
+              },
+              {
+                "Type": 0,
+                "Number": "5e-324",
+                "selected": false
+              }
+            ]
+          },
+          "DelaySetting": 0,
+          "Guid": "xml-delay-7",
+          "Version": 4,
+          "MouseMoveType": "none"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile></recordProfile><selected>false</selected></MacroEvent><MacroEvent><Type>0</Type><Number>5e-324</Number><selected>false</selected></MacroEvent></MacroEvents><DelaySetting>0</DelaySetting><Guid>xml-delay-7</Guid><Version>4</Version><MouseMoveType>none</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-delay-7",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 0,
+            "Number": "0.000",
+            "selected": false
+          }
+        ],
+        "delaySetting": 0,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      }
+    },
+    {
+      "name": "delay-8",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-delay-8",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 0,
+            "Number": "3600",
+            "selected": false
+          }
+        ],
+        "delaySetting": 0,
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {},
+                "selected": false
+              },
+              {
+                "Type": 0,
+                "Number": "3600",
+                "selected": false
+              }
+            ]
+          },
+          "DelaySetting": 0,
+          "Guid": "xml-delay-8",
+          "Version": 4,
+          "MouseMoveType": "none"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile></recordProfile><selected>false</selected></MacroEvent><MacroEvent><Type>0</Type><Number>3600</Number><selected>false</selected></MacroEvent></MacroEvents><DelaySetting>0</DelaySetting><Guid>xml-delay-8</Guid><Version>4</Version><MouseMoveType>none</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-delay-8",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 0,
+            "Number": "3600.000",
+            "selected": false
+          }
+        ],
+        "delaySetting": 0,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      }
+    },
+    {
+      "name": "movement-absolute",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-movement-absolute",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          }
+        ],
+        "delaySetting": 2,
+        "appEngine": {
+          "mouseMoveType": "absolute"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {
+                  "mmtSetting": 1
+                },
+                "selected": false
+              }
+            ]
+          },
+          "DelaySetting": 2,
+          "Guid": "xml-movement-absolute",
+          "Version": 4,
+          "MouseMoveType": "absolute"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile><mmtSetting>1</mmtSetting></recordProfile><selected>false</selected></MacroEvent></MacroEvents><DelaySetting>2</DelaySetting><Guid>xml-movement-absolute</Guid><Version>4</Version><MouseMoveType>absolute</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-movement-absolute",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {
+              "mmtSetting": 1
+            },
+            "selected": false
+          }
+        ],
+        "delaySetting": 2,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "absolute"
+        }
+      }
+    },
+    {
+      "name": "movement-foreground",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-movement-foreground",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          }
+        ],
+        "delaySetting": 2,
+        "appEngine": {
+          "mouseMoveType": "foreground"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {
+                  "mmtSetting": 2
+                },
+                "selected": false
+              }
+            ]
+          },
+          "DelaySetting": 2,
+          "Guid": "xml-movement-foreground",
+          "Version": 4,
+          "MouseMoveType": "foreground"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile><mmtSetting>2</mmtSetting></recordProfile><selected>false</selected></MacroEvent></MacroEvents><DelaySetting>2</DelaySetting><Guid>xml-movement-foreground</Guid><Version>4</Version><MouseMoveType>foreground</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-movement-foreground",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {
+              "mmtSetting": 2
+            },
+            "selected": false
+          }
+        ],
+        "delaySetting": 2,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "foreground"
+        }
+      }
+    },
+    {
+      "name": "movement-relative",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-movement-relative",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          }
+        ],
+        "delaySetting": 2,
+        "appEngine": {
+          "mouseMoveType": "relative"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {
+                  "mmtSetting": 3
+                },
+                "selected": false
+              }
+            ]
+          },
+          "DelaySetting": 2,
+          "Guid": "xml-movement-relative",
+          "Version": 4,
+          "MouseMoveType": "relative"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile><mmtSetting>3</mmtSetting></recordProfile><selected>false</selected></MacroEvent></MacroEvents><DelaySetting>2</DelaySetting><Guid>xml-movement-relative</Guid><Version>4</Version><MouseMoveType>relative</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-movement-relative",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {
+              "mmtSetting": 3
+            },
+            "selected": false
+          }
+        ],
+        "delaySetting": 2,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "relative"
+        }
+      }
+    },
+    {
+      "name": "movement-none",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-movement-none",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          }
+        ],
+        "delaySetting": 2,
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {},
+                "selected": false
+              }
+            ]
+          },
+          "DelaySetting": 2,
+          "Guid": "xml-movement-none",
+          "Version": 4,
+          "MouseMoveType": "none"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile></recordProfile><selected>false</selected></MacroEvent></MacroEvents><DelaySetting>2</DelaySetting><Guid>xml-movement-none</Guid><Version>4</Version><MouseMoveType>none</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-movement-none",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          }
+        ],
+        "delaySetting": 2,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      }
+    },
+    {
+      "name": "key-state-null",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-key-state-null",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 1,
+            "Id": null,
+            "KeyEvent": {
+              "Makecode": 258,
+              "State": null
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {},
+                "selected": false
+              },
+              {
+                "Type": 1,
+                "Id": null,
+                "KeyEvent": {
+                  "Makecode": 258,
+                  "State": null
+                },
+                "selected": false,
+                "isPairing": false
+              }
+            ]
+          },
+          "DelaySetting": 0,
+          "Guid": "xml-key-state-null",
+          "Version": 4,
+          "MouseMoveType": "none"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile></recordProfile><selected>false</selected></MacroEvent><MacroEvent><Type>1</Type><Id/><KeyEvent><Makecode>258</Makecode><State/></KeyEvent><selected>false</selected><isPairing>false</isPairing></MacroEvent></MacroEvents><DelaySetting>0</DelaySetting><Guid>xml-key-state-null</Guid><Version>4</Version><MouseMoveType>none</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-key-state-null",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 1,
+            "Id": null,
+            "KeyEvent": {
+              "Makecode": 258,
+              "State": null
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      }
+    },
+    {
+      "name": "key-state-0",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-key-state-0",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 1,
+            "Id": null,
+            "KeyEvent": {
+              "Makecode": 258,
+              "State": 0
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {},
+                "selected": false
+              },
+              {
+                "Type": 1,
+                "Id": null,
+                "KeyEvent": {
+                  "Makecode": 258,
+                  "State": 0
+                },
+                "selected": false,
+                "isPairing": false
+              }
+            ]
+          },
+          "DelaySetting": 0,
+          "Guid": "xml-key-state-0",
+          "Version": 4,
+          "MouseMoveType": "none"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile></recordProfile><selected>false</selected></MacroEvent><MacroEvent><Type>1</Type><Id/><KeyEvent><Makecode>258</Makecode><State>0</State></KeyEvent><selected>false</selected><isPairing>false</isPairing></MacroEvent></MacroEvents><DelaySetting>0</DelaySetting><Guid>xml-key-state-0</Guid><Version>4</Version><MouseMoveType>none</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-key-state-0",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 1,
+            "Id": 0,
+            "KeyEvent": {
+              "Makecode": 258,
+              "State": 0
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      }
+    },
+    {
+      "name": "key-state-1",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-key-state-1",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 1,
+            "Id": null,
+            "KeyEvent": {
+              "Makecode": 258,
+              "State": 1
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {},
+                "selected": false
+              },
+              {
+                "Type": 1,
+                "Id": null,
+                "KeyEvent": {
+                  "Makecode": 258,
+                  "State": 1
+                },
+                "selected": false,
+                "isPairing": false
+              }
+            ]
+          },
+          "DelaySetting": 0,
+          "Guid": "xml-key-state-1",
+          "Version": 4,
+          "MouseMoveType": "none"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile></recordProfile><selected>false</selected></MacroEvent><MacroEvent><Type>1</Type><Id/><KeyEvent><Makecode>258</Makecode><State>1</State></KeyEvent><selected>false</selected><isPairing>false</isPairing></MacroEvent></MacroEvents><DelaySetting>0</DelaySetting><Guid>xml-key-state-1</Guid><Version>4</Version><MouseMoveType>none</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-key-state-1",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 1,
+            "Id": null,
+            "KeyEvent": {
+              "Makecode": 258,
+              "State": 1
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      }
+    },
+    {
+      "name": "key-state-2",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-key-state-2",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 1,
+            "Id": null,
+            "KeyEvent": {
+              "Makecode": 258,
+              "State": 2
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {},
+                "selected": false
+              },
+              {
+                "Type": 1,
+                "Id": null,
+                "KeyEvent": {
+                  "Makecode": 258,
+                  "State": 2
+                },
+                "selected": false,
+                "isPairing": false
+              }
+            ]
+          },
+          "DelaySetting": 0,
+          "Guid": "xml-key-state-2",
+          "Version": 4,
+          "MouseMoveType": "none"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile></recordProfile><selected>false</selected></MacroEvent><MacroEvent><Type>1</Type><Id/><KeyEvent><Makecode>258</Makecode><State>2</State></KeyEvent><selected>false</selected><isPairing>false</isPairing></MacroEvent></MacroEvents><DelaySetting>0</DelaySetting><Guid>xml-key-state-2</Guid><Version>4</Version><MouseMoveType>none</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-key-state-2",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 1,
+            "Id": null,
+            "KeyEvent": {
+              "Makecode": 258,
+              "State": 2
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      }
+    },
+    {
+      "name": "key-state-3",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-key-state-3",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 1,
+            "Id": null,
+            "KeyEvent": {
+              "Makecode": 258,
+              "State": 3
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {},
+                "selected": false
+              },
+              {
+                "Type": 1,
+                "Id": null,
+                "KeyEvent": {
+                  "Makecode": 258,
+                  "State": 3
+                },
+                "selected": false,
+                "isPairing": false
+              }
+            ]
+          },
+          "DelaySetting": 0,
+          "Guid": "xml-key-state-3",
+          "Version": 4,
+          "MouseMoveType": "none"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile></recordProfile><selected>false</selected></MacroEvent><MacroEvent><Type>1</Type><Id/><KeyEvent><Makecode>258</Makecode><State>3</State></KeyEvent><selected>false</selected><isPairing>false</isPairing></MacroEvent></MacroEvents><DelaySetting>0</DelaySetting><Guid>xml-key-state-3</Guid><Version>4</Version><MouseMoveType>none</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-key-state-3",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 1,
+            "Id": null,
+            "KeyEvent": {
+              "Makecode": 258,
+              "State": 3
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      }
+    },
+    {
+      "name": "key-state-4",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-key-state-4",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 1,
+            "Id": null,
+            "KeyEvent": {
+              "Makecode": 258,
+              "State": 4
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {},
+                "selected": false
+              },
+              {
+                "Type": 1,
+                "Id": null,
+                "KeyEvent": {
+                  "Makecode": 258,
+                  "State": 4
+                },
+                "selected": false,
+                "isPairing": false
+              }
+            ]
+          },
+          "DelaySetting": 0,
+          "Guid": "xml-key-state-4",
+          "Version": 4,
+          "MouseMoveType": "none"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile></recordProfile><selected>false</selected></MacroEvent><MacroEvent><Type>1</Type><Id/><KeyEvent><Makecode>258</Makecode><State>4</State></KeyEvent><selected>false</selected><isPairing>false</isPairing></MacroEvent></MacroEvents><DelaySetting>0</DelaySetting><Guid>xml-key-state-4</Guid><Version>4</Version><MouseMoveType>none</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-key-state-4",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 1,
+            "Id": null,
+            "KeyEvent": {
+              "Makecode": 258,
+              "State": 4
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      }
+    },
+    {
+      "name": "key-state-5",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-key-state-5",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 1,
+            "Id": null,
+            "KeyEvent": {
+              "Makecode": 258,
+              "State": 5
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {},
+                "selected": false
+              },
+              {
+                "Type": 1,
+                "Id": null,
+                "KeyEvent": {
+                  "Makecode": 258,
+                  "State": 5
+                },
+                "selected": false,
+                "isPairing": false
+              }
+            ]
+          },
+          "DelaySetting": 0,
+          "Guid": "xml-key-state-5",
+          "Version": 4,
+          "MouseMoveType": "none"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile></recordProfile><selected>false</selected></MacroEvent><MacroEvent><Type>1</Type><Id/><KeyEvent><Makecode>258</Makecode><State>5</State></KeyEvent><selected>false</selected><isPairing>false</isPairing></MacroEvent></MacroEvents><DelaySetting>0</DelaySetting><Guid>xml-key-state-5</Guid><Version>4</Version><MouseMoveType>none</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-key-state-5",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 1,
+            "Id": null,
+            "KeyEvent": {
+              "Makecode": 258,
+              "State": 5
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      }
+    },
+    {
+      "name": "mouse-0",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-mouse-0",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 2,
+            "Id": null,
+            "MouseEvent": {
+              "MouseButton": 0,
+              "State": null
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {},
+                "selected": false
+              },
+              {
+                "Type": 2,
+                "Id": null,
+                "MouseEvent": {
+                  "MouseButton": 0,
+                  "State": null
+                },
+                "selected": false,
+                "isPairing": false
+              }
+            ]
+          },
+          "DelaySetting": 0,
+          "Guid": "xml-mouse-0",
+          "Version": 4,
+          "MouseMoveType": "none"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile></recordProfile><selected>false</selected></MacroEvent><MacroEvent><Type>2</Type><Id/><MouseEvent><MouseButton>0</MouseButton><State/></MouseEvent><selected>false</selected><isPairing>false</isPairing></MacroEvent></MacroEvents><DelaySetting>0</DelaySetting><Guid>xml-mouse-0</Guid><Version>4</Version><MouseMoveType>none</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-mouse-0",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 2,
+            "Id": null,
+            "MouseEvent": {
+              "MouseButton": 0,
+              "State": null
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      }
+    },
+    {
+      "name": "mouse-1",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-mouse-1",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 2,
+            "Id": null,
+            "MouseEvent": {
+              "MouseButton": 1,
+              "State": null
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {},
+                "selected": false
+              },
+              {
+                "Type": 2,
+                "Id": null,
+                "MouseEvent": {
+                  "MouseButton": 1,
+                  "State": null
+                },
+                "selected": false,
+                "isPairing": false
+              }
+            ]
+          },
+          "DelaySetting": 0,
+          "Guid": "xml-mouse-1",
+          "Version": 4,
+          "MouseMoveType": "none"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile></recordProfile><selected>false</selected></MacroEvent><MacroEvent><Type>2</Type><Id/><MouseEvent><MouseButton>1</MouseButton><State/></MouseEvent><selected>false</selected><isPairing>false</isPairing></MacroEvent></MacroEvents><DelaySetting>0</DelaySetting><Guid>xml-mouse-1</Guid><Version>4</Version><MouseMoveType>none</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-mouse-1",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 2,
+            "Id": null,
+            "MouseEvent": {
+              "MouseButton": 1,
+              "State": null
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      }
+    },
+    {
+      "name": "mouse-2",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-mouse-2",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 2,
+            "Id": null,
+            "MouseEvent": {
+              "MouseButton": 2,
+              "State": null
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {},
+                "selected": false
+              },
+              {
+                "Type": 2,
+                "Id": null,
+                "MouseEvent": {
+                  "MouseButton": 2,
+                  "State": null
+                },
+                "selected": false,
+                "isPairing": false
+              }
+            ]
+          },
+          "DelaySetting": 0,
+          "Guid": "xml-mouse-2",
+          "Version": 4,
+          "MouseMoveType": "none"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile></recordProfile><selected>false</selected></MacroEvent><MacroEvent><Type>2</Type><Id/><MouseEvent><MouseButton>2</MouseButton><State/></MouseEvent><selected>false</selected><isPairing>false</isPairing></MacroEvent></MacroEvents><DelaySetting>0</DelaySetting><Guid>xml-mouse-2</Guid><Version>4</Version><MouseMoveType>none</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-mouse-2",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 2,
+            "Id": null,
+            "MouseEvent": {
+              "MouseButton": 2,
+              "State": null
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      }
+    },
+    {
+      "name": "mouse-3",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-mouse-3",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 2,
+            "Id": null,
+            "MouseEvent": {
+              "MouseButton": 3,
+              "State": null
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {},
+                "selected": false
+              },
+              {
+                "Type": 2,
+                "Id": null,
+                "MouseEvent": {
+                  "MouseButton": 3,
+                  "State": null
+                },
+                "selected": false,
+                "isPairing": false
+              }
+            ]
+          },
+          "DelaySetting": 0,
+          "Guid": "xml-mouse-3",
+          "Version": 4,
+          "MouseMoveType": "none"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile></recordProfile><selected>false</selected></MacroEvent><MacroEvent><Type>2</Type><Id/><MouseEvent><MouseButton>3</MouseButton><State/></MouseEvent><selected>false</selected><isPairing>false</isPairing></MacroEvent></MacroEvents><DelaySetting>0</DelaySetting><Guid>xml-mouse-3</Guid><Version>4</Version><MouseMoveType>none</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-mouse-3",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 2,
+            "Id": null,
+            "MouseEvent": {
+              "MouseButton": 3,
+              "State": null
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      }
+    },
+    {
+      "name": "mouse-4",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-mouse-4",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 2,
+            "Id": null,
+            "MouseEvent": {
+              "MouseButton": 4,
+              "State": null
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {},
+                "selected": false
+              },
+              {
+                "Type": 2,
+                "Id": null,
+                "MouseEvent": {
+                  "MouseButton": 4,
+                  "State": null
+                },
+                "selected": false,
+                "isPairing": false
+              }
+            ]
+          },
+          "DelaySetting": 0,
+          "Guid": "xml-mouse-4",
+          "Version": 4,
+          "MouseMoveType": "none"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile></recordProfile><selected>false</selected></MacroEvent><MacroEvent><Type>2</Type><Id/><MouseEvent><MouseButton>4</MouseButton><State/></MouseEvent><selected>false</selected><isPairing>false</isPairing></MacroEvent></MacroEvents><DelaySetting>0</DelaySetting><Guid>xml-mouse-4</Guid><Version>4</Version><MouseMoveType>none</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-mouse-4",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 2,
+            "Id": null,
+            "MouseEvent": {
+              "MouseButton": 4,
+              "State": null
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      }
+    },
+    {
+      "name": "mouse-5",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-mouse-5",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 2,
+            "Id": null,
+            "MouseEvent": {
+              "MouseButton": 5,
+              "State": 0
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {},
+                "selected": false
+              },
+              {
+                "Type": 2,
+                "Id": null,
+                "MouseEvent": {
+                  "MouseButton": 5,
+                  "State": 0
+                },
+                "selected": false,
+                "isPairing": false
+              }
+            ]
+          },
+          "DelaySetting": 0,
+          "Guid": "xml-mouse-5",
+          "Version": 4,
+          "MouseMoveType": "none"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile></recordProfile><selected>false</selected></MacroEvent><MacroEvent><Type>2</Type><Id/><MouseEvent><MouseButton>5</MouseButton><State>0</State></MouseEvent><selected>false</selected><isPairing>false</isPairing></MacroEvent></MacroEvents><DelaySetting>0</DelaySetting><Guid>xml-mouse-5</Guid><Version>4</Version><MouseMoveType>none</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-mouse-5",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 2,
+            "Id": 0,
+            "MouseEvent": {
+              "MouseButton": 5,
+              "State": 0
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      }
+    },
+    {
+      "name": "mouse-6",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-mouse-6",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 2,
+            "Id": null,
+            "MouseEvent": {
+              "MouseButton": 6,
+              "State": 0
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {},
+                "selected": false
+              },
+              {
+                "Type": 2,
+                "Id": null,
+                "MouseEvent": {
+                  "MouseButton": 6,
+                  "State": 0
+                },
+                "selected": false,
+                "isPairing": false
+              }
+            ]
+          },
+          "DelaySetting": 0,
+          "Guid": "xml-mouse-6",
+          "Version": 4,
+          "MouseMoveType": "none"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile></recordProfile><selected>false</selected></MacroEvent><MacroEvent><Type>2</Type><Id/><MouseEvent><MouseButton>6</MouseButton><State>0</State></MouseEvent><selected>false</selected><isPairing>false</isPairing></MacroEvent></MacroEvents><DelaySetting>0</DelaySetting><Guid>xml-mouse-6</Guid><Version>4</Version><MouseMoveType>none</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-mouse-6",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 2,
+            "Id": 0,
+            "MouseEvent": {
+              "MouseButton": 6,
+              "State": 0
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      }
+    },
+    {
+      "name": "mouse-7",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-mouse-7",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 2,
+            "Id": null,
+            "MouseEvent": {
+              "MouseButton": 7,
+              "State": 0
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {},
+                "selected": false
+              },
+              {
+                "Type": 2,
+                "Id": null,
+                "MouseEvent": {
+                  "MouseButton": 7,
+                  "State": 0
+                },
+                "selected": false,
+                "isPairing": false
+              }
+            ]
+          },
+          "DelaySetting": 0,
+          "Guid": "xml-mouse-7",
+          "Version": 4,
+          "MouseMoveType": "none"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile></recordProfile><selected>false</selected></MacroEvent><MacroEvent><Type>2</Type><Id/><MouseEvent><MouseButton>7</MouseButton><State>0</State></MouseEvent><selected>false</selected><isPairing>false</isPairing></MacroEvent></MacroEvents><DelaySetting>0</DelaySetting><Guid>xml-mouse-7</Guid><Version>4</Version><MouseMoveType>none</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-mouse-7",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 2,
+            "Id": 0,
+            "MouseEvent": {
+              "MouseButton": 7,
+              "State": 0
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      }
+    },
+    {
+      "name": "mouse-8",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-mouse-8",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 2,
+            "Id": null,
+            "MouseEvent": {
+              "MouseButton": 8,
+              "State": 0
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {},
+                "selected": false
+              },
+              {
+                "Type": 2,
+                "Id": null,
+                "MouseEvent": {
+                  "MouseButton": 8,
+                  "State": 0
+                },
+                "selected": false,
+                "isPairing": false
+              }
+            ]
+          },
+          "DelaySetting": 0,
+          "Guid": "xml-mouse-8",
+          "Version": 4,
+          "MouseMoveType": "none"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile></recordProfile><selected>false</selected></MacroEvent><MacroEvent><Type>2</Type><Id/><MouseEvent><MouseButton>8</MouseButton><State>0</State></MouseEvent><selected>false</selected><isPairing>false</isPairing></MacroEvent></MacroEvents><DelaySetting>0</DelaySetting><Guid>xml-mouse-8</Guid><Version>4</Version><MouseMoveType>none</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-mouse-8",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 2,
+            "Id": 0,
+            "MouseEvent": {
+              "MouseButton": 8,
+              "State": 0
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      }
+    },
+    {
+      "name": "mouse-9",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-mouse-9",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 2,
+            "Id": null,
+            "MouseEvent": {
+              "MouseButton": 9,
+              "State": 0
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {},
+                "selected": false
+              },
+              {
+                "Type": 2,
+                "Id": null,
+                "MouseEvent": {
+                  "MouseButton": 9,
+                  "State": 0
+                },
+                "selected": false,
+                "isPairing": false
+              }
+            ]
+          },
+          "DelaySetting": 0,
+          "Guid": "xml-mouse-9",
+          "Version": 4,
+          "MouseMoveType": "none"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile></recordProfile><selected>false</selected></MacroEvent><MacroEvent><Type>2</Type><Id/><MouseEvent><MouseButton>9</MouseButton><State>0</State></MouseEvent><selected>false</selected><isPairing>false</isPairing></MacroEvent></MacroEvents><DelaySetting>0</DelaySetting><Guid>xml-mouse-9</Guid><Version>4</Version><MouseMoveType>none</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-mouse-9",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 2,
+            "Id": 0,
+            "MouseEvent": {
+              "MouseButton": 9,
+              "State": 0
+            },
+            "selected": false,
+            "isPairing": false
+          }
+        ],
+        "delaySetting": 0,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      }
+    },
+    {
+      "name": "literal-entities",
+      "input": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-literal-entities",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 4,
+            "Text": "Literal &lt; &amp; &quot; &#39;",
+            "selected": false
+          }
+        ],
+        "delaySetting": 0,
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      },
+      "envelope": {
+        "Macro": {
+          "Name": "Portable & <macro> 😃",
+          "MacroEvents": {
+            "MacroEvent": [
+              {
+                "Type": "actionBar",
+                "recordProfile": {},
+                "selected": false
+              },
+              {
+                "Type": 4,
+                "Text": "Literal &lt; &amp; &quot; &#39;",
+                "selected": false
+              }
+            ]
+          },
+          "DelaySetting": 0,
+          "Guid": "xml-literal-entities",
+          "Version": 4,
+          "MouseMoveType": "none"
+        }
+      },
+      "xml": "<Macro><Name>Portable &amp; &lt;macro&gt; 😃</Name><MacroEvents><MacroEvent><Type>actionBar</Type><recordProfile></recordProfile><selected>false</selected></MacroEvent><MacroEvent><Type>4</Type><Text>Literal &amp;lt; &amp;amp; &amp;quot; &amp;#39;</Text><selected>false</selected></MacroEvent></MacroEvents><DelaySetting>0</DelaySetting><Guid>xml-literal-entities</Guid><Version>4</Version><MouseMoveType>none</MouseMoveType></Macro>",
+      "imported": {
+        "name": "Portable & <macro> 😃",
+        "guid": "xml-literal-entities",
+        "macroEvents": [
+          {
+            "Type": "actionBar",
+            "recordProfile": {},
+            "selected": false
+          },
+          {
+            "Type": 4,
+            "Text": "Literal < & \" '",
+            "selected": false
+          }
+        ],
+        "delaySetting": 0,
+        "actionLoad": {
+          "previousAction": [],
+          "nextAction": []
+        },
+        "deviceList": [],
+        "appEngine": {
+          "mouseMoveType": "none"
+        }
+      },
+      "intentional_difference": "Lite retains literal entity-looking text; stock postprocessor unescapes XML-decoded text a second time."
+    }
+  ],
+  "source": {
+    "parent_sha256": "fd20eeea9ac259a741c5deec4cc23f7e293cb99fa8ed658816af50bbd894941d",
+    "method": "Isolated source export handler captures typed envelope; independent XML serialization/ElementTree parsing; isolated source v4 constructor and postprocessor. No vendor bootstrap, native bridge or host action execution."
+  }
+}

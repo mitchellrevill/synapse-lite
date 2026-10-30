@@ -1,0 +1,1131 @@
+{
+  "provenance": "Independent reference from static native instructions, not vendor execution",
+  "native_sha256": "cd9fc2a61ff920b9b73e1f5e27632020e2f8586f443e426a875ad3b042b714fa",
+  "cases": [
+    {
+      "canvas": [
+        7,
+        23
+      ],
+      "bounds": [
+        0,
+        0,
+        23,
+        7
+      ],
+      "initial_random_state": 1,
+      "final_random_state": 2256422445,
+      "hot": 16711680,
+      "cold": 16744448,
+      "frames": 500,
+      "rgba_md5": "555d239e227c80cd07a8c7e5c650f04a",
+      "samples": [
+        {
+          "frame": 0,
+          "top_left": [
+            2,
+            1,
+            0,
+            0
+          ],
+          "bottom_left": [
+            71,
+            17,
+            0,
+            0
+          ],
+          "bottom_right": [
+            89,
+            33,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 1,
+          "top_left": [
+            2,
+            1,
+            0,
+            0
+          ],
+          "bottom_left": [
+            98,
+            24,
+            0,
+            0
+          ],
+          "bottom_right": [
+            87,
+            32,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 4,
+          "top_left": [
+            3,
+            1,
+            0,
+            0
+          ],
+          "bottom_left": [
+            180,
+            45,
+            0,
+            0
+          ],
+          "bottom_right": [
+            83,
+            31,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 5,
+          "top_left": [
+            3,
+            1,
+            0,
+            0
+          ],
+          "bottom_left": [
+            180,
+            45,
+            0,
+            0
+          ],
+          "bottom_right": [
+            83,
+            31,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 499,
+          "top_left": [
+            2,
+            1,
+            0,
+            0
+          ],
+          "bottom_left": [
+            71,
+            17,
+            0,
+            0
+          ],
+          "bottom_right": [
+            89,
+            33,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "canvas": [
+        6,
+        22
+      ],
+      "bounds": [
+        0,
+        0,
+        22,
+        6
+      ],
+      "initial_random_state": 1,
+      "final_random_state": 2256422445,
+      "hot": 16711680,
+      "cold": 16744448,
+      "frames": 500,
+      "rgba_md5": "d2d178626ca5569cbc725c87efea4aba",
+      "samples": [
+        {
+          "frame": 0,
+          "top_left": [
+            6,
+            3,
+            0,
+            0
+          ],
+          "bottom_left": [
+            71,
+            17,
+            0,
+            0
+          ],
+          "bottom_right": [
+            43,
+            10,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 1,
+          "top_left": [
+            5,
+            2,
+            0,
+            0
+          ],
+          "bottom_left": [
+            98,
+            24,
+            0,
+            0
+          ],
+          "bottom_right": [
+            42,
+            10,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 4,
+          "top_left": [
+            2,
+            1,
+            0,
+            0
+          ],
+          "bottom_left": [
+            180,
+            45,
+            0,
+            0
+          ],
+          "bottom_right": [
+            40,
+            10,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 5,
+          "top_left": [
+            2,
+            1,
+            0,
+            0
+          ],
+          "bottom_left": [
+            180,
+            45,
+            0,
+            0
+          ],
+          "bottom_right": [
+            40,
+            10,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 499,
+          "top_left": [
+            6,
+            3,
+            0,
+            0
+          ],
+          "bottom_left": [
+            71,
+            17,
+            0,
+            0
+          ],
+          "bottom_right": [
+            43,
+            10,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "canvas": [
+        6,
+        23
+      ],
+      "bounds": [
+        0,
+        0,
+        23,
+        6
+      ],
+      "initial_random_state": 1,
+      "final_random_state": 2256422445,
+      "hot": 16711680,
+      "cold": 16744448,
+      "frames": 500,
+      "rgba_md5": "aaef8017355846f572bcd388e64f7081",
+      "samples": [
+        {
+          "frame": 0,
+          "top_left": [
+            6,
+            3,
+            0,
+            0
+          ],
+          "bottom_left": [
+            71,
+            17,
+            0,
+            0
+          ],
+          "bottom_right": [
+            89,
+            33,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 1,
+          "top_left": [
+            5,
+            2,
+            0,
+            0
+          ],
+          "bottom_left": [
+            98,
+            24,
+            0,
+            0
+          ],
+          "bottom_right": [
+            87,
+            32,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 4,
+          "top_left": [
+            2,
+            1,
+            0,
+            0
+          ],
+          "bottom_left": [
+            180,
+            45,
+            0,
+            0
+          ],
+          "bottom_right": [
+            83,
+            31,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 5,
+          "top_left": [
+            2,
+            1,
+            0,
+            0
+          ],
+          "bottom_left": [
+            180,
+            45,
+            0,
+            0
+          ],
+          "bottom_right": [
+            83,
+            31,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 499,
+          "top_left": [
+            6,
+            3,
+            0,
+            0
+          ],
+          "bottom_left": [
+            71,
+            17,
+            0,
+            0
+          ],
+          "bottom_right": [
+            89,
+            33,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "canvas": [
+        7,
+        22
+      ],
+      "bounds": [
+        0,
+        0,
+        22,
+        7
+      ],
+      "initial_random_state": 1,
+      "final_random_state": 2256422445,
+      "hot": 16711680,
+      "cold": 16744448,
+      "frames": 500,
+      "rgba_md5": "cedda7df30d6bd28b566ba1b7b57eb04",
+      "samples": [
+        {
+          "frame": 0,
+          "top_left": [
+            2,
+            1,
+            0,
+            0
+          ],
+          "bottom_left": [
+            71,
+            17,
+            0,
+            0
+          ],
+          "bottom_right": [
+            43,
+            10,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 1,
+          "top_left": [
+            2,
+            1,
+            0,
+            0
+          ],
+          "bottom_left": [
+            98,
+            24,
+            0,
+            0
+          ],
+          "bottom_right": [
+            42,
+            10,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 4,
+          "top_left": [
+            3,
+            1,
+            0,
+            0
+          ],
+          "bottom_left": [
+            180,
+            45,
+            0,
+            0
+          ],
+          "bottom_right": [
+            40,
+            10,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 5,
+          "top_left": [
+            3,
+            1,
+            0,
+            0
+          ],
+          "bottom_left": [
+            180,
+            45,
+            0,
+            0
+          ],
+          "bottom_right": [
+            40,
+            10,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 499,
+          "top_left": [
+            2,
+            1,
+            0,
+            0
+          ],
+          "bottom_left": [
+            71,
+            17,
+            0,
+            0
+          ],
+          "bottom_right": [
+            43,
+            10,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "canvas": [
+        3,
+        46
+      ],
+      "bounds": [
+        0,
+        0,
+        46,
+        3
+      ],
+      "initial_random_state": 1,
+      "final_random_state": 2256422445,
+      "hot": 16711680,
+      "cold": 16744448,
+      "frames": 500,
+      "rgba_md5": "94b8f4b465f323604693baee4793880a",
+      "samples": [
+        {
+          "frame": 0,
+          "top_left": [
+            11,
+            5,
+            0,
+            0
+          ],
+          "bottom_left": [
+            71,
+            17,
+            0,
+            0
+          ],
+          "bottom_right": [
+            89,
+            33,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 1,
+          "top_left": [
+            11,
+            5,
+            0,
+            0
+          ],
+          "bottom_left": [
+            98,
+            24,
+            0,
+            0
+          ],
+          "bottom_right": [
+            87,
+            32,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 4,
+          "top_left": [
+            9,
+            4,
+            0,
+            0
+          ],
+          "bottom_left": [
+            180,
+            45,
+            0,
+            0
+          ],
+          "bottom_right": [
+            83,
+            31,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 5,
+          "top_left": [
+            9,
+            4,
+            0,
+            0
+          ],
+          "bottom_left": [
+            180,
+            45,
+            0,
+            0
+          ],
+          "bottom_right": [
+            83,
+            31,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 499,
+          "top_left": [
+            11,
+            5,
+            0,
+            0
+          ],
+          "bottom_left": [
+            71,
+            17,
+            0,
+            0
+          ],
+          "bottom_right": [
+            89,
+            33,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "canvas": [
+        14,
+        46
+      ],
+      "bounds": [
+        0,
+        0,
+        46,
+        14
+      ],
+      "initial_random_state": 1,
+      "final_random_state": 2256422445,
+      "hot": 16711680,
+      "cold": 16744448,
+      "frames": 500,
+      "rgba_md5": "3aa925fe3684b320c6360e76fabb9605",
+      "samples": [
+        {
+          "frame": 0,
+          "top_left": [
+            2,
+            1,
+            0,
+            0
+          ],
+          "bottom_left": [
+            71,
+            17,
+            0,
+            0
+          ],
+          "bottom_right": [
+            89,
+            33,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 1,
+          "top_left": [
+            2,
+            1,
+            0,
+            0
+          ],
+          "bottom_left": [
+            98,
+            24,
+            0,
+            0
+          ],
+          "bottom_right": [
+            87,
+            32,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 4,
+          "top_left": [
+            3,
+            1,
+            0,
+            0
+          ],
+          "bottom_left": [
+            180,
+            45,
+            0,
+            0
+          ],
+          "bottom_right": [
+            83,
+            31,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 5,
+          "top_left": [
+            3,
+            1,
+            0,
+            0
+          ],
+          "bottom_left": [
+            180,
+            45,
+            0,
+            0
+          ],
+          "bottom_right": [
+            83,
+            31,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 499,
+          "top_left": [
+            2,
+            1,
+            0,
+            0
+          ],
+          "bottom_left": [
+            71,
+            17,
+            0,
+            0
+          ],
+          "bottom_right": [
+            89,
+            33,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "canvas": [
+        10,
+        30
+      ],
+      "bounds": [
+        3,
+        2,
+        26,
+        9
+      ],
+      "initial_random_state": 4294967295,
+      "final_random_state": 2543955147,
+      "hot": 8405024,
+      "cold": null,
+      "frames": 500,
+      "rgba_md5": "47f04ff6f0c0db04cd5608b0146605ed",
+      "samples": [
+        {
+          "frame": 0,
+          "top_left": [
+            0,
+            0,
+            0,
+            24
+          ],
+          "bottom_left": [
+            16,
+            7,
+            3,
+            50
+          ],
+          "bottom_right": [
+            16,
+            7,
+            3,
+            75
+          ]
+        },
+        {
+          "frame": 1,
+          "top_left": [
+            0,
+            0,
+            0,
+            24
+          ],
+          "bottom_left": [
+            18,
+            9,
+            4,
+            50
+          ],
+          "bottom_right": [
+            15,
+            7,
+            3,
+            75
+          ]
+        },
+        {
+          "frame": 4,
+          "top_left": [
+            0,
+            0,
+            0,
+            24
+          ],
+          "bottom_left": [
+            25,
+            12,
+            6,
+            50
+          ],
+          "bottom_right": [
+            13,
+            6,
+            3,
+            75
+          ]
+        },
+        {
+          "frame": 5,
+          "top_left": [
+            0,
+            0,
+            0,
+            24
+          ],
+          "bottom_left": [
+            25,
+            12,
+            6,
+            50
+          ],
+          "bottom_right": [
+            13,
+            6,
+            3,
+            75
+          ]
+        },
+        {
+          "frame": 499,
+          "top_left": [
+            0,
+            0,
+            0,
+            24
+          ],
+          "bottom_left": [
+            16,
+            7,
+            3,
+            50
+          ],
+          "bottom_right": [
+            16,
+            7,
+            3,
+            75
+          ]
+        }
+      ]
+    },
+    {
+      "canvas": [
+        7,
+        23
+      ],
+      "bounds": [
+        0,
+        0,
+        23,
+        7
+      ],
+      "initial_random_state": 12345,
+      "final_random_state": 1426078949,
+      "hot": null,
+      "cold": null,
+      "frames": 500,
+      "rgba_md5": "4250efcd7b9b2a01983bc5b430a88d1f",
+      "samples": [
+        {
+          "frame": 0,
+          "top_left": [
+            0,
+            0,
+            0,
+            24
+          ],
+          "bottom_left": [
+            0,
+            0,
+            0,
+            100
+          ],
+          "bottom_right": [
+            0,
+            0,
+            0,
+            100
+          ]
+        },
+        {
+          "frame": 1,
+          "top_left": [
+            0,
+            0,
+            0,
+            24
+          ],
+          "bottom_left": [
+            0,
+            0,
+            0,
+            100
+          ],
+          "bottom_right": [
+            0,
+            0,
+            0,
+            100
+          ]
+        },
+        {
+          "frame": 4,
+          "top_left": [
+            0,
+            0,
+            0,
+            24
+          ],
+          "bottom_left": [
+            0,
+            0,
+            0,
+            100
+          ],
+          "bottom_right": [
+            0,
+            0,
+            0,
+            100
+          ]
+        },
+        {
+          "frame": 5,
+          "top_left": [
+            0,
+            0,
+            0,
+            24
+          ],
+          "bottom_left": [
+            0,
+            0,
+            0,
+            100
+          ],
+          "bottom_right": [
+            0,
+            0,
+            0,
+            100
+          ]
+        },
+        {
+          "frame": 499,
+          "top_left": [
+            0,
+            0,
+            0,
+            24
+          ],
+          "bottom_left": [
+            0,
+            0,
+            0,
+            100
+          ],
+          "bottom_right": [
+            0,
+            0,
+            0,
+            100
+          ]
+        }
+      ]
+    },
+    {
+      "canvas": [
+        7,
+        23
+      ],
+      "bounds": [
+        0,
+        0,
+        23,
+        7
+      ],
+      "initial_random_state": 0,
+      "final_random_state": 2400188796,
+      "hot": null,
+      "cold": 1122867,
+      "frames": 500,
+      "rgba_md5": "f4d9ddf37f11d53a137be5d437f297a2",
+      "samples": [
+        {
+          "frame": 0,
+          "top_left": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "bottom_left": [
+            4,
+            9,
+            13,
+            0
+          ],
+          "bottom_right": [
+            11,
+            22,
+            34,
+            0
+          ]
+        },
+        {
+          "frame": 1,
+          "top_left": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "bottom_left": [
+            6,
+            13,
+            20,
+            0
+          ],
+          "bottom_right": [
+            9,
+            19,
+            29,
+            0
+          ]
+        },
+        {
+          "frame": 4,
+          "top_left": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "bottom_left": [
+            13,
+            27,
+            40,
+            0
+          ],
+          "bottom_right": [
+            4,
+            9,
+            13,
+            0
+          ]
+        },
+        {
+          "frame": 5,
+          "top_left": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "bottom_left": [
+            13,
+            27,
+            40,
+            0
+          ],
+          "bottom_right": [
+            4,
+            9,
+            13,
+            0
+          ]
+        },
+        {
+          "frame": 499,
+          "top_left": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "bottom_left": [
+            4,
+            9,
+            13,
+            0
+          ],
+          "bottom_right": [
+            11,
+            22,
+            34,
+            0
+          ]
+        }
+      ]
+    }
+  ]
+}

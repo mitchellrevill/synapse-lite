@@ -731,6 +731,12 @@ impl Device {
         let (command, size, id) = input.command();
         let r = self.get(command, size, &[slot, id, layer as u8])?;
         let a = r.args();
+        if a[..3] != [slot, id, layer as u8] {
+            return Err(Error::Unsupported(format!(
+                "Input readback selectors differ: requested [{slot},{id},{}], returned [{},{},{}]; no selector alias is verified",
+                layer as u8, a[0], a[1], a[2]
+            )));
+        }
         Ok(Action::decode(a[3], [a[5], a[6], a[7], a[8], a[9]]))
     }
 
@@ -748,7 +754,9 @@ impl Device {
     /// Set a button or key in the live slot. Returns whether anything was sent: an
     /// unchanged one is left alone.
     pub fn set_input(&self, input: Input, layer: Layer, action: Action) -> Result<bool> {
-        if self.input(input, layer).ok() == Some(action) {
+        // A rejected/mismatched baseline is not evidence that a write is safe.
+        // In particular, do not silently continue after an unsupported GET.
+        if self.input(input, layer)? == action {
             return Ok(false);
         }
         let (command, size, id) = input.command();
@@ -871,6 +879,98 @@ impl Device {
 }
 
 #[cfg(test)]
+mod readback_guard_tests {
+    use super::*;
+    use crate::{
+        proto::{checksum, Report, REPORT_LEN},
+        sim::{Sim, MOUSE_PID},
+        Transport,
+    };
+    use std::time::Duration;
+
+    struct ChangedSelector {
+        sim: Sim,
+        field: usize,
+    }
+    impl Transport for ChangedSelector {
+        fn send_feature_report(&self, data: &[u8]) -> Result<()> {
+            self.sim.send_feature_report(data)
+        }
+        fn get_feature_report(&self, data: &mut [u8]) -> Result<usize> {
+            let size = self.sim.get_feature_report(data)?;
+            let start = size - REPORT_LEN;
+            let mut report = Report(data[start..size].try_into().unwrap());
+            if report.command() == cmd::BUTTON.get() {
+                report.0[8 + self.field] ^= 1;
+                report.0[88] = checksum(&report.0);
+                data[start..size].copy_from_slice(&report.0);
+            }
+            Ok(size)
+        }
+        fn read_delay(&self) -> Duration {
+            Duration::ZERO
+        }
+    }
+
+    #[test]
+    fn mismatched_slot_input_or_layer_refuses_decode_and_no_set_follows() {
+        for field in 0..3 {
+            let sim = Sim::mouse();
+            let dev = Device::open(
+                Box::new(ChangedSelector {
+                    sim: sim.clone(),
+                    field,
+                }),
+                MOUSE_PID,
+                0,
+                std::ffi::CString::new("sim-mismatched-input").unwrap(),
+                &[0x1f],
+                Sim::spec_for(MOUSE_PID),
+            )
+            .unwrap();
+            sim.state().log.clear();
+            assert!(dev.input(Input::Button(4), Layer::Normal).is_err());
+            assert!(dev.slot_input(1, Input::Button(4), Layer::Normal).is_err());
+            assert!(dev
+                .set_input(Input::Button(4), Layer::Normal, "left".parse().unwrap())
+                .is_err());
+            assert!(sim.state().log.iter().all(|c| *c == cmd::BUTTON.get()));
+        }
+    }
+
+    #[test]
+    fn rejected_baseline_cannot_fall_through_to_set_and_valid_unchanged_is_noop() {
+        let sim = Sim::mouse();
+        let dev = sim.open(MOUSE_PID, Sim::spec_for(MOUSE_PID)).unwrap();
+        sim.state().buttons.remove(&(cmd::BUTTON_LIVE_SLOT, 4, 0));
+        sim.state().log.clear();
+        assert!(dev
+            .set_input(Input::Button(4), Layer::Normal, "left".parse().unwrap())
+            .is_err());
+        assert!(!sim.state().log.contains(&cmd::BUTTON));
+        let sim = Sim::mouse();
+        let dev = sim.open(MOUSE_PID, Sim::spec_for(MOUSE_PID)).unwrap();
+        sim.state().log.clear();
+        let original = dev.input(Input::Button(4), Layer::Normal).unwrap();
+        assert!(!dev
+            .set_input(Input::Button(4), Layer::Normal, original)
+            .unwrap());
+        assert!(!sim.state().log.contains(&cmd::BUTTON));
+        assert!(dev
+            .set_input(Input::Button(4), Layer::Normal, "left".parse().unwrap())
+            .unwrap());
+        assert_eq!(
+            sim.state()
+                .log
+                .iter()
+                .filter(|c| **c == cmd::BUTTON)
+                .count(),
+            1
+        );
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -914,7 +1014,7 @@ mod tests {
 
     #[test]
     fn encodings_match_what_the_basilisk_v3_reports() {
-        // Read back from real hardware (docs/research-button-remapping.md).
+        // Read back from real hardware (docs/architecture.md).
         assert_eq!(Action::decode(6, [5, 0x01, 0x90, 0x01, 0x90]), Action::DpiClutch { x: 400, y: 400 });
         assert_eq!(Action::decode(14, [0x68, 0, 0x14, 0, 0]), Action::TurboMouse { button: 0x68, rate: 50 });
         assert_eq!(Action::decode(7, [4, 0, 0, 0, 0]), Action::ProfileCycleUp);

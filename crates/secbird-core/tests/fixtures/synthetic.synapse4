@@ -1,0 +1,25 @@
+{
+  "productId": 196,
+  "deviceName": "Razer DeathAdder V3 HyperSpeed",
+  "category": "MOUSE",
+  "futureEnvelope": {
+    "keep": "unchanged"
+  },
+  "profiles": [
+    {
+      "hash": "b5824efd4c1bc79d2e98a20019eb914b",
+      "name": "Fixture Mouse",
+      "payload": "eyJkcGkiOnsieCI6ODAwLCJ5IjoxNjAwfSwiZnV0dXJlIjp7Im5lc3RlZCI6WzEsdHJ1ZSwi4piDIl19LCJndWlkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAxIiwibWFwcGluZ3MiOlt7ImlucHV0SUQiOiJMZWZ0Q2xpY2siLCJteXN0ZXJ5Ijp7IngiOjF9LCJvdXRwdXRUeXBlIjoiOTk5In1dLCJuYW1lIjoiRml4dHVyZSBNb3VzZSIsInBvbGxpbmdSYXRlIjoxMDAwfQ==",
+      "unknownEntry": {
+        "retain": true
+      }
+    }
+  ],
+  "macros": [
+    {
+      "hash": "5ceb9568ab26c46e9179e6e02c467229",
+      "name": "Synthetic Macro",
+      "payload": "eyJndWlkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAyIiwibWFjcm9FdmVudHMiOlt7Im9wYXF1ZSI6dHJ1ZX1dLCJtYWNyb1BsYXliYWNrT3B0aW9uIjp7Im1vZGUiOjl9fQ=="
+    }
+  ]
+}

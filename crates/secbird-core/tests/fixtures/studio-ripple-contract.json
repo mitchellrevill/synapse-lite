@@ -1,0 +1,149 @@
+{
+  "producer": "inert literal extraction from Studio module6257 / factory / chunk255",
+  "source_sha256": {
+    "module-6257.js": "b78e31c6d57f820cc1fc4f8e75e05a6b2991ba27c1154bfde763199c1ae42fc8",
+    "effect-defaults.js": "81135f0c67380ab3654fec6ff88a731573aee47ea704df120b7b5d351a839ef8",
+    "255.e317cf93.chunk.js": "d2318bae2ccc07acb71ab4fb6c53358ebd063e29ca87cf5df6bbb0904e933e9e"
+  },
+  "speed": {
+    "min": 1,
+    "max": 50,
+    "default": 10
+  },
+  "width": {
+    "min": 100,
+    "max": 400,
+    "step": 100,
+    "default": 300
+  },
+  "defaults": {
+    "speed": 10,
+    "width": 300,
+    "playbackStart": "onPress",
+    "playbackEnd": "after",
+    "cycles": 1,
+    "colorStopsCustom": false,
+    "colorStops": [
+      {
+        "Stop": 0,
+        "Color": 16711680
+      },
+      {
+        "Stop": 26,
+        "Color": 16773888
+      },
+      {
+        "Stop": 42,
+        "Color": 3604296
+      },
+      {
+        "Stop": 55,
+        "Color": 6484479
+      },
+      {
+        "Stop": 68,
+        "Color": 3327
+      },
+      {
+        "Stop": 81,
+        "Color": 8388863
+      },
+      {
+        "Stop": 100,
+        "Color": 16711680
+      }
+    ]
+  },
+  "presets": [
+    [
+      {
+        "Stop": 0,
+        "Color": 16711680
+      },
+      {
+        "Stop": 26,
+        "Color": 16773888
+      },
+      {
+        "Stop": 42,
+        "Color": 3604296
+      },
+      {
+        "Stop": 55,
+        "Color": 6484479
+      },
+      {
+        "Stop": 68,
+        "Color": 3327
+      },
+      {
+        "Stop": 81,
+        "Color": 8388863
+      },
+      {
+        "Stop": 100,
+        "Color": 16711680
+      }
+    ],
+    [
+      {
+        "Stop": 0,
+        "Color": 0
+      },
+      {
+        "Stop": 25,
+        "Color": 16776960
+      },
+      {
+        "Stop": 50,
+        "Color": 0
+      },
+      {
+        "Stop": 75,
+        "Color": 65280
+      },
+      {
+        "Stop": 100,
+        "Color": 0
+      }
+    ],
+    [
+      {
+        "Stop": 0,
+        "Color": 0
+      },
+      {
+        "Stop": 50,
+        "Color": 65280
+      },
+      {
+        "Stop": 100,
+        "Color": 0
+      }
+    ],
+    [
+      {
+        "Stop": 0,
+        "Color": 16711680
+      },
+      {
+        "Stop": 100,
+        "Color": 16776960
+      }
+    ],
+    [
+      {
+        "Stop": 0,
+        "Color": 65280
+      },
+      {
+        "Stop": 100,
+        "Color": 65280
+      }
+    ]
+  ],
+  "repeat": {
+    "min": 1,
+    "max": 100
+  }
+}

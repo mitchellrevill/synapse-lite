@@ -1,0 +1,83 @@
+{
+  "provenance": "Independent static-instruction single-Ornata/zero-orientation reference; synthetic profile; no vendor/Rust execution",
+  "selected_leds": 109,
+  "logical_pixels": 161,
+  "mask_bounds": [
+    1,
+    0,
+    23,
+    6
+  ],
+  "frames": 500,
+  "initial_crt_state": 1,
+  "final_crt_state": 2609502873,
+  "fire_rebuilds": 2,
+  "rgb_md5": "15c72331781274566ba1d29ebfc5b0d1",
+  "samples": [
+    {
+      "frame": 0,
+      "esc": [
+        62,
+        6,
+        62
+      ],
+      "padding": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "frame": 1,
+      "esc": [
+        62,
+        6,
+        61
+      ],
+      "padding": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "frame": 4,
+      "esc": [
+        62,
+        6,
+        60
+      ],
+      "padding": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "frame": 137,
+      "esc": [
+        62,
+        5,
+        15
+      ],
+      "padding": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "frame": 499,
+      "esc": [
+        1,
+        58,
+        62
+      ],
+      "padding": [
+        0,
+        0,
+        0
+      ]
+    }
+  ]
+}

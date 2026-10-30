@@ -31,8 +31,10 @@ impl std::str::FromStr for Rgb {
 }
 
 /// The DPI values the mouse's DPI button cycles through.
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct DpiStages {
+    #[serde(flatten)]
+    pub extra: std::collections::BTreeMap<String, serde_json::Value>,
     /// 1-based index of the stage in use.
     pub active: u8,
     /// `(x, y)` per stage, at most [`cmd::MAX_DPI_STAGES`].
@@ -95,8 +97,9 @@ impl std::str::FromStr for Dimming {
     }
 }
 
-/// A keyboard's gaming mode: the keys it blocks so a game isn't left by accident. Nothing
-/// blocked is gaming mode off. As text: `off`, or the blocked keys, like `win,alt-tab`.
+/// Legacy Gaming Mode text projection: `off`, or e.g. `win,alt-tab`.
+/// This retains profile compatibility, not proof of a firmware shortcut mask.
+/// Ornata025D refuses the firmware API and requires a host mapping runtime.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct GameMode {
     pub win: bool,
@@ -183,13 +186,18 @@ impl Device {
         Ok((u16::from_be_bytes([a[1], a[2]]), u16::from_be_bytes([a[3], a[4]])))
     }
 
+    /// Preview the device's range/step normalization without issuing a request.
+    pub fn fitted_dpi(&self, x: u16, y: u16) -> Result<(u16, u16)> {
+        match self.spec.as_ref().and_then(|s| s.dpi.as_ref()) {
+            Some(r) => Ok((snap(x, r.min, r.max, r.step), snap(y, r.min, r.max, r.step))),
+            None if (100..=30000).contains(&x) && (100..=30000).contains(&y) => Ok((x, y)),
+            None => Err(Error::InvalidArg(format!("DPI {x}x{y} out of range"))),
+        }
+    }
+
     /// Set DPI and store it in the device's memory, rounded to the device's step.
     pub fn set_dpi(&self, x: u16, y: u16) -> Result<(u16, u16)> {
-        let (x, y) = match self.spec.as_ref().and_then(|s| s.dpi.as_ref()) {
-            Some(r) => (snap(x, r.min, r.max, r.step), snap(y, r.min, r.max, r.step)),
-            None if (100..=30000).contains(&x) && (100..=30000).contains(&y) => (x, y),
-            None => return Err(Error::InvalidArg(format!("DPI {x}x{y} out of range"))),
-        };
+        let (x, y) = self.fitted_dpi(x, y)?;
         let [xh, xl] = x.to_be_bytes();
         let [yh, yl] = y.to_be_bytes();
         self.transact(cmd::DPI, cmd::DPI_SIZE, &[cmd::VARSTORE, xh, xl, yh, yl, 0, 0])?;
@@ -207,13 +215,12 @@ impl Device {
                 (u16::from_be_bytes([s[1], s[2]]), u16::from_be_bytes([s[3], s[4]]))
             })
             .collect();
-        Ok(DpiStages { active: a[1], stages })
+        Ok(DpiStages { active: a[1], stages, ..Default::default() })
     }
 
-    /// Replace the DPI stages and store them in the device's memory. Values are rounded
-    /// to the device's step; returns what was sent. The device also switches to the active
-    /// stage's DPI.
-    pub fn set_dpi_stages(&self, stages: &DpiStages) -> Result<DpiStages> {
+    /// Pure validation and rounding of DPI stages to this device's range and step.
+    /// Unknown profile metadata is retained; this sends no hardware request.
+    pub fn fitted_dpi_stages(&self, stages: &DpiStages) -> Result<DpiStages> {
         let n = stages.stages.len();
         if !(1..=cmd::MAX_DPI_STAGES).contains(&n) {
             return Err(Error::InvalidArg(format!("{n} DPI stages; 1 to {} are allowed", cmd::MAX_DPI_STAGES)));
@@ -221,17 +228,20 @@ impl Device {
         if !(1..=n as u8).contains(&stages.active) {
             return Err(Error::InvalidArg(format!("active stage {} of {n}", stages.active)));
         }
-        let range = self.spec.as_ref().and_then(|s| s.dpi.as_ref());
-        let fit = |v: u16| match range {
-            Some(r) => Ok(snap(v, r.min, r.max, r.step)),
-            None if (100..=30000).contains(&v) => Ok(v),
-            None => Err(Error::InvalidArg(format!("DPI {v} out of range"))),
-        };
-        let mut sent = DpiStages { active: stages.active, stages: Vec::with_capacity(n) };
-        let mut args = vec![cmd::VARSTORE, stages.active, n as u8];
-        for (i, &(x, y)) in stages.stages.iter().enumerate() {
-            let (x, y) = (fit(x)?, fit(y)?);
-            sent.stages.push((x, y));
+        let fitted = stages.stages.iter().map(|&(x, y)| self.fitted_dpi(x, y))
+            .collect::<Result<Vec<_>>>()?;
+        Ok(DpiStages {
+            active: stages.active,
+            stages: fitted,
+            extra: stages.extra.clone(),
+        })
+    }
+    /// Replace stages using exactly the same pure projection exposed to callers
+    /// staging a complete profile before any hardware mutation.
+    pub fn set_dpi_stages(&self, stages: &DpiStages) -> Result<DpiStages> {
+        let sent = self.fitted_dpi_stages(stages)?;
+        let mut args = vec![cmd::VARSTORE, sent.active, sent.stages.len() as u8];
+        for (i, &(x, y)) in sent.stages.iter().enumerate() {
             let ([xh, xl], [yh, yl]) = (x.to_be_bytes(), y.to_be_bytes());
             args.extend([i as u8, xh, xl, yh, yl, 0, 0]);
         }
@@ -300,6 +310,11 @@ impl Device {
     /// The keys a keyboard or keypad blocks in gaming mode. `None` for other devices; an
     /// error when the keyboard has no gaming mode.
     pub fn game_mode(&self) -> Result<Option<GameMode>> {
+        if self.pid == 0x025d {
+            return Err(Error::Unsupported(
+                "Ornata Gaming Mode uses host input mappings; the firmware state byte is not a shortcut-blocking mask".into(),
+            ));
+        }
         if !self.spec.as_ref().is_some_and(|s| matches!(s.kind, crate::Kind::Keyboard | crate::Kind::Keypad)) {
             return Ok(None);
         }
@@ -309,6 +324,11 @@ impl Device {
 
     /// Set it, then read it back: a keyboard that doesn't block some of these keys says so.
     pub fn set_game_mode(&self, want: GameMode) -> Result<()> {
+        if self.pid == 0x025d {
+            return Err(Error::Unsupported(
+                "Ornata Gaming Mode requires selected-device host input routing and recovery; no firmware shortcut mask was sent".into(),
+            ));
+        }
         self.transact(cmd::GAME_MODE, cmd::GAME_MODE_SIZE, &[want.bits(), 0, 0, 0])?;
         let got = self.game_mode()?;
         if got != Some(want) {

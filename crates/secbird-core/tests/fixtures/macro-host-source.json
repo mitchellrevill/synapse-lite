@@ -1,0 +1,139 @@
+{
+  "provenance": "Controlled replay of recovered literal templates/pure converter only; no clipboard/process/browser/native execution",
+  "cases": [
+    {
+      "row": {
+        "Type": 4,
+        "Text": "Hello\nworld 😃",
+        "selected": false
+      },
+      "output": [
+        {
+          "type": "clipboard",
+          "id": "text",
+          "text": "Hello\nworld 😃"
+        },
+        {
+          "type": "delay",
+          "ms": 500
+        }
+      ]
+    },
+    {
+      "row": {
+        "Type": 5,
+        "TextCommand": "echo literal data",
+        "selected": false
+      },
+      "output": [
+        {
+          "type": "launch",
+          "path": "echo literal data"
+        },
+        {
+          "type": "delay",
+          "ms": 50
+        }
+      ]
+    },
+    {
+      "row": {
+        "Type": 5,
+        "TextCommand": "taskmgr.exe",
+        "selected": false
+      },
+      "output": [
+        {
+          "type": "launch",
+          "path": "cmd /c start taskmgr"
+        },
+        {
+          "type": "delay",
+          "ms": 50
+        }
+      ]
+    },
+    {
+      "row": {
+        "Type": 10,
+        "RadioIndex": 0,
+        "Content0": "C:\\Tools\\Example.exe",
+        "Content1": "retained.invalid",
+        "selected": false
+      },
+      "output": [
+        {
+          "type": "launch",
+          "path": "C:\\Tools\\Example.exe",
+          "startHidden": false,
+          "pathToCheck": "C:\\Tools\\Example.exe"
+        },
+        {
+          "type": "delay",
+          "ms": 50
+        }
+      ]
+    },
+    {
+      "row": {
+        "Type": 10,
+        "RadioIndex": 0,
+        "Content0": "C:\\Docs\\example.txt",
+        "Content1": "",
+        "selected": false
+      },
+      "output": [
+        {
+          "type": "launch",
+          "path": "cmd /c \"C:\\Docs\\example.txt\"",
+          "startHidden": true,
+          "pathToCheck": "C:\\Docs\\example.txt"
+        },
+        {
+          "type": "delay",
+          "ms": 50
+        }
+      ]
+    },
+    {
+      "row": {
+        "Type": 10,
+        "RadioIndex": 1,
+        "Content0": "C:\\Kept.exe",
+        "Content1": "example.invalid",
+        "selected": false
+      },
+      "output": [
+        {
+          "type": "launch",
+          "path": "cmd /c start \"\" \"https://www.example.invalid\"",
+          "startHidden": true
+        },
+        {
+          "type": "delay",
+          "ms": 120
+        }
+      ]
+    },
+    {
+      "row": {
+        "Type": 10,
+        "RadioIndex": 1,
+        "Content0": "",
+        "Content1": "chrome://settings",
+        "selected": false
+      },
+      "output": [
+        {
+          "type": "launch",
+          "path": "cmd /c start \"\" \"chrome://settings\"",
+          "startHidden": true
+        },
+        {
+          "type": "delay",
+          "ms": 120
+        }
+      ]
+    }
+  ]
+}
