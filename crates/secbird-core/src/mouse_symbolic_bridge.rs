@@ -92,7 +92,7 @@ impl MousePacketPlan {
         self.identity
     }
     pub fn source_event(&self) -> Event {
-        self.source_event
+        self.source_event.clone()
     }
     pub fn source_unit_provenance(&self) -> SourceUnitProvenance {
         self.source_unit
@@ -260,7 +260,7 @@ mod tests {
             };
             let unit = vector["unit"].as_u64().unwrap() as u16;
             let modifiers = vector["modifiers"].as_u64().unwrap() as u32;
-            let result = plan_mouse_packet(event, identity(unit), modifiers, Some(unit)).unwrap();
+            let result = plan_mouse_packet(event.clone(), identity(unit), modifiers, Some(unit)).unwrap();
             let bytes: Vec<u8> = vector["packet_hex"]
                 .as_str()
                 .unwrap()
@@ -311,7 +311,7 @@ mod tests {
     #[test]
     fn modifiers_are_transformed_once_and_constructor_zeros_are_retained() {
         let event = left_down();
-        let plan = plan_mouse_packet(event, identity(0), 0x10, None).unwrap();
+        let plan = plan_mouse_packet(event.clone(), identity(0), 0x10, None).unwrap();
         let InputPacket::Mouse(raw) = InputPacket::from_bytes(plan.packet()).unwrap() else {
             panic!("expected mouse packet");
         };
@@ -412,6 +412,8 @@ mod tests {
                     scancode: 1,
                     flag: 0,
                     transition: Transition::Down,
+                    modifiers: None,
+                    unit_id: None,
                 },
                 BridgeError::NotMouse,
             ),

@@ -1,5 +1,10 @@
 # Mouse symbolic packet planning
 
+The separate [mixed-output scheduler](MACRO-MIXED-OUTPUT.md) now adds logical
+button ownership and serialized one-shot wheel completion. This planner remains
+pure, and its runtime gaps still apply to actual input delivery. No live sender
+or physical ownership is established by either module.
+
 `secbird_core::mouse_symbolic_bridge::plan_mouse_packet` converts one supported `source_macro::Event` into one fixed 32-byte RZCONTROL packet using the existing `MouseInput` codec. It uses no heap allocation in packet planning, opens no endpoint, and has no sender, scheduling thread, input injection, completion claim, held-output ledger or automatic release operation.
 
 Callers supply an explicit `keyboard_symbolic_bridge::RoutingIdentity` token/unit, a native modifier mask and optional native source UnitId. RoutingIdentity has no Default; its token is symbolic context and never enters the packet. Missing source UnitId means native zero and must match routing unit zero. A nonzero routing unit requires the same explicit source unit. Missing-unit zero and explicit-unit zero produce the same wire bytes but retain distinct mouse-specific `SourceUnitProvenance` values. Neither construction establishes a physical device identity or permission to route input.

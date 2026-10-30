@@ -1,0 +1,103 @@
+{
+  "date": "2026-10-29",
+  "scope": "Balanced mixed keyboard/mouse source timeline, owned button recovery and one-shot wheels; no native input adapter",
+  "published_base_sha": "6149f7a9422ae93322365ed12df46ab681dc40a8",
+  "source": {
+    "mapping_engine_sha256": "6eabdfdedf797e042738b630d827c06f7a45dbe560ebaec96c66698f88f3320a",
+    "evidence_authority": "Retained hash-bound static analysis, not a new vendor runtime or physical input capture",
+    "mouse_release_conversion": "ev_b51f99b667bcb45687c6639e879dbbe1208fd76becee13804d590965fd9c847b",
+    "mouse_down_predicate": "ev_1ba38a71573b6acbad91118a696d9fde75635934fd32ec29b386f0dd60c07822",
+    "mouse_up_predicate": "ev_c09cf247fecb53623bd31b457c5d6975ab4b486dd73acd98775ae25818b887d3",
+    "event_dispatch": "ev_bed07cbcc6184aaf6145e517884bf89970b7a48a8c5e1bb89b73117e82d41034",
+    "mouse_ready_dispatch": "ev_e298b47973ed9bb7317761bf37489f5c33ba6c736c55b453968b9a078aa65e7d",
+    "static_packet_vectors": 14,
+    "vendor_or_physical_input_execution": false
+  },
+  "verification": {
+    "new_checks": 31,
+    "new_mouse_ledger_checks": 16,
+    "new_mixed_scheduler_checks": 14,
+    "new_keyboard_refusal_check": 1,
+    "published_workspace": {
+      "core_passed": 545,
+      "core_ignored": 6,
+      "tray_passed": 306,
+      "tray_ignored": 47,
+      "cli_passed": 4,
+      "doc_passed": 1
+    },
+    "optimized_scheduler_checks_passed": 26,
+    "optimized_output_ledger_checks_passed": 27,
+    "optimized_workspace_build": true,
+    "extra_integrated_base_check": {
+      "base_sha": "7b99930f9c63e659f1bcf3a51d9d9ca6a456904e",
+      "core_passed": 604,
+      "core_ignored": 6,
+      "tray_passed": 322,
+      "tray_ignored": 57,
+      "cli_passed": 5,
+      "doc_passed": 1,
+      "optimized_scheduler_passed": 26,
+      "optimized_ledgers_passed": 27,
+      "optimized_workspace_build": true,
+      "playback_sources_match_after_eol_normalization": true
+    },
+    "per_command_routes_and_cross_class_tickets": true,
+    "fresh_run_owner_ticket_discriminator": true,
+    "all_static_mouse_packets_match": true,
+    "mouse_breaks_keyboard_adjacency": true,
+    "late_and_uncertain_down_recovered": true,
+    "wheel_never_replayed_or_inverted": true,
+    "uncertain_wheel_drains_existing_holds": true,
+    "refusal_is_per_entry_without_automatic_retry": true,
+    "refusal_does_not_strand_same_or_other_class": true,
+    "exhaustion_preserves_unconfirmed_holds_and_other_cleanup": true,
+    "clock_faults_retain_owned_recovery": true,
+    "missing_context_and_unit_mismatch_refuse_atomically": true,
+    "step_storage_test_ceiling_bytes": 32768,
+    "maximum_steps": 512,
+    "mouse_button_entry_limit": 64,
+    "mouse_claim_limit": 256,
+    "wheel_queue_slots": 1,
+    "live_profile_macro_activation": false,
+    "physical_recovery_verified": false,
+    "driver_changes": false,
+    "normal_profiles_changed_by_this_change": false,
+    "full_native_visual_suite_run": false,
+    "ui_change": false,
+    "complete_build_memory_acceptance": false
+  },
+  "remaining": [
+    "Native selector ownership/routing/completion/cancellation adapter",
+    "Physical held-input arbitration and recovery through disable/profile switch/close/crash/unplug/sleep",
+    "GUI definition-to-native planning integration, recording and remaining events/playback modes",
+    "Native modifier expansion and special mouse held-ledger fast path",
+    "Full device APIs/profile re-import/privacy/visual acceptance and three final complete-build memory runs"
+  ],
+  "source_inputs_sha256": {
+    "crates/secbird-core/src/keyboard_output_ledger.rs": "eae3d9a05bbef479cef77b7de055c29e880f3f0f43db95da9b3d53a834e3b64d",
+    "crates/secbird-core/src/lib.rs": "7ab5802ccac79cf1ad48eb1ad3e831525765bbf9dd7e35f9563266a5b8226b73",
+    "crates/secbird-core/src/macro_scheduler.rs": "bd6d048b9164af20012a000df817f1525aab01d24a032f0d8ddbe3320c2a83ff",
+    "crates/secbird-core/src/macro_scheduler/runtime.rs": "1c9ccb196365c503c458404ed8ae8e1bb0f2e0e1dc46fea4421728731da5ae3d",
+    "crates/secbird-core/src/macro_scheduler/mixed_tests.rs": "a68827632a7fd5aa1d7ccc351295f44c8cd89bf8eaafb143c663c409a4f1ab03",
+    "crates/secbird-core/src/mouse_output_ledger.rs": "8aec62708a3d0b521d19b93eac8880d4cd5b4a2c927c5f773dd2b40880e74eb7"
+  },
+  "evidence_sha256": {
+    "macro-mixed-published-workspace.log": "dbe38db433938419bf6a7f48f26721538405ea998633a0a6e0bda7fd1a14209a",
+    "macro-mixed-published-scheduler-release.log": "a5edbc4719597d8c47ec23f1b3cfccdff846bc1892cf9ad42725704935caa196",
+    "macro-mixed-published-ledgers-release.log": "1bf5db5116079f403b27657c379c6f9cbb16ca32ef259af732c63a1e91853a89",
+    "macro-mixed-published-release.log": "65f39cc4648bfcd0d48d534575bbc1e8e93b399fcae1e2b3e37179247a3f1c44",
+    "macro-mixed-core.log": "ff66297f65e678c4982e6fe679ce828eff6206d687035a1acc009f6362d6b22d",
+    "macro-mixed-consumers.log": "9f347ecf3767392c4f02cafda1333bdca2aa3b69f934813e1e178aa013ab2f4e",
+    "macro-mixed-doc.log": "6d22d43526c03655b7378f348ac7832296e6531398009b8eea1f0390e98994f6",
+    "macro-mixed-scheduler-release.log": "619db570fc0eb4b9b348d358da8f83ab515cc1a527ef96c8bd2e447a9cd7b7dd",
+    "macro-mixed-ledgers-release.log": "eac08bee8cbe1499286746498724b8376680a0ba8a05a3db62139097e7ec0e8b",
+    "macro-mixed-release.log": "7888e2bc75ed57a883464f8c50e20b47faa565f73bf6fe25a5eb6d95760873ca"
+  },
+  "static_packet_fixture_sha256": "06b7a12fb13d77b8528786691af9a7de526d4f04d2ecf711efee9ca2a835b03b",
+  "build_outputs_sha256": {
+    "secbird.exe": "7542a397cc7d98a4a42edc7b567ef91e24bb8883ed02d8716cfbaf3cd886188d",
+    "secbird-tray.exe": "bc5d7e61b73d05fdd0ad852b97ed23f35dfecd11edb8ee2454999214f833c9f6"
+  },
+  "complete_goal_acceptance": false
+}

@@ -1,0 +1,394 @@
+{
+  "target_sha256": "c64e539437b50da2b1f2e4155d8cbb0fb1c3e1ebaad894caf509bad97e9857f9",
+  "method": "Static Ghidra field extraction and machine-code-verified wrapper ordering; no vendor execution",
+  "evidence_ids": [
+    "ev_e41707828fdc67ce32e9cb39471c396de2383a3b5158f4a4d762135ef451c85a",
+    "ev_55e7f3fbdfd45ab3da1190f4c21236def339d5e3db860dcb6b639a4ad60f085f",
+    "ev_e27de87aa6ed421f081d3e1c485a70f5119afdf0aa2f9fb6ae7446ac1094dc29",
+    "ev_1e00bb4d00f5841456612953ced2a20f13a8cb767e2a18821f88c3a0c7834c12"
+  ],
+  "sampled_virtual_keys": [
+    164,
+    162,
+    160,
+    91,
+    165,
+    163,
+    161,
+    92
+  ],
+  "construction_up": [
+    {
+      "mask": 256,
+      "scan_code": 56,
+      "flags": 1,
+      "delay_argument": 0
+    },
+    {
+      "mask": 16,
+      "scan_code": 56,
+      "flags": 3,
+      "delay_argument": 0
+    },
+    {
+      "mask": 512,
+      "scan_code": 29,
+      "flags": 1,
+      "delay_argument": 0
+    },
+    {
+      "mask": 32,
+      "scan_code": 29,
+      "flags": 3,
+      "delay_argument": 0
+    },
+    {
+      "mask": 1024,
+      "scan_code": 42,
+      "flags": 1,
+      "delay_argument": 0
+    },
+    {
+      "mask": 64,
+      "scan_code": 54,
+      "flags": 1,
+      "delay_argument": 0
+    },
+    {
+      "mask": 2048,
+      "scan_code": 91,
+      "flags": 3,
+      "delay_argument": 0
+    },
+    {
+      "mask": 128,
+      "scan_code": 92,
+      "flags": 3,
+      "delay_argument": 0
+    }
+  ],
+  "construction_down": [
+    {
+      "mask": 256,
+      "scan_code": 56,
+      "flags": 0,
+      "delay_argument": 0
+    },
+    {
+      "mask": 16,
+      "scan_code": 56,
+      "flags": 2,
+      "delay_argument": 0
+    },
+    {
+      "mask": 512,
+      "scan_code": 29,
+      "flags": 0,
+      "delay_argument": 0
+    },
+    {
+      "mask": 32,
+      "scan_code": 29,
+      "flags": 2,
+      "delay_argument": 0
+    },
+    {
+      "mask": 1024,
+      "scan_code": 42,
+      "flags": 0,
+      "delay_argument": 0
+    },
+    {
+      "mask": 64,
+      "scan_code": 54,
+      "flags": 0,
+      "delay_argument": 0
+    },
+    {
+      "mask": 2048,
+      "scan_code": 91,
+      "flags": 2,
+      "delay_argument": 0
+    },
+    {
+      "mask": 128,
+      "scan_code": 92,
+      "flags": 2,
+      "delay_argument": 0
+    }
+  ],
+  "cases": [
+    {
+      "snapshot_mask": 0,
+      "steps": [
+        {
+          "scan_code": 29,
+          "flags": 0,
+          "delay_argument": 30,
+          "role": "PasteChord",
+          "route": "EndpointOnly"
+        },
+        {
+          "scan_code": 47,
+          "flags": 0,
+          "delay_argument": 20,
+          "role": "PasteChord",
+          "route": "EndpointOnly"
+        },
+        {
+          "scan_code": 47,
+          "flags": 1,
+          "delay_argument": 0,
+          "role": "PasteChord",
+          "route": "EndpointOnly"
+        },
+        {
+          "scan_code": 29,
+          "flags": 1,
+          "delay_argument": 10,
+          "role": "PasteChord",
+          "route": "EndpointOnly"
+        }
+      ]
+    },
+    {
+      "snapshot_mask": 16,
+      "steps": [
+        {
+          "scan_code": 56,
+          "flags": 3,
+          "delay_argument": 0,
+          "role": "SuspendSnapshotModifier",
+          "route": "EndpointElseOsFallback"
+        },
+        {
+          "scan_code": 29,
+          "flags": 0,
+          "delay_argument": 30,
+          "role": "PasteChord",
+          "route": "EndpointOnly"
+        },
+        {
+          "scan_code": 47,
+          "flags": 0,
+          "delay_argument": 20,
+          "role": "PasteChord",
+          "route": "EndpointOnly"
+        },
+        {
+          "scan_code": 47,
+          "flags": 1,
+          "delay_argument": 0,
+          "role": "PasteChord",
+          "route": "EndpointOnly"
+        },
+        {
+          "scan_code": 29,
+          "flags": 1,
+          "delay_argument": 10,
+          "role": "PasteChord",
+          "route": "EndpointOnly"
+        },
+        {
+          "scan_code": 56,
+          "flags": 2,
+          "delay_argument": 0,
+          "role": "RestoreSnapshotModifier",
+          "route": "EndpointElseOsFallback"
+        }
+      ]
+    },
+    {
+      "snapshot_mask": 512,
+      "steps": [
+        {
+          "scan_code": 29,
+          "flags": 1,
+          "delay_argument": 0,
+          "role": "SuspendSnapshotModifier",
+          "route": "EndpointElseOsFallback"
+        },
+        {
+          "scan_code": 29,
+          "flags": 0,
+          "delay_argument": 30,
+          "role": "PasteChord",
+          "route": "EndpointOnly"
+        },
+        {
+          "scan_code": 47,
+          "flags": 0,
+          "delay_argument": 20,
+          "role": "PasteChord",
+          "route": "EndpointOnly"
+        },
+        {
+          "scan_code": 47,
+          "flags": 1,
+          "delay_argument": 0,
+          "role": "PasteChord",
+          "route": "EndpointOnly"
+        },
+        {
+          "scan_code": 29,
+          "flags": 1,
+          "delay_argument": 10,
+          "role": "PasteChord",
+          "route": "EndpointOnly"
+        },
+        {
+          "scan_code": 29,
+          "flags": 0,
+          "delay_argument": 0,
+          "role": "RestoreSnapshotModifier",
+          "route": "EndpointElseOsFallback"
+        }
+      ]
+    },
+    {
+      "snapshot_mask": 4080,
+      "steps": [
+        {
+          "scan_code": 92,
+          "flags": 3,
+          "delay_argument": 0,
+          "role": "SuspendSnapshotModifier",
+          "route": "EndpointElseOsFallback"
+        },
+        {
+          "scan_code": 91,
+          "flags": 3,
+          "delay_argument": 0,
+          "role": "SuspendSnapshotModifier",
+          "route": "EndpointElseOsFallback"
+        },
+        {
+          "scan_code": 54,
+          "flags": 1,
+          "delay_argument": 0,
+          "role": "SuspendSnapshotModifier",
+          "route": "EndpointElseOsFallback"
+        },
+        {
+          "scan_code": 42,
+          "flags": 1,
+          "delay_argument": 0,
+          "role": "SuspendSnapshotModifier",
+          "route": "EndpointElseOsFallback"
+        },
+        {
+          "scan_code": 29,
+          "flags": 3,
+          "delay_argument": 0,
+          "role": "SuspendSnapshotModifier",
+          "route": "EndpointElseOsFallback"
+        },
+        {
+          "scan_code": 29,
+          "flags": 1,
+          "delay_argument": 0,
+          "role": "SuspendSnapshotModifier",
+          "route": "EndpointElseOsFallback"
+        },
+        {
+          "scan_code": 56,
+          "flags": 3,
+          "delay_argument": 0,
+          "role": "SuspendSnapshotModifier",
+          "route": "EndpointElseOsFallback"
+        },
+        {
+          "scan_code": 56,
+          "flags": 1,
+          "delay_argument": 0,
+          "role": "SuspendSnapshotModifier",
+          "route": "EndpointElseOsFallback"
+        },
+        {
+          "scan_code": 29,
+          "flags": 0,
+          "delay_argument": 30,
+          "role": "PasteChord",
+          "route": "EndpointOnly"
+        },
+        {
+          "scan_code": 47,
+          "flags": 0,
+          "delay_argument": 20,
+          "role": "PasteChord",
+          "route": "EndpointOnly"
+        },
+        {
+          "scan_code": 47,
+          "flags": 1,
+          "delay_argument": 0,
+          "role": "PasteChord",
+          "route": "EndpointOnly"
+        },
+        {
+          "scan_code": 29,
+          "flags": 1,
+          "delay_argument": 10,
+          "role": "PasteChord",
+          "route": "EndpointOnly"
+        },
+        {
+          "scan_code": 92,
+          "flags": 2,
+          "delay_argument": 0,
+          "role": "RestoreSnapshotModifier",
+          "route": "EndpointElseOsFallback"
+        },
+        {
+          "scan_code": 91,
+          "flags": 2,
+          "delay_argument": 0,
+          "role": "RestoreSnapshotModifier",
+          "route": "EndpointElseOsFallback"
+        },
+        {
+          "scan_code": 54,
+          "flags": 0,
+          "delay_argument": 0,
+          "role": "RestoreSnapshotModifier",
+          "route": "EndpointElseOsFallback"
+        },
+        {
+          "scan_code": 42,
+          "flags": 0,
+          "delay_argument": 0,
+          "role": "RestoreSnapshotModifier",
+          "route": "EndpointElseOsFallback"
+        },
+        {
+          "scan_code": 29,
+          "flags": 2,
+          "delay_argument": 0,
+          "role": "RestoreSnapshotModifier",
+          "route": "EndpointElseOsFallback"
+        },
+        {
+          "scan_code": 29,
+          "flags": 0,
+          "delay_argument": 0,
+          "role": "RestoreSnapshotModifier",
+          "route": "EndpointElseOsFallback"
+        },
+        {
+          "scan_code": 56,
+          "flags": 2,
+          "delay_argument": 0,
+          "role": "RestoreSnapshotModifier",
+          "route": "EndpointElseOsFallback"
+        },
+        {
+          "scan_code": 56,
+          "flags": 0,
+          "delay_argument": 0,
+          "role": "RestoreSnapshotModifier",
+          "route": "EndpointElseOsFallback"
+        }
+      ]
+    }
+  ]
+}

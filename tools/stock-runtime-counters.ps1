@@ -1,16 +1,40 @@
+# Literal directory prefixes, not wildcard patterns. Additional roots must be
+# explicitly inventoried before capture; defaults retain the original scope.
+function Resolve-StockRuntimeRoots {
+    param([string[]]$AdditionalRoots=@())
+    $roots = [Collections.Generic.List[string]]::new()
+    foreach ($root in @('C:\Program Files\Razer','C:\Program Files (x86)\Razer') + $AdditionalRoots) {
+        if ([string]::IsNullOrWhiteSpace($root) -or -not [IO.Path]::IsPathFullyQualified($root) -or $root.IndexOfAny([char[]]'*?') -ge 0) {
+            throw 'Stock roots must be explicit absolute directories without wildcard characters'
+        }
+        $resolved = [IO.Path]::GetFullPath($root).TrimEnd([char[]]'\/') + '\'
+        if ([IO.Path]::GetPathRoot($resolved) -eq $resolved) { throw 'A whole drive is not a stock process scope' }
+        if (-not $roots.Contains($resolved)) { $roots.Add($resolved) }
+    }
+    return $roots.ToArray()
+}
 # Pure sample validation with an injected counter reader for deterministic checks.
 function Read-VerifiedStockSample {
     param(
         [AllowEmptyCollection()][object[]]$Inventory,
         [string]$TargetPath,
-        [scriptblock]$ReadCounters
+        [scriptblock]$ReadCounters,
+        [string[]]$AdditionalRoots=@()
     )
+    $roots = @(Resolve-StockRuntimeRoots -AdditionalRoots $AdditionalRoots)
     $rows = [Collections.Generic.List[object]]::new()
     $targetFound = $false
     foreach ($entry in $Inventory) {
-        $inRoots = $entry.ExecutablePath -like 'C:\Program Files\Razer\*' -or
-            $entry.ExecutablePath -like 'C:\Program Files (x86)\Razer\*'
-        $namedCandidate = $entry.Name -match '^(Razer|RzSynapse|RzEngineMon|RzChroma|GameManager|Synapse)'
+        $scopeRoot = -1
+        if (-not [string]::IsNullOrWhiteSpace($entry.ExecutablePath)) {
+            if (-not [IO.Path]::IsPathFullyQualified($entry.ExecutablePath)) { throw 'Inventory has a relative executable path; no baseline written' }
+            $imagePath = [IO.Path]::GetFullPath($entry.ExecutablePath)
+            for ($rootIndex=0; $rootIndex -lt $roots.Count; $rootIndex++) {
+                if ($imagePath.StartsWith($roots[$rootIndex], [StringComparison]::OrdinalIgnoreCase)) { $scopeRoot=$rootIndex; break }
+            }
+        }
+        $inRoots = $scopeRoot -ge 0
+        $namedCandidate = $entry.Name -match '^(Razer|Rz|GameManager|Synapse)'
         if ($namedCandidate -and [string]::IsNullOrWhiteSpace($entry.ExecutablePath)) {
             throw "Cannot establish executable scope for stock candidate PID $($entry.ProcessId); no baseline written"
         }
@@ -36,6 +60,7 @@ function Read-VerifiedStockSample {
         $rows.Add([pscustomobject]@{
             pid = [int]$entry.ProcessId
             name = [string]$entry.Name
+            scope_root = $scopeRoot
             start_utc = $started.ToString('o')
             working_set = [long]$counter.WorkingSet
             private_bytes = [long]$counter.PrivateBytes

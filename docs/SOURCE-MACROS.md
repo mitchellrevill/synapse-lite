@@ -1,5 +1,11 @@
 # Source macro parsing and symbolic planning
 
+The separate [saved GUI definition bridge](MACRO-DEFINITION-PLANNING.md) now
+projects supported editor records into this native planner, verifies matching
+source caches, and provides local file inspection. This module's parser and
+runtime gaps remain unresolved; no live input adapter is enabled. Optional native
+keyboard fields now follow the [field contract](NATIVE-KEYBOARD-FIELDS.md).
+
 **29 October addition:** a separate bounded scheduler now joins admitted one-pass
 keyboard plans with packet planning and the output ledger under simulated
 completion/clock control. See [MACRO-SCHEDULER.md](MACRO-SCHEDULER.md). It has no
@@ -12,16 +18,18 @@ execution, and no profile macro activation is enabled by that model.
 
 `PlaybackMetadata::parse(&macro_group)` borrows the source Value. It recognizes the observed Once, NTimes, ContinuousHeld, ContinuousToggle, Sequence, Queue, Phased and PhasedMacro names. Only Once and positive integer u32 NTimes produce a `SymbolicPlan`; other modes return UnresolvedPlayback. Once ignores repeatCount as the shipped converter does, retaining that inert field without interpreting it. Unknown metadata fields fail conservatively rather than being discarded. This initial supported domain deliberately rejects JavaScript coercion, malformed/zero/fractional counts and ambiguous values.
 
-The planner accepts only these native source events:
+The planner accepts the native source events below, plus the bounded launch and
+clipboard/text payloads documented in [host-action compilation](MACRO-HOST-PLANNING.md).
+Host payloads remain ineligible for the input scheduler.
 
 | Event | Accepted fields | Interpretation |
 |---|---|---|
 |delay|type, ms|Integer u32 milliseconds; zero remains an actual event.|
-|keyboard|type, scancode, flag|Native u16 scan code retained; Explicit flags0/1 ordinary down/up,2/3 E0 down/up,4/5 E1 down/up. Mixed-prefix6/7 and other flags, plus optional modifier/unit/timer fields, are unsupported. No prefix inference or HID/VK conversion.|
+|keyboard|type, scancode, flag; optional modifiers, unitId|Native u16 scan code retained; explicit flags0/1 ordinary down/up,2/3 E0 down/up,4/5 E1 down/up. Optional modifiers is u32 and unitId is u16; absence and explicit zero remain distinct. Mixed-prefix6/7, other flags and timer fields are unsupported. No prefix inference or HID/VK conversion.|
 |mouse button|type, id|Single transition: left1/2, right4/8, middle16/32, button4 64/128, button5 256/512.|
 |mouse wheel|type, id, data|Vertical1024 or horizontal2048; raw120→+120, raw65416→−120. Both raw bits and signed delta remain available.|
 
-Every selected event is validated. Unknown types, mixed/extra action fields, combined button IDs, unsupported wheel magnitudes and malformed numeric fields fail the whole plan; no partial plan escapes and no action is silently skipped. Random delay, launch/clipboard, nested macros, loops and mouse motion remain unsupported. UI Type events are not converted here: the fixture inputs explain provenance, while the accepted outputs are the native event JSON.
+Every selected event is validated. Unknown types, mixed/extra action fields, combined button IDs, unsupported wheel magnitudes and malformed numeric fields fail the whole plan; no partial plan escapes and no action is silently skipped. Random delay, nested macros, loops and mouse motion remain unsupported. UI Type events are converted by the separate saved-definition bridge; this parser accepts native event JSON.
 
 Repetition is compact: the plan stores one base sequence plus repeat count, checked expanded-event count and checked total explicit-delay milliseconds. It never materializes every repetition. Native completion costs are excluded from that sum. `source_keyboard_gap_before_us` reports the evidenced10000microsecond rule for directly consecutive keyboard events within the base sequence. A zero-delay event breaks adjacency. Repetition-boundary timing remains unresolved.
 

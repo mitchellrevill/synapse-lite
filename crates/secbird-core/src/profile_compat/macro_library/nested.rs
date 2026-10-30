@@ -93,7 +93,8 @@ pub(super) fn validate_change(old:Option<&Value>,new:&Value,records:&BTreeMap<St
     let new_body=decode_record(new)?;let (new_targets,bad)=info(&new_body)?;
     let old_body=old.map(decode_record).transpose()?;
     let (old_targets,mut old_bad)=old_body.as_ref().map(info).transpose()?.unwrap_or_default();
-    if old_body.as_ref().is_some_and(|old|old.get("appEngine").is_some()||new_body.get("appEngine").is_some())&&old_body.as_ref().is_some_and(|old|old["macroEvents"]!=new_body["macroEvents"]){return Err(invalid("Native event cache invalidation needs verification before event edits"));}
+    let cached=|body:&Value|body.get("appEngine").is_some_and(|engine|!movement_only_hint(engine));
+    if old_body.as_ref().is_some_and(|old|cached(old)||cached(&new_body))&&old_body.as_ref().is_some_and(|old|old["macroEvents"]!=new_body["macroEvents"]){return Err(invalid("Native event cache invalidation needs verification before event edits"));}
     for row in bad {let Some(index)=old_bad.iter().position(|old|old==&row) else{return Err(invalid("New nested event has no verified target"));};old_bad.remove(index);}
     let mut check:BTreeSet<_>=new_targets.difference(&old_targets).cloned().collect();
     if old_body.as_ref().is_some_and(|old|old.get("macroPlaybackOption")!=new_body.get("macroPlaybackOption")){check.extend(new_targets);}

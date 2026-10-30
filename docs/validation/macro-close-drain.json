@@ -1,0 +1,72 @@
+{
+  "date": "2026-10-30",
+  "base_commit": "d2346f0cfb47b298b10dfb3ae5f3f0f946cfcd3d",
+  "scope": "Retain queued Close during macro worker drain",
+  "regression": {
+    "test": "native_editor::macro_view::playback::tests::close_survives_navigation_while_macro_drains",
+    "before": "FAILED: Closing must survive later queued navigation",
+    "after": "PASS, included in 319 regular app checks",
+    "covers": [
+      "latest navigation before Close",
+      "Close supersedes navigation",
+      "Home/Refresh/Device/repeated Close cannot supersede Close"
+    ]
+  },
+  "app_suite": {
+    "passed": 319,
+    "failed": 0,
+    "ignored": 49,
+    "test_threads": 1
+  },
+  "native_workflow": {
+    "passed": 1,
+    "report": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-27\\what-i-want-you-to-do\\work\\rust-temp\\native-macro-playback-50408-1793344362203954000\\interaction.json",
+    "sha256": "8c616383a7f42ef6f2b864289874d932294438d5aead2fe3706a495d9bff8f81",
+    "result": {
+      "actual_play_stop_buttons": true,
+      "close_waits_for_drain": true,
+      "controlled_external_rename_detected": true,
+      "device_commands": 0,
+      "device_profiles_unchanged": true,
+      "owned_fixture_launch": {
+        "completed": 2,
+        "launches": 1,
+        "outcome": "finished",
+        "uncertain": false
+      },
+      "partial_runtime_failure_preserves_accepted_launch_count": true,
+      "physical_discovery": false,
+      "playback_source_writes": 0,
+      "post_close_admission_reused": true,
+      "readonly_dirty_mixed_stale_refused": true,
+      "stop_wakes_delay": true
+    },
+    "limitation": "Actual native Close/Stop/drain workflow rerun; rapid competing navigation priority is covered by deterministic transition regression, not a timing-sensitive UI race"
+  },
+  "release_build": {
+    "command": "cargo build --release -j 1 -p secbird-tray",
+    "exit_code": 0
+  },
+  "release_binaries": [
+    {
+      "path": "target/release/secbird-tray.exe",
+      "sha256": "ef828e3b1a2baa2c9788103b6e55595c82d5d5a6718dcbf9d079262e9b8a4184",
+      "bytes": 3402240
+    },
+    {
+      "path": "target/release/secbird.exe",
+      "sha256": "f3cc9e9ed8af74361239d087f4145d4f02529938d519495c4cb2672db22fa47c",
+      "bytes": 1489920
+    }
+  ],
+  "source": {
+    "path": "crates/secbird-tray/src/native_editor/macro_view/playback.rs",
+    "sha256": "711b99c0dc0028a8f5f9b8cc5f67c1b3ff3ba5f009035b46fdc42135cfe64ce8",
+    "normalization": "LF, matching tested source bytes and Git blob; Windows checkout may use CRLF"
+  },
+  "limitations": [
+    "No changed rendering, driver/input delivery or clipboard execution claimed",
+    "Existing active app was not replaced",
+    "Full API/hardware/privacy/visual and three final memory acceptance runs remain open"
+  ]
+}

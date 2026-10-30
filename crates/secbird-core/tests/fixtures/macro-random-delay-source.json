@@ -1,0 +1,172 @@
+{
+  "behavior": [
+    {
+      "initial": {
+        "min": "0.10",
+        "max": "0.90"
+      },
+      "field": "min",
+      "value": "0.25",
+      "result": {
+        "min": "0.25",
+        "max": "0.90"
+      }
+    },
+    {
+      "initial": {
+        "min": "0.10",
+        "max": "0.90"
+      },
+      "field": "max",
+      "value": "1.25",
+      "result": {
+        "min": "0.10",
+        "max": "1.25"
+      }
+    },
+    {
+      "initial": {
+        "min": "0.10",
+        "max": "0.90"
+      },
+      "field": "min",
+      "value": "0.123",
+      "result": {
+        "min": "0.12",
+        "max": "0.90"
+      }
+    },
+    {
+      "initial": {
+        "min": "2",
+        "max": "3"
+      },
+      "field": "max",
+      "value": "1",
+      "result": {
+        "min": "2",
+        "max": "3"
+      }
+    },
+    {
+      "initial": {
+        "min": "4",
+        "max": "5"
+      },
+      "field": "min",
+      "value": "5",
+      "result": {
+        "min": "5",
+        "max": "5"
+      }
+    }
+  ],
+  "vectors": [
+    {
+      "row": {
+        "Type": 0,
+        "Number": {
+          "min": "0.000",
+          "max": "0.000"
+        }
+      },
+      "native": [
+        {
+          "type": "randomDelay",
+          "minMs": 0,
+          "maxMs": 0
+        }
+      ]
+    },
+    {
+      "row": {
+        "Type": 0,
+        "Number": {
+          "min": "0.000",
+          "max": "5.000"
+        }
+      },
+      "native": [
+        {
+          "type": "randomDelay",
+          "minMs": 0,
+          "maxMs": 5000
+        }
+      ]
+    },
+    {
+      "row": {
+        "Type": 0,
+        "Number": {
+          "min": "0.100",
+          "max": "0.900"
+        }
+      },
+      "native": [
+        {
+          "type": "randomDelay",
+          "minMs": 100,
+          "maxMs": 900
+        }
+      ]
+    },
+    {
+      "row": {
+        "Type": 0,
+        "Number": {
+          "min": "0.250",
+          "max": "1.250"
+        }
+      },
+      "native": [
+        {
+          "type": "randomDelay",
+          "minMs": 250,
+          "maxMs": 1250
+        }
+      ]
+    },
+    {
+      "row": {
+        "Type": 0,
+        "Number": {
+          "min": "1.001",
+          "max": "1.999"
+        }
+      },
+      "native": [
+        {
+          "type": "randomDelay",
+          "minMs": 1001,
+          "maxMs": 1999
+        }
+      ]
+    },
+    {
+      "row": {
+        "Type": 0,
+        "Number": {
+          "min": "5.000",
+          "max": "5.000"
+        }
+      },
+      "native": [
+        {
+          "type": "randomDelay",
+          "minMs": 5000,
+          "maxMs": 5000
+        }
+      ]
+    }
+  ],
+  "provenance": {
+    "parent": "8190.61506f5b.chunk.js",
+    "sha256": "003b116007bb415462e5175c09fc84928d2a20c8d1a7c73113a432643d2cbe9f",
+    "utf8_start": 1213298,
+    "utf8_end": 1432125,
+    "module": "58190",
+    "focused_sha256": "863f572be5a3615bff4531f330323f2c0461cc20d450018fee6297f3821562ea",
+    "kind": "static source slice, not executed"
+  },
+  "converter_sha256": "ca583a9a4f21d72252384255a7f932d570bba3a2e906633fb36580f687847433"
+}

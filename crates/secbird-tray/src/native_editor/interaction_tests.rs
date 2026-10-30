@@ -15,6 +15,12 @@ mod linked_games;
 mod macros;
 #[path="shortcut_interaction_tests.rs"]
 mod shortcuts;
+#[path="macro_xml_interaction_tests.rs"]
+mod macro_xml;
+#[path="macro_playback_interaction_tests.rs"]
+mod macro_playback;
+#[path="macro_random_delay_interaction_tests.rs"]
+mod macro_random_delay;
 #[path="studio_interaction_tests.rs"]
 mod studio;
 #[path="chroma_interaction_tests.rs"]

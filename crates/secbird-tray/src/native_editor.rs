@@ -2314,6 +2314,9 @@ impl State {
     }
 
     unsafe fn action(&mut self, action: Action) {
+        if matches!(&action,Action::MacroLibrary(macro_view::Control::Stop)) {
+            macro_view::action(self,macro_view::Control::Stop);return;
+        }
         if matches!(action, Action::Studio(studio_view::Control::StopDevice)) {
             studio_view::action(self, studio_view::Control::StopDevice);
             return;
@@ -2322,6 +2325,7 @@ impl State {
             return;
         }
         let leaving_macro=matches!(&action,Action::Home|Action::Device(_)|Action::Refresh|Action::Close|Action::Studio(studio_view::Control::Enter)|Action::Chroma(chroma_view::Control::Open))||matches!(&action,Action::HostClose(id) if id==macro_view::ID);
+        if leaving_macro&&macro_view::playback::transition(self,&action){return;}
         if leaving_macro&&!macro_view::can_leave(self){return;}
         let leaving_shortcuts=matches!(&action,Action::Home|Action::Device(_)|Action::Refresh|Action::Close|Action::Studio(studio_view::Control::Enter))||matches!(&action,Action::HostClose(id) if id==shortcuts::ID);
         if leaving_shortcuts&&!shortcuts::can_leave(self,action.clone()){return;}
@@ -3789,6 +3793,7 @@ unsafe extern "system" fn window_proc(
             let pointer = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut RefCell<State>;
             if !pointer.is_null() {
                 if let Ok(mut state) = (*pointer).try_borrow_mut() {
+                    if macro_view::playback::block_close(&mut state){return 0;}
                     if !macro_view::can_leave(&mut state){return 0;}
                     if !shortcuts::can_leave(&mut state,Action::Close){return 0;}
                     if studio_view::block_close(&mut state) {return 0;}
@@ -3831,6 +3836,7 @@ unsafe extern "system" fn window_proc(
             WINDOW.store(0, Ordering::Release);
             let pointer=GetWindowLongPtrW(hwnd,GWLP_USERDATA) as *mut RefCell<State>;
             if !pointer.is_null(){if let Ok(mut state)=(*pointer).try_borrow_mut(){
+                macro_view::playback::destroy(&mut state);
                 mouse_feedback::stop(&mut state);
                 if let Some(tray)=state.exit_tray.take(){PostMessageW(tray,WM_CLOSE,1,hwnd as isize);}
             }}
@@ -3888,6 +3894,9 @@ unsafe extern "system" fn window_proc(
             7=>{let value=&*(lparam as *const Value);state.action(Action::MacroLibrary(macro_view::Control::Select(value.as_str().unwrap().into())));},
             8=>{*(lparam as *mut Value)=match macro_view::menu_targets(&state){Ok(targets)=>json!(targets.into_iter().map(|target|json!({"guid":target.guid,"name":target.name,"disabled":target.reason.is_some()})).collect::<Vec<_>>()),Err(error)=>json!({"error":error})};},
             9=>{use secbird_core::profile_compat::macro_library::host_actions::Kind;let value=&*(lparam as *const Value);let kind=match value.as_str(){Some("command")=>Kind::Command,Some("program")=>Kind::Program,Some("website")=>Kind::Website,_=>Kind::Text};state.action(Action::MacroLibrary(macro_view::Control::OpenHost(kind)));},
+            10=>{let value=&*(lparam as *const Value);macro_view::export_selected(&mut state,PathBuf::from(value.as_str().unwrap()));},
+            11=>state.action(Action::MacroLibrary(macro_view::Control::Play)),
+            12=>state.action(Action::MacroLibrary(macro_view::Control::Stop)),
             _=>{},
         }}return 0;
     }
@@ -3955,16 +3964,17 @@ unsafe extern "system" fn window_proc(
         return 0;
     }
     if message==macro_view::BROWSE {
-        let allowed=(*pointer).try_borrow().is_ok_and(|state|macro_view::active(&state)&&!state.read_only_smoke&&!state.restricted_actions&&!state.macros.busy);
+        let allowed=(*pointer).try_borrow().is_ok_and(|state|macro_view::active(&state)&&!state.read_only_smoke&&!state.restricted_actions&&!state.macros.busy&&!state.macros.playing());
         if allowed {let result=macro_view::browse(hwnd);if let Ok(mut state)=(*pointer).try_borrow_mut(){if macro_view::can_leave(&mut state){match result {Ok(Some(path))=>macro_view::request(&mut state,macro_view::Request::Import(path)),Ok(None)=>{},Err(error)=>state.error(&error)}}InvalidateRect(hwnd,null(),0);}}
         return 0;
     }
     if message==macro_view::INPUT_MENU {
-        let allowed=(*pointer).try_borrow().is_ok_and(|state|macro_view::active(&state)&&!state.read_only_smoke&&!state.restricted_actions&&!state.macros.busy);
+        let allowed=(*pointer).try_borrow().is_ok_and(|state|macro_view::active(&state)&&!state.read_only_smoke&&!state.restricted_actions&&!state.macros.busy&&!state.macros.playing());
         if allowed {let targets=(*pointer).try_borrow().map_err(|_|"Macro editor is busy".to_string()).and_then(|state|if wparam==0{macro_view::menu_targets(&state)}else{Ok(vec![])});let result=targets.and_then(|targets|{if let Ok(mut state)=(*pointer).try_borrow_mut(){state.macros.popup=true;}macro_view::choose_input(hwnd,wparam!=0,&targets)});if let Ok(mut state)=(*pointer).try_borrow_mut(){state.macros.popup=false;match result {Ok(Some(control))=>state.action(Action::MacroLibrary(control)),Ok(None)=>{},Err(error)=>state.error(&error)}}}
         return 0;
     }
     if message==macro_view::HOST_BROWSE {macro_view::browse_host(hwnd,pointer);return 0;}
+    if message==macro_view::EXPORT_BROWSE {macro_view::browse_export(hwnd,pointer);return 0;}
     if message==studio_view::EXIT_REQUEST {
         let tray=lparam as HWND;
         let mut process=0;
@@ -5003,6 +5013,9 @@ unsafe extern "system" fn window_proc(
         WM_TIMER if wparam == studio_view::PREVIEW_TIMER => {
             studio_view::preview_tick(&mut state);
             0
+        }
+        WM_TIMER if wparam == macro_view::playback::TIMER => {
+            macro_view::playback::tick(&mut state);0
         }
         WM_TIMER if wparam == RESPONSE_TIMER => {
             state.collect();

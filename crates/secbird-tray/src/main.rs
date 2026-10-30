@@ -30,6 +30,8 @@ mod osd;
 #[cfg(windows)]
 mod native_editor;
 #[cfg(windows)]
+mod host_macro_worker;
+#[cfg(windows)]
 mod server;
 #[cfg(windows)]
 mod settings;

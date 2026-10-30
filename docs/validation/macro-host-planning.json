@@ -1,0 +1,86 @@
+{
+  "date": "2026-10-30",
+  "unit": "Saved macro host-action compilation",
+  "status": "verified_compilation_not_execution",
+  "source_vectors": 7,
+  "new_core_tests": 6,
+  "new_cli_tests": 1,
+  "debug": {
+    "core": {
+      "passed": 578,
+      "ignored": 6,
+      "failed": 0
+    },
+    "cli": {
+      "passed": 9,
+      "failed": 0
+    },
+    "tray": {
+      "passed": 308,
+      "ignored": 48,
+      "failed": 0,
+      "serial": true
+    }
+  },
+  "release": {
+    "host_tests": {
+      "passed": 12,
+      "failed": 0
+    },
+    "binaries_built": [
+      "secbird",
+      "secbird-tray"
+    ]
+  },
+  "artifacts": [
+    {
+      "path": "target/release/secbird.exe",
+      "bytes": 1489920,
+      "sha256": "3738da331983a0ff3dc29ad16de682aeedd0882a1872a9f2a9c1ce57b46e8c83"
+    },
+    {
+      "path": "target/release/secbird-tray.exe",
+      "bytes": 3325952,
+      "sha256": "f131d1577aca8f57f366f957ab12e661e442d72b823ef5252b1a2725d09f77b3"
+    },
+    {
+      "path": "crates/secbird-core/tests/fixtures/macro-host-source.json",
+      "bytes": 2972,
+      "sha256": "8ff488fc37b800e341c1de2b1b62c88cca3793a6d359ae0cf6ab947bfc0532fd"
+    },
+    {
+      "path": "crates/secbird-core/src/source_macro/host.rs",
+      "bytes": 4308,
+      "sha256": "f6caee71ccc775ee52ff9a2e73ca7ca1b09ca118143b249f476c898307fa3b63"
+    },
+    {
+      "path": "crates/secbird-core/src/profile_compat/macro_library/planning/host.rs",
+      "bytes": 3488,
+      "sha256": "c42a830c4e34c2aab2888e8ed07792c473bad9b93471434611bb9e0d0a7a4874"
+    }
+  ],
+  "initial_failures": [
+    "Event Copy removal exposed five moved-value errors, corrected with explicit cloning at existing mouse provenance boundaries",
+    "A report-field assertion was attached to the listing test rather than plan-export test; corrected and full CLI/tray check repeated"
+  ],
+  "checks": [
+    "Seven independent recovered converter vectors match native JSON and verified caches",
+    "UTF16/NUL/expanded-wrapper limits and malformed native/GUI fields refuse atomically",
+    "Case-sensitive taskmgr and URL substring rules preserved, empty placeholders omit events",
+    "Source rows, store/profile bytes, existing report files and raw metadata preserved",
+    "Mixed input scheduler rejects host payloads before any dispatch",
+    "git diff --check"
+  ],
+  "side_effects": {
+    "normal_app_started": false,
+    "commands_executed": false,
+    "clipboard_changed": false,
+    "input_sent": false,
+    "stock_apps_or_services_changed": false
+  },
+  "limitations": [
+    "No native host-action executor, clipboard/paste or cancellation/recovery path implemented",
+    "Static current-build native dossiers establish parser/helper/process calls; fallback and completion contract still need analysis",
+    "No hardware/API-wide, pixel-perfect or three-run complete-build sub100MB acceptance claim"
+  ]
+}

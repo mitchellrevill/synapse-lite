@@ -1,0 +1,121 @@
+{
+  "date": "2026-10-30",
+  "objective": "Preserve and plan optional native keyboard modifiers/unitId through source parsing, packet bridge and scheduler with exact owned release metadata.",
+  "base_commit": "fbb1a48c6bbed3c53d89f9f44ea693d4c29fd4b4",
+  "tests": {
+    "new_checks": 7,
+    "workspace_serial": {
+      "core_passed": 566,
+      "core_ignored": 6,
+      "tray_passed": 306,
+      "tray_ignored": 47,
+      "cli_passed": 8,
+      "doc_passed": 1
+    },
+    "optimized_core_passed": 566,
+    "optimized_core_ignored": 6,
+    "optimized_workspace_build": "pass",
+    "initial_parallel_workspace": "CLI8/core566 passed; tray305 passed and one process-wide GDI count assertion failed (before7/after8). Full serialized rerun passed, no unrelated rendering change."
+  },
+  "final_source_inputs": [
+    {
+      "path": "crates/secbird-core/src/source_macro.rs",
+      "sha256": "249559ee6635f68a8947906dbcd5ad6958b9850ed2f10b6db04f99716f8b6f0f"
+    },
+    {
+      "path": "crates/secbird-core/src/keyboard_symbolic_bridge.rs",
+      "sha256": "670912a1f0bb01e7061f79cda99cdf893a1ceb34b521fc1330b3de08796261ff"
+    },
+    {
+      "path": "crates/secbird-core/src/mouse_symbolic_bridge.rs",
+      "sha256": "92002dc1baaf8f8239526d3d3131605b5a11814dd4ecb15788aac64f83659e65"
+    },
+    {
+      "path": "crates/secbird-core/src/macro_scheduler/runtime.rs",
+      "sha256": "4ce3f0aac359297ff418acb86dc43ff29b620ef9a6e19a33b04ecb50b774f231"
+    },
+    {
+      "path": "crates/secbird-core/src/macro_scheduler/mixed_tests.rs",
+      "sha256": "a5e71e548e1ef64324fbe92909e3ce30d3b31401b6ba7d869bbcb8d4b590803d"
+    }
+  ],
+  "logs": {
+    "native-keyboard-fields-core.log": {
+      "sha256": "af3857bfba2a19c520599ffdf58f0925e3d2d74519d730612a96a4056b8dff2e",
+      "test_results": [
+        "test result: ok. 566 passed; 0 failed; 6 ignored; 0 measured; 0 filtered out; finished in 10.59s"
+      ]
+    },
+    "native-keyboard-fields-workspace.log": {
+      "sha256": "04baeb6d5c8ae4bc59cba96e7ac8ef6257b2825612884936303939fd1ba0c239",
+      "test_results": [
+        "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.86s",
+        "test result: ok. 566 passed; 0 failed; 6 ignored; 0 measured; 0 filtered out; finished in 7.60s",
+        "test result: FAILED. 305 passed; 1 failed; 47 ignored; 0 measured; 0 filtered out; finished in 3.20s"
+      ]
+    },
+    "native-keyboard-fields-workspace-serial.log": {
+      "sha256": "2c2d83ea866240bd2af6d145bb1880bdc5f850b26f3cf3edcd5586242d2a446b",
+      "test_results": [
+        "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.13s",
+        "test result: ok. 566 passed; 0 failed; 6 ignored; 0 measured; 0 filtered out; finished in 29.14s",
+        "test result: ok. 306 passed; 0 failed; 47 ignored; 0 measured; 0 filtered out; finished in 7.20s",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s"
+      ]
+    },
+    "native-keyboard-fields-release-tests.log": {
+      "sha256": "d2ab025454991814ee2588b1c348af04fc0790d7011e0da4878c5a84abe2f5f9",
+      "test_results": [
+        "test result: ok. 566 passed; 0 failed; 6 ignored; 0 measured; 0 filtered out; finished in 3.96s"
+      ]
+    },
+    "native-keyboard-fields-release-build.log": {
+      "sha256": "16f4299ce0ab596a0806e643c4c51276b429a540f4fbf5f80bbfa0c9716ce2ff",
+      "test_results": []
+    }
+  },
+  "source": {
+    "installed_version": "4.0.896",
+    "installed_binary": "C:\\Program Files\\Razer\\RazerAppEngine\\app-4.0.896\\CommonDLL\\mapping_engine.dll",
+    "installed_sha256": "c64e539437b50da2b1f2e4155d8cbb0fb1c3e1ebaad894caf509bad97e9857f9",
+    "installed_bytes": 3948744,
+    "historical_evidence_version": "4.0.827",
+    "historical_binary_sha256": "6eabdfdedf797e042738b630d827c06f7a45dbe560ebaec96c66698f88f3320a",
+    "historical_parser": "work\\macro-routing\\keyboard-native-json-parser.c",
+    "historical_parser_sha256": "241ad96a4eb688eb3002e547b2207e659a9fddc7b4565f57046732998530fbb7",
+    "current_decompilation": "Scoped CLI using existing Ghidra12.1.4 and1GiB heap timed out at240000ms during search_strings on current4.0.896 binary; retained complete result in work/native-keyboard-fields-rea/modifier-strings.json. No Evidence or compatibility inference claimed; no repeat without changed startup/provider conditions.",
+    "claim": "Optional native keyboard fields are implemented from retained 4.0.827 parser; current 4.0.896 behavior is not yet revalidated",
+    "stock_process_baseline": "No matching Razer/Synapse/Chroma processes returned by Get-Process at observation; no replacement baseline claimed"
+  },
+  "vm_prerequisite": {
+    "utc": "2026-10-30T02:32:37.759380+00:00",
+    "available_ram_bytes": 6480977920,
+    "required_ram_bytes": 10737418240,
+    "launch_allowed": false,
+    "vm_started": false
+  },
+  "release_binaries": [
+    {
+      "path": "target\\release\\secbird.exe",
+      "bytes": 1483264,
+      "sha256": "a58e50655636bc00aece338f352065985325c744d57d50eceaed91ed7aebc217"
+    },
+    {
+      "path": "target\\release\\secbird-tray.exe",
+      "bytes": 3249664,
+      "sha256": "08423a089716f4e3d798662ea101a29f5706dded31f04babd6da816b6f12812c"
+    }
+  ],
+  "normal_store_changed": false,
+  "input_submitted": false,
+  "driver_loaded": false,
+  "gui_changed": false,
+  "complete_goal_acceptance": false,
+  "remaining": [
+    "Current4.0.896 native source revalidation after changed provider/startup conditions",
+    "Native selector ownership/routing/terminal completion/cancellation",
+    "Modifier key expansion and concurrent physical-held arbitration",
+    "Differing down/up packet metadata, conditional E1 scheduling and remaining source events/modes",
+    "Physical recovery and all three complete-build memory acceptance runs"
+  ]
+}
