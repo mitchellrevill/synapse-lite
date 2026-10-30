@@ -1,21 +1,18 @@
-# Screenshots
+# Screenshot gallery
 
-These PNGs are captured directly from the native editor at desktop resolution,
-2560 × 1440 pixels. They are not enlarged versions of smaller captures.
+The gallery shows the native desktop interface at 2560×1440, using example profiles, demonstration game entries and simulated devices.
 
-- `macros.png`: isolated local macro editor with a synthetic library and the
-  selected project logo. No fixture-device tab is shown.
-- `studio.png`: isolated Studio session with a loaded composition, Starlight
-  controls and provisioned local device geometry.
+| Image | View |
+| --- | --- |
+| [dashboard.png](dashboard.png) | Connected-device dashboard. |
+| [performance.png](performance.png) | Sensitivity stages and polling rate. |
+| [customize.png](customize.png) | Keyboard customization. |
+| [lighting.png](lighting.png) | Brightness, quick effects and lighting policies. |
+| [studio.png](studio.png) | Layered lighting composition and effect properties. |
+| [macros.png](macros.png) | Macro event editing. |
+| [linked-games.png](linked-games.png) | Example application library. |
+| [settings.png](settings.png) | General preferences, profile backup and app information. |
 
-Both use the real window/message loop and production painter with simulated
-transport. The screenshots contain no account data, serials or private paths.
-They do not establish physical support or pixel-perfect stock parity.
+These are native-window captures, not mockups or enlarged thumbnails. The interface is from app commit `30fd34e`. Device names identify the illustrated models; the images do not certify support for every device, effect or pictured control. See [compatibility](../compatibility.md) and [Studio capabilities](../studio.md).
 
-Reproduce with the opt-in native tests
-`native_macro_source_surface_selector_create_save_and_dirty_switch` and
-`native_studio_starlight_properties_gradient_save_and_playback_preserve_source`.
-Select the private asset pack with `SYNAPSE_LITE_ASSETS`; the Studio test also
-requires `SYNAPSE_LITE_STOCK_STUDIO_FILE`. Run one at a time with `--ignored
---test-threads=1`. The tests print their private capture directories. Review
-captures before copying them here. Do not publish their source profiles.
+When updating the gallery, capture a desktop-sized app window with its asset pack installed. Use demonstration data and exclude account details, serial numbers and private paths.

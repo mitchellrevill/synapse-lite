@@ -2,52 +2,92 @@
 
 <p align="center">
   <a href="https://github.com/mitchellrevill/synapse-lite/actions/workflows/ci.yml">Build status</a> ·
-  <a href="docs/development.md">Build from source</a> ·
-  <a href="docs/cli.md">CLI reference</a> ·
+  <a href="docs/development.md">Build guide</a> ·
+  <a href="docs/cli.md">Command line</a> ·
   <a href="docs/compatibility.md">Compatibility</a> ·
-  <a href="https://github.com/mitchellrevill/synapse-lite/issues">Report an issue</a>
+  <a href="https://github.com/mitchellrevill/synapse-lite/issues">Issues</a>
 </p>
 
-A native Rust peripheral manager with familiar Synapse controls, local profiles and a lighting editor. No advertising, accounts or telemetry in the native app.
+A native Rust peripheral manager for Windows, with local profiles, device controls and a lighting editor. No advertising, account requirement or telemetry in the native app.
 
-Built on [Secretarybird](https://github.com/infinityInfinite/secbird). The existing `secbird` CLI, commands and profile tooling are retained.
+Built on [Secretarybird](https://github.com/infinityInfinite/secbird).
 
-> **In development.** Device support varies by model and firmware. Some Studio effects and input features are still incomplete. Complete Synapse parity and the final memory target have not been established.
+> **Development preview.** Support varies by device and firmware. Some lighting effects and input features are incomplete. See [compatibility](docs/compatibility.md) before replacing your existing setup.
 
-## What it does
+## Features
 
-- **Device controls:** sensitivity, polling, power, lighting and supported button assignments.
-- **Profiles:** local storage, application links, native backup and supported Synapse 4 interchange. Unknown imported fields are retained where supported.
-- **Macros:** a local library, recording, event editing and device-dependent playback paths.
-- **Studio:** LED selection, layers, gradients, composition import/export, preview and supported device output.
-- **Tray and CLI:** quick profile access and the same `secbird` tooling for scripts and terminal use.
+- **Device settings:** sensitivity, polling rate, power, lighting and supported button assignments.
+- **Profiles:** local storage, application links, backups and supported Synapse 4 import/export.
+- **Macros:** a library, recording and event editing, with device-dependent playback support.
+- **Studio:** LED selection, layers, gradients, composition files, preview and supported device output.
+- **Tray and terminal:** profile access from the tray and device management with `secbird`.
 
-Studio currently renders Static, Spectrum Cycling, Fire, continuous Breathing, cardinal Wave, Wheel and Starlight. Other effect tiles do not yet imply working animation. See [Studio status](docs/studio.md).
+Studio renders Static, Spectrum Cycling, Fire, continuous Breathing, cardinal Wave, Wheel and Starlight. Other effects and modes are still in development. [Studio capabilities](docs/studio.md).
 
 ## Screenshots
 
+### Studio
+
 ![Studio lighting editor](docs/screenshots/studio.png)
+
+<details>
+<summary><strong>Device dashboard and controls</strong></summary>
+
+### Dashboard
+
+![Device dashboard](docs/screenshots/dashboard.png)
+
+### Sensitivity
+
+![Mouse sensitivity and polling settings](docs/screenshots/performance.png)
+
+### Keyboard assignments
+
+![Keyboard customization](docs/screenshots/customize.png)
+
+### Lighting
+
+![Keyboard lighting settings](docs/screenshots/lighting.png)
+
+</details>
+
+<details>
+<summary><strong>Macros, linked games and preferences</strong></summary>
+
+### Macros
 
 ![Macro editor](docs/screenshots/macros.png)
 
-These are captures of the native app using an isolated editor session and simulated transport. They show the interface, not proof of support for every pictured control or physical device. [Screenshot details](docs/screenshots/README.md).
+### Linked games
 
-## Get started
+![Application and profile library](docs/screenshots/linked-games.png)
 
-Windows 10/11 is the native desktop target. Linux supports the CLI; the native editor is Windows-only.
+### Preferences
 
-Build with stable Rust and the Windows MSVC toolchain:
+![General app settings](docs/screenshots/settings.png)
+
+</details>
+
+Screenshots use example profiles and simulated devices. Open an image for the full 2560×1440 capture. [Gallery details](docs/screenshots/README.md).
+
+## Build and run
+
+The desktop app supports Windows 10/11. Linux supports the command-line tool.
+
+For Windows, install stable Rust with the MSVC toolchain and Windows SDK:
 
 ```powershell
 cargo build --release --locked
-.	argetelease\secbird-tray.exe
+.\target\release\secbird-tray.exe
 ```
 
-The new logo is embedded. Device artwork, fonts and source-derived control assets are provisioned separately from local inputs; a source build does not include those vendor assets. See [asset setup](docs/assets.md) before expecting the complete interface.
+The desktop interface requires a separately provisioned asset pack for device artwork, fonts and source-derived controls. Those vendor assets are not included in the source repository. Follow the [asset setup guide](docs/assets.md) for a complete local build.
 
-Configuration lives in `%APPDATA%\SynapseLite`. Set `SYNAPSE_LITE_CONFIG_DIR` for a separate portable or test configuration. Keep the executable beside its provisioned `assets` directory, or select it with `SYNAPSE_LITE_ASSETS`.
+Settings are stored in `%APPDATA%\SynapseLite`. For portable or isolated setups, use `SYNAPSE_LITE_CONFIG_DIR`. Keep the asset pack beside the executable in an `assets` folder, or select it with `SYNAPSE_LITE_ASSETS`.
 
-## Same command line
+## Command line
+
+Use `secbird` to inspect devices, adjust settings and manage profile files:
 
 ```powershell
 secbird list
@@ -58,18 +98,18 @@ secbird import backup.json
 secbird studio inspect lighting.ChromaEffects
 ```
 
-Run `secbird --help` for the complete command set. [CLI guide](docs/cli.md) covers device controls, profiles, lighting and file inspection.
+Run `secbird --help` for all commands, or read the [CLI guide](docs/cli.md).
 
 ## Contributing
 
-Start with [development and tests](docs/development.md), [architecture](docs/architecture.md) and [compatibility](docs/compatibility.md). Keep changes scoped, retain input recovery, and distinguish simulator results from physical verification. Useful bug reports include the build commit, reproduction steps and a redacted `secbird report`.
+Start with [development and tests](docs/development.md) and [architecture](docs/architecture.md). Bug reports should include the build version, reproduction steps and a redacted `secbird report`.
 
-The memory target is below 100 MB for both total working set and private committed memory. It is a target, not an idle-memory guarantee. [Measurement guide](docs/performance.md).
+Performance measurements and the current memory target are described in the [measurement guide](docs/performance.md). Full functional parity and final resource acceptance remain open.
 
 ## Credits and licensing
 
-- [infinityInfinite and Secretarybird contributors](https://github.com/infinityInfinite/secbird): the upstream Rust application, CLI and device-control foundation. This fork began at `v0.5.0-beta1` and incorporates upstream functionality through `v0.5.1`.
-- [OpenRazer contributors](https://github.com/openrazer/openrazer): documented hardware and protocol facts used by the device database. No OpenRazer implementation is included.
+- [infinityInfinite and Secretarybird contributors](https://github.com/infinityInfinite/secbird): the Rust application, CLI and device-control foundation. This fork began at `v0.5.0-beta1` and incorporates upstream functionality through `v0.5.1`.
+- [OpenRazer contributors](https://github.com/openrazer/openrazer): documented hardware and protocol facts used by the device database.
 - Synapse Lite contributors: the native interface, profile interoperability and Studio work.
 
-Licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE). See [NOTICE](NOTICE). Razer, Synapse and Chroma are Razer trademarks. This independent project is not affiliated with or endorsed by Razer. The custom logo is project branding, not the Razer logo.
+Licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE). See [NOTICE](NOTICE). Razer, Synapse and Chroma are Razer trademarks. This independent project is not affiliated with or endorsed by Razer.

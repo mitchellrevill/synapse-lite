@@ -2,9 +2,7 @@
 
 ## Project logo
 
-`assets/logo-source.png` is the selected original generated mark: three angular green signal paths around an open triangular centre. It is distinct project branding inspired by threefold composition, without the original snake artwork. The unused concepts are not shipped.
-
-The source was created with the built-in image generator. Prompt: “Create a distinctive Synapse Lite emblem; strip the snakes and organic detail from the threefold inspiration and reinterpret it as three minimal interlocking angular signal paths around an open triangular core; bright green, transparent background, no text.”
+`assets/logo-source.png` contains the Synapse Lite project mark. The original artwork was produced with OpenAI image generation; app and web exports are built from this source file.
 
 Rebuild derived assets with:
 
@@ -18,7 +16,7 @@ This creates the PNG sizes, transparent multi-size app/tray ICOs, embedded nativ
 
 Device artwork, fonts and source-derived control icons are not project branding. They remain separately provisioned local assets; they are not included in this public source tree. The native app reads `SYNAPSE_LITE_ASSETS`, or `assets` beside the executable. Missing packs can result in missing device artwork or controls.
 
-The retained `provision-*.py` and `provision-*.cjs` tools take explicit local inputs and output paths. Run each tool without arguments to inspect its usage. Python image tools require Pillow; SVG tools take a path to a Sharp module. They do not require those dependencies at runtime.
+The `provision-*.py` and `provision-*.cjs` tools take explicit local inputs and output paths. Run each tool without arguments to inspect its usage. Python image tools require Pillow; SVG tools take a path to a Sharp module. They do not require those dependencies at runtime.
 
 For public metadata acquisition and offline packs:
 

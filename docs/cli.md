@@ -1,6 +1,6 @@
 # Command line
 
-The executable remains `secbird` (`secbird.exe` on Windows). Crate names, command names and existing scripting interfaces are unchanged. `secbird --help` is the authoritative complete reference.
+Use `secbird` (`secbird.exe` on Windows) to manage device settings, profiles and lighting from a terminal. Run `secbird --help` for the complete command reference.
 
 With multiple devices, use `-d DEVICE_ID` or `-d SERIAL`. Examples below change the selected device only where explicitly shown.
 
