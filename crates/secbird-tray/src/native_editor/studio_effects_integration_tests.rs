@@ -62,9 +62,13 @@ fn native_studio_integrated_effect_fields_routes_and_persistence() {
                     lighting_click(
                         hwnd,
                         width / 2. + (67. - 480.) * fit,
-                        (168. + height) / 2. + (76. - 180.) * fit,
+                        (118. + height) / 2. + (76. - 180.) * fit,
                         scale,
                     );
+                    if query()["selected_leds"] != 1 {
+                        return Err(format!("Effect {index} LED selection missed the canvas: {}", query()));
+                    }
+                    Ok(())
                 };
                 let text = |id: i32, value: &str| -> Result<(), String> {
                     let field = GetDlgItem(hwnd, id);
@@ -78,11 +82,11 @@ fn native_studio_integrated_effect_fields_routes_and_persistence() {
                     let path = json!(report.join(name).to_string_lossy());
                     SendMessageW(hwnd, STUDIO_TEST, 6, &path as *const Value as isize);
                 };
-                select(0);
+                select(0)?;
                 text(2130, "120")?;
                 lighting_click(hwnd, right + 170., 298., scale);
                 capture("integrated-wheel.png");
-                select(1);
+                select(1)?;
                 text(2142, "22")?;
                 lighting_click(hwnd, right + 160., 411., scale);
                 capture("integrated-tidal.png");
@@ -91,7 +95,7 @@ fn native_studio_integrated_effect_fields_routes_and_persistence() {
                 {
                     return Err("Tidal retained another effect's active fields".into());
                 }
-                select(2);
+                select(2)?;
                 text(2120, "2")?;
                 lighting_click(hwnd, right + 100., 327., scale);
                 capture("integrated-audio.png");
@@ -101,27 +105,27 @@ fn native_studio_integrated_effect_fields_routes_and_persistence() {
                 if query()["undo"] != undo {
                     return Err("Stale effect field message edited Audio".into());
                 }
-                select(0);
+                select(0)?;
                 if edit_text(hwnd, 2130).as_deref() != Some("120") {
                     return Err("Wheel speed was lost after Tidal/Audio edits".into());
                 }
-                select(3);
+                select(3)?;
                 lighting_click(hwnd,right+30.,360.,scale);
                 lighting_click(hwnd, right + 210., 290., scale);
                 text(2103, "0")?;
                 text(2104, "abcdef")?;
                 lighting_click(hwnd, right + 70., 493., scale);
                 capture("integrated-spectrum.png");
-                select(4);
+                select(4)?;
                 lighting_click(hwnd, right + 175., 232., scale);
                 lighting_click(hwnd, right + 175., 290., scale);
                 lighting_click(hwnd, right + 115., 462., scale);
                 capture("integrated-breathing.png");
-                select(5);
+                select(5)?;
                 text(2101, "bb3300")?;
                 lighting_click(hwnd, right + 60., 333., scale);
                 capture("integrated-fire.png");
-                select(6);
+                select(6)?;
                 if IsWindowVisible(GetDlgItem(hwnd, 2130)) != 0
                     || IsWindowVisible(GetDlgItem(hwnd, 2142)) != 0
                     || IsWindowVisible(GetDlgItem(hwnd, 2120)) != 0
