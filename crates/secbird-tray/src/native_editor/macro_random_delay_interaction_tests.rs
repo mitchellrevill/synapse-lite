@@ -64,18 +64,12 @@ fn native_random_delay_edit_save_history_invalid_readonly_and_conflict() {
                     value
                 };
                 SendMessageW(hwnd, super::super::macro_view::TEST, 1, 0);
+                SendMessageW(hwnd, super::super::macro_view::TEST, 13, 0);
                 wait_for(
                     || query()["open"] == true && query()["busy"] == false,
                     "macro library",
                 )?;
                 monitor.state().log.clear();
-                let scale = f64::from(GetDpiForWindow(hwnd).max(96)) / 96.;
-                let mut rect: RECT = std::mem::zeroed();
-                GetClientRect(hwnd, &mut rect);
-                let width = f64::from(rect.right) / scale;
-                let left = (width - 900.).max(10.) / 2.;
-                let timeline = left + 210.;
-                let click = |x, y| lighting_click(hwnd, x, y, scale);
                 let edit = |id, text: &str| {
                     let handle = GetDlgItem(hwnd, id);
                     assert!(!handle.is_null(), "missing random-delay field {id}");
@@ -88,7 +82,7 @@ fn native_random_delay_edit_save_history_invalid_readonly_and_conflict() {
                     );
                 };
                 redraw(hwnd);
-                click(timeline + 100., 258.);
+                macro_command(hwnd,super::super::macro_view::Control::Event(1));
                 if query()["range_min"] != "100"
                     || query()["range_max"] != "900"
                     || query()["dirty"] != false
@@ -100,23 +94,23 @@ fn native_random_delay_edit_save_history_invalid_readonly_and_conflict() {
                 if query()["dirty"] != true || std::fs::read(&path).unwrap() != original {
                     return Err("Range draft was not local".into());
                 }
-                click(left + 90., 404.);
+                macro_command(hwnd,super::super::macro_view::Control::ApplyDelay);
                 let applied = query()["events"].clone();
                 if applied[1]["Number"]["min"] != "0.250" || applied[1]["Number"]["max"] != "1.250"
                 {
                     return Err(format!("Range Apply failed: {}", query()));
                 }
-                click(timeline + 40., 174.);
+                macro_command(hwnd,super::super::macro_view::Control::Undo);
                 if query()["range_min"] != "100" {
                     return Err("Undo did not restore the range".into());
                 }
-                click(timeline + 135., 174.);
+                macro_command(hwnd,super::super::macro_view::Control::Redo);
                 if query()["events"] != applied || query()["range_max"] != "1250" {
                     return Err("Redo did not restore the range".into());
                 }
                 edit(2320, "2000");
                 edit(2321, "1000");
-                click(left + 90., 404.);
+                macro_command(hwnd,super::super::macro_view::Control::ApplyDelay);
                 if query()["failed"] != true
                     || query()["events"] != applied
                     || std::fs::read(&path).unwrap() != original
@@ -125,9 +119,9 @@ fn native_random_delay_edit_save_history_invalid_readonly_and_conflict() {
                 }
                 edit(2320, "250");
                 edit(2321, "1250");
-                click(left + 90., 404.);
+                macro_command(hwnd,super::super::macro_view::Control::ApplyDelay);
                 redraw(hwnd);
-                click(timeline + 630., 174.);
+                macro_command(hwnd,super::super::macro_view::Control::Save);
                 wait_for(
                     || query()["busy"] == false && query()["dirty"] == false,
                     "range Save",
@@ -150,9 +144,10 @@ fn native_random_delay_edit_save_history_invalid_readonly_and_conflict() {
                 }
                 SendMessageW(hwnd, super::super::macro_view::TEST, 3, 0);
                 SendMessageW(hwnd, super::super::macro_view::TEST, 1, 0);
+                SendMessageW(hwnd, super::super::macro_view::TEST, 13, 0);
                 wait_for(|| query()["busy"] == false, "range reopen")?;
                 redraw(hwnd);
-                click(timeline + 100., 258.);
+                macro_command(hwnd,super::super::macro_view::Control::Event(1));
                 if query()["range_min"] != "250" || query()["range_max"] != "1250" {
                     return Err("Reopened range differs".into());
                 }
@@ -167,15 +162,15 @@ fn native_random_delay_edit_save_history_invalid_readonly_and_conflict() {
                 SendMessageW(hwnd, READ_ONLY_TEST_SET, 1, 0);
                 redraw(hwnd);
                 edit(2320, "400");
-                click(left + 90., 404.);
+                macro_command(hwnd,super::super::macro_view::Control::ApplyDelay);
                 if query()["dirty"] != false || std::fs::read(&path).unwrap() != saved {
                     return Err("Read-only range changed data".into());
                 }
                 SendMessageW(hwnd, READ_ONLY_TEST_SET, 0, 0);
                 redraw(hwnd);
                 // Refresh actual fields after the test-only read-only HWND mutation.
-                click(timeline + 100., 296.);
-                click(timeline + 100., 258.);
+                macro_command(hwnd,super::super::macro_view::Control::Event(2));
+                macro_command(hwnd,super::super::macro_view::Control::Event(1));
                 let retained = json!("retained");
                 SendMessageW(
                     hwnd,
@@ -184,7 +179,7 @@ fn native_random_delay_edit_save_history_invalid_readonly_and_conflict() {
                     &retained as *const Value as isize,
                 );
                 redraw(hwnd);
-                click(timeline + 100., 258.);
+                macro_command(hwnd,super::super::macro_view::Control::Event(1));
                 if query()["range_min"] != ""
                     || GetWindowLongPtrW(GetDlgItem(hwnd, 2320), GWL_STYLE) & ES_READONLY as isize
                         == 0
@@ -192,7 +187,7 @@ fn native_random_delay_edit_save_history_invalid_readonly_and_conflict() {
                     return Err("Sub-millisecond source was rounded or made editable".into());
                 }
                 edit(2320, "100");
-                click(left + 90., 404.);
+                macro_command(hwnd,super::super::macro_view::Control::ApplyDelay);
                 if query()["dirty"] != false || std::fs::read(&path).unwrap() != saved {
                     return Err("Unsupported source range changed".into());
                 }
@@ -204,9 +199,9 @@ fn native_random_delay_edit_save_history_invalid_readonly_and_conflict() {
                     &supported as *const Value as isize,
                 );
                 redraw(hwnd);
-                click(timeline + 100., 258.);
+                macro_command(hwnd,super::super::macro_view::Control::Event(1));
                 edit(2320, "300");
-                click(left + 90., 404.);
+                macro_command(hwnd,super::super::macro_view::Control::ApplyDelay);
                 let current = Store::load(&path).unwrap();
                 let changed = library::edit(
                     &current,
@@ -219,7 +214,7 @@ fn native_random_delay_edit_save_history_invalid_readonly_and_conflict() {
                 changed.save().unwrap();
                 let external = std::fs::read(&path).unwrap();
                 redraw(hwnd);
-                click(timeline + 630., 174.);
+                macro_command(hwnd,super::super::macro_view::Control::Save);
                 wait_for(
                     || query()["busy"] == false && query()["failed"] == true,
                     "stale range refusal",

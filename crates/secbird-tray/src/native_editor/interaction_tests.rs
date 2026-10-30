@@ -49,6 +49,16 @@ use super::*;
 use secbird_core::{commands as cmd, sim::Sim, Store};
 use std::time::Instant;
 
+// Command/worker regressions deliberately bypass pointer geometry. Visible
+// controls and child EDIT notifications are covered by the macro surface test.
+unsafe fn macro_command(hwnd:HWND,control:super::macro_view::Control){
+    SendMessageW(hwnd,super::macro_view::TEST,14,&control as *const super::macro_view::Control as isize);
+}
+unsafe fn macro_test_field(hwnd:HWND,id:u16,text:&str){
+    let value=json!({"field":id,"text":text});
+    SendMessageW(hwnd,super::macro_view::TEST,15,&value as *const Value as isize);
+}
+
 struct Environment(Vec<(&'static str, Option<std::ffi::OsString>)>);
 impl Environment {
     fn set(values: &[(&'static str, &Path)]) -> Self {

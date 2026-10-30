@@ -1722,7 +1722,8 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
             p,
             if selected.is_some_and(|row| row.kind == Kind::Group) {
                 "Drag layers onto the middle of this group to add them. Drop beside a root row to move a layer out."
-            } else { "Effect properties and lighting preview are not available yet." },
+            } else if selected.is_some() { "Properties for this retained effect are not implemented yet." }
+            else { "Select an effect layer to edit its properties and preview lighting." },
             right + 10,
             274,
             230,
@@ -1750,7 +1751,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         view.archive.is_some() && !view.busy && !view.dialog && (view.dirty() || view.renaming || view.composition_renaming),
     );
     let message = if view.status.is_empty() {
-        "Open a .ChromaEffects file to edit its layers."
+        "Create or open a composition to edit its layers."
     } else {
         &view.status
     };

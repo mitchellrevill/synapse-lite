@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
 pub mod migration;
+#[cfg(windows)]
+pub mod stock_catalogue;
 const KEY: &str = "_synapseLiteLinkedGames";
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Game {

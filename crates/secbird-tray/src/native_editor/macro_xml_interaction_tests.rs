@@ -68,17 +68,14 @@ fn native_macro_xml_export_import_refusals_and_dialog_cancel() {
                     value
                 };
                 SendMessageW(hwnd, super::super::macro_view::TEST, 1, 0);
+                SendMessageW(hwnd, super::super::macro_view::TEST, 13, 0);
                 wait_for(
                     || query()["busy"] == false && query()["selected"] == "portable-native",
                     "macro XML library",
                 )?;
                 monitor.state().log.clear();
-                let mut client: RECT = std::mem::zeroed();
-                GetClientRect(hwnd, &mut client);
-                let scale = f64::from(GetDpiForWindow(hwnd).max(96)) / 96.;
-                let width = f64::from(client.right) / scale;
                 redraw(hwnd);
-                lighting_click(hwnd, width - 80., 100., scale);
+                macro_command(hwnd,super::super::macro_view::Control::Export);
                 let started = Instant::now();
                 let mut dialog = null_mut();
                 while started.elapsed() < Duration::from_secs(5) {
@@ -136,7 +133,9 @@ fn native_macro_xml_export_import_refusals_and_dialog_cancel() {
                 if std::fs::read(&destination).unwrap() != xml {
                     return Err("Existing XML was overwritten".into());
                 }
-                SetWindowTextW(GetDlgItem(hwnd, 2300), wide("Unsaved name").as_ptr());
+                macro_command(hwnd,super::super::macro_view::Control::Rename);
+                let name=GetDlgItem(hwnd,2300);assert!(!name.is_null(),"inline Rename field missing");
+                SetWindowTextW(name, wide("Unsaved name").as_ptr());
                 let dirty = output.join("dirty.xml");
                 let target = json!(dirty.to_string_lossy());
                 SendMessageW(

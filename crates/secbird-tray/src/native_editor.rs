@@ -160,6 +160,7 @@ const CACHED_LIGHTING_TIMER: usize = 76;
 const CACHED_FEEDBACK_RETRY: usize = 77;
 const BG: u32 = 0x222222;
 const PANEL: u32 = 0x111111;
+const EDIT_BRUSH_PROPERTY: &str = "SynapseLite.EditBrush";
 const TEXT: u32 = 0xcccccc;
 const MUTED: u32 = 0x999999;
 const BORDER: u32 = 0x5d5d5d;
@@ -1198,6 +1199,9 @@ impl State {
         }
         for command in update.commands {
             match command {
+                lighting_view::Command::OpenStudio => {
+                    self.action(Action::Studio(studio_view::Control::Enter));
+                }
                 lighting_view::Command::CommitIntent {
                     owner,
                     settings,
@@ -2957,6 +2961,18 @@ impl Painter<'_> {
         );
         self.hits.push(Hit { rect, action });
     }
+    /// Source navigation pills are distinct from rectangular command buttons.
+    unsafe fn navigation(&mut self, text:&str, x:i32, y:i32, width:i32, action:Action, active:bool) {
+        let rect=self.rect(x,y,width,28);
+        if active {
+            let brush=CreateSolidBrush(rgb(GREEN)); let pen=CreatePen(PS_SOLID,0,rgb(GREEN));
+            let old_brush=SelectObject(self.dc,brush);let old_pen=SelectObject(self.dc,pen);
+            RoundRect(self.dc,rect.left,rect.top,rect.right,rect.bottom,self.px(28),self.px(28));
+            SelectObject(self.dc,old_brush);SelectObject(self.dc,old_pen);DeleteObject(brush);DeleteObject(pen);
+        }
+        self.text(text,x,y,width,28,self.fonts.small,if active{PANEL}else{MUTED},DT_CENTER);
+        self.hits.push(Hit{rect,action});
+    }
     unsafe fn tab(&mut self, tab: Tab, x: i32, y: i32, active: bool) {
         let label = tab.title();
         let width = tab.width();
@@ -3090,9 +3106,11 @@ unsafe fn paint(state: &mut State, dc: HDC) {
         rect: p.rect(40, 42, 40, 38),
         action: Action::Refresh,
     });
-    p.button("Settings",width-110,47,95,Action::Settings(settings_view::Control::Open),settings_view::active(state));
+    p.image(state.icons.get("host-settings"), width-55, 51, 20, 20);
+    p.hits.push(Hit { rect: p.rect(width-65, 42, 40, 38), action: Action::Settings(settings_view::Control::Open) });
     if state.device().is_some() {
-        p.button("Device info",width-245,47,125,Action::DeviceInformation,false);
+        p.image(state.icons.get("host-tutorial-book"),width-100,91,20,20);
+        p.hits.push(Hit{rect:p.rect(width-110,81,40,40),action:Action::DeviceInformation});
     }
     let device = state.device().cloned();
     let title = if settings_view::active(state) {"SETTINGS"} else if shortcuts::active(state) {"GLOBAL SHORTCUTS"} else if chroma_view::active(state) {"RAZER CHROMA"} else if macro_view::active(state) {"MACRO"} else if linked_games::active(state) {"LINKED GAMES"} else if state.studio.open { "RAZER CHROMA STUDIO" } else { device
@@ -3794,6 +3812,8 @@ unsafe extern "system" fn window_proc(
         (*(create.lpCreateParams as *mut RefCell<State>))
             .borrow_mut()
             .hwnd = hwnd;
+        let state=(*(create.lpCreateParams as *mut RefCell<State>)).borrow();
+        SetPropW(hwnd,wide(EDIT_BRUSH_PROPERTY).as_ptr(),state.edit_brush as HANDLE);
     }
     // Win32 calls can synchronously reenter a window procedure. Never create
     // overlapping mutable references to its state during those callbacks.
@@ -3900,6 +3920,7 @@ unsafe extern "system" fn window_proc(
             return 0;
         }
         WM_NCDESTROY => {
+            RemovePropW(hwnd,wide(EDIT_BRUSH_PROPERTY).as_ptr());
             SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
             return DefWindowProcW(hwnd, message, wparam, lparam);
         }
@@ -3908,6 +3929,16 @@ unsafe extern "system" fn window_proc(
     let pointer = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut RefCell<State>;
     if pointer.is_null() {
         return DefWindowProcW(hwnd, message, wparam, lparam);
+    }
+    // Painting child EDITs can synchronously request their colors while a
+    // parent capture/action borrows State. Use its window-owned brush without
+    // aliasing that borrow; the default procedure would paint a white field.
+    if matches!(message,WM_CTLCOLOREDIT|WM_CTLCOLORSTATIC)
+        && !(i32::from(PERFORMANCE_INPUT)..i32::from(PERFORMANCE_INPUT)+10).contains(&GetDlgCtrlID(lparam as HWND))
+        && (*pointer).try_borrow().is_err()
+    {
+        let brush=GetPropW(hwnd,wide(EDIT_BRUSH_PROPERTY).as_ptr());
+        if !brush.is_null(){SetTextColor(wparam as HDC,rgb(TEXT));SetBkColor(wparam as HDC,rgb(PANEL));return brush as isize;}
     }
     if message==studio_view::DIALOG {studio_view::dialog(hwnd,pointer,wparam);return 0;}
     #[cfg(test)]
@@ -3951,6 +3982,10 @@ unsafe extern "system" fn window_proc(
             10=>{let value=&*(lparam as *const Value);macro_view::export_selected(&mut state,PathBuf::from(value.as_str().unwrap()));},
             11=>state.action(Action::MacroLibrary(macro_view::Control::Play)),
             12=>state.action(Action::MacroLibrary(macro_view::Control::Stop)),
+            13=>state.action(Action::MacroLibrary(macro_view::Control::Rename)),
+            14=>state.action(Action::MacroLibrary((*(lparam as *const macro_view::Control)).clone())),
+            15=>macro_view::test_field(&mut state,&*(lparam as *const Value)),
+            16=>macro_view::test_stage_input(&mut state,&*(lparam as *const Value)),
             _=>{},
         }}return 0;
     }
@@ -5299,6 +5334,23 @@ fn run_window(
             }),
             icons: [
                 "host-synapse",
+                "host-settings",
+                "host-macro",
+                "host-chroma",
+                "host-macro-delay",
+                "host-macro-keyboard",
+                "host-macro-mouse",
+                "host-macro-launch",
+                "host-macro-command",
+                "host-macro-text",
+                "host-macro-loop",
+                "host-macro-undo",
+                "host-macro-redo",
+                "host-macro-undo-enabled",
+                "host-macro-redo-enabled",
+                "host-macro-record",
+                "host-macro-delete",
+                "host-tutorial-book",
                 "host-mouse",
                 "host-keyboard",
                 "host-linked-games",

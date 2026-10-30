@@ -1,0 +1,122 @@
+{
+  "created_utc": "2026-10-30T14:29:23.054797+00:00",
+  "scope": "Existing shared-module regression repairs; complete Synapse parity is not claimed",
+  "workspace": {
+    "summaries": [
+      {
+        "passed": 12,
+        "ignored": 0
+      },
+      {
+        "passed": 773,
+        "ignored": 10
+      },
+      {
+        "passed": 374,
+        "ignored": 78
+      },
+      {
+        "passed": 1,
+        "ignored": 0
+      }
+    ],
+    "passed": 1160
+  },
+  "strict_clippy": true,
+  "release_build": true,
+  "native_checks": {
+    "native_macro_source_surface_selector_create_save_and_dirty_switch": {
+      "scope": "native pointer/EDIT/worker integration",
+      "passed": true,
+      "artifact_folder": "native-macro-parity-17112-1793368799408001600"
+    },
+    "native_macro_loops_range_nested_history_save_discard_and_invalid_repeat": {
+      "scope": "native command and persistence regression",
+      "passed": true,
+      "artifact_folder": "native-macro-loops-38676-1793368810571221700"
+    },
+    "native_macro_library_drafts_save_history_conflicts_and_lifecycle": {
+      "scope": "native command, recording and modal regression",
+      "passed": true,
+      "artifact_folder": "native-macros-48076-1793368816116374100"
+    },
+    "native_linked_games_add_bind_unlink_remove_and_tab_lifecycle_preserve_settings": {
+      "scope": "native pointer/profile-link regression",
+      "passed": true,
+      "artifact_folder": "native-linked-games-52340-1793368848329997800"
+    },
+    "native_linked_games_installed_catalogue_names_icons_and_search": {
+      "scope": "native rendering/search with copied installed metadata",
+      "passed": true,
+      "artifact_folder": "native-stock-games-40800"
+    },
+    "native_lighting_advanced_opens_existing_studio": {
+      "scope": "native Lighting entry, composition creation, menu cancellation and fixture preset",
+      "passed": true,
+      "artifact_folder": "native-lighting-studio-55932"
+    },
+    "native_macro_xml_export_import_refusals_and_dialog_cancel": {
+      "scope": "native command/file-picker and XML regression",
+      "passed": true,
+      "artifact_folder": "native-macro-xml-54536-1793368794807055300"
+    },
+    "native_random_delay_edit_save_history_invalid_readonly_and_conflict": {
+      "scope": "native inline range fields and command/persistence regression",
+      "passed": true,
+      "artifact_folder": "native-random-delay-52452-1793369825943897400"
+    },
+    "native_macro_host_play_stop_refusals_revision_and_close_drain": {
+      "scope": "native command/worker playback with owned no-I/O fixture",
+      "passed": true,
+      "artifact_folder": "native-macro-playback-49748-1793369961556401300"
+    }
+  },
+  "source_sha256": {
+    "crates/secbird-core/src/linked_games.rs": "0c9640cf992c2f4f4a58d67447ec9dcec53034e8766648386700f34060ff6fe3",
+    "crates/secbird-core/src/linked_games/stock_catalogue.rs": "e98abb9ac7b5b5cbdd78bcc86e8ac075d7fc304e0afc57f8dca462d3b4953e77",
+    "crates/secbird-tray/src/native_editor.rs": "9655735b718e2a9be70a5a5940fb75b704bcb5cdf637d80ab1873fda0237ba7f",
+    "crates/secbird-tray/src/native_editor/host_tabs.rs": "da52dbf5052b8124bbd855f1c9747daad25cc12a3e642967e8ce8271fc9e0d28",
+    "crates/secbird-tray/src/native_editor/interaction_tests.rs": "08a64c8b009d0eba91e028bcf12304f25d0cbe8dbca84ae7dba3046abd4374cc",
+    "crates/secbird-tray/src/native_editor/lighting_view.rs": "d37138bcb0a55e0195971764ce3b6e68370c0114dd85171c0ef517907478d914",
+    "crates/secbird-tray/src/native_editor/linked_games.rs": "415865cce28e136b6fef6a43ec4a18b6dd65b548c9c167122361ff4341949605",
+    "crates/secbird-tray/src/native_editor/linked_games_interaction_tests.rs": "5e903e1ed4faf65130540ea1347cd878d990266121cd770153c509f59fdcf359",
+    "crates/secbird-tray/src/native_editor/macro_interaction_tests.rs": "f4417aabfb4015ae25bed0f41afbc3a7adaa052d9c550e10570216a16b1e7d3b",
+    "crates/secbird-tray/src/native_editor/macro_playback_interaction_tests.rs": "bc655d5af5b581cb3ce3c88d839c1fbd97c70c9e8a6c0a5d35d84d6ea6c48c7f",
+    "crates/secbird-tray/src/native_editor/macro_random_delay_interaction_tests.rs": "259e426a68e7aba528d4a6b6dc4f9a286df4e2ecd338a7767c1942d41819d795",
+    "crates/secbird-tray/src/native_editor/macro_view.rs": "917e7a10b4ddc8b50da2fc60f0347b2c29d1c1b31852d138952c9c5bc04057cf",
+    "crates/secbird-tray/src/native_editor/macro_view/random_delay.rs": "5097081da640218b8029a563d69ba129f0c037e5294dc70b536e27352bf56323",
+    "crates/secbird-tray/src/native_editor/macro_view/surface.rs": "7f6a9b8fdb56f4a35694a0fc0519ae6624a56354958081a1fd92ccd215119771",
+    "crates/secbird-tray/src/native_editor/macro_xml_interaction_tests.rs": "ebe94063291fcc095a58d79c5b815262b27f0f695f928f81b3f5f4044e1485bb",
+    "crates/secbird-tray/src/native_editor/studio_view.rs": "00c4f0d47826e66106bf820b9e0056a579b1ede691324a97a6da440fdaaed30f",
+    "tools/provision-game-covers.cjs": "b2d44c4103866973113fe9634471759efa3ad35bb960b764f6daf59af5364d1f",
+    "tools/provision-host-assets.cjs": "406238adc9ace929ce1bdb3705b4fa5b3f34bb5d4f523eaa6f8afd385a0dbdf0"
+  },
+  "logs_sha256": {
+    "parity-workspace-tests.log": "d4e20d75b921cc12eb6f47a4dda502125b58c736017cdd7710eeaade59f648cb",
+    "parity-clippy.log": "56518720e4dedca214ff6713d8370e8a86dd6ef06e6a22939b7b321d8e74ec90",
+    "parity-build.log": "09f6ab6d0f013db53103a094a667aa9ea566f66f1101fe88220a7afadf3aa798",
+    "parity-catalogue-final.log": "f3fcd855c6c76449c3834145c4dea02585eb6d7afd68b29dda33ee962b75582a",
+    "parity-native-native_macro_source_surface_selector_create_save_and_dirty_switch.log": "e82e2e3cde4b172dd41951eaff2b3b901228bdff4d9b54e747c060360dc5a756",
+    "parity-native-native_macro_loops_range_nested_history_save_discard_and_invalid_repeat.log": "463235c051d5f5f6b05684e74a00b690f3e7890306e60909bdd339cc345867a4",
+    "parity-native-native_macro_library_drafts_save_history_conflicts_and_lifecycle.log": "aae04e3555ef0bfdac06b93da7ee2f0ab463860978fbfd9a6ba1436c2213bb3a",
+    "parity-native-native_linked_games_add_bind_unlink_remove_and_tab_lifecycle_preserve_settings.log": "6987ae5ff030c1fed97d57db7e78df56af5e7fdc4f6523b2b8b4723996f2c0ca",
+    "parity-native-native_linked_games_installed_catalogue_names_icons_and_search.log": "7d9805456f8ab9d3fc09ed3245659f38380762dccc8fb582dc682740912a3c65",
+    "parity-native-native_lighting_advanced_opens_existing_studio.log": "66c5cd55cd254eabcc8ee61e114dd14beb9c3eb706d9ca6d1dca769c6d9ee6b9",
+    "parity-native-native_macro_xml_export_import_refusals_and_dialog_cancel.log": "eace212e6521df26e85709da4949cde4516e89e3aae241821c0649f8c06ff168",
+    "parity-native-native_random_delay_edit_save_history_invalid_readonly_and_conflict.log": "a435987d6123d2646fc5eb77fb66de7da6b58a75cc9461a8a55c2f1f608a8331",
+    "parity-native-native_macro_host_play_stop_refusals_revision_and_close_drain.log": "6d896a908b10eeb5072b94a7e9bb528e06d29ed36f8ba011b3a6f309af9dfb47"
+  },
+  "game_artwork": {
+    "user_approved_requests": 62,
+    "covers_imported": 60,
+    "cdn_refused": 2,
+    "runtime_fetches": false,
+    "ico_and_png_payloads_supported": true
+  },
+  "stock_reference_date": "2026-10-27",
+  "fresh_stock_capture_verified": false,
+  "desktop_helper_limitation": "Kernel assets initialization fails before desktop control can run",
+  "legacy_macro_screen_removed": true,
+  "physical_input_or_lighting_output_certified": false,
+  "full_goal_complete": false
+}

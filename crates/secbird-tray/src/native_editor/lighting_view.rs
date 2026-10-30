@@ -28,6 +28,7 @@ pub(super) enum Scope {
 }
 #[derive(Clone)]
 pub(super) enum Command {
+    OpenStudio,
     CommitIntent {
         owner: Owner,
         settings: LightingSettings,
@@ -83,6 +84,7 @@ pub(super) enum InputEvent {
 }
 #[derive(Clone)]
 pub(super) enum Control {
+    OpenStudio,
     BrightnessToggle,
     DisplayToggle,
     IdleToggle,
@@ -513,6 +515,11 @@ pub(super) unsafe fn action(state: &mut State, control: Control) -> Update {
         return Update::default();
     }
     match control {
+        Control::OpenStudio => Update {
+            handled: true,
+            commands: vec![Command::OpenStudio],
+            ..Update::default()
+        },
         Control::BrightnessToggle => {
             if let Some(b) = &mut state.lighting.intent.brightness {
                 b.set_enabled(!b.enabled);
@@ -545,12 +552,7 @@ pub(super) unsafe fn action(state: &mut State, control: Control) -> Update {
             state.lighting.effect_menu = false;
             state.lighting.palette = None;
             state.lighting.editor = None;
-            state.lighting.notice = if advanced {
-                "Advanced effects require an external Chroma renderer and cannot be applied here."
-                    .into()
-            } else {
-                String::new()
-            };
+            state.lighting.notice.clear();
             Update::rebuild()
         }
         Control::EffectMenu => {
@@ -1485,7 +1487,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, _device: &Value) 
     if v.advanced {
         draw::text(
             p,
-            "Advanced effects require an external Chroma renderer.",
+            "Create and edit advanced lighting effects in Chroma Studio.",
             at(
                 g.effects_panel.x + 40.0,
                 g.effects_panel.y + 128.0,
@@ -1496,18 +1498,13 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, _device: &Value) 
             TEXT,
             DT_LEFT,
         );
-        draw::text(
-            p,
-            "Profile selection and Chroma launch are unavailable in this build.",
-            at(
-                g.effects_panel.x + 40.0,
-                g.effects_panel.y + 158.0,
-                520.0,
-                20.0,
-            ),
-            p.fonts.normal,
-            MUTED,
-            DT_LEFT,
+        p.button(
+            "CHROMA STUDIO",
+            (g.effects_panel.x + 40.0) as i32,
+            (g.effects_panel.y + 168.0) as i32,
+            180,
+            Action::Lighting(Control::OpenStudio),
+            false,
         );
     } else {
         wrapped_text(p, "Quick effects are presets that can be saved to a device's profile and synced with other supported Razer Chroma-enabled devices.", g.quick_message.x, g.quick_message.y, 520.0, 17.0);

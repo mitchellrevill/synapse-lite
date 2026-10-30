@@ -1,6 +1,67 @@
 use super::*;
 
 #[test]
+#[ignore="opens a private native window with a read-only copy of installed game metadata"]
+fn native_linked_games_installed_catalogue_names_icons_and_search() {
+    let root=PathBuf::from(std::env::var_os("ProgramData").unwrap()).join("Razer/GameManager3/Data");
+    let games=secbird_core::linked_games::stock_catalogue::read(&root).unwrap();assert!(!games.is_empty());let count=games.len();
+    let folder=std::env::temp_dir().join(format!("native-stock-games-{}",std::process::id()));std::fs::create_dir_all(&folder).unwrap();let frame=folder.join("frame.json");
+    let _environment=Environment::set(&[("SYNAPSE_LITE_CONFIG_DIR",&folder),("SYNAPSE_LITE_SMOKE_REPORT",&frame),("SYNAPSE_LITE_SMOKE_VIEW",Path::new("dashboard"))]);
+    let sim=Sim::mouse();let engine=Engine::with_simulated_mouse(&sim).unwrap();
+    let store=secbird_core::linked_games::stock_catalogue::merge(&Store::load(&folder.join("profiles.json")).unwrap(),games).unwrap();store.save().unwrap();let before=std::fs::read(folder.join("profiles.json")).unwrap();let output=folder.clone();
+    let controller=std::thread::spawn(move||{
+        let result=(||->Result<(),String>{unsafe{
+            wait_for(||frame.exists(),"installed-games HWND")?;let hwnd=WINDOW.load(Ordering::Acquire) as HWND;
+            let query=||{let mut value=Value::Null;SendMessageW(hwnd,super::super::linked_games::TEST,3,&mut value as *mut Value as isize);value};
+            SendMessageW(hwnd,super::super::linked_games::TEST,1,0);wait_for(||query()["busy"]==false&&query()["games"].as_array().is_some_and(|rows|rows.len()==count),"installed game tiles")?;
+            redraw(hwnd);let capture=json!(output.join("installed-games.png").to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize);
+            if query()["rendered_icons"].as_u64().unwrap_or(0)+query()["rendered_covers"].as_u64().unwrap_or(0)==0{return Err("No local game icons rendered".into());}
+            let mut client:RECT=std::mem::zeroed();GetClientRect(hwnd,&mut client);let scale=f64::from(GetDpiForWindow(hwnd).max(96))/96.;
+            let columns=(((f64::from(client.right)/scale) as usize-40)/310).max(1);let rows=((f64::from(client.bottom)/scale) as usize).saturating_sub(184).div_ceil(240);
+            let mut sorted=query()["games"].as_array().unwrap().clone();sorted.sort_by_key(|game|game["name"].as_str().unwrap_or("").to_lowercase());
+            let fallback_icons=sorted.iter().take(columns*rows).filter(|game|!assets_dir().join("game-covers").join(format!("{}.bgra",game["id"].as_str().unwrap())).is_file()&&game["stockIconPath"].as_str().is_some_and(|path|Path::new(path).is_file())).count();
+            if query()["rendered_icons"].as_u64().unwrap_or(0)<fallback_icons as u64{return Err("A local ICO/PNG fallback was replaced by a generic placeholder".into());}
+            let search=GetDlgItem(hwnd,2200);SetWindowTextW(search,wide("___no_game_matches___").as_ptr());SendMessageW(hwnd,WM_COMMAND,2200|((EN_CHANGE as usize)<<16),search as isize);redraw(hwnd);if query()["search"]!="___no_game_matches___"{return Err("Game search did not read its native edit field".into());}
+            if std::fs::read(output.join("profiles.json")).unwrap()!=before{return Err("Viewing game tiles changed profile data".into());}
+            Ok(())
+        }})();unsafe{PostMessageW(WINDOW.load(Ordering::Acquire) as HWND,WM_CLOSE,0,0);}
+        result
+    });
+    let run=run_standalone(Arc::new(Mutex::new(engine)),Some(Duration::from_secs(30)));let result=controller.join().unwrap();assert!(run.is_ok(),"{run:?}");assert!(result.is_ok(),"{result:?}");eprintln!("Installed game metadata HWND: {} games, {}",count,folder.display());
+}
+
+#[test]
+#[ignore="opens an isolated native keyboard Lighting page and enters Studio through its visible button"]
+fn native_lighting_advanced_opens_existing_studio() {
+    let folder=std::env::temp_dir().join(format!("native-lighting-studio-{}",std::process::id()));std::fs::create_dir_all(&folder).unwrap();let frame=folder.join("frame.json");
+    let _environment=Environment::set(&[("SYNAPSE_LITE_CONFIG_DIR",&folder),("SYNAPSE_LITE_SMOKE_REPORT",&frame),("SYNAPSE_LITE_SMOKE_VIEW",Path::new("keyboard-lighting"))]);
+    let sim=Sim::keyboard();let engine=Engine::with_simulated_keyboard(&sim,folder.join("profiles.json")).unwrap();let output=folder.clone();
+    let controller=std::thread::spawn(move||{
+        let result=(||->Result<(),String>{unsafe{
+            wait_for(||std::fs::read(&frame).ok().and_then(|b|serde_json::from_slice::<Value>(&b).ok()).is_some_and(|v|v["source_lighting_view"]==true),"Lighting page")?;
+            let hwnd=WINDOW.load(Ordering::Acquire) as HWND;let scale=f64::from(GetDpiForWindow(hwnd).max(96))/96.;let mut client:RECT=std::mem::zeroed();GetClientRect(hwnd,&mut client);
+            let width=f64::from(client.right)/scale;let geometry=lighting_layout::geometry(width,128.,0.,1).ok_or("Lighting geometry")?;
+            lighting_click(hwnd,geometry.advanced_tab.x+30.,geometry.advanced_tab.y+14.,scale);redraw(hwnd);
+            lighting_click(hwnd,geometry.effects_panel.x+120.,geometry.effects_panel.y+182.,scale);redraw(hwnd);
+            let mut studio=Value::Null;SendMessageW(hwnd,STUDIO_TEST,2,&mut studio as *mut Value as isize);
+            if studio["open"]!=true{return Err(format!("Lighting launch failed: {studio}"));}
+            let query=||{let mut value=Value::Null;SendMessageW(hwnd,STUDIO_TEST,2,&mut value as *mut Value as isize);value};
+            wait_for(||query()["busy"]==false,"Studio session restore")?;
+            lighting_click(hwnd,288.,101.,scale);redraw(hwnd);lighting_click(hwnd,320.,130.,scale);redraw(hwnd);
+            if query()["profiles"].as_u64().unwrap_or(0)==0{return Err("Studio profile menu could not create a composition".into());}
+            lighting_click(hwnd,325.,186.,scale);redraw(hwnd);
+            wait_for(||query()["dialog"]==true,"Studio preset menu")?;
+            SendMessageW(hwnd,STUDIO_TEST,9,0);
+            wait_for(||query()["dialog"]==false,"Studio preset menu cancelled")?;
+            let preset=json!([605,0,6]);SendMessageW(hwnd,STUDIO_TEST,8,&preset as *const Value as isize);redraw(hwnd);
+            if query()["canvas_devices"].as_u64().unwrap_or(0)==0{return Err("Studio could not add the Ornata preset".into());}
+            let capture=json!(output.join("studio-from-lighting.png").to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize);Ok(())
+        }})();unsafe{let hwnd=WINDOW.load(Ordering::Acquire) as HWND;SendMessageW(hwnd,STUDIO_TEST,9,0);SendMessageW(hwnd,STUDIO_TEST,5,0);PostMessageW(hwnd,WM_CLOSE,0,0);}result
+    });
+    let run=run_standalone(Arc::new(Mutex::new(engine)),Some(Duration::from_secs(30)));let result=controller.join().unwrap();assert!(run.is_ok(),"{run:?}");assert!(result.is_ok(),"{result:?}");eprintln!("Lighting to Studio HWND: {}",folder.display());
+}
+
+#[test]
 #[ignore="requires private native assets; opens an isolated simulated Linked Games window"]
 fn native_linked_games_add_bind_unlink_remove_and_tab_lifecycle_preserve_settings() {
     let folder=std::env::temp_dir().join(format!("native-linked-games-{}-{}",std::process::id(),std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
