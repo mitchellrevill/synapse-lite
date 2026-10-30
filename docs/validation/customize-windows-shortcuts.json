@@ -1,0 +1,67 @@
+{
+  "schema": 1,
+  "date": "2026-10-30",
+  "base_commit": "7b99930f9c63e659f1bcf3a51d9d9ca6a456904e",
+  "scope": "Customize Windows Shortcuts device assignment authoring and local persistence; no runtime delivery",
+  "choices": 26,
+  "regular_tests": {
+    "core": {
+      "passed": 577,
+      "ignored": 6
+    },
+    "cli": {
+      "passed": 5,
+      "ignored": 0
+    },
+    "native_app": {
+      "passed": 323,
+      "ignored": 58
+    }
+  },
+  "explicit_native_checks": {
+    "passed": 3,
+    "simulated_transport_only": true,
+    "checks": [
+      "Windows choice scrolling, Save/reopen, Cancel, dirty-close Save, stale profile refusal, worker read-only refusal, opaque metadata and opposite-layer preservation",
+      "Existing keyboard assignment shell/fonts/discard regression",
+      "Existing mouse label/drawer/primary-left restriction regression"
+    ],
+    "windows_workflow_device_sets": 0,
+    "physical_discovery": false
+  },
+  "release": {
+    "command": "cargo build --release --workspace -j 1",
+    "passed": true,
+    "binaries": {
+      "secbird.exe": {
+        "bytes": 1430528,
+        "sha256": "bd61d819b34700428165d951416ce5f9016751b9ce3b4e96be36c9babea46815"
+      },
+      "secbird-tray.exe": {
+        "bytes": 3505152,
+        "sha256": "afc0744b84b67e4521e94e5ea76ff8af7295ffbd1723e1c0dc736802dab3dbf2"
+      }
+    }
+  },
+  "source_evidence": "crates/secbird-core/src/profile_compat/windows_shortcuts_source.json",
+  "visual_review": {
+    "native_dimensions": [
+      1600,
+      900
+    ],
+    "native_scale": 1.25,
+    "stock_dimensions": [
+      2048,
+      1104
+    ],
+    "stock_dpi": "unverified",
+    "pixel_parity_established": false,
+    "controls_and_status_readable_without_overlap": true
+  },
+  "limitations": [
+    "Device-specific triggering, input ownership, execution and hardware delivery remain disabled/unverified.",
+    "Additional catalogue/dial choices need separate recovered evidence.",
+    "Live stock re-import and complete-build privacy/functional/memory acceptance remain open.",
+    "Release package was not launched over the unrelated running Lite instance."
+  ]
+}

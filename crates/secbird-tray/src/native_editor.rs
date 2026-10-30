@@ -32,6 +32,7 @@ mod assignment_geometry;
 mod assignment_fonts;
 mod assignment_layout;
 mod assignment_model;
+mod assignment_backend;
 mod assignment_view;
 mod color_editor_layout;
 mod color_editor_view;
@@ -517,8 +518,11 @@ struct Hit {
     action: Action,
 }
 
+const ASSIGNMENT_SAVED_STATUS:&str="Assignment saved locally; hardware delivery unavailable";
+
 enum Job {
     DeviceInformation(String),
+    LocalAssignment(assignment_model::Draft),
     Onboard(onboard_view::Request),
     Chroma(chroma_view::Request),
     Settings(Option<Value>),
@@ -776,6 +780,10 @@ fn worker(
             let mut failed = false;
             let mut notices = Vec::new();
             let state = match job {
+                Job::LocalAssignment(draft) => {
+                    let state=assignment_backend::save(&mut engine,&draft)?;
+                    status=ASSIGNMENT_SAVED_STATUS.into();Ok(state)
+                }
                 Job::Refresh => server::dispatch(&mut engine, "GET", "/api/state", &[]),
                 Job::Rescan => server::dispatch(&mut engine, "POST", "/api/rescan", b"{}"),
                 Job::Buttons(body) => {
@@ -815,12 +823,13 @@ fn worker(
                         );
                         failed = true;
                     }
+                    if !failed {
+                        status = answer.get("status").and_then(Value::as_str).unwrap_or("Settings applied").into();
+                    }
                     if answer.get("buttons").is_some() {
                         buttons = Some(answer);
                     }
-                    if !failed {
-                        status = "Settings applied".into();
-                    }
+                    if !failed && path=="/api/sensitivity-draft" {status="Sensitivity draft saved locally; device assignment unchanged".into();}
                     server::dispatch(&mut engine, "GET", "/api/state", &[])
                 }
                 Job::Onboard(_)
@@ -2039,7 +2048,9 @@ impl State {
             if let Some(buttons) = reply.buttons {
                 self.buttons = buttons["buttons"].as_array().cloned().unwrap_or_default();
             }
+            let assignment_saved = !reply.failed && (reply.status == ASSIGNMENT_SAVED_STATUS || reply.status == "Sensitivity draft saved locally; device assignment unchanged");
             if reply.failed {
+                self.assignment.saving=false;
                 self.error(&reply.status);
             } else {
                 self.status = reply.status;
@@ -2067,6 +2078,7 @@ impl State {
                 ReleaseCapture();
                 self.error("The selected device/profile changed; reopen the profile dialog");
             }
+            if assignment_saved { assignment_view::saved(self); }
             assignment_view::sync(self);
             calibration_view::request(self,false);
             self.sync_performance(false);
@@ -2346,6 +2358,7 @@ impl State {
             studio_view::action(self, studio_view::Control::StopDevice);
             return;
         }
+        if self.assignment.saving { return; }
         if matches!(&action, Action::Device(id) if self.selected.as_ref() == Some(id)) {
             return;
         }
@@ -3829,6 +3842,7 @@ unsafe extern "system" fn window_proc(
             if !pointer.is_null() {
                 if let Ok(mut state) = (*pointer).try_borrow_mut() {
                     if macro_view::playback::block_close(&mut state){return 0;}
+                    if state.assignment.saving { return 0; }
                     if !macro_view::can_leave(&mut state){return 0;}
                     if !shortcuts::can_leave(&mut state,Action::Close){return 0;}
                     if studio_view::block_close(&mut state) {return 0;}
@@ -4174,12 +4188,24 @@ unsafe extern "system" fn window_proc(
     #[cfg(test)]
     if message == ASSIGNMENT_TEST_QUERY {
         if let Ok(mut state) = (*pointer).try_borrow_mut() {
+            if wparam == 4 {
+                let value=&*(lparam as *const Value);
+                assignment_view::action(&mut state,assignment_view::Control::Category(assignment_model::Category::Launch));
+                if let Some(d)=&mut state.assignment.draft { d.launch.path=value.as_str().unwrap().into();d.dirty=true; }
+                state.rebuild_fields(); return 0;
+            }
+            if wparam == 5 { assignment_view::action(&mut state,assignment_view::Control::Save); return 0; }
             if wparam == 2 {
                 *(lparam as *mut Value) = assignment_view::font_diagnostics(&state);
                 return 0;
             }
+            if wparam == 7 {*(lparam as *mut Value)=assignment_view::sensitivity_diagnostics(&state);return 0;}
             if wparam == 3 {
                 *(lparam as *mut Value) = json!({"width":state.width,"height":state.height,"scale":state.scale,"hit_count":state.hits.len()});
+                return 0;
+            }
+            if wparam == 6 {
+                *(lparam as *mut Value) = assignment_view::render_fixture(&mut state);
                 return 0;
             }
             if wparam == 1 {
@@ -4189,7 +4215,7 @@ unsafe extern "system" fn window_proc(
             }
             let draft = state.assignment.draft.as_ref();
             let g = assignment_view::shell(&state);
-            *(lparam as *mut Value) = json!({"view":assignment_view::diagnostics(&state),"open":draft.is_some(),"input":draft.map(|d|&d.input.input_id),"category":draft.and_then(|d|d.category).map(|c|c.key()),"dirty":draft.is_some_and(|d|d.dirty),"prompt":state.assignment.pending.is_some(),"speed":draft.map(|d|d.speed),"source_original":draft.map(|d|&d.context.original_profile),"popup":g.map(|g|json!({"x":g.popup.x,"y":g.popup.y,"height":g.popup.height})),"pending":state.pending});
+            *(lparam as *mut Value) = json!({"view":assignment_view::diagnostics(&state),"open":draft.is_some(),"input":draft.map(|d|&d.input.input_id),"category":draft.and_then(|d|d.category).map(|c|c.key()),"dirty":draft.is_some_and(|d|d.dirty),"prompt":state.assignment.pending.is_some(),"speed":draft.map(|d|d.speed),"media_option":draft.and_then(|d|d.media_option),"categories":draft.map(|d|d.categories.iter().map(|c|c.key()).collect::<Vec<_>>()),"save_reason":draft.map(|d|d.save_reason()),"status":state.status,"source_original":draft.map(|d|&d.context.original_profile),"popup":g.map(|g|json!({"x":g.popup.x,"y":g.popup.y,"height":g.popup.height})),"pending":state.pending});
         }
         return 0;
     }
@@ -4467,6 +4493,15 @@ unsafe extern "system" fn window_proc(
         }
     }
     match message {
+        WM_COMMAND if (wparam & 0xffff) as u16 >= assignment_view::LAUNCH_PATH && (wparam & 0xffff) as u16 <= assignment_view::LAUNCH_ARGUMENTS => {
+            if (wparam >> 16) as u32 == EN_CHANGE { assignment_view::launch_change(&mut state, (wparam & 0xffff) as u16, lparam as HWND); }
+            0
+        }
+        WM_COMMAND if matches!((wparam & 0xffff) as u16, assignment_view::DPI_X | assignment_view::DPI_Y) => {
+            let code=(wparam >> 16) as u32;
+            if code == EN_CHANGE || code == EN_KILLFOCUS {assignment_view::dpi_change(&mut state,(wparam & 0xffff) as u16,code == EN_KILLFOCUS);}
+            0
+        }
         WM_COMMAND if (wparam & 0xffff) as u16 == assignment_view::SPEED => {
             let code = (wparam >> 16) as u32;
             if code == EN_CHANGE || code == EN_KILLFOCUS {
@@ -4608,6 +4643,11 @@ unsafe extern "system" fn window_proc(
             0
         }
         WM_MOUSEWHEEL if assignment_view::covered(&state) => {
+            // WM_MOUSEWHEEL carries screen coordinates. A leave/scroll event
+            // can arrive without a preceding mouse-move in this window.
+            let mut point=POINT{x:(lparam as u32 & 0xffff) as i16 as i32,y:((lparam as u32>>16)&0xffff) as i16 as i32};
+            ScreenToClient(hwnd,&mut point);
+            state.assignment.hover=Some((point.x as f64/state.scale as f64,point.y as f64/state.scale as f64));
             assignment_view::wheel(&mut state, ((wparam >> 16) as u16 as i16) as f64 / 120.0);
             0
         }
@@ -4782,7 +4822,8 @@ unsafe extern "system" fn window_proc(
             } else if let Some(Action::Assignment(assignment_view::Control::Step(delta))) = action {
                 assignment_view::begin_step(&mut state, delta);
             } else if let Some(Action::Assignment(
-                control @ (assignment_view::Control::Slider(_)
+                control @ (assignment_view::Control::DpiSlider(_, _)
+                | assignment_view::Control::Slider(_)
                 | assignment_view::Control::RailThumb(_)
                 | assignment_view::Control::DrawerThumb(_)
                 | assignment_view::Control::FormThumb(_)
@@ -5483,6 +5524,7 @@ fn run_window(
                 }
             }
             let control_id = GetDlgCtrlID(message.hwnd) as u16;
+            if matches!(control_id, assignment_view::DPI_X | assignment_view::DPI_Y) && message.message == WM_KEYDOWN && matches!(message.wParam,13 | 27) {SetFocus(hwnd);continue;}
             if control_id == assignment_view::SPEED {
                 if message.message == WM_KEYDOWN && matches!(message.wParam, 13 | 27) {
                     SetFocus(hwnd);

@@ -1849,17 +1849,17 @@ pub(super) unsafe fn capture_frame(state: &mut State, path: &Path) -> bool {
     }
     let old = SelectObject(dc, bitmap);
     super::paint(state, dc);
-    if state.studio.open {
-        // Integrated evidence includes the actual edit controls as well as the
-        // owner-painted panels. Capture only this owned window's children.
-        for &field in state.fields.values() {
-            if IsWindowVisible(field)==0 {continue;}
-            let mut bounds:RECT=std::mem::zeroed();GetWindowRect(field,&mut bounds);
-            let mut point=POINT{x:bounds.left,y:bounds.top};ScreenToClient(state.hwnd,&mut point);
-            let saved=SaveDC(dc);SetViewportOrgEx(dc,point.x,point.y,null_mut());
-            SendMessageW(field,WM_PRINT,dc as usize,(PRF_CLIENT|PRF_ERASEBKGND|PRF_CHECKVISIBLE) as isize);
-            RestoreDC(dc,saved);
-        }
+    // Native EDIT children are separate windows and are absent from paint().
+    for child in state.fields.values() {
+        if IsWindowVisible(*child)==0 {continue;}
+        let mut bounds: RECT = std::mem::zeroed();
+        GetWindowRect(*child, &mut bounds);
+        let mut point = POINT { x: bounds.left, y: bounds.top };
+        ScreenToClient(state.hwnd, &mut point);
+        let saved = SaveDC(dc);
+        SetViewportOrgEx(dc, point.x, point.y, null_mut());
+        SendMessageW(*child, WM_PRINT, dc as usize, (PRF_CLIENT | PRF_ERASEBKGND | PRF_CHECKVISIBLE) as isize);
+        RestoreDC(dc, saved);
     }
     SelectObject(dc, old);
     let mut image = null_mut();

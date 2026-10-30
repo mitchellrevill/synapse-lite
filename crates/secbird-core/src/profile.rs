@@ -11,6 +11,8 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 mod storage;
+mod navigation;
+pub use navigation::NavigationStatus;
 mod applications;
 pub use applications::{normalize_app_path, foreground_app_identity};
 
