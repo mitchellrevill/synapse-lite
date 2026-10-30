@@ -27,6 +27,7 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
+mod device_information;
 mod assignment_geometry;
 mod assignment_fonts;
 mod assignment_layout;
@@ -433,6 +434,7 @@ impl Tab {
 
 #[derive(Clone)]
 enum Action {
+    DeviceInformation,
     Onboard(onboard_view::Control),
     Chroma(chroma_view::Control),
     Settings(settings_view::Control),
@@ -514,6 +516,7 @@ struct Hit {
 }
 
 enum Job {
+    DeviceInformation(String),
     Onboard(onboard_view::Request),
     Chroma(chroma_view::Request),
     Settings(Option<Value>),
@@ -583,6 +586,7 @@ struct Reply {
 }
 
 enum WorkerReply {
+    DeviceInformation(String, String),
     Onboard(onboard_view::Request, Result<Value,String>),
     Chroma(Result<chroma_view::Response, String>),
     Settings(Result<Value,String>),
@@ -615,6 +619,16 @@ fn worker(
     }
     for job in jobs {
         let job = match job {
+            Job::DeviceInformation(id) => {
+                let text = match engine.lock() {
+                    Ok(engine) => engine.devices().iter().find(|dev| dev.key() == id)
+                        .map(secbird_core::device_information::diagnostic_text)
+                        .unwrap_or_else(|| "Device disconnected. Rescan devices and try again.".into()),
+                    Err(_) => "Device worker unavailable; try refreshing.".into(),
+                };
+                if replies.send(WorkerReply::DeviceInformation(id, text)).is_err() { break; }
+                continue;
+            }
             Job::Onboard(request) => {
                 let result = engine.lock().map_err(|_|"Device worker is unavailable".to_string())
                     .and_then(|mut engine|onboard_view::work(&mut engine,&request));
@@ -817,6 +831,7 @@ fn worker(
                 | Job::SensorRead(..)
                 | Job::Profiles(_)
                 | Job::ImportFile { .. }
+                | Job::DeviceInformation(_)
                 | Job::Settings(_)
                 | Job::ExportFile { .. } => return Err("File operation was not routed".into()),
             }
@@ -1040,6 +1055,7 @@ impl Drop for Bitmap {
 }
 
 struct State {
+    information_cache: HashMap<String, String>,
     settings: settings_view::View,
     linked_games:linked_games::View,
     shortcuts:shortcuts::View,
@@ -1792,7 +1808,7 @@ impl State {
                 &job,
                 Job::Profiles(profile_modal_model::Request::PreviewExport { .. })
             );
-        if self.restricted_actions && !matches!(&job, Job::Refresh | Job::Settings(None) | Job::Onboard(onboard_view::Request { operation: onboard_view::Operation::Read, .. }) | Job::SensorRead(..) | Job::LinkedGames(linked_games::Request::Read) | Job::MacroLibrary(macro_view::Request::Read) | Job::Studio(studio_view::Request::Restore{..})) && !presentation_preview {
+        if self.restricted_actions && !matches!(&job, Job::DeviceInformation(_) | Job::Refresh | Job::Settings(None) | Job::Onboard(onboard_view::Request { operation: onboard_view::Operation::Read, .. }) | Job::SensorRead(..) | Job::LinkedGames(linked_games::Request::Read) | Job::MacroLibrary(macro_view::Request::Read) | Job::Studio(studio_view::Request::Restore{..})) && !presentation_preview {
             return;
         }
         if self.pending > 0 {
@@ -1926,6 +1942,12 @@ impl State {
                 }
                 WorkerReply::Chroma(result) => {self.pending=self.pending.saturating_sub(1);chroma_view::receive(self,result);continue;}
                 WorkerReply::Shortcuts(result)=>{self.pending=self.pending.saturating_sub(1);shortcuts::receive(self,result);continue;}
+                WorkerReply::DeviceInformation(id, text) => {
+                    self.pending=self.pending.saturating_sub(1);
+                    self.information_cache.insert(id.clone(), text);
+                    if self.selected.as_deref()==Some(id.as_str()) { device_information::show(self, &id); }
+                    continue;
+                }
                 WorkerReply::Settings(result)=>{self.pending=self.pending.saturating_sub(1);settings_view::receive(self,result);continue;}
                 WorkerReply::LinkedGames(result)=>{self.pending=self.pending.saturating_sub(1);linked_games::receive(self,result);continue;}
                 WorkerReply::MacroLibrary(result)=>{self.pending=self.pending.saturating_sub(1);macro_view::receive(self,result);continue;}
@@ -2360,6 +2382,12 @@ impl State {
             return;
         }
         match action {
+            Action::DeviceInformation => {
+                if let Some(id) = self.selected.clone().filter(|_|self.device().is_some()) {
+                    if self.information_cache.contains_key(&id) { device_information::show(self, &id); }
+                    else { self.queue(Job::DeviceInformation(id)); }
+                }
+            }
             Action::Onboard(control)=>onboard_view::action(self,control),
             Action::Chroma(control) => chroma_view::action(self,control),
             Action::Settings(control)=>settings_view::action(self,control),
@@ -3039,6 +3067,9 @@ unsafe fn paint(state: &mut State, dc: HDC) {
         action: Action::Refresh,
     });
     p.button("Settings",width-110,47,95,Action::Settings(settings_view::Control::Open),settings_view::active(state));
+    if state.device().is_some() {
+        p.button("Device info",width-245,47,125,Action::DeviceInformation,false);
+    }
     let device = state.device().cloned();
     let title = if settings_view::active(state) {"SETTINGS"} else if shortcuts::active(state) {"GLOBAL SHORTCUTS"} else if chroma_view::active(state) {"RAZER CHROMA"} else if macro_view::active(state) {"MACRO"} else if linked_games::active(state) {"LINKED GAMES"} else if state.studio.open { "RAZER CHROMA STUDIO" } else { device
         .as_ref()
@@ -5119,6 +5150,7 @@ fn run_window(
             .spawn(move || worker(engine, jobs_rx, replies_tx))
             .map_err(|e| e.to_string())?;
         let mut state = Box::new(RefCell::new(State {
+            information_cache: HashMap::new(),
             settings: settings_view::View::default(),
             linked_games:linked_games::View::default(),
             shortcuts:shortcuts::View::default(),

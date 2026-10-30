@@ -115,3 +115,5 @@ pub mod linked_games;
 
 pub mod ambient_sampling;
 pub mod global_shortcuts;
+
+pub mod device_information;
