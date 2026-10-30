@@ -1,0 +1,367 @@
+{
+  "ripple": {
+    "selected": {
+      "colorStopsCustom": false,
+      "speed": 10,
+      "width": 300,
+      "playbackStart": "onPress",
+      "playbackEnd": "after",
+      "cycles": 1
+    },
+    "reset": {
+      "colorStops": [
+        {
+          "Stop": 0,
+          "Color": 16711680
+        },
+        {
+          "Stop": 26,
+          "Color": 16773888
+        },
+        {
+          "Stop": 42,
+          "Color": 3604296
+        },
+        {
+          "Stop": 55,
+          "Color": 6484479
+        },
+        {
+          "Stop": 68,
+          "Color": 3327
+        },
+        {
+          "Stop": 81,
+          "Color": 8388863
+        },
+        {
+          "Stop": 100,
+          "Color": 16711680
+        }
+      ],
+      "colorStopsCustom": false,
+      "speed": 10,
+      "width": 300,
+      "playbackStart": "onPress",
+      "playbackEnd": "after",
+      "cycles": 1
+    }
+  },
+  "wave": {
+    "selected": {
+      "colorStopsCustom": false,
+      "speed": 15,
+      "width": 100,
+      "pause": 0,
+      "angle": 90,
+      "split": false,
+      "playbackStart": "random",
+      "playbackEnd": "never",
+      "cycles": -1
+    },
+    "reset": {
+      "colorStops": [
+        {
+          "Stop": 0,
+          "Color": 16711680
+        },
+        {
+          "Stop": 26,
+          "Color": 16773888
+        },
+        {
+          "Stop": 42,
+          "Color": 3604296
+        },
+        {
+          "Stop": 55,
+          "Color": 6484479
+        },
+        {
+          "Stop": 68,
+          "Color": 3327
+        },
+        {
+          "Stop": 81,
+          "Color": 8388863
+        },
+        {
+          "Stop": 100,
+          "Color": 16711680
+        }
+      ],
+      "colorStopsCustom": false,
+      "speed": 15,
+      "width": 100,
+      "pause": 0,
+      "angle": 90,
+      "split": false,
+      "playbackStart": "random",
+      "playbackEnd": "never",
+      "cycles": -1
+    }
+  },
+  "reactive": {
+    "selected": {
+      "randomColor": false,
+      "duration": 1500,
+      "playbackStart": "onPress",
+      "playbackEnd": "after",
+      "cycles": 1
+    },
+    "reset": {
+      "color": 65280,
+      "randomColor": false,
+      "duration": 1500,
+      "playbackStart": "onPress",
+      "playbackEnd": "after",
+      "cycles": 1
+    }
+  },
+  "spectrum": {
+    "selected": {
+      "colorStopsCustom": false,
+      "duration": 37740
+    },
+    "reset": {
+      "colorStops": [
+        {
+          "Stop": 0,
+          "Color": 16718079
+        },
+        {
+          "Stop": 18,
+          "Color": 16715792
+        },
+        {
+          "Stop": 28,
+          "Color": 16744448
+        },
+        {
+          "Stop": 35,
+          "Color": 15728384
+        },
+        {
+          "Stop": 42,
+          "Color": 14679808
+        },
+        {
+          "Stop": 49,
+          "Color": 65280
+        },
+        {
+          "Stop": 52,
+          "Color": 65535
+        },
+        {
+          "Stop": 64,
+          "Color": 1595647
+        },
+        {
+          "Stop": 77,
+          "Color": 1595647
+        },
+        {
+          "Stop": 100,
+          "Color": 16718079
+        }
+      ],
+      "colorStopsCustom": false,
+      "duration": 37740
+    }
+  },
+  "breathing": {
+    "selected": {
+      "randomColor": false,
+      "duration": 14000,
+      "playbackStart": "random",
+      "playbackEnd": "never",
+      "cycles": -1
+    },
+    "reset": {
+      "color": 65280,
+      "color2": 65280,
+      "randomColor": false,
+      "duration": 14000,
+      "playbackStart": "random",
+      "playbackEnd": "never",
+      "cycles": -1
+    }
+  },
+  "static": {
+    "selected": {},
+    "reset": {
+      "color": 65280
+    }
+  },
+  "starlight": {
+    "selected": {
+      "colorStopsCustom": false,
+      "randomColor": false,
+      "density": 1,
+      "duration": 1700
+    },
+    "reset": {
+      "colorStops": [
+        {
+          "Stop": 0,
+          "Color": 16711680
+        },
+        {
+          "Stop": 26,
+          "Color": 16773888
+        },
+        {
+          "Stop": 42,
+          "Color": 3604296
+        },
+        {
+          "Stop": 55,
+          "Color": 6484479
+        },
+        {
+          "Stop": 68,
+          "Color": 3327
+        },
+        {
+          "Stop": 81,
+          "Color": 8388863
+        },
+        {
+          "Stop": 100,
+          "Color": 16711680
+        }
+      ],
+      "colorStopsCustom": false,
+      "randomColor": false,
+      "density": 1,
+      "duration": 1700
+    }
+  },
+  "fire": {
+    "selected": {},
+    "reset": {
+      "color": 16711680,
+      "color2": 16744448
+    }
+  },
+  "ambient": {
+    "selected": {
+      "blur": 5
+    },
+    "reset": {
+      "screen": "full",
+      "blur": 5
+    }
+  },
+  "audio": {
+    "selected": {
+      "colorStopsCustom": false,
+      "boost": 1,
+      "autoBoost": false,
+      "decay": 1
+    },
+    "reset": {
+      "colorStops": [
+        {
+          "Stop": 0,
+          "Color": 65280
+        },
+        {
+          "Stop": 51,
+          "Color": 16776960
+        },
+        {
+          "Stop": 100,
+          "Color": 16711680
+        }
+      ],
+      "colorStopsCustom": false,
+      "boost": 1,
+      "autoBoost": false,
+      "decay": 1
+    }
+  },
+  "wheel": {
+    "selected": {
+      "colorStopsCustom": false,
+      "speed": 60,
+      "playbackStart": "random",
+      "playbackEnd": "never",
+      "cycles": -1
+    },
+    "reset": {
+      "colorStops": [
+        {
+          "Stop": 0,
+          "Color": 16711680
+        },
+        {
+          "Stop": 26,
+          "Color": 16773888
+        },
+        {
+          "Stop": 42,
+          "Color": 3604296
+        },
+        {
+          "Stop": 55,
+          "Color": 6484479
+        },
+        {
+          "Stop": 68,
+          "Color": 3327
+        },
+        {
+          "Stop": 81,
+          "Color": 8388863
+        },
+        {
+          "Stop": 100,
+          "Color": 16711680
+        }
+      ],
+      "colorStopsCustom": false,
+      "speed": 60,
+      "playbackStart": "random",
+      "playbackEnd": "never",
+      "cycles": -1
+    }
+  },
+  "chroma-generate": {
+    "selected": {
+      "mediaSrc": "",
+      "currentConfig": {},
+      "effectConfigList": [],
+      "currentConfigId": -1
+    },
+    "reset": {
+      "mediaSrc": "",
+      "currentConfig": {},
+      "effectConfigList": [],
+      "currentConfigId": -1
+    }
+  },
+  "tidal": {
+    "selected": {
+      "randomColor": false,
+      "speed": 10,
+      "angle": 160,
+      "split": true,
+      "playbackStart": "random",
+      "playbackEnd": "never",
+      "cycles": -1
+    },
+    "reset": {
+      "color": 65280,
+      "color2": 255,
+      "randomColor": false,
+      "speed": 10,
+      "angle": 160,
+      "split": true,
+      "playbackStart": "random",
+      "playbackEnd": "never",
+      "cycles": -1
+    }
+  }
+}

@@ -1,6 +1,29 @@
 //! Source-shaped layer construction and reversible sibling-array operations.
 use super::*;
 
+/// Position relative to an existing row; Into prepends to a group's children.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DropPosition { Before, After, Into }
+
+fn position(entries: &[Box<RawValue>], id: &str) -> Result<usize> {
+    entries.iter().position(|raw| Object::parse(raw).ok()
+        .and_then(|object| object.text("id").ok()).as_deref() == Some(id))
+        .ok_or_else(|| invalid("missing layer in sibling list"))
+}
+
+fn change_list(root: &mut Vec<Box<RawValue>>, parent: Option<&str>,
+    edit: impl FnOnce(&mut Vec<Box<RawValue>>) -> Result<()>) -> Result<()> {
+    if let Some(parent) = parent {
+        let index = position(root, parent)?;
+        let mut group = Object::parse(&root[index])?;
+        let mut children = layers(&group)?;
+        edit(&mut children)?;
+        group.set("layers", Some(&encode(&children)?));
+        root[index] = encode(&group)?;
+    } else { edit(root)?; }
+    Ok(())
+}
+
 /// Studio IDs, not firmware effect IDs. Runtime support is a separate contract.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NewEffect {
@@ -28,6 +51,64 @@ fn validate_title(title: &str) -> Result<()> {
 }
 
 impl Draft {
+    /// One atomic structural edit. Only groupId changes when crossing parents;
+    /// region data and unknown members retain their raw JSON representation.
+    pub fn drop_item(&mut self, id: &str, target: &str, placement: DropPosition) -> Result<bool> {
+        let row = self.rows.iter().find(|row| row.id == id).ok_or_else(|| invalid("unknown layer"))?;
+        let destination = self.rows.iter().find(|row| row.id == target).ok_or_else(|| invalid("unknown target"))?;
+        if id == target { return Ok(false); }
+        let parent = if placement == DropPosition::Into {
+            if destination.kind != Kind::Group { return Err(invalid("drop into a group")); }
+            Some(destination.id.clone())
+        } else { destination.parent.clone() };
+        if row.kind == Kind::Group && parent.is_some() {
+            return Err(invalid("groups must remain at the root"));
+        }
+        // Never silently repair conflicting imported back references, including
+        // children of a moved group and the destination group itself.
+        for check in self.rows.iter().filter(|check| check.id == id || check.id == target
+            || Some(&check.id) == parent.as_ref() || check.parent.as_deref() == Some(id)) {
+            let object = item(&self.current, &check.id)?.ok_or_else(|| invalid("missing layer"))?;
+            let reference = object.get("groupId").map(|_| object.text("groupId")).transpose()?;
+            if reference.as_deref().filter(|id| !id.is_empty()) != check.parent.as_deref() {
+                return Err(invalid("layer tree and groupId disagree; preserve imported data without guessing"));
+            }
+        }
+        if placement == DropPosition::Into && row.parent == parent { return Ok(false); }
+        if row.parent == parent && placement != DropPosition::Into {
+            let siblings: Vec<_> = self.rows.iter().filter(|row| row.parent == parent).collect();
+            let from = siblings.iter().position(|row| row.id == id).unwrap();
+            let to = siblings.iter().position(|row| row.id == target).unwrap();
+            if (placement == DropPosition::Before && from + 1 == to)
+                || (placement == DropPosition::After && to + 1 == from) { return Ok(false); }
+        }
+        let old_parent = row.parent.clone();
+        let mut moved = item(&self.current, id)?.ok_or_else(|| invalid("missing layer"))?;
+        if old_parent != parent {
+            moved.set("groupId", Some(&encode(&parent.as_deref().unwrap_or(""))?));
+        }
+        let moved = encode(&moved)?;
+        let mut root = layers(&Object::parse(&self.current)?)?;
+        change_list(&mut root, old_parent.as_deref(), |siblings| {
+            siblings.remove(position(siblings, id)?); Ok(())
+        })?;
+        change_list(&mut root, parent.as_deref(), |siblings| {
+            let index = if placement == DropPosition::Into { 0 } else {
+                position(siblings, target)? + usize::from(placement == DropPosition::After)
+            };
+            siblings.insert(index, moved); Ok(())
+        })?;
+        self.replace_tree(root)
+    }
+
+    pub fn set_opened(&mut self, id: &str, opened: bool) -> Result<bool> {
+        let row = self.rows.iter().find(|row| row.id == id).ok_or_else(|| invalid("unknown group"))?;
+        if row.kind != Kind::Group { return Err(invalid("only groups expand")); }
+        if row.opened == Some(opened) { return Ok(false); }
+        let object = item(&self.current, id)?.ok_or_else(|| invalid("missing group"))?;
+        self.commit(vec![Change { id: id.into(), field: "opened",
+            before: object.get("opened").map(RawValue::to_owned), after: encode(&opened)? }])
+    }
     fn fresh_ids(&self, ids: &[String]) -> Result<()> {
         let mut seen: BTreeSet<_> = self.rows.iter().map(|row|row.id.as_str()).collect();
         for id in ids {
@@ -252,5 +333,77 @@ mod tests {
         assert!(draft.layers().iter().any(|row|row.id == id(1)));
         assert!(!draft.layers().iter().any(|row|row.id == id(2)));
         assert!(draft.json().contains("9007199254740993123456789"));
+    }
+
+    #[test]
+    fn organization_cross_group_moves_are_atomic_lossless_and_reopenable() {
+        let mut draft = Draft::open(PROFILE).unwrap();
+        let regions = object(&draft, "a").get("regions").unwrap().get().to_string();
+        draft.add_group(&id(1), "Second").unwrap();
+        draft.drop_item("a", &id(1), DropPosition::Into).unwrap();
+        assert_eq!(object(&draft, "a").text("groupId").unwrap(), id(1));
+        draft.drop_item("b", "a", DropPosition::Before).unwrap();
+        assert_eq!(draft.layers()[1].id, "b");
+        assert_eq!(draft.layers()[2].id, "a");
+        draft.drop_item("a", "g", DropPosition::After).unwrap();
+        assert_eq!(object(&draft, "a").text("groupId").unwrap(), "");
+        draft.rename_layer(&id(1), "Renamed").unwrap();
+        draft.set_opened(&id(1), true).unwrap();
+        draft.set_visible(&id(1), false).unwrap();
+        let finished = draft.json().to_string();
+        let reopened = Draft::open(&finished).unwrap();
+        assert_eq!(reopened.layers(), draft.layers());
+        assert_eq!(object(&draft, "a").get("regions").unwrap().get(), regions);
+        assert!(finished.contains("9007199254740993123456789"));
+        assert!(finished.contains("9.9900e+100"));
+        for _ in 0..7 { assert!(draft.undo().unwrap()); }
+        assert!(!draft.is_dirty());
+        assert_eq!(object(&draft, "a").text("groupId").unwrap(), "g");
+        for _ in 0..7 { assert!(draft.redo().unwrap()); }
+        assert_eq!(draft.json(), finished);
+        let checkpoint = draft.checkpoint();
+        draft.accept_saved(checkpoint).unwrap();
+        assert!(!draft.is_dirty());
+        draft.undo().unwrap(); assert!(draft.is_dirty());
+        draft.redo().unwrap(); assert!(!draft.is_dirty());
+    }
+
+    #[test]
+    fn organization_invalid_and_noop_drops_preserve_history_and_redo() {
+        let mut draft = Draft::open(PROFILE).unwrap();
+        draft.rename_layer("g", "Rename").unwrap(); draft.undo().unwrap();
+        let before = draft.json().to_string();
+        for (id, target, placement) in [("a", "a", DropPosition::Before),
+            ("a", "b", DropPosition::Before), ("b", "a", DropPosition::After),
+            ("a", "g", DropPosition::Into)] {
+            assert!(!draft.drop_item(id, target, placement).unwrap());
+        }
+        for (id, target, placement) in [("missing", "a", DropPosition::Before),
+            ("a", "missing", DropPosition::After), ("g", "a", DropPosition::Before),
+            ("g", "c", DropPosition::Into), ("a", "c", DropPosition::Into)] {
+            assert!(draft.drop_item(id, target, placement).is_err());
+        }
+        assert_eq!(draft.json(), before); assert_eq!(draft.undo_len(), 0); assert_eq!(draft.redo_len(), 1);
+        let malformed = PROFILE.replace("\"groupId\":\"g\"", "\"groupId\":\"missing\"");
+        let mut bad = Draft::open(&malformed).unwrap();
+        assert!(bad.drop_item("g", "c", DropPosition::After).is_err());
+        assert!(bad.drop_item("a", "c", DropPosition::After).is_err());
+        assert_eq!(bad.json(), malformed); assert_eq!(bad.undo_len(), 0);
+    }
+
+    #[test]
+    fn organization_reorders_whole_groups_and_preserves_absent_opened_on_undo() {
+        let mut draft = Draft::open(PROFILE).unwrap();
+        let group = object(&draft, "g").get("layers").unwrap().get().to_string();
+        draft.drop_item("g", "c", DropPosition::After).unwrap();
+        assert_eq!(draft.layers()[0].id, "c");
+        assert_eq!(object(&draft, "g").get("layers").unwrap().get(), group);
+        draft.undo().unwrap(); assert!(!draft.is_dirty());
+        let raw = PROFILE.replace("\"opened\":true,", "");
+        let mut draft = Draft::open(&raw).unwrap();
+        draft.set_opened("g", true).unwrap(); assert!(draft.is_dirty());
+        draft.undo().unwrap(); assert!(object(&draft, "g").get("opened").is_none());
+        assert!(!draft.is_dirty());
+        assert!(draft.set_opened("a", true).is_err());
     }
 }

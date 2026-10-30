@@ -61,7 +61,7 @@ impl Draft {
         Ok(SelectedGradient::Uniform(Some(first)))
     }
     pub fn edit_breathing_stop(&mut self,id:&str,selection:&[LedSelection],edit:StopEdit)->Result<bool> {
-        match edit {StopEdit::Set{position,color,..}|StopEdit::Insert{position,color}=>spectrum::validate_stop(&GradientStop{position,color})?,StopEdit::Delete{..}=>{}}
+        match edit {StopEdit::Set{position,color,..}|StopEdit::Insert{position,color}=>spectrum::validate_stop(&GradientStop{position,color})?,StopEdit::Move{position,..}=>spectrum::validate_stop(&GradientStop{position,color:None})?,StopEdit::Delete{..}=>{}}
         if !matches!(self.breathing_selection_gradient(id,selection)?,SelectedGradient::Uniform(Some(_))) {return Err(invalid("select one uniform Breathing gradient before editing"));}
         // Materialize inherited stops per selected membership without changing
         // duration, playback flags, untouched regions or unknown raw leaves.

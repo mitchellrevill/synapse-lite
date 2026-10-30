@@ -1,0 +1,54 @@
+{
+  "baseline": "7b99930f9c63e659f1bcf3a51d9d9ca6a456904e",
+  "scope": "Studio viewport only; transient editor state; simulated transport",
+  "regular_tray_tests": {
+    "passed": 324,
+    "failed": 0,
+    "ignored": 57
+  },
+  "focused_canvas_tests": {
+    "passed": 6,
+    "failed": 0,
+    "ignored_private_asset_tests": 2
+  },
+  "native_window_test": {
+    "passed": true,
+    "display_scale": 1.25,
+    "space_drag_release_cancel": true,
+    "ctrl_wheel_screen_to_client_anchor": true,
+    "shift_wheel_horizontal_only": true,
+    "numeric_zoom_175_percent": true,
+    "device_names_toggle": true,
+    "fit_selected": true,
+    "selection_and_draft_unchanged": true,
+    "profile_bytes_unchanged": true,
+    "no_device_sets": true,
+    "requires_desktop_access": true
+  },
+  "transform_hit_test_scales": [
+    1,
+    1.25,
+    1.5,
+    2,
+    2.5
+  ],
+  "zoom_percent_tested": [
+    5,
+    50,
+    100,
+    200,
+    400
+  ],
+  "visual_review": {
+    "image": "images/studio-viewport.png",
+    "stock_reference": "inventory-2026-10-27/captures/stock-chroma-studio-0.jpg",
+    "fixed": "Moved selection/zoom status below Add Device after screenshot review; rendered numeric child control in test capture",
+    "remaining": "Labeled native buttons differ from stock compact icon/dropdown controls; no specific-device fit submenu"
+  },
+  "limitations": [
+    "No physical multi-monitor DPI transition test",
+    "No pixel-parity claim",
+    "No hardware output or driver test",
+    "Native keyboard-state test requires normal desktop access; restricted execution produced unusable keyboard state and startup timing"
+  ]
+}

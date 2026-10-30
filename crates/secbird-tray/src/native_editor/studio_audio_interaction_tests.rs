@@ -33,7 +33,7 @@ fn native_studio_audio_parameters_gradient_save_history_and_capture_refusal() {
     let controller = std::thread::spawn(move || {
         let result = (|| -> Result<Value, String> {
             unsafe {
-                wait_for(|| frame.exists(), "Audio window")?;
+                wait_for_studio_window(|| frame.exists(), "Audio window")?;
                 let hwnd = WINDOW.load(Ordering::Acquire) as HWND;
                 let query = || {
                     let mut v = Value::Null;
@@ -77,7 +77,7 @@ fn native_studio_audio_parameters_gradient_save_history_and_capture_refusal() {
                 lighting_click(
                     hwnd,
                     width / 2. + (67. - 480.) * fit,
-                    (168. + height) / 2. + (76. - 180.) * fit,
+                    (118. + height) / 2. + (76. - 180.) * fit,
                     scale,
                 );
                 let set = |field, text: &str| -> Result<(), String> {

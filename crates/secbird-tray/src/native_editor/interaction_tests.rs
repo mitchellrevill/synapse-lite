@@ -23,6 +23,10 @@ mod macro_playback;
 mod macro_random_delay;
 #[path="studio_interaction_tests.rs"]
 mod studio;
+#[path="studio_library_interaction_tests.rs"]
+mod studio_library;
+#[path="studio_clipboard_interaction_tests.rs"]
+mod studio_clipboard;
 #[path="chroma_interaction_tests.rs"]
 mod chroma;
 #[path="settings_interaction_tests.rs"]
@@ -61,6 +65,17 @@ fn wait_for(mut predicate: impl FnMut() -> bool, reason: &str) -> Result<(), Str
         if predicate() {
             return Ok(());
         }
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    Err(format!("Timed out: {reason}"))
+}
+
+// Studio startup loads the native source assets before publishing WINDOW. Keep
+// cold-start admission bounded separately from the four-second action checks.
+fn wait_for_studio_window(mut predicate: impl FnMut() -> bool, reason: &str) -> Result<(), String> {
+    let started = Instant::now();
+    while started.elapsed() < Duration::from_secs(15) {
+        if predicate() { return Ok(()); }
         std::thread::sleep(Duration::from_millis(20));
     }
     Err(format!("Timed out: {reason}"))

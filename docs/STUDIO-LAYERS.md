@@ -77,10 +77,36 @@ See `docs/validation/studio-layer-authoring.json`. Native owned-state rendering
 was inspected alongside the stock gallery. It omits child Win32 edit controls and
 is not a replacement for desktop screenshot verification.
 
+## Layer organization, 30 October 2026
+
+Drag a layer title above or below another row to reorder it or change its parent.
+Drop on the middle half of a group row to prepend the layer to that group, including
+a collapsed empty group. Drop beside a root row to move a child out of its group.
+Groups move with their children and stay at the root. A green line marks the drop
+position; Escape, capture loss and release outside the list cancel. Scroll the list
+with the wheel to reach other rows. Ctrl+E and Rename Group edit the selected name.
+
+Expand/collapse now edits the saved `opened` property and participates in undo/redo,
+alongside rename, visibility and structural moves. Group visibility keeps its existing
+source behavior of overwriting child visibility in one reversible step. A drop is one
+structural history step; it updates only the moved layer's `groupId` when crossing
+parents (an empty string at the root). Same-parent moves retain the imported reference
+spelling/absence. Conflicting back references fail before mutation; nested groups are
+refused. Unknown fields and raw number spellings remain intact.
+
+Recovered source `main.88ac681e.js` (same SHA256 above), decoded UTF-16 offset 298657,
+contains the before/after/add reducer and root/group restrictions. The REA analysis
+parent for this pass is `ev_8802e345246ce84cc6e9f177adf39f06d49a57eca46060468a42f242a825b1c4`;
+40 parsed JavaScript files, zero parse failures, partial application/semantic coverage.
+Direct literal inspection supplies the reducer details; no vendor execution or
+full runtime equivalence is claimed. Persisted undoable expansion is an explicit
+requested editor behavior; stock expansion does not set its save-enabled flag.
+
 ## Remaining work
 
-- Full drag/reparent and layer-to-group assignment, the stock add-effect palette,
-  icons, context menus and exact positioning. Current Layer Actions is an interim UI.
+- The stock add-effect palette, icons, context menus and exact positioning. Current
+  Layer Actions and text Show/Hide buttons remain interim UI. Drag auto-scroll at
+  the viewport edge is not implemented; wheel scrolling is available.
 - Confirm the stock localized default group-name template; current English naming
   is New group N. Imported/custom group titles are preserved.
 - Chassis, key legends, canvas framing/zoom persistence and the complete stock

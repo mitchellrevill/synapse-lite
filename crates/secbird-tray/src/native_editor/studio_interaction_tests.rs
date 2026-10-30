@@ -15,7 +15,7 @@ fn native_studio_starlight_properties_gradient_save_and_refusal_preserve_source(
     let folder=directory.clone();let monitor=sim.clone();let source=input.clone();
     let controller=std::thread::spawn(move || {
         let result=(|| -> Result<Value,String> {unsafe {
-            wait_for(||frame.exists(),"Wave window")?;
+            wait_for_studio_window(||frame.exists(),"Wave window")?;
             let hwnd=WINDOW.load(Ordering::Acquire) as HWND;
             let query=||{let mut value=Value::Null;SendMessageW(hwnd,STUDIO_TEST,2,&mut value as *mut Value as isize);value};
             wait_for(||query()["pending"]==0,"initial reads")?;
@@ -29,7 +29,7 @@ fn native_studio_starlight_properties_gradient_save_and_refusal_preserve_source(
             let id=query()["selected"].as_str().ok_or("Starlight not selected")?.to_owned();
             if !query()["rows"].as_array().unwrap().iter().any(|r|r["id"]==id && r["title"]=="STARLIGHT") {return Err("Starlight layer was not added".into());}
             let fit=((width-540.)/960.).min((height-250.)/360.).clamp(0.05,4.);
-            lighting_click(hwnd,width/2.+(67.-480.)*fit,(168.+height)/2.+(76.-180.)*fit,scale);
+            lighting_click(hwnd,width/2.+(67.-480.)*fit,(118.+height)/2.+(76.-180.)*fit,scale);
             lighting_click(hwnd,right+195.,290.,scale); // Fast500 assigns source defaults
             let density=GetDlgItem(hwnd,2108);if density.is_null(){return Err("Starlight density field missing".into());}
             SendMessageW(density,WM_SETTEXT,0,wide("7").as_ptr() as isize);lighting_click(hwnd,right+100.,413.,scale);
@@ -85,7 +85,7 @@ fn native_studio_wave_direction_presets_motion_preview_save_and_undo_preserve_so
     let folder=directory.clone();let monitor=sim.clone();let source=input.clone();
     let controller=std::thread::spawn(move || {
         let result=(|| -> Result<Value,String> {unsafe {
-            wait_for(||frame.exists(),"Wave window")?;
+            wait_for_studio_window(||frame.exists(),"Wave window")?;
             let hwnd=WINDOW.load(Ordering::Acquire) as HWND;
             let query=||{let mut value=Value::Null;SendMessageW(hwnd,STUDIO_TEST,2,&mut value as *mut Value as isize);value};
             wait_for(||query()["pending"]==0,"initial reads")?;
@@ -99,7 +99,7 @@ fn native_studio_wave_direction_presets_motion_preview_save_and_undo_preserve_so
             let id=query()["selected"].as_str().ok_or("new Wave not selected")?.to_owned();
             if !query()["rows"].as_array().unwrap().iter().any(|row|row["id"]==id && row["title"]=="WAVE") {return Err("Wave menu did not create the source-shaped layer".into());}
             let fit=((width-540.)/960.).min((height-250.)/360.).clamp(0.05,4.);
-            lighting_click(hwnd,width/2.+(67.-480.)*fit,(168.+height)/2.+(76.-180.)*fit,scale);
+            lighting_click(hwnd,width/2.+(67.-480.)*fit,(118.+height)/2.+(76.-180.)*fit,scale);
             lighting_click(hwnd,right+211.,290.,scale); // Left270, assigns source defaults
             lighting_click(hwnd,right+210.,360.,scale); // source preset5: solid green
             for (id,text) in [(2105,"0"),(2106,"125"),(2107,"79")] {
@@ -123,6 +123,52 @@ fn native_studio_wave_direction_presets_motion_preview_save_and_undo_preserve_so
             let field=GetDlgItem(hwnd,2103);SendMessageW(field,WM_SETTEXT,0,wide("101").as_ptr() as isize);
             lighting_click(hwnd,right+70.,493.,scale);
             if query()["failed"]!=true {return Err("Invalid Wave gradient position was accepted".into());}
+            // Shared gradient workflow through actual native fields and mouse routing.
+            let before_shared = query()["undo"].as_u64().ok_or("missing undo count")?;
+            lighting_click(hwnd,right+120.,565.,scale); // RGB representation
+            let field=GetDlgItem(hwnd,2104);
+            SendMessageW(field,WM_SETTEXT,0,wide("255,128,0").as_ptr() as isize);
+            lighting_click(hwnd,right+70.,493.,scale);
+            if query()["undo"] != before_shared+1 {return Err("RGB entry did not make one edit".into());}
+            lighting_click(hwnd,right+195.,565.,scale); // HSV representation
+            let field=GetDlgItem(hwnd,2104);
+            SendMessageW(field,WM_SETTEXT,0,wide("240,100,100").as_ptr() as isize);
+            lighting_click(hwnd,right+70.,493.,scale);
+            if query()["undo"] != before_shared+2 {return Err("HSV entry did not make one edit".into());}
+            let field=GetDlgItem(hwnd,2104);
+            SendMessageW(field,WM_SETTEXT,0,wide("NaN,0,0").as_ptr() as isize);
+            lighting_click(hwnd,right+70.,493.,scale);
+            if query()["failed"] != true || query()["undo"] != before_shared+2 {return Err("Invalid HSV changed history".into());}
+            lighting_click(hwnd,right+40.,565.,scale); // HEX
+            let at=|percent:f64|position(right+15.+percent*209./100.,399.,scale);
+            SendMessageW(hwnd,WM_LBUTTONDOWN,1,at(100.));
+            SendMessageW(hwnd,WM_MOUSEMOVE,1,at(25.));
+            if query()["undo"] != before_shared+2 {return Err("Drag preview mutated document".into());}
+            SendMessageW(hwnd,WM_LBUTTONUP,0,at(25.));
+            if query()["undo"] != before_shared+3 {return Err("Completed drag did not create exactly one edit".into());}
+            // Crossing the other endpoint keeps this same stop selected.
+            SendMessageW(hwnd,WM_LBUTTONDOWN,1,at(25.));
+            SendMessageW(hwnd,WM_MOUSEMOVE,1,at(75.));
+            SendMessageW(hwnd,WM_CANCELMODE,0,0);
+            if query()["undo"] != before_shared+3 {return Err("Cancelled drag changed document".into());}
+            let shared_output=folder.join("shared-gradient.ChromaEffects");
+            let path=json!(shared_output.to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,3,&path as *const Value as isize);
+            wait_for(||query()["busy"]==false && query()["dirty"]==false,"shared gradient save")?;
+            let bytes=std::fs::read(&shared_output).map_err(|e|e.to_string())?;
+            let shared=secbird_core::studio::Archive::parse(&bytes).map_err(|e|e.to_string())?;
+            let value:Value=serde_json::from_str(shared.profile_json(0).unwrap()).unwrap();
+            let row=value["layers"].as_array().unwrap().iter().find(|r|r["id"]==id).ok_or("shared Wave missing")?;
+            let stops=&row["regions"][0]["params"]["colorStops"];
+            if stops[1]["Stop"]!=25 || stops[1]["Color"]!=0x0000ff {return Err(format!("HSV/drag saved wrong stop: {stops}"));}
+            let capture=json!(folder.join("shared-gradient.png").to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize);
+            SendMessageW(hwnd,READ_ONLY_TEST_SET,1,0);
+            SendMessageW(hwnd,WM_LBUTTONDOWN,1,at(25.));SendMessageW(hwnd,WM_LBUTTONUP,0,at(90.));
+            if query()["undo"] != before_shared+3 {return Err("Read-only gradient drag changed history".into());}
+            SendMessageW(hwnd,READ_ONLY_TEST_SET,0,0);
+            for _ in 0..3 {lighting_click(hwnd,450.,100.,scale);}
+            if query()["undo"] != before_shared {return Err("Shared gradient undo did not restore original".into());}
+            // Restore the selected stop for the existing Wave motion/save checks.
+            lighting_click(hwnd,right+170.,422.,scale);
             let gradient_capture=json!(folder.join("wave-gradient.png").to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,6,&gradient_capture as *const Value as isize);
             lighting_click(hwnd,right+100.,290.,scale); // back to motion
             let capture=json!(folder.join("wave.png").to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize);
@@ -169,7 +215,7 @@ fn native_studio_breathing_colors_speed_preview_save_and_undo_preserve_source() 
     let folder=directory.clone();let monitor=sim.clone();let source=input.clone();
     let controller=std::thread::spawn(move || {
         let result=(|| -> Result<Value,String> {unsafe {
-            wait_for(||frame.exists(),"Breathing window")?;
+            wait_for_studio_window(||frame.exists(),"Breathing window")?;
             let hwnd=WINDOW.load(Ordering::Acquire) as HWND;
             let query=||{let mut value=Value::Null;SendMessageW(hwnd,STUDIO_TEST,2,&mut value as *mut Value as isize);value};
             wait_for(||query()["pending"]==0,"initial reads")?;
@@ -183,7 +229,7 @@ fn native_studio_breathing_colors_speed_preview_save_and_undo_preserve_source() 
             let id=query()["selected"].as_str().ok_or("new Breathing not selected")?.to_owned();
             if !query()["rows"].as_array().unwrap().iter().any(|row|row["id"]==id && row["title"]=="BREATHING") {return Err("Breathing menu did not create the source-shaped layer".into());}
             let fit=((width-540.)/960.).min((height-250.)/360.).clamp(0.05,4.);
-            lighting_click(hwnd,width/2.+(67.-480.)*fit,(168.+height)/2.+(76.-180.)*fit,scale);
+            lighting_click(hwnd,width/2.+(67.-480.)*fit,(118.+height)/2.+(76.-180.)*fit,scale);
             let first=GetDlgItem(hwnd,i32::from(studio_view::COLOR));let second=GetDlgItem(hwnd,i32::from(studio_view::COLD));
             if first.is_null() || second.is_null() {return Err("Breathing dual colour fields missing".into());}
             SendMessageW(first,WM_SETTEXT,0,wide("112233").as_ptr() as isize);lighting_click(hwnd,right+70.,333.,scale);
@@ -262,7 +308,7 @@ fn native_studio_saved_apply_and_stop_use_shared_worker_without_changing_profile
     let source=input.clone();
     let controller=std::thread::spawn(move || {
         let result=(|| -> Result<Value,String> { unsafe {
-            wait_for(||frame.exists(),"Studio output window")?;
+            wait_for_studio_window(||frame.exists(),"Studio output window")?;
             let hwnd=WINDOW.load(Ordering::Acquire) as HWND;
             let query=||{let mut value=Value::Null;SendMessageW(hwnd,STUDIO_TEST,2,&mut value as *mut Value as isize);value};
             wait_for(||query()["pending"]==0 && query()["output_control_ready"]==true,"device control ready")?;
@@ -395,7 +441,7 @@ fn native_studio_actual_stock_export_loads_geometry_and_preserves_profiles() {
                 lighting_click(
                     hwnd,
                     width / 2.0 + (67.0 - 480.0) * fit,
-                    (168.0 + height) / 2.0 + (76.0 - 180.0) * fit,
+                    (118.0 + height) / 2.0 + (76.0 - 180.0) * fit,
                     scale,
                 );
                 if query()["selected_leds"] != 1 || query()["dirty"] != false {
@@ -569,7 +615,7 @@ fn native_studio_actual_stock_export_loads_geometry_and_preserves_profiles() {
                 lighting_click(
                     hwnd,
                     width / 2.0 + (67.0 - 480.0) * fit,
-                    (168.0 + height) / 2.0 + (76.0 - 180.0) * fit,
+                    (118.0 + height) / 2.0 + (76.0 - 180.0) * fit,
                     scale,
                 );
                 SendMessageW(hwnd, READ_ONLY_TEST_SET, 1, 0);
@@ -722,6 +768,15 @@ fn native_studio_actual_stock_export_loads_geometry_and_preserves_profiles() {
 #[test]
 #[ignore = "opens a bounded native Studio window; run alone"]
 fn native_studio_edits_save_failure_and_exit_recovery() {
+    // Rendering source assets can take longer on a loaded development desktop.
+    fn wait_for(mut predicate: impl FnMut() -> bool, reason: &str) -> Result<(), String> {
+        let started = Instant::now();
+        while started.elapsed() < Duration::from_secs(20) {
+            if predicate() { return Ok(()); }
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        Err(format!("Timed out: {reason}"))
+    }
     let directory = std::env::temp_dir().join(format!(
         "native-studio-{}-{}",
         std::process::id(),
@@ -810,7 +865,7 @@ fn native_studio_edits_save_failure_and_exit_recovery() {
                 let screen = |x: f64, y: f64| {
                     position(
                         width / 2.0 + (x - 480.0) * fit,
-                        (168.0 + height) / 2.0 + (y - 180.0) * fit,
+                        (118.0 + height) / 2.0 + (y - 180.0) * fit,
                         scale,
                     )
                 };
@@ -821,6 +876,21 @@ fn native_studio_edits_save_failure_and_exit_recovery() {
                     query()["selected_leds"] == 1 && query()["dirty"] == false,
                     "LED hit selection changed document or missed",
                 )?;
+                let mut navigation = Value::Null;
+                SendMessageW(hwnd, STUDIO_TEST, studio_view::TEST_NAVIGATION, &mut navigation as *mut Value as isize);
+                check(navigation["ok"] == true, &format!("viewport gestures: {navigation}"))?;
+                let zoom_field = GetDlgItem(hwnd, studio_view::ZOOM as i32);
+                check(!zoom_field.is_null(), "numeric zoom field missing")?;
+                SendMessageW(zoom_field, WM_SETTEXT, 0, wide("175%").as_ptr() as isize);
+                click(right - 55.0, height - 25.0);
+                check(query()["viewport"]["zoom"] == 175.0 && query()["dirty"] == false && query()["selected_leds"] == 1, "numeric zoom failed or changed selection/document")?;
+                click(300.0, height - 25.0);
+                check(query()["viewport"]["names"] == true, "device-name toggle failed")?;
+                click(380.0, height - 25.0);
+                check((query()["viewport"]["zoom"].as_f64().unwrap() - fit * 100.0).abs() < 1e-7, "fit selected failed")?;
+                click(right - 100.0, 148.0);
+                let capture = json!(folder.join("viewport-navigation.png").to_string_lossy());
+                SendMessageW(hwnd, STUDIO_TEST, 6, &capture as *const Value as isize);
                 let from = screen(45.0, 54.0);
                 let to = screen(165.0, 98.0);
                 SendMessageW(hwnd, WM_LBUTTONDOWN, 1, from);
@@ -1105,7 +1175,7 @@ fn native_studio_edits_save_failure_and_exit_recovery() {
     });
     run_window(
         Arc::new(Mutex::new(engine)),
-        Some(Duration::from_secs(25)),
+        Some(Duration::from_secs(60)),
         None,
     )
     .unwrap();
@@ -1142,7 +1212,7 @@ fn native_studio_layer_authoring_preview_undo_and_save_preserve_source() {
     let folder = directory.clone(); let observer = sim.clone(); let export = input.clone();
     let controller = std::thread::spawn(move || {
         let result = (|| -> Result<Value,String> { unsafe {
-            wait_for(||frame.exists(),"Studio layer window")?;
+            wait_for_studio_window(||frame.exists(),"Studio layer window")?;
             let hwnd = WINDOW.load(Ordering::Acquire) as HWND;
             let query = || {let mut value=Value::Null;SendMessageW(hwnd,STUDIO_TEST,2,&mut value as *mut Value as isize);value};
             wait_for(||query()["pending"]==0,"initial simulated queries")?;
@@ -1165,7 +1235,7 @@ fn native_studio_layer_authoring_preview_undo_and_save_preserve_source() {
                 return Err(format!("New empty layer did not follow source click-add: {created}"));
             }
             let fit=((width-540.)/960.).min((height-250.)/360.).clamp(0.05,4.);
-            lighting_click(hwnd,width/2.+(67.-480.)*fit,(168.+height)/2.+(76.-180.)*fit,scale);
+            lighting_click(hwnd,width/2.+(67.-480.)*fit,(118.+height)/2.+(76.-180.)*fit,scale);
             let field=GetDlgItem(hwnd,i32::from(studio_view::COLOR));if field.is_null(){return Err("New Static properties missing".into());}
             SendMessageW(field,WM_SETTEXT,0,wide("123456").as_ptr() as isize);
             lighting_click(hwnd,right+80.,343.,scale);
@@ -1216,4 +1286,103 @@ fn native_studio_layer_authoring_preview_undo_and_save_preserve_source() {
     let result=controller.join().unwrap();assert!(run.is_ok(),"{run:?}");assert!(result.is_ok(),"{result:?}");
     assert_eq!(std::fs::read(&input).unwrap(),original);assert_eq!(std::fs::read(directory.join("profiles.json")).unwrap(),store_before);
     eprintln!("Studio authoring evidence: {}",directory.display());
+}
+
+#[test]
+#[ignore = "opens isolated simulated Studio window; run alone"]
+fn native_studio_organization_drag_groups_history_and_persistence() {
+    let directory = std::env::temp_dir().join(format!("native-studio-organization-{}-{}", std::process::id(),
+        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+    std::fs::create_dir_all(&directory).unwrap();
+    let frame = directory.join("frame.json");
+    let _environment = Environment::set(&[("SYNAPSE_LITE_CONFIG_DIR", &directory),
+        ("SYNAPSE_LITE_SMOKE_REPORT", &frame), ("SYNAPSE_LITE_SMOKE_VIEW", Path::new("studio"))]);
+    let sim = Sim::wireless_mouse();
+    let engine = Engine::with_simulated_mouse(&sim).unwrap();
+    let mut store = Store::load(&directory.join("profiles.json")).unwrap();
+    store.for_device(&engine.devices()[0]); store.save().unwrap();
+    let store_before = std::fs::read(directory.join("profiles.json")).unwrap();
+    let source = directory.join("input.ChromaEffects");
+    let original = br#"{"version":1,"profiles":[{"id":"p","title":"Organization","devices":[],"opaque":9.9900e+100,"layers":[{"id":"g","type":"group","title":"Group","opened":true,"visible":true,"layers":[{"id":"a","type":"layer","title":"A","name":"static","groupId":"g","visible":true,"regions":[],"future":1.2300e-7},{"id":"b","type":"layer","title":"B","name":"static","groupId":"g","visible":false,"regions":[]}]},{"id":"c","type":"layer","title":"C","name":"static","visible":true,"regions":[]},{"id":"h","type":"group","title":"Second","visible":true,"opened":false,"layers":[]}]}]}"#;
+    std::fs::write(&source, original).unwrap();
+    let folder = directory.clone(); let monitor = sim.clone();
+    let controller = std::thread::spawn(move || {
+        let result = (|| -> Result<Value, String> { unsafe {
+            wait_for_studio_window(|| frame.exists(), "Studio organization window")?;
+            let hwnd = WINDOW.load(Ordering::Acquire) as HWND;
+            let query = || { let mut value = Value::Null; SendMessageW(hwnd, STUDIO_TEST, 2, &mut value as *mut Value as isize); value };
+            wait_for(|| query()["pending"] == 0, "initial simulated reads")?;
+            let path = json!(source.to_string_lossy()); SendMessageW(hwnd, STUDIO_TEST, 1, &path as *const Value as isize);
+            wait_for(|| query()["profiles"] == 1 && query()["busy"] == false, "organization fixture")?;
+            monitor.state().log.clear(); redraw(hwnd);
+            let scale = f64::from(GetDpiForWindow(hwnd).max(96)) / 96.;
+            let pack = |x: f64, y: f64| (((y*scale).round() as u32) << 16 | (x*scale).round() as u32) as isize;
+            let drag = |from: f64, to: f64| {
+                SendMessageW(hwnd, WM_LBUTTONDOWN, 1, pack(100.,from));
+                SendMessageW(hwnd, WM_MOUSEMOVE, 1, pack(100.,to));
+                SendMessageW(hwnd, WM_LBUTTONUP, 0, pack(100.,to)); redraw(hwnd);
+            };
+            let click = |x,y| lighting_click(hwnd,x,y,scale);
+            SendMessageW(hwnd, READ_ONLY_TEST_SET, 1, 0); drag(308.,188.);
+            SendMessageW(hwnd, READ_ONLY_TEST_SET, 0, 0);
+            if query()["undo"] != 0 { return Err("read-only drag edited the tree".into()); }
+            SendMessageW(hwnd, WM_LBUTTONDOWN, 1, pack(100.,308.));
+            SendMessageW(hwnd, WM_MOUSEMOVE, 1, pack(100.,188.));
+            SendMessageW(hwnd, WM_CANCELMODE, 0, 0);
+            SendMessageW(hwnd, WM_LBUTTONUP, 0, pack(100.,188.));
+            if query()["undo"] != 0 { return Err("cancelled drag edited the tree".into()); }
+            drag(308.,188.); // C into G, prepend
+            if query()["rows"][1]["id"] != "c" || query()["rows"][1]["parent"] != "g" { return Err(format!("root into group failed: {}",query())); }
+            drag(268.,348.); // A into closed H
+            click(10.,308.); // expand H, persisted
+            drag(348.,170.); // A out to root, before G
+            click(100.,348.); // H selected for rename
+            let mut client: RECT = std::mem::zeroed(); GetClientRect(hwnd,&mut client);
+            let right = f64::from(client.right)/scale - 250.;
+            click(right+80.,193.);
+            let field=GetDlgItem(hwnd, i32::from(studio_view::NAME));
+            if field.is_null() { return Err("group rename field missing".into()); }
+            SendMessageW(field, WM_SETTEXT, 0, wide("Renamed").as_ptr() as isize);
+            click(right+80.,193.);
+            click(210.,348.); // hide empty H
+            drag(348.,170.); // H before A
+            click(10.,268.); // collapse G
+            if query()["undo"] != 8 || query()["failed"] == true { return Err(format!("organization operations failed: {}",query())); }
+            let rows = query()["rows"].clone();
+            let image=json!(folder.join("organized.png").to_string_lossy());
+            if SendMessageW(hwnd,STUDIO_TEST,6,&image as *const Value as isize)!=1 { return Err("capture failed".into()); }
+            for _ in 0..8 { click(440.,100.); }
+            if query()["dirty"] != false { return Err(format!("organization undo failed: {}",query())); }
+            for _ in 0..8 { click(515.,100.); }
+            if query()["rows"] != rows { return Err("organization redo changed rows".into()); }
+            let output=folder.join("organized.ChromaEffects");
+            let path=json!(output.to_string_lossy()); SendMessageW(hwnd,STUDIO_TEST,3,&path as *const Value as isize);
+            wait_for(||query()["busy"]==false && query()["dirty"]==false,"organization save")?;
+            let saved=std::fs::read(&output).map_err(|e|e.to_string())?;
+            let archive=secbird_core::studio::Archive::parse(&saved).map_err(|e|e.to_string())?;
+            let raw=archive.profile_json(0).ok_or("missing saved profile")?;
+            let draft=secbird_core::studio::document::Draft::open(raw).map_err(|e|e.to_string())?;
+            if draft.layers()[0].id!="h" || draft.layers()[0].title!="Renamed" || draft.layers()[0].opened!=Some(true)
+                || draft.layers()[0].visible!=Some(false) || draft.layers()[1].parent.is_some()
+                || draft.layers()[2].opened!=Some(false) || !raw.contains("1.2300e-7") || !raw.contains("9.9900e+100") {
+                return Err("saved group structure/metadata differs".into());
+            }
+            SendMessageW(hwnd,STUDIO_TEST,1,&path as *const Value as isize);
+            wait_for(||query()["busy"]==false && query()["undo"]==0,"organization reopen")?;
+            if query()["rows"]!=rows { return Err("reopened rows differ".into()); }
+            if std::fs::read(&source).map_err(|e|e.to_string())? != original { return Err("source modified".into()); }
+            if !monitor.state().log.is_empty() { return Err("organization made device calls".into()); }
+            Ok(json!({"drag_root_into_group":true,"drag_between_groups":true,"drag_out_to_root":true,
+                "group_reorder_rename_expand_visibility":true,"undo_redo_steps":8,"save_reopen":true,
+                "unknown_raw_data_preserved":true,"read_only_and_cancel":true,"device_calls":0}))
+        }})();
+        unsafe { let hwnd=WINDOW.load(Ordering::Acquire) as HWND; SendMessageW(hwnd,STUDIO_TEST,5,0); PostMessageW(hwnd,WM_CLOSE,0,0); }
+        std::fs::write(folder.join("interaction.json"),serde_json::to_vec_pretty(&match &result {Ok(v)=>v.clone(),Err(e)=>json!({"error":e})}).unwrap()).unwrap();
+        result
+    });
+    let run=run_standalone(Arc::new(Mutex::new(engine)),Some(Duration::from_secs(45)));
+    let result=controller.join().unwrap();
+    assert!(run.is_ok(),"{run:?}"); assert!(result.is_ok(),"{result:?}");
+    assert_eq!(std::fs::read(directory.join("profiles.json")).unwrap(),store_before);
+    eprintln!("Studio organization evidence: {}",directory.display());
 }

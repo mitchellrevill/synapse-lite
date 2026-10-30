@@ -25,6 +25,11 @@ pub enum SelectedGradient {
 }
 #[derive(Clone, Copy)]
 pub enum StopEdit {
+    /// Move a whole raw record without rewriting its colour or unknown leaves.
+    Move {
+        index: usize,
+        position: u8,
+    },
     Set {
         index: usize,
         position: u8,
@@ -149,6 +154,17 @@ pub(super) fn edit_stop(params: &mut Object, edit: StopEdit, limit: usize) -> Re
             .ok_or_else(|| invalid("choose a gradient first"))?,
     )?;
     match edit {
+        StopEdit::Move { index, position } => {
+            if position > 100 {
+                return Err(invalid("gradient position requires 0..100 percent"));
+            }
+            let raw = stops
+                .get_mut(index)
+                .ok_or_else(|| invalid("unknown gradient stop"))?;
+            let mut stop = Object::parse(raw)?;
+            stop.set("Stop", Some(&encode(&position)?));
+            *raw = encode(&stop)?;
+        }
         StopEdit::Set {
             index,
             position,
@@ -358,6 +374,10 @@ impl Draft {
             | StopEdit::Insert { position, color } => {
                 validate_stop(&GradientStop { position, color })?
             }
+            StopEdit::Move { position, .. } => validate_stop(&GradientStop {
+                position,
+                color: None,
+            })?,
             StopEdit::Delete { .. } => {}
         }
         if !matches!(
@@ -398,6 +418,74 @@ mod tests {
     }
     fn params(draft: &Draft, col: u16) -> Object {
         draft.spectrum_params("s", &keys(&[col])).unwrap().remove(0)
+    }
+    #[test]
+    fn shared_gradient_move_preserves_raw_record_partition_and_exact_history() {
+        let mut draft = Draft::open(PROFILE).unwrap();
+        let untouched = params(&draft, 2)
+            .get("colorStops")
+            .unwrap()
+            .get()
+            .to_owned();
+        draft
+            .edit_spectrum_stop(
+                "s",
+                &keys(&[1]),
+                StopEdit::Move {
+                    index: 0,
+                    position: 90,
+                },
+            )
+            .unwrap();
+        assert_eq!(draft.undo_len(), 1);
+        assert_eq!(
+            params(&draft, 2).get("colorStops").unwrap().get(),
+            untouched
+        );
+        let raw = params(&draft, 1)
+            .get("colorStops")
+            .unwrap()
+            .get()
+            .to_owned();
+        assert_eq!(
+            raw,
+            r#"[{"Stop":80,"Color":2},{"Stop":90,"Color":1,"stopFuture":9.9900e+100}]"#
+        );
+        assert!(draft.json().contains("9007199254740993123456789"));
+        let changed = draft.json().to_owned();
+        draft.undo().unwrap();
+        assert_eq!(draft.json(), PROFILE);
+        draft.redo().unwrap();
+        assert_eq!(draft.json(), changed);
+        for edit in [
+            StopEdit::Move {
+                index: 0,
+                position: 101,
+            },
+            StopEdit::Move {
+                index: 99,
+                position: 20,
+            },
+        ] {
+            assert!(draft.edit_spectrum_stop("s", &keys(&[1]), edit).is_err());
+            assert_eq!(draft.json(), changed);
+            assert_eq!(draft.undo_len(), 1);
+        }
+        // None and duplicate positions stay on their original raw record.
+        let mut params = Object::parse(&serde_json::from_str::<Box<serde_json::value::RawValue>>(r#"{"colorStops":[{"Stop":0,"tag":"none"},{"Stop":50,"Color":9,"tag":"rgb"},{"Stop":100}]}"#).unwrap()).unwrap();
+        edit_stop(
+            &mut params,
+            StopEdit::Move {
+                index: 0,
+                position: 50,
+            },
+            10,
+        )
+        .unwrap();
+        assert_eq!(
+            params.get("colorStops").unwrap().get(),
+            r#"[{"Stop":50,"tag":"none"},{"Stop":50,"Color":9,"tag":"rgb"},{"Stop":100}]"#
+        );
     }
     #[test]
     fn duration_only_preserves_raw_gradients_and_missing_custom_but_seeds_unassigned_custom_false()

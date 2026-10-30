@@ -12,7 +12,7 @@ const MAX_BYTES: usize = 256 * 1024;
 pub(crate) struct Selection {
     version: u32,
     path: PathBuf,
-    profile_id: String,
+    profile_id: Option<String>,
     #[serde(default, flatten)]
     extra: BTreeMap<String, Value>,
 }
@@ -29,20 +29,17 @@ impl Selection {
             || self.version != 1
             || !self.path.is_absolute()
             || self.path.as_os_str().encode_wide().count() > 32767
-            || self.profile_id.is_empty()
-            || self.profile_id.len() > 512
-            || self.profile_id.chars().any(char::is_control)
+            || self.profile_id.as_ref().is_some_and(|id| id.is_empty() || id.len() > 512 || id.chars().any(char::is_control))
         {
             return Err("Studio session is invalid or unsupported; original retained".into());
         }
         Ok(())
     }
     pub fn from_archive(path: PathBuf, archive: &Archive, index: usize) -> Result<Self, String> {
-        let profile_id = archive
-            .profile_header(index)
-            .map_err(|e| e.to_string())?
-            .id
-            .ok_or("Composition has no stable profile identity")?;
+        let profile_id = if archive.profile_count()==0 {None} else {
+            Some(archive.profile_header(index).map_err(|e| e.to_string())?.id
+                .ok_or("Composition has no stable profile identity")?)
+        };
         let value = Self {
             version: 1,
             path,
@@ -54,6 +51,9 @@ impl Selection {
         Ok(value)
     }
     fn index(&self, archive: &Archive) -> Result<usize, String> {
+        let Some(profile_id)=&self.profile_id else {
+            return if archive.profile_count()==0 {Ok(0)} else {Err("Remembered empty library now contains compositions; open it to select one".into())};
+        };
         let mut matches = vec![];
         for index in 0..archive.profile_count() {
             if archive
@@ -61,7 +61,7 @@ impl Selection {
                 .map_err(|e| e.to_string())?
                 .id
                 .as_deref()
-                == Some(&self.profile_id)
+                == Some(profile_id.as_str())
             {
                 matches.push(index);
             }
@@ -143,6 +143,17 @@ mod tests {
     }
     fn bytes(ids: &[&str]) -> Vec<u8> {
         serde_json::to_vec(&json!({"version":1,"profiles":ids.iter().map(|id|json!({"id":id,"title":id,"devices":[],"layers":[]})).collect::<Vec<_>>()})).unwrap()
+    }
+    #[test]
+    fn empty_library_reopens_without_a_stale_composition_identity() {
+        let folder=folder();let path=folder.join("session.json");let source=folder.join("empty.ChromaEffects");
+        let original=bytes(&[]);std::fs::write(&source,&original).unwrap();
+        let archive=Archive::parse(&original).unwrap();
+        save(&path,Selection::from_archive(source.clone(),&archive,0).unwrap(),false).unwrap();
+        let restored=restore(&path).unwrap().unwrap();assert_eq!(restored.archive.profile_count(),0);
+        assert_eq!(std::fs::read(&source).unwrap(),original);
+        std::fs::write(&source,bytes(&["new"])).unwrap();assert!(restore(&path).is_err());
+        std::fs::remove_dir_all(folder).unwrap();
     }
     #[test]
     fn restart_follows_identity_across_reorder_without_changing_composition() {

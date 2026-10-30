@@ -1,0 +1,60 @@
+{
+  "date": "2026-10-30",
+  "base_commit": "7b99930f9c63e659f1bcf3a51d9d9ca6a456904e",
+  "isolated_branch": "feat/studio-gradient-editor",
+  "core_regional_tests_passed": 44,
+  "core_breathing_tests_passed": 8,
+  "core_gradient_filter_tests_passed": 8,
+  "tray_gradient_filter_passed": 4,
+  "tray_gradient_filter_ignored": 2,
+  "independent_spectrum_palette_fixture_passed": true,
+  "native_simulated_tests_passed": [
+    "Wave with shared RGB/HSV/drag extension",
+    "Starlight",
+    "Audio Meter",
+    "Breathing"
+  ],
+  "shared_workflow": {
+    "rgb_entry": true,
+    "hsv_blue_saved_as_rgb24": 255,
+    "saved_stop_percent": 25,
+    "invalid_hsv_no_history": true,
+    "drag_one_undo_entry": true,
+    "drag_preview_no_document_mutation": true,
+    "cancel_no_document_mutation": true,
+    "readonly_drag_refused": true,
+    "save_undo_redo": true,
+    "source_export_and_device_profile_bytes_unchanged": true,
+    "simulated_device_requests": 0,
+    "physical_discovery_disabled": true
+  },
+  "visual_comparison": {
+    "stock_reference": "stock-studio-color-gradient-editor-0.jpg",
+    "inspected": true,
+    "matching_effect_and_viewport": false,
+    "pixel_parity": false,
+    "child_edit_controls_in_painter_capture": false,
+    "found_and_corrected": [
+      "red/blue conversion applied twice in new paint calls",
+      "status overlapped mode buttons"
+    ],
+    "remaining": [
+      "stock popup and source panel geometry",
+      "colour plane and eyedropper",
+      "remembered custom picker colours",
+      "panel scrolling and narrow viewports"
+    ],
+    "final_native_capture_sha256": "659fa7211140d1b8e5c8832a72a62b0090ce193d7584e5549ab2c3a33f2827b5",
+    "native_rgb_pixel_checks_passed": 3
+  },
+  "rea_parent": "ev_a02d7b1bbe545689660e69523e909cdc13bcf8082950ea71889fd8db8ed13895",
+  "rea_files": 2,
+  "rea_parse_failures": 0,
+  "rea_semantic_unknowns": 2429,
+  "runtime_retry": "Restricted test could not create its window; desktop retry passed with isolated simulated devices.",
+  "physical_optical_acceptance": false,
+  "stock_reimport_acceptance": false,
+  "complete_build_memory_acceptance": false,
+  "native_debug_build_passed": true,
+  "build_command": "cargo build -p secbird-tray --jobs 1 --target-dir ../target-gradient"
+}

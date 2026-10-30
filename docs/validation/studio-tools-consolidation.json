@@ -1,0 +1,116 @@
+{
+  "date": "2026-10-30",
+  "base": "41b6c8519a165bcf399336c83420f6d2aa693b89",
+  "branch": "integration/studio-tools-2026-10-30",
+  "source_commits": {
+    "gradient": "f6d66cefd303025cf43df98fa7995640c71219d9",
+    "layer_organization": "f165fc2c1b28b607de51a91c246cd0b881d21ab7",
+    "composition_library": "c88dd301a0efe5f87a08dab03d8e26cd0da162b3",
+    "property_clipboard": "79171f899356e0e6344ec1632dba4b5d231ea53d",
+    "viewport": "8277747e8f63fcf72e0d87b3160d3cb15cd9b14d",
+    "quick_selection": "9c03c00004d53a54c7896622b9bd7da481e30884",
+    "layout_remapping": "0d940b395a352a429a63eb37e5422b1ed990483f"
+  },
+  "validation": {
+    "studio_core_serial_passed": 117,
+    "studio_core_failed": 0,
+    "studio_tray_serial_passed": 69,
+    "studio_tray_failed": 0,
+    "studio_tray_optional_ignored": 24,
+    "native_serial_passed": 9,
+    "native_serial_failed": 0,
+    "release_workspace_build_passed": true,
+    "release_command": "cargo build --offline --release --workspace --jobs 1 --target-dir C:/Users/mitch/Documents/Codex/studio-tools-target",
+    "release_binaries": {
+      "secbird.exe": {
+        "bytes": 1548288,
+        "sha256": "139b44d1bf8e3b6707ee39e1573655f597f1243b131d3dbc77fc67aed1a5c5cf"
+      },
+      "secbird-tray.exe": {
+        "bytes": 3790848,
+        "sha256": "2dbeff54115cfa2889f22cf22366a4cf9665d08514c03b21451149e250eb3561"
+      }
+    },
+    "native_cases": {
+      "native_studio_audio_parameters_gradient_save_history_and_capture_refusal": {
+        "passed": true,
+        "log_sha256": "32b53f77bc7107a6950e9a07f557a4e7f0afaad6282e86d54342db6d0448a6de"
+      },
+      "native_studio_breathing_colors_speed_preview_save_and_undo_preserve_source": {
+        "passed": true,
+        "log_sha256": "33bc8f60f257d96e9f6f4e945e66a10250a1c242095b82de02195dbe6a9456ca"
+      },
+      "native_studio_composition_library_create_rename_duplicate_delete_and_dirty_guards": {
+        "passed": true,
+        "log_sha256": "58eb72fda23550800a4011bec08af6a724b56f97d654c463c09ff19725fe70f7"
+      },
+      "native_studio_edits_save_failure_and_exit_recovery": {
+        "passed": true,
+        "log_sha256": "43cee5ed8c9f2b09a0b17ac1ee5d307d308cf1d3cbda8c1cd59bbdb698c65422"
+      },
+      "native_studio_organization_drag_groups_history_and_persistence": {
+        "passed": true,
+        "log_sha256": "0f05828d9e718174a0f0c18a63934eb6e655b55b02284e024e04fde8401ab09d"
+      },
+      "native_studio_property_clipboard_context_history_and_save": {
+        "passed": true,
+        "log_sha256": "6f70419b2e122284e70ecd30fe9edf2e244856773ac9deab8a5c3f0eec4278cb"
+      },
+      "native_studio_remap_cancel_commit_save_history": {
+        "passed": true,
+        "log_sha256": "9c678961aea5e0f1b412a63e365aa19b15ba3c5bac801952181b5bbbcd06616e"
+      },
+      "native_studio_starlight_properties_gradient_save_and_refusal_preserve_source": {
+        "passed": true,
+        "log_sha256": "ae74319e40814307290b851b464ac060f96466120c84bc3fc029623e51cdbb23"
+      },
+      "native_studio_wave_direction_presets_motion_preview_save_and_undo_preserve_source": {
+        "passed": true,
+        "log_sha256": "8642333f5e909efead082c8d66093e724b96da5c7807f80a47f4845e96f84f9c"
+      }
+    },
+    "inspected_captures": {
+      "gradient": {
+        "sha256": "56a5e9d27029345cd5ed9f35663664d619a2737e35c23c4b18a811daa1e598fe",
+        "pixel_parity_claim": false
+      },
+      "library": {
+        "sha256": "5d33e18830ef3876923b18ded3395085b239533f380a7b649948637cc770906c",
+        "pixel_parity_claim": false
+      }
+    }
+  },
+  "integration_fixes": [
+    "Distinct quick-selection (8), remap (9), and library (4..7) dialog routes",
+    "Distinct navigation (10) and remap (11) native test commands",
+    "Library popovers intercept clicks before populated LED canvas",
+    "Property, gradient, layer-drag pointer handlers all retained",
+    "Cancel transient gestures before modal/property workflows",
+    "Clipboard fixture uses viewport canvas center",
+    "Populated-canvas library/quick cancellation regression",
+    "Studio cold startup has bounded 15-second wait; action checks retain four seconds"
+  ],
+  "hardware_policy": {
+    "native_tests_simulated": true,
+    "physical_discovery_disabled": true,
+    "device_requests_for_authoring": 0,
+    "physical_or_optical_acceptance": false,
+    "memory_acceptance": false
+  },
+  "scope": {
+    "root_branch_changed": false,
+    "canonical_checkout_changed": false,
+    "pushed": false,
+    "merged_root_or_main": false,
+    "new_threads": 0
+  },
+  "remaining": [
+    "Root must resolve overlap with later lazy-assets 6342e04 and Identify 5b13094; neither was merged here",
+    "Existing per-feature visual fidelity, stock committed re-import, physical lighting and complete memory gates remain open"
+  ],
+  "retry_notes": [
+    "Declared quick-xml dependency downloaded from crates.io because it was not cached",
+    "Restricted temporary-folder rerun failed with Access Denied; final serial run used workspace TEMP/TMP and passed",
+    "First native cold start exceeded old four-second window admission; final bounded startup wait passed all nine tests"
+  ]
+}

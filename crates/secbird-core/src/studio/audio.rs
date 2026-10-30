@@ -273,6 +273,7 @@ impl Draft {
             | StopEdit::Insert { position, color } => {
                 spectrum::validate_stop(&GradientStop { position, color })?
             }
+            StopEdit::Move { position, .. } => spectrum::validate_stop(&GradientStop { position, color: None })?,
             StopEdit::Delete { .. } => {}
         }
         if !matches!(
