@@ -44,7 +44,9 @@ launch result. Lock contention remains pending rather than losing a session.
 
 While playback runs, draft edits and selection changes are disabled. Leaving
 the page or closing the window requests Stop and continues the requested action
-after drain. Unexpected window destruction also requests Stop; the global registry
+after drain. Once Close is queued, later navigation cannot replace it. Before
+Close is requested, navigation can still change the destination while stopping.
+Unexpected window destruction also requests Stop; the global registry
 retains the orphan's handle and can reap it on the next start. It does not detach
 an uninterruptible OS call or admit an overlapping run. A blocked OS launch can
 therefore keep playback in Stopping; it does not block the device worker or

@@ -55,9 +55,42 @@ pub(in crate::native_editor) unsafe fn transition(state: &mut State, next: &Acti
     if !state.macros.playing() {
         return false;
     }
-    state.macros.playback_next = Some(Box::new(next.clone()));
+    remember_transition(&mut state.macros.playback_next, next);
     stop(state);
     true
+}
+fn remember_transition(pending: &mut Option<Box<Action>>, next: &Action) {
+    // A requested window/tray exit must survive clicks while Stop drains.
+    // Navigation may change destination until that terminal intent is queued.
+    if !matches!(pending.as_deref(), Some(Action::Close)) {
+        *pending = Some(Box::new(next.clone()));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn close_survives_navigation_while_macro_drains() {
+        let mut pending = None;
+        remember_transition(&mut pending, &Action::Device("first".into()));
+        remember_transition(&mut pending, &Action::Home);
+        assert!(matches!(pending.as_deref(), Some(Action::Home)));
+        remember_transition(&mut pending, &Action::Close);
+        for next in [
+            Action::Home,
+            Action::Refresh,
+            Action::Device("second".into()),
+            Action::Close,
+        ] {
+            remember_transition(&mut pending, &next);
+            assert!(
+                matches!(pending.as_deref(), Some(Action::Close)),
+                "Closing must survive later queued navigation"
+            );
+        }
+    }
 }
 pub(in crate::native_editor) unsafe fn block_close(state: &mut State) -> bool {
     transition(state, &Action::Close)
