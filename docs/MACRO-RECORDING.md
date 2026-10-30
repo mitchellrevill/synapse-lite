@@ -1,0 +1,19 @@
+# Focused macro recording
+
+Explicit Record starts capture only in the native macro editor window. Stop appends completed keyboard / mouse button transitions and measured inter-event delays to the local draft as one Undo unit. Escape cancels the buffer. Focus loss, cancel mode, close and destruction stop capture and remove the timer. An unfinished press is omitted rather than given a fabricated release. Save / Discard retain the existing definition revision, source hash, cache and store guards. Failed conversion leaves the original draft intact.
+
+The recorder accepts at most 240 transitions within 60 seconds. It ignores repeated downs and orphan ups. Keyboard messages require exactly one verified source descriptor for the scan code / prefix. Mouse capture covers five buttons in the timeline area below the controls. No system hooks, background capture, device discovery, driver writes or playback are added. The app never starts recording itself.
+
+Source event representation reuses input_events::rows and InsertDelay. Existing evidence in MACRO-INPUT-AUTHORING.md and validation/macro-input-authoring.json identifies main renderer SHA256 fd20eeea9ac259a741c5deec4cc23f7e293cb99fa8ed658816af50bbd894941d and REA summary ev_368f033770d7aaf127eb74322e35ac3865eaf53a0136ff7e35db3eac13a56a2a (125 source descriptors, 250 replayed transitions). No expensive source producer or vendor runtime was repeated. This proves representation reuse, not native recording timing parity.
+
+Limitations: wheel/movement and ambiguous or unavailable keys are not captured. Escape is reserved for cancellation. The focused capture policy and added Record / Stop / Cancel controls are deliberate local behavior; source pixel equivalence remains unaccepted. Physical device acceptance, input ownership / terminal completion, mixed playback and loops are outside this feature. This checkpoint does not establish complete application feature parity or the total RAM goal.
+
+Repository provenance: initially inspected canonical 7b99930f9c63e659f1bcf3a51d9d9ca6a456904e (29 unpublished commits above published main). Feature was moved to published origin/main before final verification; unrelated integrations are excluded from this branch.
+
+Visual review: [archived stock editor](validation/macro-recording/stock-editor.jpg) (2048x1104) and [native focused recording](validation/macro-recording/native-recording.png) (1600x900). Stop and Cancel fit the timeline toolbar; the recording notice is readable at the bottom. Stock has a Record dropdown, duration indicator and template sidebar; this patch keeps the existing draft editor geometry, so source pixel parity and recording-options parity remain explicit gaps. No stock recording was initiated for this comparison.
+
+Verification: four synthetic recording-core tests passed. The isolated native editor test passed with synthetic A down/repeat/up messages, single-Undo recording, Escape cancellation, focus-loss removal of an incomplete down, unchanged disk before Save, and the existing save/history/stale-revision/cache-authoring tests. Initial native attempts were blocked by Windows temporary-file permissions; placing TEMP/TMP in this chat's work folder resolved that. The complete native interaction result is retained in validation/macro-recording/native-interaction.json. No hardware SET or physical discovery occurred.
+
+The final published-base core macro-library suite passed all 31 tests, including four recording tests, 125 independent source-key fixtures, cache refusal and stale revision checks.
+
+Optimized verification: cargo build -p secbird-tray --release --offline -j 1 passed. Its first attempt hit Windows temporary archive rename permissions; using the same isolated TEMP/TMP folder resolved it. Existing warnings remain. The final native test rerun passed after disabling unrelated editing controls during capture; the retained screenshot is from that run. No application RAM acceptance was performed.

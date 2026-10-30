@@ -15,6 +15,7 @@ pub(super) const HOST_BROWSE:u32=WM_APP+175;
 #[cfg(test)] pub(super) const TEST:u32=WM_APP+173;
 const NAME:u16=2300;const DELAY:u16=2301;
 
+#[derive(Clone)]
 struct Draft {
     entry:Entry,
     base_revision:String,
@@ -49,9 +50,10 @@ pub enum Request {Read,Change(Change),Import(PathBuf)}
 impl Request {pub fn mutates(&self)->bool {!matches!(self,Self::Read)}}
 pub struct Data {library:Library}
 #[derive(Clone)]
-pub enum Control {Open,List,Select(String),New,Duplicate,Delete,Import,Save,Discard,Undo,Redo,Event(usize),AddDelay,ApplyDelay,DeleteEvent,Move(i8),InputMenu,GestureMenu,ChooseInput(Input),ChooseGesture(Gesture),ChooseNested(String),AddInput,RebindInput,OpenHost(host_actions::Kind),Host(FormControl)}
+pub enum Control {Record,StopRecording,CancelRecording,Open,List,Select(String),New,Duplicate,Delete,Import,Save,Discard,Undo,Redo,Event(usize),AddDelay,ApplyDelay,DeleteEvent,Move(i8),InputMenu,GestureMenu,ChooseInput(Input),ChooseGesture(Gesture),ChooseNested(String),AddInput,RebindInput,OpenHost(host_actions::Kind),Host(FormControl)}
 #[derive(Default)]
 pub(super) struct View {
+    recording:Option<(library::recording::Recording,std::time::Instant)>,
     pub used:bool,
     pub busy:bool,
     data:Option<Data>,
@@ -106,6 +108,7 @@ impl View {
     }
 }
 pub(super) fn can_leave(state:&mut State)->bool {
+    stop_recording(state,false);
     if active(state)&&state.macros.form.is_some(){form::explain_leave(&mut state.macros);state.macros.status="Apply or cancel the action editor before leaving.".into();state.macros.failed=true;state.exit_tray=None;state.closing=false;unsafe{InvalidateRect(state.hwnd,null(),0);}return false;}
     if !active(state)||!state.macros.dirty(){return true;}
     state.macros.status="Save or discard the macro draft before leaving this page.".into();state.macros.failed=true;state.exit_tray=None;state.closing=false;unsafe{InvalidateRect(state.hwnd,null(),0);}false
@@ -152,9 +155,16 @@ pub(super) unsafe fn action(state:&mut State,control:Control) {
     if !active(state)||state.macros.busy{return;}
     let mutable=!state.read_only_smoke&&!state.restricted_actions;
     if !mutable&&!matches!(control,Control::List|Control::Select(_)|Control::Event(_)|Control::Host(FormControl::Cancel)){return;}
+    if state.macros.recording.is_some()&&!matches!(control,Control::StopRecording|Control::CancelRecording){return;}
     if state.macros.form.is_some(){if let Control::Host(control)=control{form::action(state,control);}return;}
     let result=(||->Result<(),String>{
         match control {
+            Control::Record=>{commit_fields(state)?;let d=state.macros.draft.as_ref().ok_or("Select a macro first")?;
+                // Probe the ordinary authoring guard before accepting any input.
+                library::edit_definition(&d.entry.encoded_record,Change::InsertInput{guid:d.entry.guid.clone(),index:d.entry.events.len(),input:Input::Keyboard("KEY_A".into()),gesture:Gesture::Tap}).map_err(|e|e.to_string())?;
+                state.macros.recording=Some((Default::default(),std::time::Instant::now()));SetFocus(state.hwnd);SetTimer(state.hwnd,RECORD_TIMER,100,None);state.macros.status="RECORDING · type here / click timeline · Stop to keep · Esc cancels".into();},
+            Control::StopRecording=>stop_recording(state,false),
+            Control::CancelRecording=>stop_recording(state,true),
             Control::Open=>{},Control::List=>state.macros.picker=!state.macros.picker,
             Control::OpenHost(kind)=>{commit_fields(state)?;form::open(state,kind,None)?;},
             Control::Host(_)=>{},
@@ -193,6 +203,7 @@ pub(super) unsafe fn action(state:&mut State,control:Control) {
     state.rebuild_fields();InvalidateRect(state.hwnd,null(),0);
 }
 pub(super) unsafe fn fields(state:&mut State) {
+    if state.macros.recording.is_some(){return;}
     if state.macros.form.is_some(){form::fields(state);return;}
     if state.macros.draft.is_none(){return;}
     let left=((state.width as f32/state.scale)as i32-900).max(10)/2;
@@ -217,7 +228,7 @@ fn event_label(value:&Value,library:Option<&Library>)->String {
     match value["Type"].as_u64(){Some(0)if value["Number"].is_object()=>"Random delay".into(),Some(0)=>format!("Delay · {} seconds",value["Number"].as_str().map(|s|s.chars().take(80).collect::<String>()).unwrap_or_else(||value["Number"].to_string())),Some(1)=>"Keyboard function".into(),Some(2)=>"Mouse function".into(),Some(7)=>"Nested macro".into(),Some(6)=>"Loop".into(),_=>"Retained source event".into()}
 }
 pub(super) unsafe fn paint(state:&State,p:&mut Painter,width:i32,height:i32) {
-    let view=&state.macros;let left=(width-900).max(10)/2;let timeline=left+210;let can=!view.busy&&!state.read_only_smoke&&!state.restricted_actions;let draft=view.draft.as_ref();
+    let view=&state.macros;let left=(width-900).max(10)/2;let timeline=left+210;let can=!view.busy&&!state.read_only_smoke&&!state.restricted_actions&&view.recording.is_none();let draft=view.draft.as_ref();
     p.fill(0,80,width,height-80,BG);p.line(0,127,width,0);
     let title=draft.map_or("Select a macro",|d|d.entry.name.as_str());p.text(&format!("{}{}",title,if view.dirty(){" *"}else{""}),46,87,224,28,p.fonts.normal,TEXT,DT_LEFT);
     p.hits.push(Hit{rect:p.rect(46,87,230,28),action:Action::MacroLibrary(Control::List)});
@@ -242,6 +253,8 @@ pub(super) unsafe fn paint(state:&State,p:&mut Painter,width:i32,height:i32) {
     let host_row=draft.is_some_and(|draft|view.event.and_then(|i|draft.entry.events.get(i)).is_some_and(|row|host_actions::from_row(row).ok().flatten().is_some()));
     let compatible=host_row||if nested_row {view.nested_mode&&view.nested.is_some()}else{!view.nested_mode&&group.as_ref().is_some_and(|group|view.input.as_ref().is_some_and(|input|input_events::can_rebind(&group.input,input)))};
     button(p,if host_row{"EDIT ACTION"}else if nested_row{"UPDATE MACRO"}else if paired{"UPDATE PAIR"}else{"UPDATE EVENT"},left+10,622,180,Control::RebindInput,can&&compatible);
+    button(p,if view.recording.is_some(){"STOP"}else{"RECORD"},timeline+190,160,100,if view.recording.is_some(){Control::StopRecording}else{Control::Record},!view.busy&&!state.read_only_smoke&&!state.restricted_actions&&draft.is_some());
+    if view.recording.is_some(){button(p,"CANCEL",timeline+300,160,100,Control::CancelRecording,true);}
     button(p,"UNDO",timeline+10,160,80,Control::Undo,can&&draft.is_some_and(|d|!d.undo.is_empty()));button(p,"REDO",timeline+100,160,80,Control::Redo,can&&draft.is_some_and(|d|!d.redo.is_empty()));
     button(p,"DISCARD",timeline+470,160,100,Control::Discard,can&&view.dirty());button(p,"SAVE",timeline+580,160,100,Control::Save,can&&view.dirty());
     if let Some(d)=draft {
@@ -287,7 +300,7 @@ pub(super) unsafe fn browse(hwnd:HWND)->Result<Option<PathBuf>,String> {
     let end=file.iter().position(|v|*v==0).ok_or("Import path is not terminated")?;Ok(Some(PathBuf::from(String::from_utf16(&file[..end]).map_err(|e|e.to_string())?)))
 }
 #[cfg(test)] pub(super) fn diagnostics(state:&State)->Value {
-    let v=&state.macros;json!({"open":active(state),"busy":v.busy,"form":form::diagnostics(v),"menu_open":v.popup,"dirty":v.dirty(),"selected":v.selected,"name":v.name,"delay":v.delay,"event":v.event,"status":v.status,"failed":v.failed,"entries":v.data.as_ref().map(|d|d.library.entries.iter().map(|e|json!({"guid":e.guid,"name":e.name,"referenced":e.referenced})).collect::<Vec<_>>()).unwrap_or_default(),"events":v.draft.as_ref().map(|d|&d.entry.events),"undo":v.draft.as_ref().map_or(0,|d|d.undo.len()),"redo":v.draft.as_ref().map_or(0,|d|d.redo.len())})
+    let v=&state.macros;json!({"open":active(state),"busy":v.busy,"form":form::diagnostics(v),"menu_open":v.popup,"recording":v.recording.is_some(),"dirty":v.dirty(),"selected":v.selected,"name":v.name,"delay":v.delay,"event":v.event,"status":v.status,"failed":v.failed,"entries":v.data.as_ref().map(|d|d.library.entries.iter().map(|e|json!({"guid":e.guid,"name":e.name,"referenced":e.referenced})).collect::<Vec<_>>()).unwrap_or_default(),"events":v.draft.as_ref().map(|d|&d.entry.events),"undo":v.draft.as_ref().map_or(0,|d|d.undo.len()),"redo":v.draft.as_ref().map_or(0,|d|d.redo.len())})
 }
 #[cfg(test)] mod tests {
     use super::*;
@@ -298,4 +311,40 @@ pub(super) unsafe fn browse(hwnd:HWND)->Result<Option<PathBuf>,String> {
         assert_eq!(draft.undo.len(),20);assert!(draft.dirty());draft.history(false).unwrap();assert_eq!(draft.entry.name,"Edit 38");assert!(draft.entry.referenced);draft.history(true).unwrap();assert_eq!(draft.entry.name,"Edit 39");assert!(draft.entry.referenced);
         draft.history(false).unwrap();draft.apply(Change::Rename{guid:"history".into(),name:"Branch".into()}).unwrap();assert!(draft.redo.is_empty());assert!(draft.undo.iter().chain(&draft.redo).map(String::len).sum::<usize>()<=4*1024*1024);
     }
+}
+
+const RECORD_TIMER:usize=0x5243;
+pub(super) fn stop_recording(state:&mut State,cancel:bool) {
+    let Some((recording,_))=state.macros.recording.take() else{return;};
+    unsafe{KillTimer(state.hwnd,RECORD_TIMER);state.rebuild_fields();}
+    if cancel {state.macros.status="Recording cancelled; draft unchanged".into();return;}
+    let result=(||->Result<(),String>{
+        let original=state.macros.draft.as_ref().ok_or("No macro draft")?;
+        let mut next=original.clone();
+        let changes=recording.changes(&next.entry.guid,next.entry.events.len());
+        if changes.is_empty(){return Ok(());}
+        for change in changes {next.apply(change)?;}
+        // One undo checkpoint for the complete recording.
+        next.undo=original.undo.clone();next.undo.push_back(original.entry.encoded_record.to_string());next.redo.clear();next.trim();
+        state.macros.draft=Some(next);Ok(())
+    })();
+    state.macros.status=match result {Ok(())=>"Recording stopped · incomplete presses omitted · Save or Discard".into(),Err(e)=>format!("Recording discarded: {e}")};
+}
+/// Only ordinary messages delivered to this focused editor; no global hook/raw input.
+pub(super) unsafe fn record_message(state:&mut State,message:u32,wparam:usize,lparam:isize)->bool {
+    if state.macros.recording.is_none(){return false;}
+    if message==WM_KILLFOCUS || message==WM_CANCELMODE || message==WM_CLOSE || message==WM_DESTROY || (message==WM_ACTIVATE && wparam&0xffff==0) {stop_recording(state,false);InvalidateRect(state.hwnd,null(),0);return false;}
+    if message==WM_TIMER && wparam==RECORD_TIMER {if state.macros.recording.as_ref().unwrap().1.elapsed().as_millis()>=60_000 {stop_recording(state,false);InvalidateRect(state.hwnd,null(),0);}return true;}
+    if matches!(message,WM_KEYDOWN|WM_KEYUP|WM_SYSKEYDOWN|WM_SYSKEYUP) && wparam==27 {if message==WM_KEYDOWN {stop_recording(state,true);InvalidateRect(state.hwnd,null(),0);}return true;}
+    let input=if matches!(message,WM_KEYDOWN|WM_KEYUP|WM_SYSKEYDOWN|WM_SYSKEYUP) {
+        let scan=((lparam>>16)&255) as u16;let prefix=if lparam&(1<<24)!=0{2}else{0};
+        let candidates:Vec<_>=input_events::keys().iter().filter(|k|k.scan_code==scan&&k.prefix==prefix).collect();
+        if candidates.len()!=1{return true;}Some(Input::Keyboard(candidates[0].id.clone()))
+    }else if matches!(message,WM_LBUTTONDOWN|WM_LBUTTONUP|WM_RBUTTONDOWN|WM_RBUTTONUP|WM_MBUTTONDOWN|WM_MBUTTONUP|WM_XBUTTONDOWN|WM_XBUTTONUP) {
+        // Controls above the timeline stay operable and are never recorded.
+        let y=((lparam>>16) as u16) as i16;if (y as f32)/state.scale<242.{return false;}
+        Some(Input::Mouse(if matches!(message,WM_XBUTTONDOWN|WM_XBUTTONUP){if (wparam>>16)&0xffff==1{3}else{4}}else if matches!(message,WM_LBUTTONDOWN|WM_LBUTTONUP){0}else if matches!(message,WM_RBUTTONDOWN|WM_RBUTTONUP){1}else{2}))
+    }else{None};
+    if let Some(input)=input {let down=matches!(message,WM_KEYDOWN|WM_SYSKEYDOWN|WM_LBUTTONDOWN|WM_RBUTTONDOWN|WM_MBUTTONDOWN|WM_XBUTTONDOWN);let (r,start)=state.macros.recording.as_mut().unwrap();let result=r.capture(start.elapsed().as_millis() as u64,input,if down{Gesture::Down}else{Gesture::Up});if result.is_err(){stop_recording(state,false);InvalidateRect(state.hwnd,null(),0);}return true;}
+    false
 }
