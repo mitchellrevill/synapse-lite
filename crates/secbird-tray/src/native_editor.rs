@@ -4340,6 +4340,7 @@ unsafe extern "system" fn window_proc(
         }
         return DefWindowProcW(hwnd, message, wparam, lparam);
     };
+    if macro_view::record_message(&mut state,message,wparam,lparam){return 0;}
     if message==WM_COMMAND && (shortcuts::command(&mut state,(wparam&0xffff)as u16,((wparam>>16)&0xffff)as u16) || macro_view::command(&mut state,(wparam&0xffff)as u16,((wparam>>16)&0xffff)as u16) || linked_games::command(&mut state,(wparam&0xffff)as u16,((wparam>>16)&0xffff)as u16) || studio_view::command(&mut state,(wparam&0xffff)as u16,((wparam>>16)&0xffff)as u16)) {return 0;}
     if message==WM_MOUSEWHEEL && studio_view::wheel(&mut state,((wparam>>16)as u16 as i16)as i32,
         POINT{x:(lparam as u32&0xffff)as i16 as i32,y:((lparam as u32>>16)&0xffff)as i16 as i32}) {return 0;}
@@ -5455,6 +5456,7 @@ fn run_window(
             if result <= 0 {
                 break;
             }
+            if message.hwnd==hwnd && macro_view::record_message(&mut state.borrow_mut(),message.message,message.wParam,message.lParam){continue;}
             if message.message == WM_KEYDOWN && GetKeyState(18) >= 0 {
                 let studio_action=studio_view::key(&state.borrow(),message.wParam,GetKeyState(17)<0,matches!(GetDlgCtrlID(message.hwnd)as u16,studio_view::NAME|studio_view::COLOR));
                 if let Some(control)=studio_action {state.borrow_mut().action(Action::Studio(control));continue;}

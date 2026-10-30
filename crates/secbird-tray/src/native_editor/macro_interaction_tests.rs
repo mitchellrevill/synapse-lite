@@ -75,6 +75,18 @@ fn native_macro_library_drafts_save_history_conflicts_and_lifecycle() {
             click(350.,100.);wait_for(||query()["entries"].as_array().is_some_and(|a|a.len()==1)&&query()["busy"]==false,"new macro")?;
             let id=query()["selected"].as_str().unwrap().to_owned();let baseline=std::fs::read(&path).map_err(|e|e.to_string())?;
             click(left+90.,528.);wait_for(||query()["menu_open"]==true,"input chooser open")?;SendMessageW(hwnd,STUDIO_TEST,9,0);wait_for(||query()["menu_open"]==false,"input chooser cancel")?;if query()["dirty"]!=false||std::fs::read(&path).unwrap()!=baseline{return Err("Cancelled input menu changed draft or disk".into());}
+            // Explicit initiation, synthetic window messages only: never physical input.
+            click(timeline+610.,212.);redraw(hwnd);
+            let capture=json!(output.join("macro-recording.png").to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize);
+            SendMessageW(hwnd,WM_KEYDOWN,65,30<<16);SendMessageW(hwnd,WM_KEYDOWN,65,(30<<16)|(1<<30));SendMessageW(hwnd,WM_KEYUP,65,30<<16);
+            click(timeline+610.,212.);
+            let recorded=query();if recorded["events"].as_array().map(Vec::len)!=Some(4)||recorded["events"][1]["ScanCode"]!=30||recorded["events"][1]["Id"]!=recorded["events"][3]["Id"]{return Err(format!("Recording did not preserve source pair: {recorded}"));}
+            if std::fs::read(&path).unwrap()!=baseline{return Err("Recording wrote before Save".into());}
+            click(timeline+40.,174.);if query()["events"].as_array().map(Vec::len)!=Some(1){return Err("Recording was not one undo unit".into());}
+            click(timeline+610.,212.);SendMessageW(hwnd,WM_KEYDOWN,65,30<<16);SendMessageW(hwnd,WM_KEYDOWN,27,1<<16);
+            if query()["events"].as_array().map(Vec::len)!=Some(1){return Err("Cancel changed draft".into());}
+            click(timeline+610.,212.);SendMessageW(hwnd,WM_KEYDOWN,65,30<<16);SendMessageW(hwnd,WM_KILLFOCUS,0,0);SendMessageW(hwnd,WM_KEYUP,65,30<<16);
+            if query()["events"].as_array().map(Vec::len)!=Some(1){return Err("Focus loss retained incomplete down".into());}
             edit(2300,"Night macro");edit(2301,"1250");click(left+90.,368.);
             if query()["dirty"]!=true||query()["events"][1]["Number"]!="1.25"{return Err(format!("Local draft incorrect: {}",query()));}
             if std::fs::read(&path).unwrap()!=baseline{return Err("Unsaved fields reached disk".into());}

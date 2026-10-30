@@ -20,6 +20,7 @@ pub(super) const EXPORT_BROWSE:u32=WM_APP+176;
 #[cfg(test)] pub(super) const TEST:u32=WM_APP+173;
 const NAME:u16=2300;const DELAY:u16=2301;const REPEAT:u16=2302;
 
+#[derive(Clone)]
 struct Draft {
     entry:Entry,
     base_revision:String,
@@ -54,9 +55,10 @@ pub enum Request {Read,Change(Change),Import(PathBuf),Export{guid:String,revisio
 impl Request {pub fn mutates(&self)->bool {!matches!(self,Self::Read)}}
 pub struct Data {library:Library,notice:Option<String>}
 #[derive(Clone)]
-pub enum Control {Open,List,Select(String),New,Duplicate,Delete,Import,Export,Save,Discard,Undo,Redo,Play,Stop,Event(usize),AddDelay,ApplyDelay,DeleteEvent,Move(i8),InputMenu,GestureMenu,ChooseInput(Input),ChooseGesture(Gesture),ChooseNested(String),AddInput,RebindInput,MarkLoopStart,WrapLoop,ApplyLoop,OpenHost(host_actions::Kind),Host(FormControl)}
+pub enum Control {Record,StopRecording,CancelRecording,Open,List,Select(String),New,Duplicate,Delete,Import,Export,Save,Discard,Undo,Redo,Play,Stop,Event(usize),AddDelay,ApplyDelay,DeleteEvent,Move(i8),InputMenu,GestureMenu,ChooseInput(Input),ChooseGesture(Gesture),ChooseNested(String),AddInput,RebindInput,MarkLoopStart,WrapLoop,ApplyLoop,OpenHost(host_actions::Kind),Host(FormControl)}
 #[derive(Default)]
 pub(super) struct View {
+    recording:Option<(library::recording::Recording,std::time::Instant)>,
     pub used:bool,
     pub busy:bool,
     data:Option<Data>,
@@ -134,6 +136,7 @@ impl View {
 }
 pub(super) fn can_leave(state:&mut State)->bool {
     if state.macros.playing(){state.macros.status="Stop playback before leaving this page.".into();return false;}
+    stop_recording(state,false);
     if active(state)&&state.macros.form.is_some(){form::explain_leave(&mut state.macros);state.macros.status="Apply or cancel the action editor before leaving.".into();state.macros.failed=true;state.exit_tray=None;state.closing=false;unsafe{InvalidateRect(state.hwnd,null(),0);}return false;}
     if !active(state)||!state.macros.dirty(){return true;}
     state.macros.status="Save or discard the macro draft before leaving this page.".into();state.macros.failed=true;state.exit_tray=None;state.closing=false;unsafe{InvalidateRect(state.hwnd,null(),0);}false
@@ -190,9 +193,16 @@ pub(super) unsafe fn action(state:&mut State,control:Control) {
     if state.macros.playing()&&!matches!(control,Control::Event(_)){return;}
     let mutable=!state.read_only_smoke&&!state.restricted_actions&&!state.macros.playing();
     if !mutable&&!matches!(control,Control::List|Control::Select(_)|Control::Event(_)|Control::Host(FormControl::Cancel)){return;}
+    if state.macros.recording.is_some()&&!matches!(control,Control::StopRecording|Control::CancelRecording){return;}
     if state.macros.form.is_some(){if let Control::Host(control)=control{form::action(state,control);}return;}
     let result=(||->Result<(),String>{
         match control {
+            Control::Record=>{commit_fields(state)?;let d=state.macros.draft.as_ref().ok_or("Select a macro first")?;
+                // Probe the ordinary authoring guard before accepting any input.
+                library::edit_definition(&d.entry.encoded_record,Change::InsertInput{guid:d.entry.guid.clone(),index:d.entry.events.len(),input:Input::Keyboard("KEY_A".into()),gesture:Gesture::Tap}).map_err(|e|e.to_string())?;
+                state.macros.recording=Some((Default::default(),std::time::Instant::now()));SetFocus(state.hwnd);SetTimer(state.hwnd,RECORD_TIMER,100,None);state.macros.status="RECORDING · type here / click timeline · Stop to keep · Esc cancels".into();},
+            Control::StopRecording=>stop_recording(state,false),
+            Control::CancelRecording=>stop_recording(state,true),
             Control::Open=>{},Control::List=>state.macros.picker=!state.macros.picker,
             Control::Play=>playback::start(state)?,Control::Stop=>{},
             Control::OpenHost(kind)=>{commit_fields(state)?;form::open(state,kind,None)?;},
@@ -243,6 +253,7 @@ pub(super) unsafe fn action(state:&mut State,control:Control) {
     state.rebuild_fields();InvalidateRect(state.hwnd,null(),0);
 }
 pub(super) unsafe fn fields(state:&mut State) {
+    if state.macros.recording.is_some(){return;}
     if state.macros.form.is_some(){form::fields(state);return;}
     if state.macros.draft.is_none(){return;}
     let left=((state.width as f32/state.scale)as i32-900).max(10)/2;
@@ -250,14 +261,14 @@ pub(super) unsafe fn fields(state:&mut State) {
     for (id,text,x,y,w) in [(NAME,state.macros.name.clone(),left+10,196,180),(DELAY,state.macros.delay.clone(),left+10,310,180),(REPEAT,state.macros.repeat.clone(),left+540,198,80)] {
         if id==DELAY&&range_fields{continue;}
         state.retained_fields.remove(&id);state.field(id,&text,x,y,w);
-        if let Some(hwnd)=state.fields.get(&id){SendMessageW(*hwnd,EM_SETLIMITTEXT,if id==NAME{128}else{7},0);SendMessageW(*hwnd,EM_SETREADONLY,(state.read_only_smoke||state.restricted_actions||state.macros.busy||state.macros.playing()) as usize,0);}
+        if let Some(hwnd)=state.fields.get(&id){SendMessageW(*hwnd,EM_SETLIMITTEXT,if id==NAME{128}else{7},0);SendMessageW(*hwnd,EM_SETREADONLY,(state.read_only_smoke||state.restricted_actions||state.macros.busy||state.macros.playing()||state.macros.recording.is_some()) as usize,0);}
     }
 }
 pub(super) fn command(state:&mut State,id:u16,notification:u16)->bool {
     if active(state)&&state.macros.form.is_some(){return form::command(state,id,notification);}
     if active(state)&&random_delay::command(state,id,notification){return true;}
     if !active(state)||notification!=EN_CHANGE as u16||!matches!(id,NAME|DELAY|REPEAT){return false;}
-    if state.read_only_smoke||state.restricted_actions||state.macros.busy||state.macros.playing(){return true;}
+    if state.read_only_smoke||state.restricted_actions||state.macros.busy||state.macros.playing()||state.macros.recording.is_some(){return true;}
     let text=state.raw_text(id);if id==NAME{state.macros.name=text;}else if id==DELAY{state.macros.delay=text;}else{state.macros.repeat=text;}unsafe{InvalidateRect(state.hwnd,null(),0);}true
 }
 unsafe fn button(p:&mut Painter,text:&str,x:i32,y:i32,width:i32,control:Control,enabled:bool) {
@@ -271,7 +282,7 @@ fn event_label(value:&Value,library:Option<&Library>)->String {
     match value["Type"].as_u64(){Some(0)if value["Number"].is_object()=>"Random delay".into(),Some(0)=>format!("Delay · {} seconds",value["Number"].as_str().map(|s|s.chars().take(80).collect::<String>()).unwrap_or_else(||value["Number"].to_string())),Some(1)=>"Keyboard function".into(),Some(2)=>"Mouse function".into(),Some(7)=>"Nested macro".into(),Some(6)=>format!("Loop {} · {} times",match value["LoopEvent"]["State"].as_u64(){Some(0)=>"start",Some(1)=>"end",_=>"boundary (unverified)"},value["Number"].as_str().map(str::to_owned).unwrap_or_else(||value["Number"].to_string())),_=>"Retained source event".into()}
 }
 pub(super) unsafe fn paint(state:&State,p:&mut Painter,width:i32,height:i32) {
-    let view=&state.macros;let left=(width-900).max(10)/2;let timeline=left+210;let can=!view.busy&&!view.playing()&&!state.read_only_smoke&&!state.restricted_actions;let draft=view.draft.as_ref();
+    let view=&state.macros;let left=(width-900).max(10)/2;let timeline=left+210;let can=view.recording.is_none()&&!view.busy&&!view.playing()&&!state.read_only_smoke&&!state.restricted_actions;let draft=view.draft.as_ref();
     p.fill(0,80,width,height-80,BG);p.line(0,127,width,0);
     let title=draft.map_or("Select a macro",|d|d.entry.name.as_str());p.text(&format!("{}{}",title,if view.dirty(){" *"}else{""}),46,87,224,28,p.fonts.normal,TEXT,DT_LEFT);
     p.hits.push(Hit{rect:p.rect(46,87,230,28),action:Action::MacroLibrary(Control::List)});
@@ -297,15 +308,15 @@ pub(super) unsafe fn paint(state:&State,p:&mut Painter,width:i32,height:i32) {
     let host_row=draft.is_some_and(|draft|view.event.and_then(|i|draft.entry.events.get(i)).is_some_and(|row|host_actions::from_row(row).ok().flatten().is_some()));
     let compatible=host_row||if nested_row {view.nested_mode&&view.nested.is_some()}else{!view.nested_mode&&group.as_ref().is_some_and(|group|view.input.as_ref().is_some_and(|input|input_events::can_rebind(&group.input,input)))};
     button(p,if host_row{"EDIT ACTION"}else if nested_row{"UPDATE MACRO"}else if paired{"UPDATE PAIR"}else{"UPDATE EVENT"},left+10,622,180,Control::RebindInput,can&&compatible);
+    button(p,if view.recording.is_some(){"STOP"}else{"RECORD"},timeline+560,198,120,if view.recording.is_some(){Control::StopRecording}else{Control::Record},!view.busy&&!state.read_only_smoke&&!state.restricted_actions&&!view.playing()&&draft.is_some());
     button(p,"UNDO",timeline+10,160,80,Control::Undo,can&&draft.is_some_and(|d|!d.undo.is_empty()));button(p,"REDO",timeline+100,160,80,Control::Redo,can&&draft.is_some_and(|d|!d.redo.is_empty()));
     button(p,"PLAY ONCE",timeline+200,160,120,Control::Play,can&&draft.is_some()&&!view.dirty()&&view.form.is_none());
     button(p,"STOP",timeline+330,160,80,Control::Stop,view.playing());
     button(p,"DISCARD",timeline+470,160,100,Control::Discard,can&&view.dirty());button(p,"SAVE",timeline+580,160,100,Control::Save,can&&view.dirty());
-    button(p,"MARK START",timeline+10,198,110,Control::MarkLoopStart,can&&view.event.is_some());
+    button(p,&view.loop_start.map_or("MARK START".into(),|start|format!("START: {start}")),timeline+10,198,110,Control::MarkLoopStart,can&&view.event.is_some());
     button(p,"WRAP LOOP",timeline+130,198,110,Control::WrapLoop,can&&draft.is_some());
     p.text("REPEAT",timeline+250,198,70,28,p.fonts.small,TEXT,DT_LEFT);
-    button(p,"UPDATE LOOP",timeline+420,198,130,Control::ApplyLoop,can&&loop_pair(view).is_some());
-    if let Some(start)=view.loop_start {p.text(&format!("From row {}",start),timeline+560,198,110,28,p.fonts.small,GREEN,DT_LEFT);}
+    if view.recording.is_some(){button(p,"CANCEL",timeline+420,198,130,Control::CancelRecording,true);}else{button(p,"UPDATE LOOP",timeline+420,198,130,Control::ApplyLoop,can&&loop_pair(view).is_some());}
     if let Some(d)=draft {
         let topology=loops::pairs(&d.entry.events).unwrap_or_default();let selected_loop=loop_pair(view);
         let visible:Vec<_>=d.entry.events.iter().enumerate().filter(|(_,e)|e["Type"]!="actionBar").collect();
@@ -375,7 +386,7 @@ pub(super) unsafe fn browse_export(hwnd:HWND,pointer:*mut RefCell<State>){
     }
 }
 #[cfg(test)] pub(super) fn diagnostics(state:&State)->Value {
-    let v=&state.macros;json!({"open":active(state),"playback":playback::diagnostics(v),"busy":v.busy,"form":form::diagnostics(v),"menu_open":v.popup,"dirty":v.dirty(),"selected":v.selected,"name":v.name,"delay":v.delay,"range_min":v.range_min,"range_max":v.range_max,"repeat":v.repeat,"loop_start":v.loop_start,"event":v.event,"status":v.status,"failed":v.failed,"entries":v.data.as_ref().map(|d|d.library.entries.iter().map(|e|json!({"guid":e.guid,"name":e.name,"referenced":e.referenced})).collect::<Vec<_>>()).unwrap_or_default(),"events":v.draft.as_ref().map(|d|&d.entry.events),"undo":v.draft.as_ref().map_or(0,|d|d.undo.len()),"redo":v.draft.as_ref().map_or(0,|d|d.redo.len())})
+    let v=&state.macros;json!({"open":active(state),"playback":playback::diagnostics(v),"recording":v.recording.is_some(),"busy":v.busy,"form":form::diagnostics(v),"menu_open":v.popup,"dirty":v.dirty(),"selected":v.selected,"name":v.name,"delay":v.delay,"range_min":v.range_min,"range_max":v.range_max,"repeat":v.repeat,"loop_start":v.loop_start,"event":v.event,"status":v.status,"failed":v.failed,"entries":v.data.as_ref().map(|d|d.library.entries.iter().map(|e|json!({"guid":e.guid,"name":e.name,"referenced":e.referenced})).collect::<Vec<_>>()).unwrap_or_default(),"events":v.draft.as_ref().map(|d|&d.entry.events),"undo":v.draft.as_ref().map_or(0,|d|d.undo.len()),"redo":v.draft.as_ref().map_or(0,|d|d.redo.len())})
 }
 #[cfg(test)] mod tests {
     use super::*;
@@ -386,4 +397,40 @@ pub(super) unsafe fn browse_export(hwnd:HWND,pointer:*mut RefCell<State>){
         assert_eq!(draft.undo.len(),20);assert!(draft.dirty());draft.history(false).unwrap();assert_eq!(draft.entry.name,"Edit 38");assert!(draft.entry.referenced);draft.history(true).unwrap();assert_eq!(draft.entry.name,"Edit 39");assert!(draft.entry.referenced);
         draft.history(false).unwrap();draft.apply(Change::Rename{guid:"history".into(),name:"Branch".into()}).unwrap();assert!(draft.redo.is_empty());assert!(draft.undo.iter().chain(&draft.redo).map(String::len).sum::<usize>()<=4*1024*1024);
     }
+}
+
+const RECORD_TIMER:usize=0x5243;
+pub(super) fn stop_recording(state:&mut State,cancel:bool) {
+    let Some((recording,_))=state.macros.recording.take() else{return;};
+    unsafe{KillTimer(state.hwnd,RECORD_TIMER);state.rebuild_fields();}
+    if cancel {state.macros.status="Recording cancelled; draft unchanged".into();return;}
+    let result=(||->Result<(),String>{
+        let original=state.macros.draft.as_ref().ok_or("No macro draft")?;
+        let mut next=original.clone();
+        let changes=recording.changes(&next.entry.guid,next.entry.events.len());
+        if changes.is_empty(){return Ok(());}
+        for change in changes {next.apply(change)?;}
+        // One undo checkpoint for the complete recording.
+        next.undo=original.undo.clone();next.undo.push_back(original.entry.encoded_record.to_string());next.redo.clear();next.trim();
+        state.macros.draft=Some(next);Ok(())
+    })();
+    state.macros.status=match result {Ok(())=>"Recording stopped · incomplete presses omitted · Save or Discard".into(),Err(e)=>format!("Recording discarded: {e}")};
+}
+/// Only ordinary messages delivered to this focused editor; no global hook/raw input.
+pub(super) unsafe fn record_message(state:&mut State,message:u32,wparam:usize,lparam:isize)->bool {
+    if state.macros.recording.is_none(){return false;}
+    if message==WM_KILLFOCUS || message==WM_CANCELMODE || message==WM_CLOSE || message==WM_DESTROY || (message==WM_ACTIVATE && wparam&0xffff==0) {stop_recording(state,false);InvalidateRect(state.hwnd,null(),0);return false;}
+    if message==WM_TIMER && wparam==RECORD_TIMER {if state.macros.recording.as_ref().unwrap().1.elapsed().as_millis()>=60_000 {stop_recording(state,false);InvalidateRect(state.hwnd,null(),0);}return true;}
+    if matches!(message,WM_KEYDOWN|WM_KEYUP|WM_SYSKEYDOWN|WM_SYSKEYUP) && wparam==27 {if message==WM_KEYDOWN {stop_recording(state,true);InvalidateRect(state.hwnd,null(),0);}return true;}
+    let input=if matches!(message,WM_KEYDOWN|WM_KEYUP|WM_SYSKEYDOWN|WM_SYSKEYUP) {
+        let scan=((lparam>>16)&255) as u16;let prefix=if lparam&(1<<24)!=0{2}else{0};
+        let candidates:Vec<_>=input_events::keys().iter().filter(|k|k.scan_code==scan&&k.prefix==prefix).collect();
+        if candidates.len()!=1{return true;}Some(Input::Keyboard(candidates[0].id.clone()))
+    }else if matches!(message,WM_LBUTTONDOWN|WM_LBUTTONUP|WM_RBUTTONDOWN|WM_RBUTTONUP|WM_MBUTTONDOWN|WM_MBUTTONUP|WM_XBUTTONDOWN|WM_XBUTTONUP) {
+        // Controls above the timeline stay operable and are never recorded.
+        let y=((lparam>>16) as u16) as i16;if (y as f32)/state.scale<242.{return false;}
+        Some(Input::Mouse(if matches!(message,WM_XBUTTONDOWN|WM_XBUTTONUP){if (wparam>>16)&0xffff==1{3}else{4}}else if matches!(message,WM_LBUTTONDOWN|WM_LBUTTONUP){0}else if matches!(message,WM_RBUTTONDOWN|WM_RBUTTONUP){1}else{2}))
+    }else{None};
+    if let Some(input)=input {let down=matches!(message,WM_KEYDOWN|WM_SYSKEYDOWN|WM_LBUTTONDOWN|WM_RBUTTONDOWN|WM_MBUTTONDOWN|WM_XBUTTONDOWN);let (r,start)=state.macros.recording.as_mut().unwrap();let result=r.capture(start.elapsed().as_millis() as u64,input,if down{Gesture::Down}else{Gesture::Up});if result.is_err(){stop_recording(state,false);InvalidateRect(state.hwnd,null(),0);}return true;}
+    false
 }

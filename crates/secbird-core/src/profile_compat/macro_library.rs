@@ -4,6 +4,7 @@ use serde::{Deserialize,Serialize};
 use serde_json::value::RawValue;
 use std::collections::BTreeSet;
 pub mod input_events;
+pub mod recording;
 pub mod nested;
 pub mod loops;
 pub mod host_actions;
