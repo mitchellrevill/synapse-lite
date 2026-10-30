@@ -514,6 +514,7 @@ struct Hit {
 }
 
 enum Job {
+    LocalAssignment(assignment_model::Draft),
     Onboard(onboard_view::Request),
     Chroma(chroma_view::Request),
     Settings(Option<Value>),
@@ -759,6 +760,18 @@ fn worker(
             let mut failed = false;
             let mut notices = Vec::new();
             let state = match job {
+                Job::LocalAssignment(draft) => {
+                    if engine.is_measurement_read_only() { return Err("Read-only mode refuses assignment saves".into()); }
+                    let mut store = engine.load_store().map_err(|e|e.to_string())?;
+                    let profiles = store.devices.get_mut(&draft.context.owner.device).ok_or("Device profile disappeared")?;
+                    if profiles.active != draft.context.owner.profile { return Err("Active profile changed".into()); }
+                    let profile = profiles.profiles.get_mut(&draft.context.owner.profile).ok_or("Profile disappeared")?;
+                    let current = serde_json::to_value(&*profile).map_err(|e|e.to_string())?;
+                    *profile = serde_json::from_value(draft.local_profile(&current)?).map_err(|e|e.to_string())?;
+                    store.save().map_err(|e|e.to_string())?;
+                    status = "Assignment saved locally; hardware delivery unverified".into();
+                    server::dispatch(&mut engine, "GET", "/api/state", &[])
+                }
                 Job::Refresh => server::dispatch(&mut engine, "GET", "/api/state", &[]),
                 Job::Rescan => server::dispatch(&mut engine, "POST", "/api/rescan", b"{}"),
                 Job::Buttons(body) => {
@@ -2014,6 +2027,7 @@ impl State {
             if let Some(buttons) = reply.buttons {
                 self.buttons = buttons["buttons"].as_array().cloned().unwrap_or_default();
             }
+            let assignment_saved = !reply.failed && reply.status == "Assignment saved locally; hardware delivery unverified";
             if reply.failed {
                 self.error(&reply.status);
             } else {
@@ -2042,6 +2056,7 @@ impl State {
                 ReleaseCapture();
                 self.error("The selected device/profile changed; reopen the profile dialog");
             }
+            if assignment_saved { assignment_view::saved(self); }
             assignment_view::sync(self);
             calibration_view::request(self,false);
             self.sync_performance(false);

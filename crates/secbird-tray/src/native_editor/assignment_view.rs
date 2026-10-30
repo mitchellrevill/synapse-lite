@@ -12,6 +12,8 @@ pub(super) enum Control {
     Open(Input, Anchor),
     Close,
     Cancel,
+    Save,
+    Undo,
     Category(Category),
     Options,
     Option(usize),
@@ -356,6 +358,7 @@ fn visible_inputs(s: &State) -> Vec<Input> {
                 .is_some_and(|m| {
                     m.iter().any(|v| {
                         v["inputID"] == i.input_id
+                            && v["outputType"] != "defaultGroup"
                             && v["isHyperShift"].as_bool().unwrap_or(false) == s.assignment.hyper
                     })
                 })
@@ -947,7 +950,8 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
         }
     }
     button(p, "CANCEL", f.cancel, Some(Control::Cancel));
-    button(p, "SAVE", f.save, None);
+    button(p, "SAVE", f.save, d.can_save().then_some(Control::Save));
+    if d.dirty { button(p, "UNDO", r(f.cancel.x, f.cancel.y + 125.0, 80.0, 27.0), Some(Control::Undo)); }
     text(
         p,
         d.save_reason(),
@@ -1112,7 +1116,7 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
             DT_WORDBREAK | DT_CENTER,
         );
         button(p, "DON'T SAVE", g.discard, Some(Control::Discard));
-        button(p, "SAVE", g.save, None);
+        button(p, "SAVE", g.save, d.can_save().then_some(Control::Save));
         image(s, p, "assignment-dialog-close", g.close);
         hit(p, g.close, Control::Dismiss);
     }
@@ -1194,6 +1198,12 @@ pub(super) unsafe fn action(s: &mut State, c: Control) {
         Control::Close => {
             if let Some(t) = s.assignment.request(Transition::Close) {
                 transition(s, t);
+            }
+        }
+        Control::Undo => { if let Some(d) = &mut s.assignment.draft { d.undo(); } }
+        Control::Save => {
+            if let Some(d) = s.assignment.draft.as_ref().filter(|d|d.can_save()).cloned() {
+                s.queue(Job::LocalAssignment(d));
             }
         }
         Control::Cancel => s.assignment.cancel(),
@@ -1508,6 +1518,13 @@ pub(super) unsafe fn change(s: &mut State, blur: bool) {
         s.rebuild_fields();
     }
     InvalidateRect(s.hwnd, null(), 0);
+}
+pub(super) unsafe fn saved(s: &mut State) {
+    let pending = s.assignment.pending.take();
+    let next = s.assignment_next.take();
+    s.assignment.cancel();
+    if let Some(pending) = pending { transition(s, pending); }
+    if let Some(next) = next { s.action(*next); }
 }
 pub(super) fn sync(s: &mut State) {
     if s.assignment

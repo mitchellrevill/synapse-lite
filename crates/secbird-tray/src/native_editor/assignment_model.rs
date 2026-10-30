@@ -1,4 +1,4 @@
-//! Source Customize draft state. No transport, profile save or mapping translation.
+//! Source Customize drafts and local desired assignments. No transport or input routing.
 //! Source:605 key popup1270/MapMouse and196 groupList; see source spec hashes.
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -258,9 +258,16 @@ impl Context {
             return None;
         }
         let original_profile = device["profile"].clone();
-        let mappings = original_profile["_synapseLiteSynapse4"]["decoded"]["mappings"]
+        let mut mappings = original_profile["_synapseLiteSynapse4"]["decoded"]["mappings"]
             .as_array()
             .cloned();
+        if let Some(local) = original_profile["_synapseLiteLocalAssignments"].as_array() {
+            let records = mappings.get_or_insert_with(Vec::new);
+            for row in local {
+                records.retain(|r| r["inputID"] != row["inputID"] || truthy(&r["isHyperShift"]) != truthy(&row["isHyperShift"]));
+                records.push(row.clone());
+            }
+        }
         Some(Self {
             owner: Owner {
                 device: device["id"].as_str()?.into(),
@@ -383,7 +390,7 @@ impl Draft {
         }
     }
     pub fn select(&mut self, category: Category) {
-        if !self.categories.contains(&category) {
+        if !self.input.enabled || !self.categories.contains(&category) {
             return;
         }
         if self.category == Some(category) {
@@ -411,6 +418,7 @@ impl Draft {
             self.speed = 7;
         }
         self.speed_draft = self.speed.to_string();
+        self.dirty = matches!(category, Category::Default | Category::Disable) && initial.category != Some(category);
     }
     pub fn select_mouse(&mut self, index: usize) {
         if index < MOUSE_ACTIONS.len() {
@@ -473,11 +481,30 @@ impl Draft {
         let n = self.speed_draft.parse::<i32>().unwrap_or(0).clamp(1, 20) as u8;
         self.set_speed(n);
     }
+    pub fn can_save(&self) -> bool {
+        self.input.enabled && self.dirty && self.category.is_some_and(|c|
+            matches!(c, Category::Default | Category::Disable) && self.categories.contains(&c))
+    }
+    pub fn undo(&mut self) {
+        *self = Self::new(self.context.clone(), self.input.clone(), self.anchor.clone(), self.hyper);
+    }
+    pub fn local_profile(&self, current: &Value) -> Result<Value, String> {
+        if !self.can_save() { return Err("This assignment cannot be saved locally".into()); }
+        if current != &self.context.original_profile { return Err("Profile changed; reopen the assignment".into()); }
+        let mut result = current.clone();
+        let rows = result.as_object_mut().ok_or("Invalid profile")?
+            .entry("_synapseLiteLocalAssignments").or_insert_with(|| json!([]))
+            .as_array_mut().ok_or("Unknown local assignment format; preserved")?;
+        rows.retain(|r| r["inputID"] != self.input.input_id || truthy(&r["isHyperShift"]) != self.hyper);
+        rows.push(json!({"inputID":self.input.input_id,"inputType":self.input.input_type,
+            "isHyperShift":self.hyper,"outputType":self.category.unwrap().output().unwrap()}));
+        Ok(result)
+    }
     pub fn save_reason(&self) -> &'static str {
-        if self.context.owner.pid == 605 {
-            "Saving assignments is unavailable: Ornata mapping readback is unsupported. No command will be sent."
+        if matches!(self.category, Some(Category::Default | Category::Disable)) {
+            "Saves locally for this profile and layer. Hardware delivery is unverified; no assignment command is sent."
         } else {
-            "Saving assignments is unavailable: the installed mouse layer mapping has not been verified. No command will be sent."
+            "Saving this category is unavailable. No command will be sent."
         }
     }
     pub fn provenance(&self) -> &'static str {
@@ -562,6 +589,52 @@ mod tests {
         }
     }
     #[test]
+    fn disable_restore_layers_roundtrip_preserves_source_and_opaque_metadata() {
+        let ctx = context(json!([{"inputID":"KEY_A","inputType":"KeyInput","isHyperShift":false,"outputType":"futureGroup","opaque":17}]));
+        let mut d = Draft::new(ctx.clone(), input(), Anchor::Key("KEY_A".into()), false);
+        d.select(Category::Disable);
+        let disabled = d.local_profile(&ctx.original_profile).unwrap();
+        assert_eq!(disabled["_synapseLiteSynapse4"], ctx.original_profile["_synapseLiteSynapse4"]);
+        assert_eq!(disabled["opaque"], ctx.original_profile["opaque"]);
+        let device = json!({"id":"025D:SIM","pid":"025D","active":"A","profile":disabled});
+        let ctx2 = Arc::new(Context::from_device(&device).unwrap());
+        let standard = Draft::new(ctx2.clone(), input(), Anchor::Key("KEY_A".into()), false);
+        assert_eq!(standard.category, Some(Category::Disable));
+        let mut hyper = Draft::new(ctx2.clone(), input(), Anchor::Key("KEY_A".into()), true);
+        assert_eq!(hyper.category, Some(Category::Default));
+        hyper.select(Category::Disable);
+        let both = hyper.local_profile(&ctx2.original_profile).unwrap();
+        assert_eq!(both["_synapseLiteLocalAssignments"].as_array().unwrap().len(), 2);
+        let mut restore = standard;
+        restore.select(Category::Default);
+        let restored = restore.local_profile(&ctx2.original_profile).unwrap();
+        assert_eq!(restored["_synapseLiteLocalAssignments"][0]["outputType"], "defaultGroup");
+        let path = std::env::temp_dir().join(format!("assignment-local-{}.json",std::process::id()));
+        let mut store = secbird_core::profile::Store::load(&path).unwrap();
+        let profile = serde_json::from_value(restored.clone()).unwrap();
+        store.profiles_for("025D:SIM",605).profiles.insert("A".into(),profile);
+        store.save().unwrap();
+        let loaded = secbird_core::profile::Store::load(&path).unwrap();
+        let value = serde_json::to_value(&loaded.devices["025D:SIM"].profiles["A"]).unwrap();
+        assert_eq!(value["_synapseLiteLocalAssignments"],restored["_synapseLiteLocalAssignments"]);
+        std::fs::remove_file(path).unwrap();
+    }
+    #[test]
+    fn immutable_stale_cancel_and_undo_refuse_changes() {
+        let ctx = context(json!([]));
+        let mut i = input(); i.enabled = false;
+        let mut locked = Draft::new(ctx.clone(), i, Anchor::Key("KEY_A".into()), false);
+        locked.select(Category::Disable);
+        assert!(!locked.can_save());
+        let mut d = Draft::new(ctx.clone(), input(), Anchor::Key("KEY_A".into()), false);
+        d.select(Category::Disable);
+        assert!(d.local_profile(&json!({})).is_err());
+        d.undo(); assert!(!d.dirty); assert_eq!(d.category,Some(Category::Default));
+        d.select(Category::Disable);
+        let mut view = View::default(); view.draft=Some(d); view.cancel();
+        assert!(view.draft.is_none()); assert!(ctx.original_profile.get("_synapseLiteLocalAssignments").is_none());
+    }
+    #[test]
     fn opaque_originals_survive_preview_edit_and_discard() {
         let raw = json!([{"inputID":"KEY_A","inputType":"KeyInput","isHyperShift":false,"outputType":"futureGroup","futureGroup":{"opaque":[1,2]}}]);
         let ctx = context(raw.clone());
@@ -587,7 +660,7 @@ mod tests {
         assert_eq!(d.category, Some(Category::Default));
         assert!(d.provenance().contains("not hardware"));
         d.select(Category::Disable);
-        assert!(!d.dirty);
+        assert!(d.dirty);
         let mut unknown = (*context(json!([]))).clone();
         unknown.mappings = None;
         assert_eq!(
@@ -617,7 +690,7 @@ mod tests {
         d.select_mouse(2);
         assert!(d.dirty);
         d.select(Category::Disable);
-        assert!(!d.dirty);
+        assert!(d.dirty);
     }
     #[test]
     fn dirty_close_prompt_dismiss_keeps_draft_and_discard_releases_transition() {

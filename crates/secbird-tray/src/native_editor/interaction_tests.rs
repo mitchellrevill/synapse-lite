@@ -2277,3 +2277,33 @@ mod studio_presets;
 
 #[path="studio_audio_interaction_tests.rs"]
 mod audio;
+
+#[test]
+fn local_assignment_worker_persists_without_device_delivery() {
+    use super::assignment_model::{Anchor,Category,Context,Draft};
+    let directory=std::env::temp_dir().join(format!("assignment-worker-{}",std::process::id()));
+    std::fs::create_dir_all(&directory).unwrap();
+    let path=directory.join("profiles.json");
+    let _environment=Environment::set(&[("SYNAPSE_LITE_CONFIG_DIR", &directory)]);
+    let sim=Sim::keyboard();
+    let mut engine=Engine::with_simulated_keyboard(&sim,path.clone()).unwrap();
+    let device=&engine.devices()[0];
+    let mut store=Store::load(&path).unwrap();
+    let profiles=store.for_device(device);
+    profiles.profiles.insert("Fixture".into(),secbird_core::profile_compat::new_native_profile(605,"Fixture").unwrap());
+    profiles.active="Fixture".into(); store.save().unwrap();
+    let snapshot=server::dispatch(&mut engine,"GET","/api/state",&[]).unwrap();
+    let ctx=Arc::new(Context::from_device(&snapshot["devices"][0]).unwrap());
+    let input=assignment_model::Input{key:"A".into(),input_id:"KEY_A".into(),input_type:"KeyInput".into(),label:"A".into(),default_label:"A".into(),functions:vec!["DEFAULT".into(),"DISABLE".into()],enabled:true};
+    let mut draft=Draft::new(ctx,input,Anchor::Key("KEY_A".into()),false); draft.select(Category::Disable);
+    let before=sim.state().log.len();
+    let (tx,rx)=mpsc::channel(); let (replies,answers)=mpsc::channel();
+    tx.send(Job::LocalAssignment(draft)).unwrap(); drop(tx);
+    worker(Arc::new(Mutex::new(engine)),rx,replies);
+    let results=answers.try_iter().filter_map(|r|if let WorkerReply::User(reply)=r {Some((reply.failed,reply.status))}else{None}).collect::<Vec<_>>();
+    assert!(results.iter().any(|(failed,status)| !failed && status.contains("saved locally")),"{results:?}");
+    let loaded=Store::load(&path).unwrap();
+    assert_eq!(loaded.devices.values().next().unwrap().profiles["Fixture"].extra["_synapseLiteLocalAssignments"][0]["outputType"],"disableGroup");
+    assert!(sim.state().log[before..].iter().all(|command| command.id & 0x80 != 0), "Local save submitted a device SET");
+    std::fs::remove_file(path).unwrap(); std::fs::remove_dir(directory).unwrap();
+}
