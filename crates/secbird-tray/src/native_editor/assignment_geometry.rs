@@ -52,6 +52,7 @@ pub(super) fn form(
                 108.0
             }
         }
+        Some(Category::Windows) => 170.0,
         Some(Category::Disable) => 59.0,
         Some(Category::Mouse) => {
             if !allow_turbo {
@@ -91,8 +92,11 @@ pub(super) fn options(dropdown: Rect, viewport_bottom: f64) -> Rect {
     r(dropdown.x, top, 210.0, height)
 }
 pub(super) fn option_rows(panel: Rect, scroll: f64) -> Vec<Rect> {
-    let offset = scroll.clamp(0.0, (250.0 - (panel.height - 2.0)).max(0.0));
-    (0..10)
+    option_rows_count(panel,scroll,10)
+}
+pub(super) fn option_rows_count(panel: Rect, scroll: f64, count: usize) -> Vec<Rect> {
+    let offset = scroll.clamp(0.0, (count as f64 * 25.0 - (panel.height - 2.0)).max(0.0));
+    (0..count)
         .map(|i| {
             r(
                 panel.x + 1.0,

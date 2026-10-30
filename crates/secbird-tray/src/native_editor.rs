@@ -802,7 +802,7 @@ fn worker(
                         buttons = Some(answer);
                     }
                     if !failed {
-                        status = "Settings applied".into();
+                        status = if path == "/api/assignment-windows-local" {"Assignment saved locally; device delivery unavailable"} else {"Settings applied"}.into();
                     }
                     server::dispatch(&mut engine, "GET", "/api/state", &[])
                 }
@@ -1967,6 +1967,9 @@ impl State {
             if let Some(state) = reply.state {
                 self.state = state;
                 self.lighting_runtime_observed = None;
+            }
+            if !reply.failed && reply.status == "Assignment saved locally; device delivery unavailable" {
+                assignment_view::saved(self);
             }
             // Smoke-only selection follows the real read-only device snapshot.
             if let Some(view) = self.smoke_view.take() {
@@ -4559,6 +4562,11 @@ unsafe extern "system" fn window_proc(
             0
         }
         WM_MOUSEWHEEL if assignment_view::covered(&state) => {
+            // WM_MOUSEWHEEL carries screen coordinates. A leave/scroll event
+            // can arrive without a preceding mouse-move in this window.
+            let mut point=POINT{x:(lparam as u32 & 0xffff) as i16 as i32,y:((lparam as u32>>16)&0xffff) as i16 as i32};
+            ScreenToClient(hwnd,&mut point);
+            state.assignment.hover=Some((point.x as f64/state.scale as f64,point.y as f64/state.scale as f64));
             assignment_view::wheel(&mut state, ((wparam >> 16) as u16 as i16) as f64 / 120.0);
             0
         }

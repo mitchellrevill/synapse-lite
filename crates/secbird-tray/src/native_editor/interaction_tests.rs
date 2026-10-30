@@ -1685,7 +1685,10 @@ fn native_assignment_source_draft_has_no_device_or_store_writes() {
                     return Err(format!("Source drawer/assets incomplete: {drawer}"));
                 }
                 SendMessageW(hwnd, WM_MOUSEMOVE, 0, position(150.0, 260.0, scale));
-                SendMessageW(hwnd, WM_MOUSEWHEEL, (-120i16 as u16 as usize) << 16, 0);
+                let mut wheel_point=POINT{x:(150.0*scale).round() as i32,y:(260.0*scale).round() as i32};
+                ClientToScreen(hwnd,&mut wheel_point);
+                let at=(wheel_point.x as u16 as usize | ((wheel_point.y as u16 as usize)<<16)) as isize;
+                SendMessageW(hwnd, WM_MOUSEWHEEL, (-120i16 as u16 as usize) << 16, at);
                 redraw(hwnd);
                 let scrolled = query();
                 let offset = scrolled["view"]["drawer_scroll"].as_f64().unwrap();
@@ -2277,3 +2280,5 @@ mod studio_presets;
 
 #[path="studio_audio_interaction_tests.rs"]
 mod audio;
+
+#[path="windows_assignment_interaction_tests.rs"] mod windows_assignment;

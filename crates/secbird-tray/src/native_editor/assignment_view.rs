@@ -12,6 +12,7 @@ pub(super) enum Control {
     Open(Input, Anchor),
     Close,
     Cancel,
+    Save,
     Category(Category),
     Options,
     Option(usize),
@@ -837,6 +838,16 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
                 Role::DefaultValue,
             );
         }
+        Some(Category::Windows) => {
+            border(p, f.dropdown, 0x515151);
+            text(p, d.selected_option().and_then(|i|d.options().get(i)).map(|v|v.1).unwrap_or("Unknown shortcut — choose one"),
+                r(f.dropdown.x+10.0,f.dropdown.y,185.0,27.0),p.fonts.normal,0xcccccc,DT_SINGLELINE|DT_VCENTER);
+            image(s,p,"expand",r(f.dropdown.x+190.0,f.dropdown.y+8.0,10.0,10.0));
+            hit(p,f.dropdown,Control::Options);
+            let status = r(f.dropdown.x,f.dropdown.y+47.0,210.0,44.0);
+            rounded(p,status,0x111111,0x707070,3.0);
+            text(p,"Local assignment only\nDevice delivery unavailable",r(status.x+10.0,status.y+5.0,190.0,34.0),p.fonts.normal,0x999999,DT_WORDBREAK);
+        }
         Some(Category::Disable) => {}
         Some(Category::Mouse) => {
             border(p, f.dropdown, 0x515151);
@@ -947,7 +958,7 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
         }
     }
     button(p, "CANCEL", f.cancel, Some(Control::Cancel));
-    button(p, "SAVE", f.save, None);
+    button(p, "SAVE", f.save, if d.can_save_windows() && s.pending==0 && !s.read_only_smoke {Some(Control::Save)} else {None});
     text(
         p,
         d.save_reason(),
@@ -1015,7 +1026,7 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
         let saved = SaveDC(p.dc);
         let b = box_px(p, panel);
         IntersectClipRect(p.dc, b.left + 1, b.top + 1, b.right - 1, b.bottom - 1);
-        for (i, row) in geo::option_rows(panel, d.options_scroll)
+        for (i, row) in geo::option_rows_count(panel, d.options_scroll, d.options().len())
             .into_iter()
             .enumerate()
         {
@@ -1024,10 +1035,10 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
             }
             baseline_text(
                 p,
-                model::MOUSE_ACTIONS[i].1,
+                d.options()[i].1,
                 r(row.x + 10.0, row.y, row.width - 20.0, row.height),
                 p.fonts.normal,
-                if i == d.mouse_option { GREEN } else { 0xcccccc },
+                if Some(i) == d.selected_option() { GREEN } else { 0xcccccc },
                 DT_SINGLELINE | DT_VCENTER,
                 Role::Options,
             );
@@ -1041,7 +1052,7 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
                 panel.width - 2.0,
                 panel.height - 2.0,
             ),
-            250.0,
+            d.options().len() as f64 * 25.0,
             d.options_scroll,
             8.0,
         ) {
@@ -1112,7 +1123,7 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
             DT_WORDBREAK | DT_CENTER,
         );
         button(p, "DON'T SAVE", g.discard, Some(Control::Discard));
-        button(p, "SAVE", g.save, None);
+        button(p, "SAVE", g.save, if d.can_save_windows() && s.pending == 0 && !s.read_only_smoke {Some(Control::Save)} else {None});
         image(s, p, "assignment-dialog-close", g.close);
         hit(p, g.close, Control::Dismiss);
     }
@@ -1174,7 +1185,7 @@ fn transition(s: &mut State, next: Transition) {
     }
 }
 pub(super) unsafe fn action(s: &mut State, c: Control) {
-    if s.restricted_actions {
+    if s.restricted_actions || s.pending > 0 {
         return;
     }
     match c {
@@ -1194,6 +1205,16 @@ pub(super) unsafe fn action(s: &mut State, c: Control) {
         Control::Close => {
             if let Some(t) = s.assignment.request(Transition::Close) {
                 transition(s, t);
+            }
+        }
+        Control::Save => {
+            if !s.read_only_smoke {
+                if let Some(d) = s.assignment.draft.as_ref().filter(|d|d.can_save_windows()) {
+                    let choice = d.options()[d.windows_option.unwrap()].0;
+                    let body = json!({"id":d.context.owner.device,"expected_profile":d.context.owner.profile,
+                        "original_profile":d.context.original_profile,"input":d.input.input_id,"input_type":d.input.input_type,"hyper":d.hyper,"choice":choice});
+                    s.queue(Job::Action("/api/assignment-windows-local",body));
+                }
             }
         }
         Control::Cancel => s.assignment.cancel(),
@@ -1238,11 +1259,12 @@ pub(super) unsafe fn action(s: &mut State, c: Control) {
         Control::Options => {
             if let Some(d) = &mut s.assignment.draft {
                 d.options_open = !d.options_open;
+                d.options_scroll = d.selected_option().unwrap_or(0) as f64 * 25.0;
             }
         }
         Control::Option(i) => {
             if let Some(d) = &mut s.assignment.draft {
-                d.select_mouse(i);
+                d.select_option(i);
             }
         }
         Control::Turbo => {
@@ -1316,7 +1338,7 @@ pub(super) unsafe fn pointer(s: &mut State, p: POINT) {
                     panel.width - 2.0,
                     panel.height - 2.0,
                 ),
-                250.0,
+                d.options().len() as f64 * 25.0,
                 d.options_scroll,
                 8.0,
             ) {
@@ -1417,7 +1439,7 @@ pub(super) unsafe fn wheel(s: &mut State, delta: f64) {
                 y,
             )
         {
-            d.options_scroll = (d.options_scroll - delta * 25.0).clamp(0.0, 72.0);
+            d.options_scroll = (d.options_scroll - delta * 25.0).clamp(0.0, (d.options().len() as f64 * 25.0 - 178.0).max(0.0));
         } else if geo::contains(g.rail, x, y) {
             d.rail_scroll = (d.rail_scroll - delta * 40.0).clamp(
                 0.0,
@@ -1509,6 +1531,13 @@ pub(super) unsafe fn change(s: &mut State, blur: bool) {
     }
     InvalidateRect(s.hwnd, null(), 0);
 }
+pub(super) unsafe fn saved(s: &mut State) {
+    let pending = s.assignment.pending.take();
+    let next = s.assignment_next.take();
+    s.assignment.cancel();
+    if let Some(t) = pending { transition(s,t); }
+    if let Some(next) = next { s.action(*next); }
+}
 pub(super) fn sync(s: &mut State) {
     if s.assignment
         .draft
@@ -1534,7 +1563,21 @@ pub(super) unsafe fn repeat(s: &mut State) {
 
 #[cfg(test)]
 pub(super) fn diagnostics(s: &State) -> Value {
-    json!({"background_ready":s.customize_background.borrow().ready(),"drawer":s.assignment.drawer,"drawer_scroll":s.assignment.drawer_scroll,"drawer_count":visible_inputs(s).len(),"customized_only":s.assignment.customized_only,"filter_open":s.assignment.filter_open,"rail_expanded":s.assignment.draft.as_ref().is_some_and(|d|d.rail_expanded),"rail_scroll":s.assignment.draft.as_ref().map(|d|d.rail_scroll),"source_icons":s.icons.keys().filter(|key|key.starts_with("assignment-")).count()})
+    let controls: Vec<Value> = s.hits.iter().filter_map(|h| {
+        let key = match &h.action {
+            Action::Assignment(Control::Category(Category::Windows)) => "windows".to_string(),
+            Action::Assignment(Control::Options) => "options".to_string(),
+            Action::Assignment(Control::Option(i)) => format!("option-{i}"),
+            Action::Assignment(Control::Save) => "save".to_string(),
+            Action::Assignment(Control::Cancel) => "cancel".to_string(),
+            Action::Assignment(Control::Close) => "close".to_string(),
+            Action::Assignment(Control::Discard) => "discard".to_string(),
+            Action::Assignment(Control::Dismiss) => "dismiss".to_string(),
+            _ => return None,
+        };
+        Some(json!({"key":key,"x":(h.rect.left+h.rect.right) as f64 / 2.0 / s.scale as f64,"y":(h.rect.top+h.rect.bottom) as f64 / 2.0 / s.scale as f64}))
+    }).collect();
+    json!({"controls":controls,"windows_option":s.assignment.draft.as_ref().and_then(|d|d.windows_option),"options_scroll":s.assignment.draft.as_ref().map(|d|d.options_scroll),"background_ready":s.customize_background.borrow().ready(),"drawer":s.assignment.drawer,"drawer_scroll":s.assignment.drawer_scroll,"drawer_count":visible_inputs(s).len(),"customized_only":s.assignment.customized_only,"filter_open":s.assignment.filter_open,"rail_expanded":s.assignment.draft.as_ref().is_some_and(|d|d.rail_expanded),"rail_scroll":s.assignment.draft.as_ref().map(|d|d.rail_scroll),"source_icons":s.icons.keys().filter(|key|key.starts_with("assignment-")).count()})
 }
 #[cfg(test)]
 pub(super) unsafe fn font_diagnostics(s: &State) -> Value {

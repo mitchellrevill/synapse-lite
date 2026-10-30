@@ -1,3 +1,5 @@
+> Windows Shortcuts update (30 October 2026): local Save, edit/reopen, exact source choices and preservation are now implemented for the supported inputs. Device delivery remains unavailable. See [Customize Windows Shortcuts](CUSTOMIZE-WINDOWS-SHORTCUTS.md). The draft-only limitations below describe the original shell checkpoint and still apply to the other unfinished categories.
+
 # Native Customize assignment popup
 
 The installed Ornata V2 (605/025D) and mouse196 (00C4, with197/00C5 family alias) Customize pages now open a native source-derived assignment popup. Keyboard clicks use the recovered SVG paths. Mouse clicks use the shipped clickable label rows, not approximate regions over the product image. This is an interactive draft editor; assignment Save remains disabled for these devices because Ornata mapping readback and the mouse layer alias are not verified.

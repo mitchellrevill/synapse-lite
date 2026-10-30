@@ -1271,3 +1271,5 @@ mod tests {
         );
     }
 }
+
+pub mod windows_shortcuts;

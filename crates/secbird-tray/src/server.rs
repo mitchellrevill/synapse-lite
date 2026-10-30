@@ -442,6 +442,23 @@ fn buttons_json(dev: &Device, store: &mut Store) -> Value {
 }
 
 fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
+    if path == "/api/assignment-windows-local" {
+        let value: Value = serde_json::from_slice(body).map_err(|e|Error::InvalidArg(e.to_string()))?;
+        let text = |key: &str| value[key].as_str().filter(|s|!s.is_empty()).ok_or_else(||Error::InvalidArg(format!("Missing {key}")));
+        let id = text("id")?;
+        let dev = engine.devices().iter().find(|d|d.key()==id).ok_or_else(||Error::InvalidArg("Selected device disconnected".into()))?;
+        let mut store = Store::load(&config_dir().join("profiles.json"))?;
+        let profiles = store.devices.get_mut(id).ok_or_else(||Error::InvalidArg("Stored device unavailable".into()))?;
+        if profiles.active != text("expected_profile")? {return Err(Error::InvalidArg("Active profile changed; reopen assignment".into()));}
+        let profile = profiles.profiles.get_mut(&profiles.active).ok_or_else(||Error::InvalidArg("Stored profile unavailable".into()))?;
+        if serde_json::to_value(&*profile).map_err(|e|Error::Db(e.to_string()))? != value["original_profile"] {
+            return Err(Error::InvalidArg("Profile changed; reopen assignment".into()));
+        }
+        let hyper = value["hyper"].as_bool().ok_or_else(||Error::InvalidArg("Missing assignment layer".into()))?;
+        *profile = secbird_core::profile_compat::windows_shortcuts::edit(profile,dev.pid,text("input")?,text("input_type")?,hyper,text("choice")?)?;
+        store.save()?;
+        return Ok(json!({"ok":true,"local_only":true}));
+    }
     let b: Body = serde_json::from_slice(body).map_err(|e| Error::InvalidArg(e.to_string()))?;
     if matches!(path, "/api/device-sleep" | "/api/critical-threshold" | "/api/calibration-tracking" | "/api/dynamic-sensitivity" | "/api/sensor-rotation") {
         validate_mouse_connection(engine, &b)?;

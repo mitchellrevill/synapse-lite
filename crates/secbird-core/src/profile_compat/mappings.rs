@@ -48,7 +48,7 @@ const MOUSE_INPUTS: &[(&str, &str)] = &[
     ("DKM_SB_03", "dpi"),
 ];
 
-fn setting_key(record: &Value, pid: u16) -> Option<String> {
+pub(super) fn setting_key(record: &Value, pid: u16) -> Option<String> {
     let input = record.get("inputID")?.as_str()?;
     let name = if pid == 605 {
         let usage = key_usage(input)?;

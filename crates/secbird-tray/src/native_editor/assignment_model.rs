@@ -302,6 +302,7 @@ pub(super) struct Draft {
     pub category: Option<Category>,
     pub original_records: Vec<Value>,
     pub mouse_option: usize,
+    pub windows_option: Option<usize>,
     pub turbo: bool,
     pub speed: u8,
     pub speed_draft: String,
@@ -362,7 +363,12 @@ impl Draft {
             .and_then(|v| v["turboMode"]["keysPerSecond"].as_u64())
             .filter(|n| (1..=20).contains(n))
             .unwrap_or(7) as u8;
+        let windows_option = if category == Some(Category::Windows) {
+            original_records.first().and_then(|r|r["win8ShortcutsGroup"]["windowsShortcutAssignment"].as_str())
+                .and_then(|id|secbird_core::profile_compat::windows_shortcuts::CHOICES.iter().position(|v|v.0==id))
+        } else { Some(0) };
         Self {
+            windows_option,
             context,
             input,
             anchor,
@@ -402,14 +408,17 @@ impl Draft {
             self.hyper,
         );
         if initial.category == Some(category) {
+            self.windows_option = initial.windows_option;
             self.mouse_option = initial.mouse_option;
             self.turbo = initial.turbo;
             self.speed = initial.speed;
         } else {
+            self.windows_option = Some(0);
             self.mouse_option = 0;
             self.turbo = false;
             self.speed = 7;
         }
+        self.dirty = category == Category::Windows && initial.category != Some(category);
         self.speed_draft = self.speed.to_string();
     }
     pub fn select_mouse(&mut self, index: usize) {
@@ -473,8 +482,26 @@ impl Draft {
         let n = self.speed_draft.parse::<i32>().unwrap_or(0).clamp(1, 20) as u8;
         self.set_speed(n);
     }
+    pub fn options(&self) -> &[(&str, &str)] {
+        if self.category == Some(Category::Windows) { secbird_core::profile_compat::windows_shortcuts::CHOICES } else { &MOUSE_ACTIONS }
+    }
+    pub fn selected_option(&self) -> Option<usize> {
+        if self.category == Some(Category::Windows) { self.windows_option } else { Some(self.mouse_option) }
+    }
+    pub fn can_save_windows(&self) -> bool {
+        self.category == Some(Category::Windows) && self.dirty && self.windows_option.is_some()
+            && self.context.mappings.is_some() && self.input.enabled && self.categories.contains(&Category::Windows)
+            && secbird_core::profile_compat::windows_shortcuts::validate_input(self.context.owner.pid,&self.input.input_id,&self.input.input_type).is_ok()
+    }
+    pub fn select_option(&mut self, index: usize) {
+        if self.category == Some(Category::Windows) {
+            if index < self.options().len() {self.windows_option=Some(index);self.dirty=true;self.options_open=false;}
+        } else { self.select_mouse(index); }
+    }
     pub fn save_reason(&self) -> &'static str {
-        if self.context.owner.pid == 605 {
+        if self.category == Some(Category::Windows) {
+            "Save stores this assignment locally. Device delivery and shortcut execution are not available yet."
+        } else if self.context.owner.pid == 605 {
             "Saving assignments is unavailable: Ornata mapping readback is unsupported. No command will be sent."
         } else {
             "Saving assignments is unavailable: the installed mouse layer mapping has not been verified. No command will be sent."
@@ -670,5 +697,22 @@ mod tests {
         current["active"] = json!("A");
         current["profile"]["opaque"] = json!({"changed":true});
         assert!(!ctx.still_current(&current));
+    }
+}
+
+#[cfg(test)]
+mod windows_tests {
+    use super::*;
+    #[test]
+    fn windows_reopens_known_and_unknown_choices_without_replacing_source() {
+        for (id,expected) in [("Copy",Some(13)),("FutureShortcut",None)] {
+            let profile=json!({"_synapseLiteSynapse4":{"decoded":{"mappings":[{"inputID":"KEY_A","inputType":"KeyInput","outputType":"win8ShortcutsGroup","win8ShortcutsGroup":{"windowsShortcutAssignment":id,"opaque":8}}]}}});
+            let ctx=Arc::new(Context::from_device(&json!({"id":"SIM","pid":"025D","active":"Fixture","profile":profile})).unwrap());
+            let input=Input{key:"A".into(),input_id:"KEY_A".into(),input_type:"KeyInput".into(),label:"A".into(),default_label:"A".into(),functions:vec!["WINDOWS_SHORTCUT".into(),"DEFAULT".into()],enabled:true};
+            let mut draft=Draft::new(ctx,input,Anchor::Key("KEY_A".into()),false);
+            assert_eq!(draft.category,Some(Category::Windows));assert_eq!(draft.windows_option,expected);assert!(!draft.can_save_windows());
+            draft.select_option(25);assert!(draft.can_save_windows());assert_eq!(draft.original_records[0]["win8ShortcutsGroup"]["windowsShortcutAssignment"],id);
+            draft.select(Category::Default);draft.select(Category::Windows);assert_eq!(draft.windows_option,expected);assert!(!draft.dirty);
+        }
     }
 }
