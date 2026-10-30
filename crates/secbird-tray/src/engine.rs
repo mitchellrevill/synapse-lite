@@ -868,6 +868,7 @@ impl Engine {
     /// Apply the current profile of each listed device (by [`Device::key`]): the one tied
     /// to the program in front, else the active one.
     pub fn apply(&mut self, keys: &[String]) -> Vec<ApplyReport> {
+        let _support_timer = secbird_core::support_bundle::measure_apply();
         if self.measurement_read_only {
             return Vec::new();
         }
