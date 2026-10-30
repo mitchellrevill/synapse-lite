@@ -85,6 +85,7 @@ const ID_RESTORE_BUTTONS: u32 = 8;
 const ID_CHECK_UPDATE: u32 = 9;
 const ID_UPDATE_NOTIFY: u32 = 10;
 const ID_GET_UPDATE: u32 = 11;
+const ID_SUPPORT: u32 = 12;
 const ID_PROFILE_BASE: u32 = 1000;
 
 const GUID_DEVINTERFACE_HID: GUID = GUID::from_u128(0x4d1e55b2_f16f_11cf_88cb_001111000030);
@@ -1277,6 +1278,7 @@ impl App {
         append(menu, MF_STRING, ID_REAPPLY as usize, "Re-apply profiles");
         append(menu, MF_STRING, ID_FOLDER as usize, "Open settings folder");
         append(menu, MF_STRING, ID_RESTORE_BUTTONS as usize, "Restore all mouse buttons");
+        append(menu, MF_STRING, ID_SUPPORT as usize, "Save local support bundle…");
         append(menu, MF_STRING, ID_REPORT as usize, "Make a device report…");
         let registration = autostart_enabled();
         let auto = match &registration { Ok(true)=>MF_CHECKED, Ok(false)=>MF_UNCHECKED, Err(_)=>MF_UNCHECKED|MF_GRAYED };
@@ -1296,6 +1298,7 @@ impl App {
             ID_EDITOR => self.open_editor(),
             ID_FOLDER => open_config_folder(),
             ID_REPORT => self.make_report(),
+            ID_SUPPORT => unsafe { crate::support_bundle::dialog(self.hwnd); },
             ID_RESTORE_BUTTONS => {
                 let results = self.engine().restore_buttons();
                 let lines: Vec<String> = results
