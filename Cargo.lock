@@ -189,6 +189,7 @@ version = "0.5.0"
 dependencies = [
  "embed-resource",
  "secbird-core",
+ "serde",
  "serde_json",
 ]
 

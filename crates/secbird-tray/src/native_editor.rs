@@ -2442,7 +2442,8 @@ impl State {
             }
             Action::Device(id) => {
                 if id==chroma_view::ID && !studio_view::can_leave_to_chroma(self) { return; }
-                if (id==settings_view::ID||id==linked_games::ID||id==macro_view::ID||id==shortcuts::ID) && self.studio.open && studio_view::block_close(self){return;}
+                if id==linked_games::ID && self.studio.open && studio_view::leave_to_linked_games(self){return;}
+                if (id==settings_view::ID||id==macro_view::ID||id==shortcuts::ID) && self.studio.open && studio_view::block_close(self){return;}
                 self.studio.canvas.cancel();ReleaseCapture();
                 self.studio.open=false;
                 if !host_tabs::open(self, &id) { return; }
