@@ -90,7 +90,8 @@ fn plan(input: &Path, binding: &Path, output: &Path) -> Result<usize, Error> {
         "source_row_count":prepared.source_row_count(),"source_rows_zero_based":prepared.source_rows(),"native_events":events,
         "repeats":prepared.plan().repeats(),"explicit_delay_ms":prepared.plan().explicit_delay_ms(),
         "runtime_gaps":prepared.plan().runtime_gaps().iter().map(|gap|format!("{gap:?}")).collect::<Vec<_>>(),
-        "hardware_discovery_performed":false,"input_sent":false,"normal_store_changed":false,"live_playback_available":false});
+        "hardware_discovery_performed":false,"input_sent":false,"commands_executed":false,
+        "clipboard_changed":false,"normal_store_changed":false,"live_playback_available":false});
     let bytes = serde_json::to_vec_pretty(&report).map_err(invalid)?;
     // All validation completes before the only mutation. Existing files and
     // aliases of either input cannot be truncated or replaced.
@@ -212,6 +213,47 @@ mod tests {
         ])
         .unwrap();
         assert_eq!(std::fs::read(input).unwrap(), before);
+    }
+
+    #[test]
+    fn saved_host_action_export_preserves_input_and_never_claims_execution() {
+        let folder = Folder::new();
+        let (input, binding) = folder.inputs();
+        let store = read_store(&input).unwrap();
+        let store = macro_library::edit(
+            &store,
+            Change::InsertAction {
+                guid: "test".into(),
+                index: 1,
+                action: macro_library::host_actions::Action::Command("not executed 😀".into()),
+            },
+        )
+        .unwrap();
+        std::fs::write(&input, store.native_bytes().unwrap()).unwrap();
+        let before = std::fs::read(&input).unwrap();
+        let output = folder.path("host-plan.json");
+        assert_eq!(plan(&input, &binding, &output).unwrap(), 3);
+        let bytes = std::fs::read(&output).unwrap();
+        let report: Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(
+            report["native_events"],
+            json!([
+                {"type":"launch","path":"not executed 😀"},
+                {"type":"delay","ms":50}, {"type":"delay","ms":2}
+            ])
+        );
+        assert_eq!(report["source_rows_zero_based"], json!([1, 1, 2]));
+        assert_eq!(report["live_playback_available"], false);
+        assert_eq!(report["hardware_discovery_performed"], false);
+        assert_eq!(report["commands_executed"], false);
+        assert_eq!(report["clipboard_changed"], false);
+        assert!(report["runtime_gaps"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("HostLaunchExecution")));
+        assert!(plan(&input, &binding, &output).is_err());
+        assert_eq!(std::fs::read(&output).unwrap(), bytes);
+        assert_eq!(std::fs::read(&input).unwrap(), before);
     }
     #[test]
     fn existing_outputs_and_aliases_are_never_overwritten() {

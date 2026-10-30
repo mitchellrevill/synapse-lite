@@ -28,6 +28,103 @@ fn body(rows: Value) -> Value {
 fn binding() -> &'static str {
     r#"{"guid":"test","macroPlaybackOption":"Once"}"#
 }
+
+#[test]
+fn host_planning_matches_all_seven_independent_source_vectors_and_keeps_data_inert() {
+    use crate::source_macro::{Event, HostAction, RuntimeGap};
+    let fixture: Value = serde_json::from_str(include_str!(
+        "../../../../tests/fixtures/macro-host-source.json"
+    ))
+    .unwrap();
+    let cases = fixture["cases"].as_array().unwrap();
+    assert_eq!(cases.len(), 7);
+    for case in cases {
+        assert_eq!(
+            convert(&case["row"]).unwrap(),
+            case["output"].as_array().unwrap().clone()
+        );
+        let source = with_cache(body(json!([case["row"]])), case["output"].clone());
+        let store = saved(source);
+        let original = serde_json::to_string(&store).unwrap();
+        let prepared = prepare(&store, binding()).unwrap();
+        assert_eq!(prepared.cache_status(), CacheStatus::Verified);
+        assert_eq!(prepared.source_rows(), &[0, 0]);
+        assert_eq!(
+            serde_json::from_str::<Value>(prepared.native_json()).unwrap(),
+            case["output"]
+        );
+        let Event::Host(action) = &prepared.plan().events()[0] else {
+            panic!("missing host action")
+        };
+        let gap = match action.as_ref() {
+            HostAction::Launch { .. } => RuntimeGap::HostLaunchExecution,
+            HostAction::ClipboardText(_) => RuntimeGap::ClipboardAndPasteRecovery,
+        };
+        assert!(prepared.plan().runtime_gaps().contains(&gap));
+        // Full scheduler admission fails before it can emit any earlier input.
+        assert!(matches!(
+            Scheduler::with_contexts(
+                prepared.plan(),
+                Contexts {
+                    keyboard: None,
+                    mouse: None
+                },
+                Owner(NonZeroU64::new(1).unwrap())
+            ),
+            Err(macro_scheduler::Error::UnsupportedEvent)
+        ));
+        assert_eq!(serde_json::to_string(&store).unwrap(), original);
+    }
+}
+
+#[test]
+fn host_planning_preserves_source_case_quirks_and_empty_placeholders() {
+    assert_eq!(
+        convert(&json!({"Type":5,"TextCommand":"prefix taskmgr suffix"})).unwrap()[0]["path"],
+        "cmd /c start taskmgr"
+    );
+    assert_eq!(
+        convert(&json!({"Type":5,"TextCommand":"TASKMGR.exe"})).unwrap()[0]["path"],
+        "TASKMGR.exe"
+    );
+    assert_eq!(
+        convert(&json!({"Type":10,"RadioIndex":0.0,"Content0":"C:/Example.EXE"})).unwrap()[0]
+            ["startHidden"],
+        false
+    );
+    assert_eq!(
+        convert(&json!({"Type":10,"RadioIndex":1,"Content1":"prefix www. suffix"})).unwrap()[0]
+            ["path"],
+        "cmd /c start \"\" \"prefix www. suffix\""
+    );
+    for row in [
+        json!({"Type":4,"Text":""}),
+        json!({"Type":5,"TextCommand":""}),
+        json!({"Type":10,"RadioIndex":null}),
+        json!({"Type":10,"RadioIndex":1,"Content1":""}),
+    ] {
+        assert!(convert(&row).unwrap().is_empty());
+    }
+}
+
+#[test]
+fn host_planning_rejects_malformed_cache_and_boundaries_atomically() {
+    for row in [
+        json!({"Type":4,"Text":"😀".repeat(126)}),
+        json!({"Type":5,"TextCommand":"bad\0command"}),
+        json!({"Type":10,"RadioIndex":1,"Content1":"x".repeat(32767)}),
+        json!({"Type":10,"RadioIndex":0,"Content0":false}),
+        json!({"Type":10,"RadioIndex":2}),
+    ] {
+        assert!(prepare(&saved(body(json!([{"Type":0,"Number":0},row]))), binding()).is_err());
+    }
+    let row = json!({"Type":5,"TextCommand":"not executed"});
+    let store = saved(with_cache(
+        body(json!([row])),
+        json!([{"type":"launch","path":"different"},{"type":"delay","ms":50}]),
+    ));
+    assert!(prepare(&store, binding()).is_err());
+}
 fn mouse(button: u8, state: Value) -> Value {
     json!({"Type":2,"MouseEvent":{"MouseButton":button,"State":state}})
 }
@@ -326,13 +423,13 @@ fn unsupported_actions_phases_and_modes_never_return_a_partial_plan() {
         json!({"Type":0,"Number":{"min":0.1,"max":0.2}}),
         json!({"Type":1,"KeyEvent":{"Makecode":65,"State":6}}),
         json!({"Type":3}),
-        json!({"Type":4,"Text":"Do not paste"}),
-        json!({"Type":5,"TextCommand":"Do not run"}),
+        json!({"Type":4,"Text":false}),
+        json!({"Type":5,"TextCommand":false}),
         json!({"Type":6}),
         json!({"Type":7,"guid":"child"}),
         json!({"Type":8}),
         json!({"Type":9}),
-        json!({"Type":10}),
+        json!({"Type":10,"RadioIndex":2}),
         json!({"Type":11}),
         json!({"Type":0,"Number":"0.1","phase":1}),
     ] {

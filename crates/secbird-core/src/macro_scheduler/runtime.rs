@@ -179,8 +179,9 @@ impl Scheduler {
         let mut steps = Vec::with_capacity(plan.events().len());
         let mut keys = BTreeMap::new();
         let mut buttons = BTreeSet::new();
-        for (index, event) in plan.events().iter().copied().enumerate() {
+        for (index, event) in plan.events().iter().cloned().enumerate() {
             let step = match event {
+                Event::Host(_) => return Err(Error::UnsupportedEvent),
                 Event::DelayMs(ms) => Step::Delay(ms),
                 Event::Keyboard { transition, .. } => {
                     let context = contexts.keyboard.ok_or(Error::MissingKeyboardContext)?;
@@ -231,7 +232,7 @@ impl Scheduler {
                 Event::MouseButton { .. } | Event::Wheel { .. } => {
                     let context = contexts.mouse.ok_or(Error::MissingMouseContext)?;
                     let packet = plan_mouse_packet(
-                        event,
+                        event.clone(),
                         context.routing,
                         context.modifiers,
                         context.source_unit,

@@ -38,6 +38,10 @@ All validation completes before creating the new report.
 
 ## Source projection and preservation
 
+[Host-action compilation](MACRO-HOST-PLANNING.md) now adds Text, Run command,
+Launch program and Launch website, with source delays and exact cache comparison.
+The input scheduler rejects these host payloads; this is compilation, not execution.
+
 The bridge uses the recovered default UI-key-code converter, not HID usages or
 a guessed physical layout. It retains the order of all 150 source lookup entries,
 including entries without an input ID. It implements category/default lookup,

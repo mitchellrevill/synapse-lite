@@ -18,8 +18,10 @@ program picker uses an ordinary owned file dialog without changing the working
 directory; it does not open or run the selected file.
 
 Nothing here executes commands, opens websites, starts programs, changes the
-clipboard or generates input. Imported actions stay inert. Recording, live
-playback, source-to-native action scheduling and recovery remain unfinished.
+clipboard or generates input. Imported actions stay inert. The separate
+[saved host-action compiler](MACRO-HOST-PLANNING.md) now projects these rows into
+bounded native events and source delays. Recording, live playback, host execution
+and recovery remain unfinished in this checkpoint.
 
 ## Source and preservation
 

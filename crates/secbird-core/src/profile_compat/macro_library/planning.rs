@@ -13,6 +13,7 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 use std::sync::LazyLock;
 mod unique;
+mod host;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CacheStatus {
@@ -199,6 +200,7 @@ fn convert(row: &Value) -> Result<Vec<Value>> {
         Some(0) => delay(row),
         Some(1) => keyboard(row),
         Some(2) => mouse(row),
+        Some(4 | 5 | 10) => host::convert(row),
         _ => Err(invalid(
             "This macro event type is not implemented; no partial plan was returned",
         )),

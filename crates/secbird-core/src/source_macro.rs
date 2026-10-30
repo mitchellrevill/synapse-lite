@@ -8,6 +8,8 @@
 use serde::de::{self, DeserializeSeed, MapAccess, SeqAccess, Visitor};
 use serde_json::{Map, Number, Value};
 use std::fmt;
+pub(crate) mod host;
+pub use host::HostAction;
 
 const MAX_JSON_BYTES: usize = 256 * 1024;
 const MAX_JSON_NODES: usize = 4096;
@@ -370,8 +372,9 @@ pub enum WheelAxis {
     Horizontal,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Event {
+    Host(Box<HostAction>),
     DelayMs(u32),
     /// Native source scan-code namespace, never a USB HID usage conversion.
     Keyboard {
@@ -398,6 +401,8 @@ pub enum Event {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RuntimeGap {
+    HostLaunchExecution,
+    ClipboardAndPasteRecovery,
     NativeIdentityAndRouting,
     CompletionDrivenTiming,
     HeldOutputOwnershipAndCancellation,
@@ -436,6 +441,12 @@ impl SymbolicPlan {
         ];
         if self.repeats > 1 {
             gaps.push(RuntimeGap::RepeatBoundaryTiming);
+        }
+        if self.events.iter().any(|e| matches!(e, Event::Host(action) if matches!(action.as_ref(), HostAction::Launch { .. }))) {
+            gaps.push(RuntimeGap::HostLaunchExecution);
+        }
+        if self.events.iter().any(|e| matches!(e, Event::Host(action) if matches!(action.as_ref(), HostAction::ClipboardText(_)))) {
+            gaps.push(RuntimeGap::ClipboardAndPasteRecovery);
         }
         gaps
     }
@@ -518,7 +529,7 @@ mod tests {
                         raw_data: 120,
                         delta: 120,
                     }],
-                    9 => vec![down, up, Event::DelayMs(10), down, up],
+                    9 => vec![down.clone(), up.clone(), Event::DelayMs(10), down, up],
                     _ => panic!(
                         "source fixture gained a case without an independent expected vector"
                     ),
@@ -659,15 +670,7 @@ mod tests {
 
     #[test]
     fn unsupported_event_never_returns_partial_plan_or_skips() {
-        for kind in [
-            "launch",
-            "clipboard",
-            "randomDelay",
-            "loop",
-            "macro",
-            "mouseMove",
-            "future",
-        ] {
+        for kind in ["randomDelay", "loop", "macro", "mouseMove", "future"] {
             let data = json!([{"type":"delay","ms":2},{"type":kind}]);
             assert!(matches!(
                 plan(&data.to_string()),
@@ -1019,6 +1022,7 @@ fn decode_event(index: usize, value: &Value) -> Result<Event, PlanError> {
         .and_then(Value::as_str)
         .ok_or_else(|| invalid(at, "type"))?;
     match kind {
+        "launch" | "clipboard" => host::decode(index, object),
         "delay" => {
             fields(at, object, &["type", "ms"])?;
             Ok(Event::DelayMs(
