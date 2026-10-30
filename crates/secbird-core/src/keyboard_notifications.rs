@@ -488,9 +488,7 @@ fn run(
                         });
                         if let Some(event) = event {
                             tx.try_send(event).map_err(|_| {
-                                io::Error::new(
-                                    io::ErrorKind::Other,
-                                    "Notification consumer is absent or too slow",
+                                io::Error::other("Notification consumer is absent or too slow",
                                 )
                             })?;
                         }

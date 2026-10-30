@@ -122,14 +122,14 @@ pub(super) fn definition(root: &Node) -> Result<(String, Value)> {
         }
         rows[i]["Id"] = json!(next);
         let kind = rows[i]["Type"].clone();
-        for j in i..rows.len() {
+        for row in rows.iter_mut().skip(i) {
             let release = if group == "KeyEvent" {
-                rows[j][group]["State"].as_u64().is_some_and(|v| v != 0)
+                row[group]["State"].as_u64().is_some_and(|v| v != 0)
             } else {
-                rows[j][group]["State"] == 1
+                row[group]["State"] == 1
             };
-            if rows[j]["Type"] == kind && release {
-                rows[j]["Id"] = json!(next);
+            if row["Type"] == kind && release {
+                row["Id"] = json!(next);
                 break;
             }
         }

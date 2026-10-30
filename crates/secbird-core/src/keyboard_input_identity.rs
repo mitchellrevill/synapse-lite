@@ -9,7 +9,6 @@
 //! Stop on any device notification and discard the set before rediscovery: a
 //! Windows handle can be reused and metadata has no atomic hotplug snapshot.
 
-#![cfg(windows)]
 
 use crate::mouse_input_identity::{enumerate, raw_name, verify_raw_type};
 use crate::sensor_rotation::{hid_identity, interface_container_id};

@@ -243,7 +243,8 @@ pub fn edit(current:&Store,change:Change)->Result<Store> {
                     if value["Number"].is_object()||value["Number"].is_array(){return Err(invalid("Random/structured delay editing is not implemented; its source data was preserved"));}
                     // Preserve unknown leaves in an explicitly edited delay row.
                     let mut fields:Fields=serde_json::from_str(old.get()).map_err(|e|invalid(e.to_string()))?;let new:Value=serde_json::from_str(delay(milliseconds)?.get()).unwrap();let field=fields.0.iter_mut().find(|(key,_)|key=="Number").ok_or_else(||invalid("Delay has no Number field"))?;field.1=raw(&new["Number"])?;rows[index]=raw(&fields)?;}
-                Change::DeleteEvent{..}=>{if index>=rows.len()||protected(&rows[index]){return Err(invalid("This event cannot be deleted"));}if serde_json::from_str::<Value>(rows[index].get()).map_err(|e|invalid(e.to_string()))?["Type"]==6{loops::delete(&mut rows,index)?;}else{rows.remove(index);}}
+                Change::DeleteEvent{..}=>{if index>=rows.len()||protected(&rows[index]){return Err(invalid("This event cannot be deleted"));}
+                if serde_json::from_str::<Value>(rows[index].get()).map_err(|e|invalid(e.to_string()))?["Type"]==6{loops::delete(&mut rows,index)?;}else{rows.remove(index);}}
                 Change::MoveEvent{direction,..}=>{if index>=rows.len(){return Err(invalid("Unknown event"));}let next=index.checked_add_signed(direction as isize).filter(|n|*n<rows.len()).ok_or_else(||invalid("Event move exceeds macro bounds"))?;if ![-1,1].contains(&direction)||protected(&rows[index])||protected(&rows[next]){return Err(invalid("This event cannot be moved"));}rows.swap(index,next);}
                 _=>unreachable!(),
             }

@@ -37,7 +37,7 @@ impl Rotation {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DynamicSensitivity {
     pub state: u8,
@@ -50,18 +50,6 @@ pub struct DynamicSensitivity {
     pub custom_sensor_accelerations: Vec<f64>,
     #[serde(default, flatten)]
     pub extra: BTreeMap<String, Value>,
-}
-impl Default for DynamicSensitivity {
-    fn default() -> Self {
-        Self {
-            state: 0,
-            mode: 0,
-            points: Vec::new(),
-            template_id: 0,
-            custom_sensor_accelerations: Vec::new(),
-            extra: BTreeMap::new(),
-        }
-    }
 }
 impl DynamicSensitivity {
     pub fn control_points(&self) -> Result<Vec<Point>> {

@@ -8,16 +8,15 @@ pub struct MacroRecoveryReport {
 }
 fn records(device: &DeviceProfiles) -> Result<BTreeMap<String, Value>> {
     for (key, value) in &device.extra {
-        if key == SOURCE || key.starts_with(&format!("_synapseLiteImported:{SOURCE}")) {
-            if !value.is_object()
+        if (key == SOURCE || key.starts_with(&format!("_synapseLiteImported:{SOURCE}")))
+            && (!value.is_object()
                 || !value.get("profiles").is_some_and(Value::is_array)
-                || value.get("macros").is_some_and(|value| !value.is_array())
+                || value.get("macros").is_some_and(|value| !value.is_array()))
             {
                 return Err(invalid(
                     "Malformed retained source envelope; no macro definitions were changed",
                 ));
             }
-        }
     }
     gui::macro_records(device)
 }

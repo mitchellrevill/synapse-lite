@@ -17,10 +17,9 @@ const MAX_JSON_DEPTH: usize = 32;
 // Conservative retained-data accounting: original/decoded/error strings,
 // structured nodes and the unexpanded plan. This is not an allocator/RSS
 // measurement; input, node, depth and event limits are enforced independently.
-const RETAINED_DATA_BUDGET_BYTES: usize = 2 * 1024 * 1024;
 const _: () = assert!(
     MAX_JSON_BYTES * 3 + MAX_JSON_NODES * 256 + MAX_JSON_NODES * std::mem::size_of::<Event>()
-        <= RETAINED_DATA_BUDGET_BYTES
+        <= 2 * 1024 * 1024
 );
 
 #[derive(Debug, Clone, Copy)]

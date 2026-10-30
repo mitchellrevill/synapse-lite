@@ -54,7 +54,8 @@ impl Graph {
     pub(super) fn issues(&self)->usize {self.nodes.keys().filter(|id|self.walk(id,&mut BTreeSet::new(),&mut BTreeSet::new()).is_err()).count()}
     fn closure(&self,roots:&BTreeSet<String>)->BTreeSet<String> {
         let mut found=BTreeSet::new();let mut pending:Vec<_>=roots.iter().cloned().collect();
-        while let Some(id)=pending.pop(){if !found.insert(id.clone()){continue;}if let Some(node)=self.nodes.get(&id){pending.extend(node.targets.iter().cloned());}}
+        while let Some(id)=pending.pop(){if !found.insert(id.clone()){continue;}
+        if let Some(node)=self.nodes.get(&id){pending.extend(node.targets.iter().cloned());}}
         found
     }
 }
@@ -66,7 +67,8 @@ pub fn targets(record:&Value,context:&[Value])->Result<Vec<Target>> {
 }
 pub(crate) fn required(records:&BTreeMap<String,Value>,roots:&BTreeSet<String>)->Result<BTreeSet<String>> {
     let mut selected=BTreeMap::new();let mut pending:Vec<_>=roots.iter().cloned().collect();
-    while let Some(id)=pending.pop(){if selected.contains_key(&id){continue;}if selected.len()>=MAX_MACROS{return Err(invalid("Selected macro dependencies exceed library bounds"));}let record=records.get(&id).ok_or_else(||invalid("Selected nested macro definition is missing"))?;let (children,_)=info(&decode_record(record)?)?;pending.extend(children);selected.insert(id,record.clone());}
+    while let Some(id)=pending.pop(){if selected.contains_key(&id){continue;}
+        if selected.len()>=MAX_MACROS{return Err(invalid("Selected macro dependencies exceed library bounds"));}let record=records.get(&id).ok_or_else(||invalid("Selected nested macro definition is missing"))?;let (children,_)=info(&decode_record(record)?)?;pending.extend(children);selected.insert(id,record.clone());}
     let graph=Graph::new(&selected)?;for root in roots {graph.walk(root,&mut BTreeSet::new(),&mut BTreeSet::new())?;}Ok(graph.closure(roots))
 }
 pub(crate) fn rewrite_guids(body:&mut Value,renames:&BTreeMap<String,(String,String)>)->Result<()> {

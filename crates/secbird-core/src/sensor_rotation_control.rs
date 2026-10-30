@@ -6,7 +6,6 @@
 //! HID Device. The filter additionally has its existing best-effort Drop recovery.
 //! Coordinate stock ownership before SET: neither transport provides atomic CAS.
 
-#![cfg(windows)]
 
 pub use crate::dynamic_sensitivity::Rotation;
 use crate::sensor_rotation::{SensorRotation, SensorRotationReader};

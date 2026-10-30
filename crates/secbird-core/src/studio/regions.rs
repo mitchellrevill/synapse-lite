@@ -479,14 +479,14 @@ impl Draft {
 /// numeric spellings must not be discarded to make two encodings look equal.
 fn merge_regions(regions: Vec<Box<RawValue>>) -> Result<Vec<Box<RawValue>>> {
     let mut result: Vec<Box<RawValue>> = Vec::new();
-    let mut indexes = BTreeMap::new();
+    let mut indexes: BTreeMap<String, usize> = BTreeMap::new();
     for raw in regions {
         let mut region = Object::parse(&raw)?;
         let devices = entries(&region, "devices")?;
         region.set("devices", None);
         let signature = encode(&region)?.get().to_owned();
         if let Some(&index) = indexes.get(&signature) {
-            let existing: &Box<RawValue> = &result[index];
+            let existing: &RawValue = result[index].as_ref();
             let mut prior = Object::parse(existing)?;
             let mut all = entries(&prior, "devices")?;
             for raw in devices {

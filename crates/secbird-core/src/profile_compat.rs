@@ -772,8 +772,8 @@ fn export_effect(
     let colors = |items: &[Rgb]| {
         json!({
             "isRandom": items.is_empty(),
-            "color1": items.first().copied().map(&rgb).unwrap_or_else(|| "#00ff00".into()),
-            "color2": items.get(1).copied().map(&rgb).unwrap_or_else(|| "no-color".into())
+            "color1": items.first().copied().map(rgb).unwrap_or_else(|| "#00ff00".into()),
+            "color2": items.get(1).copied().map(rgb).unwrap_or_else(|| "no-color".into())
         })
     };
     Ok(Some(match effect {

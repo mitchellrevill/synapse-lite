@@ -8,7 +8,6 @@
 //! required. Drop attempts ownership-aware recovery, but callers should call
 //! restore() explicitly to observe errors. A crash cannot run recovery.
 
-#![cfg(windows)]
 
 use crate::device::Device;
 use crate::driver_control::{enumerate_control_interfaces, ControlInterface};

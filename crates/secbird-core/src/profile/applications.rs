@@ -19,8 +19,8 @@ pub fn normalize_app_path(input: &str) -> Result<String> {
             rest.to_string()
         };
     }
-    let (parts, minimum) = if path.starts_with(r"\\") {
-        (path[2..].split('\\').collect::<Vec<_>>(), 3)
+    let (parts, minimum) = if let Some(rest) = path.strip_prefix(r"\\") {
+        (rest.split('\\').collect::<Vec<_>>(), 3)
     } else {
         let bytes = path.as_bytes();
         if bytes.len() < 3
