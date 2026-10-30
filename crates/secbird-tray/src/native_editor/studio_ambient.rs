@@ -144,6 +144,7 @@ pub(super) unsafe fn fields(state: &mut State) {
     }
 }
 pub(super) fn command(state: &mut State, id: u16, notification: u16) -> bool {
+    if !state.studio.open || state.studio.effect()!=Some("ambient") {return false;}
     let Some(index) = FIELDS.iter().position(|&field| field == id) else {
         return false;
     };

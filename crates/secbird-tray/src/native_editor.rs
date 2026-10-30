@@ -3910,6 +3910,7 @@ unsafe extern "system" fn window_proc(
                 9=>{EndMenu();},
                 studio_view::TEST_NAVIGATION=>{*(lparam as *mut Value)=match studio_canvas::navigation_test(&mut state) {Ok(())=>json!({"ok":true}),Err(error)=>json!({"error":error})};},
                 studio_view::TEST_REMAP=>studio_view::remap_fixture_test(&mut state),
+                studio_view::TEST_EFFECT_POSITION=>{let value=&mut *(lparam as *mut Value);let name=value.as_str().unwrap_or("").to_string();*value=studio_view::add_effect_position_test(&state,&name);},
                 _=>{},
             }
         }

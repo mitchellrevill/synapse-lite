@@ -1,0 +1,100 @@
+{
+  "date": "2026-10-30",
+  "scope": "Studio Tidal authoring and bounded descriptor preparation; radial rendering explicitly gated",
+  "published_base": "6149f7a9422ae93322365ed12df46ab681dc40a8",
+  "initial_integration_base": "7b99930",
+  "unpublished_integrations_in_feature_branch": false,
+  "source_guided": true,
+  "full_tidal_parity": false,
+  "pixel_fidelity_accepted": false,
+  "total_build_ram_accepted": false,
+  "checks": [
+    {
+      "command": "cargo test -p secbird-core --offline -j 1",
+      "passed": 525,
+      "failed": 0,
+      "ignored": 6,
+      "doc_tests_passed": 1
+    },
+    {
+      "command": "cargo test -p secbird-core tidal --offline -j 1",
+      "passed": 11,
+      "failed": 0
+    },
+    {
+      "command": "cargo test -p secbird-tray studio --offline -j 1 -- --test-threads=1",
+      "passed": 53,
+      "failed": 0,
+      "ignored": 18
+    },
+    {
+      "command": "cargo test -p secbird-tray native_studio_tidal --offline -j 1 -- --ignored --test-threads=1 --nocapture",
+      "passed": 1,
+      "failed": 0,
+      "device_requests": 0,
+      "physical_discovery": false,
+      "source_profile_fixture_unchanged": true
+    },
+    {
+      "command": "node tools/replay_studio_tidal.cjs <cached-synapse-source>",
+      "converter_cases": 8,
+      "actual_source_defaults_and_layout_executed": true,
+      "vendor_dll_loaded": false
+    },
+    {
+      "command": "node tools/replay_studio_tidal_ui.cjs <cached-synapse-source> <output-directory>",
+      "source_jsx_nodes": 105,
+      "source_vendor_runtime_observed": false,
+      "network_requests_aborted": true
+    },
+    {
+      "command": "cargo build --release --workspace --offline -j 1",
+      "status": "passed"
+    }
+  ],
+  "source_files_sha256": {
+    "crates/secbird-core/src/studio/tidal.rs": "33c262886a8596a2b980225104c322ffe7cb7f5e455f0ddc8a331967e5d28363",
+    "crates/secbird-core/src/studio/tidal_descriptor.rs": "181c85e7afc5a04718ec74281fd1f4b19ea02a9d7490ebb79b5116ba2c39154f",
+    "crates/secbird-core/src/studio/tidal_tests.rs": "8473ecb00cb67ab0aadb5fce8f5d012173b76da5a97d4142528b06ecec55d985",
+    "crates/secbird-tray/src/native_editor/studio_tidal.rs": "60a49cdc7754c5a99e2d2d1cbb25455f8ece5486ac4dcfed21d5931cc7865a7f",
+    "crates/secbird-tray/src/native_editor/studio_tidal_interaction_tests.rs": "347c0d2b9bedb01ab8215a5f3dab5288c329a0c01be892a8e5b4b019b488ef82"
+  },
+  "bounds": {
+    "document_bytes": 8388608,
+    "descriptor_json_bytes": 8388608,
+    "history_steps": 20,
+    "history_bytes": 8388608,
+    "imported_gradient_stops": 10,
+    "generated_anchors_maximum": 2,
+    "speed": [
+      0,
+      50
+    ],
+    "center_canvas_integer": [
+      0,
+      10000
+    ]
+  },
+  "remaining_gaps": [
+    "Exact native radial frame algorithm and independent frame oracle",
+    "Live and saved Tidal output remain gated",
+    "Finite completion and key-trigger input ownership remain gated",
+    "Source colour dropdowns, slider, checkbox, icon tabs and playback dropdown visual parity",
+    "Imported custom-gradient authoring",
+    "Fractional center dragging",
+    "Physical optical validation and complete-build total RAM acceptance"
+  ],
+  "native_recovery_blocker": {
+    "provider": "ghidra",
+    "code": "provider_unavailable",
+    "reason": "GHIDRA_INSTALL_DIR unset; Ghidra 12.1.x unavailable",
+    "dll_sha256": "cd9fc2a61ff920b9b73e1f5e27632020e2f8586f443e426a875ad3b042b714fa"
+  },
+  "screenshots": [
+    "tidal/source-tidal-panel.png",
+    "tidal/tidal-native-default.png",
+    "tidal/tidal-native-authored.png"
+  ],
+  "native_evidence": "tidal/interaction.json",
+  "source_manifest": "tidal/source-manifest.json"
+}

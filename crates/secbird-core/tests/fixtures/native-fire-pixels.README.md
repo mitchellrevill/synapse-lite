@@ -22,3 +22,11 @@ truncation. Palette vectors preserve the native one-slot final-segment quirk.
 
 The existing native-spectrum-static-derived.rgb remains a separate earlier
 full943-frame ordinary-RGB fixture and also validates the new pixel palette.
+
+`native_fire_parameters.json` extends Fire's intrinsic grayscale reference to
+variable Rate/Seed, using the same table carrier SHA256. Its reproducible
+generator is `tools/derive_fire_parameters.py`, accepting the recovered table
+JSON and a caller-selected output path. Ten cases hash all161 intensity bytes
+for each of4588 complete frames, with explicit initial/final CRT states. These
+are static reconstruction vectors, not observations of vendor execution. The
+existing nine mapped four-channel cycles continue to test palette/mapping math.

@@ -20,15 +20,29 @@ pub enum Control {
     Add,
     Delete,
 }
+const SPECTRUM_CONTENT_BOTTOM: i32 = 760;
+#[derive(Clone, Copy)]
+enum StopTrack {
+    Shared,
+    Spectrum,
+}
+#[derive(Clone, Copy)]
+struct StopDrag {
+    original: u8,
+    position: u8,
+    track: StopTrack,
+}
 #[derive(Default)]
 pub(super) struct Properties {
     duration: Option<SelectedDuration>,
+    scroll: i32,
+    drag: Option<StopDrag>,
+    duration_drag: Option<usize>,
     gradient: Option<SelectedGradient>,
     index: usize,
     position: String,
     color: String,
     mode: ColorMode,
-    drag: Option<u8>,
 }
 impl Properties {
     fn stops(&self) -> Option<&[GradientStop]> {
@@ -58,9 +72,13 @@ impl Properties {
     }
 }
 pub(super) fn refresh(view: &mut View) {
+    if view.is_breathing() && (!view.breathing_gradient || view.breathing_playback) {
+        view.spectrum = Properties::default();
+        return;
+    }
     if !matches!(
         view.effect(),
-        Some("spectrum" | "wave" | "starlight" | "breathing" | "audio")
+        Some("spectrum" | "wheel" | "wave" | "starlight" | "breathing" | "audio")
     ) {
         view.spectrum = Properties::default();
         return;
@@ -71,10 +89,11 @@ pub(super) fn refresh(view: &mut View) {
     let id = view.selected.as_deref().unwrap();
     let selection = view.canvas.selection();
     let wave = view.effect() == Some("wave");
+    let wheel = view.effect() == Some("wheel");
     let star = view.effect() == Some("starlight");
     let breath = view.effect() == Some("breathing");
     let audio = view.effect() == Some("audio");
-    if !wave && !star && !breath && !audio {
+    if !wheel && !wave && !star && !breath && !audio {
         match draft.spectrum_selection_duration(id, &selection) {
             Ok(value) => view.spectrum.duration = Some(value),
             Err(error) => {
@@ -86,7 +105,9 @@ pub(super) fn refresh(view: &mut View) {
     } else {
         view.spectrum.duration = None;
     }
-    match if wave {
+    match if wheel {
+        draft.wheel_selection_gradient(id, &selection)
+    } else if wave {
         draft.wave_selection_gradient(id, &selection)
     } else if breath {
         draft.breathing_selection_gradient(id, &selection)
@@ -176,6 +197,12 @@ fn entered_stop(properties: &Properties, none: bool) -> Result<(u8, Option<u32>)
 }
 pub(super) fn action(state: &mut State, control: Control) {
     if matches!(control, Control::CancelDrag) {
+        unsafe {
+            cancel_drag(state);
+        }
+        return;
+    }
+    if !visible(&state.studio) {
         return;
     }
     if let Control::ColorMode(mode) = control {
@@ -220,11 +247,12 @@ pub(super) fn action(state: &mut State, control: Control) {
     let result = (|| -> Result<bool, String> {
         if !matches!(
             view.effect(),
-            Some("spectrum" | "wave" | "starlight" | "breathing" | "audio")
+            Some("spectrum" | "wheel" | "wave" | "starlight" | "breathing" | "audio")
         ) {
             return Err("Select a gradient effect first".into());
         }
         let wave = view.effect() == Some("wave");
+        let wheel = view.effect() == Some("wheel");
         let star = view.effect() == Some("starlight");
         let breath = view.effect() == Some("breathing");
         let audio = view.effect() == Some("audio");
@@ -233,7 +261,9 @@ pub(super) fn action(state: &mut State, control: Control) {
         let properties = &view.spectrum;
         let draft = view.draft.as_mut().ok_or("Open a composition first")?;
         let mut edit_stop = |edit| {
-            if wave {
+            if wheel {
+                draft.edit_wheel_stop(id, &selection, edit)
+            } else if wave {
                 draft.edit_wave_stop(id, &selection, edit)
             } else if breath {
                 draft.edit_breathing_stop(id, &selection, edit)
@@ -246,7 +276,7 @@ pub(super) fn action(state: &mut State, control: Control) {
             }
         };
         let result = match control {
-            Control::Duration(_) if wave || star || breath || audio => {
+            Control::Duration(_) if wheel || wave || star || breath || audio => {
                 return Err("Use this effect's own duration controls".into())
             }
             Control::Duration(index) => draft.set_spectrum_duration(
@@ -261,6 +291,7 @@ pub(super) fn action(state: &mut State, control: Control) {
                     "Breathing uses its own two-colour stops or an imported gradient".into(),
                 )
             }
+            Control::Preset(index) if wheel => draft.set_wheel_preset(id, &selection, index),
             Control::Preset(index) if wave => draft.set_wave_preset(id, &selection, index),
             Control::Preset(index) => draft.set_spectrum_gradient(
                 id,
@@ -317,11 +348,11 @@ pub(super) fn action(state: &mut State, control: Control) {
     })();
     match result {
         Ok(changed) => {
-            if let Some(index) = next_index {
-                view.spectrum.index = index;
-            }
             if changed {
                 view.status = "Gradient updated · save to keep changes".into();
+            }
+            if let Some(index) = next_index {
+                view.spectrum.index = index;
             }
             view.failed = false;
         }
@@ -333,16 +364,23 @@ pub(super) fn action(state: &mut State, control: Control) {
     refresh(view);
 }
 pub(super) unsafe fn fields(state: &mut State) {
+    let max_scroll = maximum_scroll(state.content_bottom_css() as i32 - 40);
+    state.studio.spectrum.scroll = state.studio.spectrum.scroll.clamp(0, max_scroll);
     if !visible(&state.studio) || state.studio.spectrum.stops().is_none_or(|s| s.is_empty()) {
         return;
     }
     let right = (state.width as f32 / state.scale) as i32 - 250;
+    let scroll = if state.studio.effect() == Some("spectrum") {
+        state.studio.spectrum.scroll
+    } else {
+        0
+    };
     for (id, text, x, y, width, limit) in [
         (
             POSITION,
             state.studio.spectrum.position.clone(),
             right + 10,
-            440,
+            440 - scroll,
             65,
             3,
         ),
@@ -350,11 +388,14 @@ pub(super) unsafe fn fields(state: &mut State) {
             STOP_COLOR,
             state.studio.spectrum.color.clone(),
             right + 90,
-            440,
+            440 - scroll,
             130,
             32,
         ),
     ] {
+        if y < 246 || y + 28 > state.content_bottom_css() as i32 - 40 {
+            continue;
+        }
         state.retained_fields.remove(&id);
         state.field(id, &text, x, y, width);
         if let Some(&edit) = state.fields.get(&id) {
@@ -364,7 +405,10 @@ pub(super) unsafe fn fields(state: &mut State) {
     }
 }
 pub(super) fn command(state: &mut State, id: u16, notification: u16) -> bool {
-    if notification != EN_CHANGE as u16 || !matches!(id, POSITION | STOP_COLOR) {
+    if !visible(&state.studio)
+        || notification != EN_CHANGE as u16
+        || !matches!(id, POSITION | STOP_COLOR)
+    {
         return false;
     }
     let text = state.raw_text(id);
@@ -376,6 +420,9 @@ pub(super) fn command(state: &mut State, id: u16, notification: u16) -> bool {
     true
 }
 pub(super) fn has_focus(state: &State) -> bool {
+    if !visible(&state.studio) {
+        return false;
+    }
     let focus = unsafe { GetFocus() };
     !focus.is_null()
         && [POSITION, STOP_COLOR]
@@ -383,6 +430,26 @@ pub(super) fn has_focus(state: &State) -> bool {
             .any(|id| state.fields.get(id).copied() == Some(focus))
 }
 pub(super) unsafe fn paint(p: &mut Painter, view: &View, right: i32) {
+    paint_scrolled(p, view, right, 10000);
+}
+pub(super) unsafe fn paint_scrolled(p: &mut Painter, view: &View, right: i32, bottom: i32) {
+    if !visible(view) {
+        return;
+    }
+    let scroll = if view.effect() == Some("spectrum") {
+        view.spectrum.scroll
+    } else {
+        0
+    };
+    let saved = SaveDC(p.dc);
+    IntersectClipRect(
+        p.dc,
+        p.px(right),
+        p.px(246),
+        p.px(right + 250),
+        p.px(bottom),
+    );
+    let first_hit = p.hits.len();
     let enabled = view.editable()
         && view.canvas.count() > 0
         && (view.effect() != Some("starlight") || starlight::gradient_enabled(view));
@@ -392,7 +459,7 @@ pub(super) unsafe fn paint(p: &mut Painter, view: &View, right: i32) {
             p,
             "BACK TO COLOURS",
             right + 10,
-            278,
+            278 - scroll,
             220,
             super::Control::BreathingGradient,
             true,
@@ -412,9 +479,19 @@ pub(super) unsafe fn paint(p: &mut Painter, view: &View, right: i32) {
             p,
             "BACK TO PROPERTIES",
             right + 10,
-            278,
+            278 - scroll,
             220,
             super::Control::Starlight(starlight::Control::Gradient),
+            true,
+        );
+    } else if view.effect() == Some("wheel") {
+        button(
+            p,
+            "BACK TO PROPERTIES",
+            right + 10,
+            278,
+            220,
+            super::Control::Wheel(wheel::Control::Gradient),
             true,
         );
     } else if view.effect() == Some("wave") {
@@ -422,7 +499,7 @@ pub(super) unsafe fn paint(p: &mut Painter, view: &View, right: i32) {
             p,
             "BACK TO MOTION",
             right + 10,
-            278,
+            278 - scroll,
             220,
             super::Control::Wave(wave::Control::Gradient),
             true,
@@ -432,20 +509,39 @@ pub(super) unsafe fn paint(p: &mut Painter, view: &View, right: i32) {
             Some(SelectedDuration::Mixed) => "DURATION · MIXED",
             _ => "DURATION",
         };
-        p.text(text, right + 10, 246, 230, 28, p.fonts.small, TEXT, DT_LEFT);
+        p.text(
+            text,
+            right + 10,
+            246 - scroll,
+            230,
+            28,
+            p.fonts.small,
+            TEXT,
+            DT_LEFT,
+        );
+        p.fill(right + 20, 290 - scroll, 200, 3, TEXT);
         for (index, label) in ["SLOW", "MEDIUM", "FAST"].iter().enumerate() {
-            button(
-                p,
-                label,
-                right + 10 + index as i32 * 76,
-                278,
-                70,
-                super::Control::Spectrum(Control::Duration(index)),
-                enabled && properties.duration.is_some(),
+            let selected = properties.duration_drag == Some(index)
+                || (properties.duration_drag.is_none()
+                    && properties.duration
+                        == Some(SelectedDuration::Uniform(SPECTRUM_DURATIONS[index])));
+            p.fill(
+                right + 16 + index as i32 * 100,
+                284 - scroll,
+                9,
+                16,
+                if selected { GREEN } else { TEXT },
             );
-            if properties.duration == Some(SelectedDuration::Uniform(SPECTRUM_DURATIONS[index])) {
-                p.fill(right + 10 + index as i32 * 76, 305, 70, 2, GREEN);
-            }
+            p.text(
+                label,
+                right + index as i32 * 76,
+                302 - scroll,
+                76,
+                16,
+                p.fonts.small,
+                TEXT,
+                DT_CENTER,
+            );
         }
     }
     p.text(
@@ -455,7 +551,7 @@ pub(super) unsafe fn paint(p: &mut Painter, view: &View, right: i32) {
             "GRADIENT PRESETS"
         },
         right + 10,
-        316,
+        316 - scroll,
         230,
         28,
         p.fonts.small,
@@ -473,7 +569,7 @@ pub(super) unsafe fn paint(p: &mut Painter, view: &View, right: i32) {
             p,
             &(index + 1).to_string(),
             right + 10 + index as i32 * 46,
-            347,
+            347 - scroll,
             40,
             super::Control::Spectrum(Control::Preset(index)),
             enabled,
@@ -488,13 +584,18 @@ pub(super) unsafe fn paint(p: &mut Painter, view: &View, right: i32) {
                 "MIXED · CHOOSE A PRESET".into()
             }
         }
-        _ if count > 0 => format!("STOP {} OF {} · % / {}", properties.index + 1, count, properties.mode.label()),
+        _ if count > 0 => format!(
+            "STOP {} OF {} · % / {}",
+            properties.index + 1,
+            count,
+            properties.mode.label()
+        ),
         _ => "CHOOSE A GRADIENT".into(),
     };
     p.text(
         &text,
         right + 10,
-        462,
+        462 - scroll,
         230,
         18,
         p.fonts.small,
@@ -505,7 +606,7 @@ pub(super) unsafe fn paint(p: &mut Painter, view: &View, right: i32) {
         p,
         "PREVIOUS",
         right + 10,
-        409,
+        409 - scroll,
         105,
         super::Control::Spectrum(Control::Stop(-1)),
         count > 0 && properties.index > 0,
@@ -514,7 +615,7 @@ pub(super) unsafe fn paint(p: &mut Painter, view: &View, right: i32) {
         p,
         "NEXT",
         right + 125,
-        409,
+        409 - scroll,
         105,
         super::Control::Spectrum(Control::Stop(1)),
         properties.index + 1 < count,
@@ -523,7 +624,7 @@ pub(super) unsafe fn paint(p: &mut Painter, view: &View, right: i32) {
         p,
         "APPLY STOP",
         right + 10,
-        480,
+        480 - scroll,
         130,
         super::Control::Spectrum(Control::ApplyStop(false)),
         enabled && count > 0,
@@ -532,7 +633,7 @@ pub(super) unsafe fn paint(p: &mut Painter, view: &View, right: i32) {
         p,
         "NONE",
         right + 150,
-        480,
+        480 - scroll,
         80,
         super::Control::Spectrum(Control::ApplyStop(true)),
         enabled && count > 0,
@@ -541,7 +642,7 @@ pub(super) unsafe fn paint(p: &mut Painter, view: &View, right: i32) {
         p,
         "ADD STOP",
         right + 10,
-        516,
+        516 - scroll,
         105,
         super::Control::Spectrum(Control::Add),
         enabled
@@ -557,11 +658,16 @@ pub(super) unsafe fn paint(p: &mut Painter, view: &View, right: i32) {
         p,
         "DELETE",
         right + 125,
-        516,
+        516 - scroll,
         105,
         super::Control::Spectrum(Control::Delete),
         enabled && count > 2,
     );
+    let tile_y = if view.effect() == Some("spectrum") {
+        582 - scroll
+    } else {
+        588 - scroll
+    };
     // Default colour tiles recovered from shared Studio picker606 (x).
     for (i, color) in [
         None,
@@ -581,13 +687,13 @@ pub(super) unsafe fn paint(p: &mut Painter, view: &View, right: i32) {
             p,
             if color.is_none() { "X" } else { "" },
             x,
-            588,
+            tile_y,
             24,
             super::Control::Spectrum(Control::Color(color)),
             enabled && count > 0,
         );
         if let Some(color) = color {
-            p.fill(x + 3, 592, 18, 20, color);
+            p.fill(x + 3, tile_y + 4, 18, 20, color);
         }
     }
     for (i, mode) in [ColorMode::Hex, ColorMode::Rgb, ColorMode::Hsv]
@@ -598,28 +704,87 @@ pub(super) unsafe fn paint(p: &mut Painter, view: &View, right: i32) {
             p,
             mode.label(),
             right + 10 + i as i32 * 76,
-            552,
+            552 - scroll,
             70,
             super::Control::Spectrum(Control::ColorMode(mode)),
             count > 0,
         );
         if properties.mode == mode {
-            p.fill(right + 10 + i as i32 * 76, 579, 70, 2, GREEN);
+            p.fill(right + 10 + i as i32 * 76, 579 - scroll, 70, 2, GREEN);
         }
     }
     if let Some(stops) = properties.stops() {
-        paint_strip(p, properties, stops, right + 15);
+        paint_strip(p, properties, stops, right + 15, 378 - scroll);
+    }
+    if view.effect() == Some("spectrum") {
+        button(
+            p,
+            "ERASE SELECTION",
+            right + 10,
+            646 - scroll,
+            220,
+            super::Control::Erase,
+            enabled,
+        );
+    }
+    if view.effect() == Some("spectrum") {
+        p.fill(right + 10, 618 - scroll, 220, 4, TEXT);
+        if let Some(stops) = properties.stops() {
+            for (index, stop) in stops.iter().enumerate() {
+                let position = if index == properties.index && properties.drag.is_some() {
+                    properties.drag.map_or(stop.position, |drag| drag.position)
+                } else {
+                    stop.position
+                };
+                let x = right + 10 + i32::from(position) * 220 / 100;
+                p.fill(
+                    x - 4,
+                    610 - scroll,
+                    9,
+                    20,
+                    if index == properties.index {
+                        GREEN
+                    } else {
+                        stop.color.unwrap_or(0x777777)
+                    },
+                );
+            }
+        }
+    }
+    if view.effect() == Some("spectrum") {
+        paragraph(
+            p,
+            &view.status,
+            right + 10,
+            684 - scroll,
+            230,
+            60,
+            if view.failed { 0xfd4949 } else { MUTED },
+        );
+    }
+    if view.effect() == Some("spectrum") && bottom < SPECTRUM_CONTENT_BOTTOM {
+        let visible = (bottom - 246).max(1);
+        let thumb = (visible * visible / (SPECTRUM_CONTENT_BOTTOM - 246)).clamp(16, visible);
+        p.fill(right + 244, 246, 4, visible, 0x303030);
+        p.fill(
+            right + 244,
+            246 + (visible - thumb) * scroll / (SPECTRUM_CONTENT_BOTTOM - bottom).max(1),
+            4,
+            thumb,
+            0x777777,
+        );
+    }
+    RestoreDC(p.dc, saved);
+    // Offscreen controls must never receive clicks above the property body.
+    let top = p.px(246);
+    let bottom = p.px(bottom);
+    for hit in &mut p.hits[first_hit..] {
+        hit.rect.top = hit.rect.top.max(top);
+        hit.rect.bottom = hit.rect.bottom.min(bottom);
     }
 }
 
-pub(super) fn visible(view: &View) -> bool {
-    view.open
-        && (view.effect() == Some("spectrum")
-            || (view.effect() == Some("wave") && view.wave.gradient_open)
-            || (view.effect() == Some("audio") && view.audio.gradient_open)
-            || (view.effect() == Some("starlight") && view.starlight.gradient_open)
-            || (view.effect() == Some("breathing") && view.breathing_gradient))
-}
+// Stable selection under crossing and equal-position stops.
 fn moved_index(stops: &[GradientStop], index: usize, position: u8) -> usize {
     stops
         .iter()
@@ -629,9 +794,14 @@ fn moved_index(stops: &[GradientStop], index: usize, position: u8) -> usize {
         })
         .count()
 }
-unsafe fn paint_strip(p: &mut Painter, properties: &Properties, stops: &[GradientStop], left: i32) {
-    // Checkerboard denotes None, distinct from black. This is an authoring
-    // swatch, not a replacement for effect-specific preview interpolation.
+unsafe fn paint_strip(
+    p: &mut Painter,
+    properties: &Properties,
+    stops: &[GradientStop],
+    left: i32,
+    top: i32,
+) {
+    // Checkerboard denotes None; swatches are authoring feedback, not runtime math.
     for x in 0..210 {
         let percent = x as f64 / 209.0 * 100.0;
         let before = stops
@@ -651,31 +821,36 @@ unsafe fn paint_strip(p: &mut Painter, properties: &Properties, stops: &[Gradien
                     .clamp(0.0, 1.0)
             };
             let channel = |shift: u32| {
-                let a = ((a_color >> shift) & 255u32) as f64;
-                let b = ((b_color >> shift) & 255u32) as f64;
+                let a = ((a_color >> shift) & 255) as f64;
+                let b = ((b_color >> shift) & 255) as f64;
                 (a + (b - a) * fraction).round() as u32
             };
             Some(channel(16) << 16 | channel(8) << 8 | channel(0))
         });
         for y in 0..2 {
-            let shade = color.unwrap_or(if (x / 6 + y) % 2 == 0 {
-                0x666666
-            } else {
-                0x333333
-            });
-            p.fill(left + x, 378 + y * 8, 1, 8, shade);
+            p.fill(
+                left + x,
+                top + y * 8,
+                1,
+                8,
+                color.unwrap_or(if (x / 6 + y) % 2 == 0 {
+                    0x666666
+                } else {
+                    0x333333
+                }),
+            );
         }
     }
     for (index, stop) in stops.iter().enumerate() {
         let position = if index == properties.index {
-            properties.drag.unwrap_or(stop.position)
+            properties.drag.map_or(stop.position, |drag| drag.position)
         } else {
             stop.position
         };
-        let x = left + (position as f64 * 209.0 / 100.0).round() as i32;
+        let x = left + (f64::from(position) * 209.0 / 100.0).round() as i32;
         p.fill(
             x - 4,
-            394,
+            top + 16,
             9,
             10,
             if index == properties.index {
@@ -684,30 +859,85 @@ unsafe fn paint_strip(p: &mut Painter, properties: &Properties, stops: &[Gradien
                 TEXT
             },
         );
-        p.fill(x - 2, 396, 5, 6, 0);
+        p.fill(x - 2, top + 18, 5, 6, 0);
     }
 }
+
+fn inspector_scroll(view: &View) -> i32 {
+    if view.effect() == Some("spectrum") {
+        view.spectrum.scroll
+    } else {
+        0
+    }
+}
+fn maximum_scroll(bottom: i32) -> i32 {
+    (SPECTRUM_CONTENT_BOTTOM - bottom).max(0)
+}
+
+pub(super) fn visible(view: &View) -> bool {
+    view.open
+        && (view.effect() == Some("spectrum")
+            || (view.effect() == Some("wheel") && view.wheel.gradient_open)
+            || (view.effect() == Some("wave") && view.wave.gradient_open)
+            || (view.effect() == Some("audio") && view.audio.gradient_open)
+            || (view.effect() == Some("starlight") && view.starlight.gradient_open)
+            || (view.effect() == Some("breathing")
+                && view.breathing_gradient
+                && !view.breathing_playback))
+}
 pub(super) fn dragging(view: &View) -> bool {
-    view.spectrum.drag.is_some()
+    view.spectrum.drag.is_some() || view.spectrum.duration_drag.is_some()
 }
 pub(super) unsafe fn cancel_drag(state: &mut State) {
-    if state.studio.spectrum.drag.take().is_some() {
+    let stop = state.studio.spectrum.drag.take().is_some();
+    let duration = state.studio.spectrum.duration_drag.take().is_some();
+    if stop {
+        state.studio.spectrum.field_values();
+    }
+    if stop || duration {
         ReleaseCapture();
         InvalidateRect(state.hwnd, null(), 0);
     }
 }
-/// A gesture changes only view state until release: one completed drag equals
-/// one regional edit/history entry; capture loss leaves the document untouched.
+pub(super) fn wheel(state: &mut State, delta: i32, x: i32) -> bool {
+    if !visible(&state.studio)
+        || state.studio.effect() != Some("spectrum")
+        || x < (state.width as f32 / state.scale) as i32 - 250
+    {
+        return false;
+    }
+    let max = maximum_scroll(state.content_bottom_css() as i32 - 40);
+    state.studio.spectrum.scroll =
+        (state.studio.spectrum.scroll + if delta < 0 { 48 } else { -48 }).clamp(0, max);
+    true
+}
+fn stop_position(track: StopTrack, x: f64, right: i32) -> u8 {
+    match track {
+        StopTrack::Shared => ((x - f64::from(right + 15)) / 209.0 * 100.0)
+            .round()
+            .clamp(0.0, 100.0) as u8,
+        // Keep Spectrum's established integer track mapping, including 90 at x+210.
+        StopTrack::Spectrum => (((x as i32 - (right + 10)) * 100 / 220).clamp(0, 100)) as u8,
+    }
+}
+/// Captured gestures update view state only. Release makes one stable Move or
+/// duration edit; Escape/capture loss leaves the document and history unchanged.
 pub(super) unsafe fn pointer(state: &mut State, message: u32, lparam: isize) -> bool {
     if matches!(message, WM_CANCELMODE | WM_CAPTURECHANGED) {
-        if state.studio.spectrum.drag.take().is_some() {
-            if message == WM_CANCELMODE {
-                ReleaseCapture();
-            }
-            InvalidateRect(state.hwnd, null(), 0);
-            return true;
+        let stop = state.studio.spectrum.drag.take().is_some();
+        let duration = state.studio.spectrum.duration_drag.take().is_some();
+        if !(stop || duration) {
+            return false;
         }
-        return false;
+        if stop {
+            state.studio.spectrum.field_values();
+        }
+        if message == WM_CANCELMODE {
+            ReleaseCapture();
+        }
+        state.rebuild_fields();
+        InvalidateRect(state.hwnd, null(), 0);
+        return true;
     }
     if !visible(&state.studio)
         || state.studio.layer_menu
@@ -722,47 +952,105 @@ pub(super) unsafe fn pointer(state: &mut State, message: u32, lparam: isize) -> 
     {
         return false;
     }
-    let x = (lparam as u32 & 0xffff) as i16 as f64 / state.scale as f64;
-    let y = ((lparam as u32 >> 16) & 0xffff) as i16 as f64 / state.scale as f64;
-    let left = state.width as f64 / state.scale as f64 - 235.0;
-    let position = ((x - left) / 209.0 * 100.0).round().clamp(0.0, 100.0) as u8;
-    match message {
-        WM_LBUTTONDOWN
-            if (374.0..=406.0).contains(&y) && (left - 5.0..=left + 214.0).contains(&x) =>
-        {
-            let Some(stops) = state.studio.spectrum.stops() else {
-                return false;
-            };
-            let Some((index, stop)) = stops
-                .iter()
-                .enumerate()
-                .min_by_key(|(_, s)| s.position.abs_diff(position))
-            else {
-                return false;
-            };
-            let old_position = stop.position;
-            state.studio.spectrum.index = index;
-            state.studio.spectrum.field_values();
-            state.studio.spectrum.drag = Some(old_position);
-            SetCapture(state.hwnd);
-            state.rebuild_fields();
-        }
-        WM_MOUSEMOVE if state.studio.spectrum.drag.is_some() => {
-            state.studio.spectrum.drag = Some(position);
-        }
-        WM_LBUTTONUP if state.studio.spectrum.drag.take().is_some() => {
-            ReleaseCapture();
-            if state
-                .studio
-                .spectrum
-                .stops()
-                .and_then(|s| s.get(state.studio.spectrum.index))
-                .is_some_and(|s| s.position != position)
-            {
-                super::action(state, super::Control::Spectrum(Control::Move(position)));
+    let x = f64::from((lparam as u32 & 0xffff) as i16) / f64::from(state.scale);
+    let y = f64::from(((lparam as u32 >> 16) & 0xffff) as i16) / f64::from(state.scale);
+    let right = (state.width as f32 / state.scale) as i32 - 250;
+    let scroll = inspector_scroll(&state.studio);
+    let bottom = state.content_bottom_css() as i32 - 40;
+    let spectrum = state.studio.effect() == Some("spectrum");
+    let duration_index = (((x as i32 - (right + 10) + 40) / 100).clamp(0, 2)) as usize;
+    if state.studio.spectrum.duration_drag.is_some() {
+        match message {
+            WM_MOUSEMOVE => state.studio.spectrum.duration_drag = Some(duration_index),
+            WM_LBUTTONUP => {
+                state.studio.spectrum.duration_drag = None;
+                ReleaseCapture();
+                state.action(Action::Studio(super::Control::Spectrum(Control::Duration(
+                    duration_index,
+                ))));
+                redraw(state);
+                return true;
             }
+            _ => return false,
         }
-        _ => return false,
+        InvalidateRect(state.hwnd, null(), 0);
+        return true;
+    }
+    if let Some(drag) = state.studio.spectrum.drag {
+        let position = stop_position(drag.track, x, right);
+        match message {
+            WM_MOUSEMOVE => {
+                state.studio.spectrum.drag = Some(StopDrag { position, ..drag });
+                state.studio.spectrum.position = position.to_string();
+            }
+            WM_LBUTTONUP => {
+                state.studio.spectrum.drag = None;
+                ReleaseCapture();
+                if position != drag.original {
+                    super::action(state, super::Control::Spectrum(Control::Move(position)));
+                } else {
+                    state.studio.spectrum.field_values();
+                    state.rebuild_fields();
+                }
+            }
+            _ => return false,
+        }
+        InvalidateRect(state.hwnd, null(), 0);
+        return true;
+    }
+    if message != WM_LBUTTONDOWN || y < 246.0 || y >= f64::from(bottom) {
+        return false;
+    }
+    if spectrum
+        && (f64::from(278 - scroll)..f64::from(302 - scroll)).contains(&y)
+        && (f64::from(right + 10)..=f64::from(right + 230)).contains(&x)
+    {
+        state.studio.spectrum.duration_drag = Some(duration_index);
+        SetCapture(state.hwnd);
+        InvalidateRect(state.hwnd, null(), 0);
+        return true;
+    }
+    let track = if (f64::from(374 - scroll)..=f64::from(406 - scroll)).contains(&y)
+        && (f64::from(right + 10)..=f64::from(right + 229)).contains(&x)
+    {
+        StopTrack::Shared
+    } else if spectrum
+        && (f64::from(610 - scroll)..=f64::from(634 - scroll)).contains(&y)
+        && (f64::from(right + 5)..=f64::from(right + 235)).contains(&x)
+    {
+        StopTrack::Spectrum
+    } else {
+        return false;
+    };
+    let position = stop_position(track, x, right);
+    let nearest = state.studio.spectrum.stops().and_then(|stops| {
+        stops
+            .iter()
+            .enumerate()
+            .filter(|(_, s)| match track {
+                StopTrack::Shared => true,
+                StopTrack::Spectrum => {
+                    (f64::from(right + 10 + i32::from(s.position) * 220 / 100) - x).abs() <= 6.0
+                }
+            })
+            .min_by_key(|(_, s)| s.position.abs_diff(position))
+            .map(|(i, s)| (i, s.position))
+    });
+    if let Some((index, original)) = nearest {
+        state.studio.spectrum.index = index;
+        state.studio.spectrum.field_values();
+        state.studio.spectrum.drag = Some(StopDrag {
+            original,
+            position: original,
+            track,
+        });
+        SetCapture(state.hwnd);
+        state.rebuild_fields();
+    } else if matches!(track, StopTrack::Spectrum) {
+        state.studio.spectrum.position = position.to_string();
+        state.action(Action::Studio(super::Control::Spectrum(Control::Add)));
+    } else {
+        return false;
     }
     InvalidateRect(state.hwnd, null(), 0);
     true
@@ -782,6 +1070,17 @@ mod tests {
         assert_eq!(moved_index(&stops, 0, 30), 0);
         assert_eq!(moved_index(&stops, 3, 30), 3);
         assert_eq!(moved_index(&stops, 1, 30), 1);
+    }
+    #[test]
+    fn crossed_stop_retains_identity_in_stable_order() {
+        let stops = [10, 40, 40, 90].map(|position| GradientStop {
+            position,
+            color: None,
+        });
+        assert_eq!(moved_index(&stops, 0, 80), 2);
+        assert_eq!(moved_index(&stops, 3, 40), 3);
+        assert_eq!(moved_index(&stops, 0, 40), 0);
+        assert_eq!(moved_index(&stops, 2, 40), 2);
     }
     #[test]
     fn all_spectrum_presets_match_independently_extracted_source_data() {

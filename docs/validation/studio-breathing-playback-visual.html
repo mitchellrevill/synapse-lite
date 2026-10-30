@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>Breathing playback visual evidence</title>
+<style>body{font:16px system-ui;background:#151515;color:#eee;margin:28px;line-height:1.5}a{color:#82df73}figure{margin:0}img{width:100%;height:auto;border:1px solid #555}section{display:grid;grid-template-columns:1fr 1fr;gap:24px}figcaption{margin:8px 0 24px}h1{font-size:24px}@media(max-width:900px){section{grid-template-columns:1fr}}</style>
+<h1>Studio Breathing playback</h1>
+<p>The two native images capture the owned test window through Windows PrintWindow,
+with simulated devices and an isolated profile store. These accompany code assertions
+for save, repeat count, reset, undo/redo, read-only refusal and zero device requests.</p>
+<section>
+<figure><img src="images/studio-breathing-playback-window.png" alt="Native random Breathing with After and repeat count two selected"><figcaption>Implemented: random color, automatic start, After end, two cycles. Switching Never→After restored the last edited count.</figcaption></figure>
+<figure><img src="images/studio-breathing-input-gated-window.png" alt="Native selected-key start and toggle end with a fully visible input ownership refusal"><figcaption>Selected-key start and toggle are saved. Production input playback refuses admission; the complete message fits above Save.</figcaption></figure>
+</section>
+<h2>Retained stock context</h2>
+<p>This inventory capture shows <strong>Spectrum Cycling</strong>, not Breathing.
+It establishes the Studio shell and property styling only. No matching stock Breathing
+playback screenshot was available in the retained inventory. The current native page
+uses buttons and a separate property page; stock uses dropdowns and a numeric stepper.
+Shell geometry, chassis/key legends and controls visibly differ. Pixel parity is open.</p>
+<figure><img src="images/studio-breathing-stock-context.jpg" alt="Retained stock Studio Spectrum properties used only as shell context"><figcaption>Unmodified inventory capture: stock-studio-selected-leds-properties-0.jpg.</figcaption></figure>
+</html>

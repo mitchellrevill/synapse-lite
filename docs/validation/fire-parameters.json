@@ -1,0 +1,28 @@
+{
+  "date": "2026-10-30",
+  "published_base": "6149f7a9422ae93322365ed12df46ab681dc40a8",
+  "native_engine_sha256": "cd9fc2a61ff920b9b73e1f5e27632020e2f8586f443e426a875ad3b042b714fa",
+  "reference_type": "independent static-instruction reconstruction, not vendor execution",
+  "variable_parameter_reference_cases": 10,
+  "variable_parameter_intrinsic_frames": 4588,
+  "variable_parameter_intensity_bytes": 738668,
+  "existing_mapped_fire_cycle_cases": 9,
+  "release_fire_tests_passed": 12,
+  "debug_studio_preview_tests_passed": 16,
+  "release_native_window_tests_passed": 1,
+  "offline_release_workspace_build_passed": true,
+  "cargo_jobs": 1,
+  "native_interaction_evidence": "fire-native-interaction.json",
+  "local_preview_capture_sha256": "f7c5596d7ccb31dd85e7ff03370e66dc04e9db0ef50f7325d349d7b02e5797b9",
+  "ui_layout_changed": false,
+  "stock_pixel_parity_claimed": false,
+  "hardware_acceptance_claimed": false,
+  "complete_build_memory_acceptance_claimed": false,
+  "remaining": [
+    "Nonzero native Mode and cycle counts below -1 remain refused",
+    "Studio's source codec fixes Rate160/Seed100/Mode0/infinite; only its existing Hot/Cold/None controls apply",
+    "Existing Studio dropdown/widget fidelity remains unfinished",
+    "Source live random-stream/dispatch phase, physical output and recovery remain unverified",
+    "Complete-build total working-set/private-memory acceptance below 100000000 bytes remains unverified"
+  ]
+}

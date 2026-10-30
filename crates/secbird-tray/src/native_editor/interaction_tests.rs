@@ -31,6 +31,10 @@ mod studio_clipboard;
 mod chroma;
 #[path="settings_interaction_tests.rs"]
 mod settings;
+#[path="studio_wheel_interaction_tests.rs"]
+mod studio_wheel;
+#[path="studio_effects_integration_tests.rs"]
+mod studio_effects;
 use super::*;
 use secbird_core::{commands as cmd, sim::Sim, Store};
 use std::time::Instant;
@@ -346,6 +350,15 @@ unsafe fn lighting_click(hwnd: HWND, x: f64, y: f64, scale: f64) {
     SendMessageW(hwnd, WM_LBUTTONDOWN, 1, point);
     SendMessageW(hwnd, WM_LBUTTONUP, 0, point);
     redraw(hwnd);
+}
+
+unsafe fn studio_add_effect(hwnd:HWND,effect:&str,scale:f64)->Result<(),String> {
+    lighting_click(hwnd,775.,100.,scale);
+    let mut position=json!(effect);
+    SendMessageW(hwnd,STUDIO_TEST,studio_view::TEST_EFFECT_POSITION,&mut position as *mut Value as isize);
+    let x=position["x"].as_f64().ok_or_else(||format!("Add {effect} is missing from the painted menu"))?;
+    let y=position["y"].as_f64().ok_or_else(||format!("Add {effect} has no menu position"))?;
+    lighting_click(hwnd,x,y,scale);Ok(())
 }
 
 unsafe fn native_click(hwnd: HWND, x: f64, y: f64, scale: f64) {
@@ -2298,3 +2311,5 @@ mod studio_presets;
 
 #[path="studio_audio_interaction_tests.rs"]
 mod audio;
+#[path="studio_tidal_interaction_tests.rs"]
+mod tidal;

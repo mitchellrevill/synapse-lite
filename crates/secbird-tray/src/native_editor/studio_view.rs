@@ -15,6 +15,10 @@ mod library;
 mod playback;
 #[path = "studio_spectrum.rs"]
 mod spectrum;
+#[path = "studio_breathing.rs"]
+mod breathing;
+#[path = "studio_tidal.rs"]
+mod tidal;
 #[path = "studio_reactive.rs"]
 mod reactive;
 #[path = "studio_audio.rs"]
@@ -25,6 +29,8 @@ mod ambient;
 mod starlight;
 #[path = "studio_wave.rs"]
 mod wave;
+#[path = "studio_wheel.rs"]
+mod wheel;
 #[path = "studio_layers.rs"]
 mod layer_tools;
 #[path = "studio_clipboard.rs"]
@@ -63,6 +69,8 @@ const REMAP_DIALOG: usize = 9;
 pub(super) const TEST_NAVIGATION: usize = 10;
 #[cfg(test)]
 pub(super) const TEST_REMAP: usize = 11;
+#[cfg(test)]
+pub(super) const TEST_EFFECT_POSITION: usize = 12;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum DialogRoute { File, Unsaved, Presets, Library, QuickSelection, Remap }
@@ -119,10 +127,12 @@ pub(super) enum Control {
     ClearColor(bool),
     Spectrum(spectrum::Control),
     Wave(wave::Control),
+    Wheel(wheel::Control),
     Starlight(starlight::Control),
     Reactive(reactive::Control),
     Audio(audio::Control),
     Ambient(ambient::Control),
+    Tidal(tidal::Control),
     Layers(layer_tools::Control),
     Properties(property_tools::Control),
     AddPreset,
@@ -133,6 +143,7 @@ pub(super) enum Control {
     StopDevice,
     BreathingDuration(usize),
     BreathingGradient,
+    Breathing(breathing::Control),
     Erase,
 }
 #[derive(Clone, Copy)]
@@ -170,11 +181,15 @@ pub(super) struct View {
     selected_cold: Option<SelectedColor>,
     spectrum: spectrum::Properties,
     wave: wave::Properties,
+    wheel: wheel::Properties,
     starlight: starlight::Properties,
     reactive: reactive::Properties,
     audio: audio::Properties,
     ambient: ambient::Properties,
+    tidal: tidal::Properties,
     breathing_gradient: bool,
+    breathing_playback: bool,
+    breathing: breathing::Properties,
     playback: playback::Playback,
     output: output::View,
     dropdown: bool,
@@ -336,6 +351,8 @@ impl View {
         self.layer_menu = false;
         self.properties = property_tools::View::default();
         self.breathing_gradient = false;
+        self.breathing_playback = false;
+        self.breathing = breathing::Properties::default();
         self.renaming = false;
         self.canvas = studio_canvas::Canvas::load(raw, &assets_dir());
         match Draft::open(raw) {
@@ -381,7 +398,7 @@ impl View {
         self.effect() == Some("fire")
     }
     fn is_breathing(&self) -> bool { self.effect()==Some("breathing") }
-    fn has_two_colors(&self) -> bool { self.is_fire() || (self.is_breathing() && !self.breathing_gradient) }
+    fn has_two_colors(&self) -> bool { self.is_fire() || (self.is_breathing() && !self.breathing_gradient && !self.breathing_playback) }
     fn effect(&self) -> Option<&str> {
         self.draft
             .as_ref()?
@@ -392,7 +409,7 @@ impl View {
             .as_deref()
     }
     fn color_property(&self, cold: bool) -> Option<ColorProperty> {
-        if self.is_breathing() && self.breathing_gradient {return None;}
+        if self.is_breathing() && (self.breathing_gradient || self.breathing_playback) {return None;}
         match (self.effect()?, cold) {
             ("static", false) => Some(ColorProperty::Static),
             ("fire", false) => Some(ColorProperty::FireHot),
@@ -406,12 +423,15 @@ impl View {
 
 pub(super) fn selection_changed(state: &mut State) {
     let view = &mut state.studio;
+    breathing::refresh(view);
     spectrum::refresh(view);
     wave::refresh(view);
+    wheel::refresh(view);
     starlight::refresh(view);
     reactive::refresh(view);
     audio::refresh(view);
     ambient::refresh(view);
+    tidal::refresh(view);
     view.selected_color = None;
     view.selected_cold = None;
     let Some(property) = view.color_property(false) else {
@@ -724,10 +744,13 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
         Control::StopDevice => unreachable!("handled before busy file operations"),
         Control::Spectrum(control) => spectrum::action(state, control),
         Control::Wave(control) => wave::action(state, control),
+        Control::Wheel(control) => wheel::action(state, control),
         Control::Starlight(control) => starlight::action(state, control),
         Control::Reactive(control) => reactive::action(state, control),
         Control::Audio(control) => audio::action(state, control),
         Control::Ambient(control) => ambient::action(state, control),
+        Control::Breathing(control) => breathing::action(state, control),
+        Control::Tidal(control) => tidal::action(state, control),
         Control::BreathingDuration(index) => {
             let result=(|| -> Result<(),String> {
                 let view=&mut state.studio;
@@ -1137,10 +1160,12 @@ pub(super) unsafe fn rebuild_fields(state: &mut State) {
     if let Some(&edit) = state.fields.get(&ZOOM) { SendMessageW(edit, EM_SETLIMITTEXT, 6, 0); }
     spectrum::fields(state);
     wave::fields(state);
+    wheel::fields(state);
     starlight::fields(state);
     reactive::fields(state);
     audio::fields(state);
     ambient::fields(state);
+    tidal::fields(state);
     if state.studio.color_property(false).is_some() {
         let text = state.studio.color.clone();
         let right = (state.width as f32 / state.scale) as i32 - 250;
@@ -1191,8 +1216,11 @@ pub(super) unsafe fn rebuild_fields(state: &mut State) {
     }
 }
 pub(super) fn command(state: &mut State, id: u16, notification: u16) -> bool {
+    if !state.studio.open {return false;}
+    if wheel::command(state,id,notification) {return true;}
     if wave::command(state,id,notification) {return true;}
     if starlight::command(state,id,notification) {return true;}
+    if tidal::command(state,id,notification) {return true;}
     if reactive::command(state,id,notification) {return true;}
     if audio::command(state,id,notification) {return true;}
     if ambient::command(state,id,notification) {return true;}
@@ -1238,9 +1266,11 @@ pub(super) fn key(state: &State, key: usize, control: bool, edit: bool) -> Optio
         (27, _) if state.studio.composition_renaming => Some(Control::Library(library::Control::CancelRename)),
         (13, _) if state.studio.renaming => Some(Control::CommitRename),
         (13, _) if edit && audio::enter(state).is_some() => audio::enter(state).map(Control::Audio),
+        (13, _) if edit && tidal::enter(state).is_some() => tidal::enter(state).map(Control::Tidal),
         (13, _) if edit && reactive::has_focus(state) => Some(Control::Reactive(reactive::Control::Color(false))),
         (13, _) if edit && ambient::focused_control(state).is_some() => ambient::focused_control(state).map(Control::Ambient),
         (13, _) if edit && starlight::has_focus(state) => Some(Control::Starlight(starlight::Control::Density)),
+        (13, _) if edit && wheel::enter(state).is_some() => Some(Control::Wheel(wheel::enter(state).unwrap())),
         (13, _) if edit && wave::has_focus(state) => Some(Control::Wave(wave::Control::Motion)),
         (13, _) if edit && spectrum::has_focus(state) => {
             Some(Control::Spectrum(spectrum::Control::ApplyStop(false)))
@@ -1276,6 +1306,8 @@ pub(super) unsafe fn wheel(state: &mut State, delta: i32, mut point: POINT) -> b
         state.studio.profile_scroll = (state.studio.profile_scroll as i32
             - if delta > 0 { 1 } else { -1 })
         .clamp(0, count.saturating_sub(7) as i32) as usize;
+    } else if spectrum::wheel(state, delta, (point.x as f32 / state.scale) as i32) {
+        // Rebuild child fields at their scrolled positions.
     } else if (point.x as f32 / state.scale) < 250.0 {
         let count = state.studio.visible_ids().len();
         let visible = ((state.content_bottom_css() - 168.0) / 40.0).max(1.0) as usize;
@@ -1611,6 +1643,8 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
             Control::Erase,
             enabled,
         );
+    } else if view.is_breathing() && view.breathing_playback {
+        breathing::paint(p,view,right);
     } else if view.is_breathing() && view.breathing_gradient {
         spectrum::paint(p,view,right);
     } else if view.has_two_colors() {
@@ -1662,15 +1696,19 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
             view.editable() && view.canvas.count() > 0,
         );
     } else if view.effect() == Some("spectrum") {
-        spectrum::paint(p, view, right);
+        spectrum::paint_scrolled(p, view, right, height-40);
     } else if view.effect() == Some("audio") {
         audio::paint(p,view,right);
+    } else if view.effect() == Some("tidal") {
+        tidal::paint(p,view,right);
     } else if view.effect() == Some("reactive") {
         reactive::paint(p,view,right);
     } else if view.effect() == Some("ambient") {
         ambient::paint(p,view,right);
     } else if view.effect() == Some("starlight") {
         starlight::paint(p,view,right);
+    } else if view.effect() == Some("wheel") {
+        wheel::paint(p,view,right);
     } else if view.effect() == Some("wave") {
         wave::paint(p,view,right);
     } else {
@@ -1687,9 +1725,10 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         );
     }
     if view.is_breathing() && !view.breathing_gradient && !view.renaming {
-        button(p,"CUSTOM GRADIENT",right+10,220,220,Control::BreathingGradient,view.editable());
+        if !view.breathing_playback {button(p,"GRADIENT",right+10,220,106,Control::BreathingGradient,view.editable());}
+        button(p,if view.breathing_playback {"BACK TO COLOURS"}else{"PLAYBACK"},right+if view.breathing_playback{10}else{124},220,if view.breathing_playback{220}else{106},Control::Breathing(breathing::Control::Page),view.editable());
     }
-    if view.is_breathing() && !view.breathing_gradient {
+    if view.is_breathing() && !view.breathing_gradient && !view.breathing_playback {
         p.text("SPEED · SELECT LEDS",right+10,500,230,25,p.fonts.small,TEXT,DT_LEFT);
         for (index,title) in ["SLOW","NORMAL","FAST"].iter().enumerate() {
             button(p,title,right+10+index as i32*77,530,72,Control::BreathingDuration(index),view.editable() && view.canvas.count()>0);
@@ -1709,21 +1748,23 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
     } else {
         &view.status
     };
+    if view.effect()!=Some("spectrum") {
     paragraph(
         p,
         message,
-        right + 10,
-        if spectrum::visible(view) { 628 } else if view.effect() == Some("ambient") { 614 } else if view.is_breathing() && !view.breathing_gradient { 566 } else if matches!(view.effect(),Some("breathing"|"spectrum"|"wave"|"starlight"|"reactive"|"audio")) {
+        if view.effect()==Some("tidal") {270} else {right + 10},
+        if view.effect()==Some("tidal") {height-112} else if spectrum::visible(view) {628} else if view.is_breathing() && view.breathing_playback {592} else if view.effect() == Some("ambient") { 614 } else if view.is_breathing() && !view.breathing_gradient { 566 } else if matches!(view.effect(),Some("breathing"|"spectrum"|"wheel"|"wave"|"starlight"|"reactive"|"audio")) {
             590
         } else if view.is_fire() {
             506
         } else {
             400
         },
-        230,
-        if spectrum::visible(view) { (height - 40 - 628).max(0) } else { 130 },
+        if view.effect()==Some("tidal") {(width-540).max(1)} else {230},
+        if view.effect()==Some("tidal") {60} else if spectrum::visible(view) {(height-40-628).max(0)} else if view.is_breathing() && view.breathing_playback {80} else {130},
         if view.failed { 0xfd4949 } else { MUTED },
     );
+    }
     layer_tools::paint(state, p);
     button(p,"REMAP",390,172,90,Control::Remap,view.editable());
     button(p,"ADD DEVICE",270,172,110,Control::AddPreset,
@@ -1776,6 +1817,15 @@ pub(super) fn diagnostics(state: &State) -> Value {
 #[cfg(test)]
 pub(super) unsafe fn add_preset_test(state:&mut State,key:(u16,u16,u16)) { preset_picker::add_test(state,key); }
 
+#[cfg(test)]
+pub(super) fn add_effect_position_test(state:&State,name:&str)->Value {
+    state.hits.iter().find_map(|hit| match &hit.action {
+        Action::Studio(Control::Layers(layer_tools::Control::Add(effect))) if format!("{effect:?}")==name =>
+            Some(json!({"x":f64::from(hit.rect.left+hit.rect.right)/2.0/f64::from(state.scale),"y":f64::from(hit.rect.top+hit.rect.bottom)/2.0/f64::from(state.scale)})),
+        _=>None,
+    }).unwrap_or(Value::Null)
+}
+
 /// Render our own window state for review, without reading another app's pixels.
 #[cfg(test)]
 pub(super) unsafe fn capture_frame(state: &mut State, path: &Path) -> bool {
@@ -1799,14 +1849,17 @@ pub(super) unsafe fn capture_frame(state: &mut State, path: &Path) -> bool {
     }
     let old = SelectObject(dc, bitmap);
     super::paint(state, dc);
-    // The offscreen parent paint omits child edit windows. Include our zoom field.
-    if let Some(&edit) = state.fields.get(&ZOOM) {
-        let saved = SaveDC(dc);
-        let x = state.width - (390.0 * state.scale).round() as i32;
-        let y = state.height - (40.0 * state.scale).round() as i32;
-        SetViewportOrgEx(dc, x, y, null_mut());
-        SendMessageW(edit, WM_PRINTCLIENT, dc as usize, PRF_CLIENT as isize);
-        RestoreDC(dc, saved);
+    if state.studio.open {
+        // Integrated evidence includes the actual edit controls as well as the
+        // owner-painted panels. Capture only this owned window's children.
+        for &field in state.fields.values() {
+            if IsWindowVisible(field)==0 {continue;}
+            let mut bounds:RECT=std::mem::zeroed();GetWindowRect(field,&mut bounds);
+            let mut point=POINT{x:bounds.left,y:bounds.top};ScreenToClient(state.hwnd,&mut point);
+            let saved=SaveDC(dc);SetViewportOrgEx(dc,point.x,point.y,null_mut());
+            SendMessageW(field,WM_PRINT,dc as usize,(PRF_CLIENT|PRF_ERASEBKGND|PRF_CHECKVISIBLE) as isize);
+            RestoreDC(dc,saved);
+        }
     }
     SelectObject(dc, old);
     let mut image = null_mut();
@@ -1890,6 +1943,22 @@ mod integration_contract_tests {
         assert_eq!(dialog_route(10), None);
         assert_eq!(dialog_route(usize::MAX), None);
         assert_ne!(TEST_NAVIGATION,TEST_REMAP);
+        assert_ne!(TEST_EFFECT_POSITION,TEST_NAVIGATION);
+        assert_ne!(TEST_EFFECT_POSITION,TEST_REMAP);
         assert!(![NAME,COLOR,COLD,POSITION,STOP_COLOR].contains(&ZOOM));
     }
+}
+
+pub(super) fn wheel_picking(state:&State)->bool {state.studio.effect()==Some("wheel") && state.studio.wheel.picking && state.studio.editable()}
+pub(super) fn wheel_center(state:&mut State,x:u16,y:u16) {wheel::center(state,x,y);}
+pub(super) unsafe fn wheel_pointer(state:&mut State,message:u32,lparam:isize)->bool {wheel::pointer(state,message,lparam)}
+
+pub(super) fn wheel_geometry(state:&State)->Option<secbird_core::studio::document::WheelGeometry> {if state.studio.effect()!=Some("wheel") {return None;}state.studio.draft.as_ref()?.wheel_geometry(state.studio.selected.as_deref()?).ok()}
+pub(super) fn tidal_center_active(state:&State)->bool {tidal::center_active(&state.studio)}
+pub(super) fn tidal_center(state:&State)->Option<(u16,u16)> {tidal::center(&state.studio)}
+pub(super) fn place_tidal_center(state:&mut State,x:f64,y:f64) {
+    if !x.is_finite() || !y.is_finite() || !(0.0..=10000.0).contains(&x) || !(0.0..=10000.0).contains(&y) {
+        error(state,"Center point must be inside the 10000-pixel Studio canvas");return;
+    }
+    tidal::action(state,tidal::Control::Place(x.round() as u16,y.round() as u16));
 }

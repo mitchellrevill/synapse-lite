@@ -21,13 +21,17 @@ use std::{
 mod regions;
 pub use regions::PropertyClipboard;
 pub use regions::{
+    BreathingEdit, BreathingSettings, SelectedBreathing,
     ColorProperty, GradientStop, LedSelection, SelectedColor, SelectedDuration, SelectedGradient,
     StopEdit, SPECTRUM_DURATIONS,
     WaveProperty, SelectedWaveValue, wave_preset,
     StarlightDescriptor, StarlightProperty, SelectedStarlightValue, STARLIGHT_DURATIONS,
+    WheelProperty, SelectedWheelValue, wheel_preset, WheelGeometry,
+    RippleProperty, SelectedRippleValue, RippleStart, RippleEnd, RipplePlayback, SelectedRipplePlayback, ripple_preset,
     ReactiveProperty, SelectedReactiveValue, REACTIVE_DURATIONS,
     AudioProperty, SelectedAudioValue, audio_preset,
     AmbientEdit, AmbientProperty, AmbientValue, SelectedAmbientValue, AmbientRect, AMBIENT_PRESETS, AMBIENT_SCALE,
+    TidalDescriptor, TidalProperty, SelectedTidalValue, TidalLayout, TIDAL_NONE,
 };
 
 #[path = "preview.rs"]

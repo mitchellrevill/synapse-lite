@@ -1,5 +1,11 @@
 # Studio Breathing
 
+**30 October playback addition:** explicit random colors, finite repeats,
+inherited/custom two-color reset and start/end authoring now exist. Synthetic input
+state-machine checks are separate from the still-gated live input path. See
+[STUDIO-BREATHING-PLAYBACK.md](STUDIO-BREATHING-PLAYBACK.md) for current scope,
+source evidence, validation and remaining gaps. Historical checkpoint follows.
+
 **29 October addition:** explicit custom gradients now have native stop authoring,
 RGB/None, Add/Delete and history, with the existing renderer and file workflow.
 See [STUDIO-BREATHING-GRADIENT.md](STUDIO-BREATHING-GRADIENT.md) for current checks

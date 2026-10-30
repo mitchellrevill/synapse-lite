@@ -1,0 +1,89 @@
+{
+  "feature": "Studio Wheel13",
+  "published_base": "6149f7a9422ae93322365ed12df46ab681dc40a8",
+  "canonical_base": "7b99930",
+  "source": [
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-27\\what-i-want-you-to-do\\work\\synapse-renderer\\cache\\apps.razer.com\\synapse\\chroma-studio\\static\\js\\main.88ac681e.js",
+      "sha256": "109b483f129044e1c7c17b9fcae0e30fa775885667976807cf2c94bd1c696d19"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-27\\what-i-want-you-to-do\\work\\synapse-renderer\\cache\\apps.razer.com\\synapse\\chroma-studio\\static\\js\\729.b16ed779.chunk.js",
+      "sha256": "1a02d85275c93522e154c4888a7cf8c571316318b7370113d4cbc8cb9dea8159"
+    }
+  ],
+  "native": {
+    "sha256": "cd9fc2a61ff920b9b73e1f5e27632020e2f8586f443e426a875ad3b042b714fa",
+    "provider": "direct Ghidra12.1.4 no-analysis import and dumpbin instructions; static only",
+    "initializer": "0x180066b40",
+    "frame": "0x180066d60",
+    "angle_helper": "0x180066f20",
+    "full_rea_recovery": "provider_unavailable followed by execution failure and timeout; successful direct recovery is not REA Evidence"
+  },
+  "tests": {
+    "core": {
+      "passed": 520,
+      "ignored": 6
+    },
+    "core_doctest": {
+      "passed": 1
+    },
+    "tray": {
+      "passed": 306,
+      "ignored": 48
+    },
+    "isolated_native": {
+      "add_wheel": true,
+      "animated_preview": true,
+      "center_only_dirty": true,
+      "center_picker_preserves_selection": true,
+      "device_requests": 0,
+      "gradient_saved": true,
+      "invalid_speed_atomic": true,
+      "layer_rotation": "counterclockwise",
+      "readonly_inert": true,
+      "regional_speed": 120,
+      "speed_slider_single_commit": true,
+      "undo_redo": true
+    },
+    "scalar_cases": 8,
+    "frames_per_case": 200,
+    "composition_frames": 200,
+    "optimized_build": "passed"
+  },
+  "screenshots": {
+    "source-wheel-properties.png": {
+      "sha256": "f0cee71b2e6b8d278042920f54b26bb9763ce1f9a7fad9eea631162bfe00bd9d",
+      "bytes": 7831
+    },
+    "wheel-properties.png": {
+      "sha256": "8a75c64a596f66b15ab8ecd12a7416edce83602c3c76e26c70b3ce4013e7ec97",
+      "bytes": 62111
+    },
+    "wheel-gradient.png": {
+      "sha256": "5149dcfc4d46dff698ce372c0febc99dceb403da9a2a29386646141c02dbd49b",
+      "bytes": 61752
+    },
+    "wheel-preview.png": {
+      "sha256": "d278e1822d0b69600d9aaa40091ac1dc482243e40cb9e65f376a20261cc0ade1",
+      "bytes": 62770
+    }
+  },
+  "remaining": [
+    "Exact pixel fidelity: inspector layout, gradient navigation, native numeric controls differ from source",
+    "Source is a historical July2025 Studio snapshot, not proof of current active UI",
+    "Finite/input-triggered Wheel playback",
+    "Malformed-gradient fallback",
+    "Fractional editor-center authoring",
+    "Physical/optical and stock re-import acceptance",
+    "Wider device/layout acceptance; existing Ornata preview gate preserved",
+    "Complete-build total RAM below100MB acceptance"
+  ],
+  "safety": {
+    "physical_output": false,
+    "shared_profile_writes": false,
+    "vendor_execution": false,
+    "canonical_mutation": false,
+    "input_admission_gates_changed": false
+  }
+}
