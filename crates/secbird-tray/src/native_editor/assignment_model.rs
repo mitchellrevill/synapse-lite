@@ -795,6 +795,7 @@ impl Draft {
             "Saving this assignment category is unavailable. The original mapping is preserved."
         }
     }
+    #[cfg(test)]
     pub fn provenance(&self) -> &'static str {
         if self.context.mappings.is_some() {
             "last-read persisted desired profile; not hardware readback"
@@ -931,7 +932,7 @@ mod tests {
         d.original_records[0]["launchGroup"]["arguments"]=json!(["future"]); assert!(d.launch_profile().is_err());
         d.original_records[0]["launchGroup"].as_object_mut().unwrap().remove("arguments");
         d.original_records.push(json!({})); assert!(d.launch_profile().is_err());
-        let mut view=View::default(); view.draft=Some(d); view.cancel(); assert!(view.draft.is_none());
+        let mut view=View { draft: Some(d), ..View::default() }; view.cancel(); assert!(view.draft.is_none());
         assert_eq!(original["opaque"],json!({"keep":[1,2]}));
     }
     #[test]
@@ -977,7 +978,7 @@ mod tests {
         assert!(d.local_profile(&json!({})).is_err());
         d.undo(); assert!(!d.dirty); assert_eq!(d.category,Some(Category::Default));
         d.select(Category::Disable);
-        let mut view = View::default(); view.draft=Some(d); view.cancel();
+        let mut view = View { draft: Some(d), ..View::default() }; view.cancel();
         assert!(view.draft.is_none()); assert!(ctx.original_profile.get("_synapseLiteLocalAssignments").is_none());
     }
     #[test]
@@ -1148,8 +1149,7 @@ mod tests {
         assert_eq!(d.media_edit().unwrap().command, "Play");
         assert!(d.media_valid());
         assert!(d.dirty);
-        let mut view = View::default();
-        view.draft = Some(d);
+        let mut view = View { draft: Some(d), ..View::default() };
         view.cancel();
         assert!(view.draft.is_none());
         assert_eq!(ctx.mappings.as_ref().unwrap(), raw.as_array().unwrap());

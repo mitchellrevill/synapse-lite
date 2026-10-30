@@ -366,7 +366,7 @@ impl Engine {
         let foreground = self.foreground.clone();
         for index in 0..self.devices.len() {
             let dev = &self.devices[index];
-            if !dev.matrix().is_some()
+            if dev.matrix().is_none()
                 || !dev.spec.as_ref().is_some_and(|s| {
                     !s.wireless
                         && matches!(
@@ -916,6 +916,7 @@ impl Engine {
                         if let Err(error) =
                             secbird_core::profile_compat::validate_store_budget(store)
                         {
+                            let failure = error.to_string();
                             let result = Err(error);
                             if let Some(color) = color {
                                 self.record_host_static(&key, &name, color, &result);
@@ -923,7 +924,7 @@ impl Engine {
                             reports.push(ApplyReport {
                                 device: dev.name(),
                                 profile: name,
-                                failures: vec![result.unwrap_err().to_string()],
+                                failures: vec![failure],
                             });
                             continue;
                         }

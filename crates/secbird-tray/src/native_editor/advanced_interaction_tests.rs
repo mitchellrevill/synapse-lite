@@ -139,7 +139,7 @@ fn native_advanced_modes_curve_drag_rotation_and_recovery() {
                     return Err("Curve did not capture or wrote before release".into());
                 }
                 SendMessageW(hwnd, WM_LBUTTONUP, 0, end);
-                wait_for(|| ready(), "Curve verified after release")?;
+                wait_for(&ready, "Curve verified after release")?;
                 if query()["advanced"]["intent"]["points"] == before {
                     return Err("Curve point did not change".into());
                 }

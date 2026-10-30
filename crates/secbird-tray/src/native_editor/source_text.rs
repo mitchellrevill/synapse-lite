@@ -184,6 +184,8 @@ impl TextPilot {
     /// # Safety
     /// `destination` must be a live window-thread HDC with an MM_TEXT physical
     /// pixel mapping, identity world transform, and the caller's desired clip.
+    // Keep the source-matching drawing parameters explicit; grouping them would churn geometry call sites.
+    #[allow(clippy::too_many_arguments)]
     pub unsafe fn draw(
         &mut self,
         destination: *mut c_void,
@@ -270,6 +272,9 @@ impl Renderer {
         }
     }
 
+    // Keep the source-matching drawing parameters explicit; grouping them would churn geometry call sites.
+
+    #[allow(clippy::too_many_arguments)]
     pub unsafe fn draw(
         &self,
         destination: *mut c_void,
@@ -334,9 +339,9 @@ mod tests {
             let mut results = Vec::new();
             for scale in [1.0_f32, 1.25, 1.5, 2.0] {
                 for (role, label, advance, baseline) in [
-                    (Role::AssignmentHeading, "MOUSE FUNCTION", 127.3120, 204.0),
-                    (Role::ToolbarTitle, "RAZER ORNATA V2", 119.9570, 212.0),
-                    (Role::HostTab, "SYNAPSE", 51.73242188, 200.0),
+                    (Role::AssignmentHeading, "MOUSE FUNCTION", 127.312, 204.0),
+                    (Role::ToolbarTitle, "RAZER ORNATA V2", 119.957, 212.0),
+                    (Role::HostTab, "SYNAPSE", 51.732_42, 200.0),
                 ] {
                     let clip = Clip {
                         x: 0,
@@ -381,14 +386,14 @@ mod tests {
         let mut pilot = TextPilot::new(Path::new(&assets)).unwrap();
         for (label, dom, expected_slot) in [
             ("SYNAPSE", 51.734375, 108),
-            ("DEATHADDER V3 HYPERSPEED", 168.078125, 224),
+            ("DEATHADDER V3 HYPERSPEED", 168.078_13, 224),
             ("ORNATA V2", 62.28125, 118),
             ("AVATAR TO FI FFI", 92.78125, 149),
         ] {
             let m = pilot.measure(label, Role::HostTab).unwrap();
             assert!((m.advance_css - dom).abs() < 1.0 / 64.0);
             assert_eq!((m.advance_css + 56.0).round() as i32, expected_slot);
-            assert!((m.layout_baseline_css - 11.40234375).abs() < 0.0001);
+            assert!((m.layout_baseline_css - 11.402_344).abs() < 0.0001);
         }
         for i in 0..50 {
             pilot.measure(&format!("TAB {i}"), Role::HostTab).unwrap();

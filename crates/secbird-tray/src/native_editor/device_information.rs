@@ -5,7 +5,6 @@ pub(super) unsafe fn show(state: &mut State, id: &str) {
     let body = format!("{text}\n\nCached snapshot. YES: refresh read-only details. NO: copy details. CANCEL: close.");
     let choice = MessageBoxW(state.hwnd, wide(&body).as_ptr(), wide("Device information — local snapshot").as_ptr(), MB_YESNOCANCEL | MB_DEFBUTTON3);
     if choice == IDYES { state.queue(Job::DeviceInformation(id.into())); }
-    if choice == IDNO {
-        if !crate::win::set_clipboard(&text) { state.error("Clipboard is busy; reopen Device info and try copying again."); }
-    }
+    if choice == IDNO
+        && !crate::win::set_clipboard(&text) { state.error("Clipboard is busy; reopen Device info and try copying again."); }
 }

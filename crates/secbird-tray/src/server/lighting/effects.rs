@@ -2,7 +2,7 @@
 //! Wave uses authenticated physical frames in Driver3; Normal0 is rejected.
 //! No mode acquisition or optical/cadence parity is claimed.
 use super::*;
-use secbird_core::{effects::Effect, features::Rgb, profile::Zone};
+use secbird_core::{effects::Effect, features::Rgb};
 
 struct Plan {
     args: Vec<u8>,
@@ -76,7 +76,7 @@ impl Plan {
         let zone = profile
             .lighting
             .entry("backlight".into())
-            .or_insert_with(Zone::default);
+            .or_default();
         zone.color = self.color;
         zone.effect = self.effect.clone();
         zone.off = false;
@@ -244,7 +244,7 @@ fn apply_traced(
         )?;
         plan.project(profile);
         crate::host_uniform::Program::clear_opt_in(profile);
-        if matches!(id, 2 | 3 | 4) {
+        if matches!(id, 2..=4) {
             let program = crate::host_uniform::Program::from_profile(profile, 605)?
                 .ok_or_else(|| Error::Unsupported("Effect has no supported host projection".into()))?;
             program.opt_in(profile)?;
@@ -257,7 +257,7 @@ fn apply_traced(
         let execution=match mode.mode() {
         0 if id==4=>return Err(Error::Unsupported("Source Wave requires existing DriverMode3; no Normal0 firmware Wave SET was attempted".into())),
         0=>{attempted=true;trace.output_attempted=true;plan.write_verified(dev)?;json!({"execution":"firmware","verified":true,"host_animation_parity":false})},
-        3 if matches!(id,1|2|3|4)=>{
+        3 if matches!(id,1..=4)=>{
             let gate=host_gate?;
             let gate=if matches!(&gate,crate::host_static::Gate::NeedsBaseline{..}) {
                 initialize_brightness_baseline(dev,store,body)?;initialized_baseline=true;

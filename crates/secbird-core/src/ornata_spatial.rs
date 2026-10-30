@@ -325,9 +325,9 @@ mod tests {
         let mut out = [Rgb(99, 88, 77); PHYSICAL_PIXELS];
         map.map_frame_into(&[Rgb(16, 32, 48); LOGICAL_PIXELS], &mut out)
             .unwrap();
-        for i in 0..PHYSICAL_PIXELS {
+        for (i, pixel) in out.iter().enumerate() {
             assert_eq!(
-                out[i],
+                *pixel,
                 if holes.contains(&i) {
                     Rgb(0, 0, 0)
                 } else {

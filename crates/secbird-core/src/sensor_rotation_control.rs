@@ -472,8 +472,7 @@ mod tests {
     }
     #[test]
     fn source_bytes_and_unknown_observation() {
-        let mut intent = Rotation::default();
-        intent.value = -44;
+        let mut intent = Rotation { value: -44, ..Rotation::default() };
         assert_eq!(
             Raw::desired(RotationPath::Hardware, &intent).unwrap(),
             Raw::Hardware([1, 1, 212])

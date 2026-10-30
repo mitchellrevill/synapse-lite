@@ -177,8 +177,7 @@ mod tests {
                 }
             );
             let mut store = Store::default();
-            let mut device = crate::profile::DeviceProfiles::default();
-            device.active = "Fixture".into();
+            let mut device = crate::profile::DeviceProfiles { active: "Fixture".into(), ..Default::default() };
             device.profiles.clear();
             device.profiles.insert("Fixture".into(), next.clone());
             store.devices.insert("025D:fixture".into(), device);
@@ -248,8 +247,7 @@ mod tests {
     #[test]
     fn ownership_refusal_and_native_store_reopen_preserve_opaque_data() {
         let mut store = Store::default();
-        let mut d = crate::profile::DeviceProfiles::default();
-        d.active = "Fixture".into();
+        let mut d = crate::profile::DeviceProfiles { active: "Fixture".into(), ..Default::default() };
         d.profiles.clear();
         let p = new_native_profile(605, "Fixture").unwrap();
         let e = edit(&p, "Play", true);

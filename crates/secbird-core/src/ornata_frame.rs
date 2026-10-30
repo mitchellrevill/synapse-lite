@@ -311,15 +311,15 @@ mod tests {
             assert!(PreparedOrnataFrame::new(&vec![Rgb(0, 0, 0); count]).is_err());
         }
         let packets = frame().packets(0x1f);
-        for row in 0..6 {
+        for (row, packet) in packets.iter().enumerate().take(6) {
             let mut args = vec![0, 0, row as u8, 0, 21];
             for col in 0..22 {
                 let index = row * 22 + col;
                 args.extend([index as u8, (index * 3) as u8, (255 - index) as u8]);
             }
-            assert_eq!(packets[row], expected(0x1f, 3, &args));
-            assert_eq!(packets[row][6], 71);
-            assert!(packets[row][80..89].iter().all(|b| *b == 0));
+            assert_eq!(*packet, expected(0x1f, 3, &args));
+            assert_eq!(packet[6], 71);
+            assert!(packet[80..89].iter().all(|b| *b == 0));
         }
         assert_eq!(
             &packets[0][77..80],

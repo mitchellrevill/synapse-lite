@@ -414,6 +414,8 @@ fn runtime(state: &State, device: &Value) -> String {
             .unwrap_or("no active host session reported")
     )
 }
+// Keep the source-matching drawing parameters explicit; grouping them would churn geometry call sites.
+#[allow(clippy::too_many_arguments)]
 unsafe fn button(
     p: &mut Painter,
     label: &str,
@@ -430,6 +432,8 @@ unsafe fn button(
         p.text(label, x, y, w, 28, p.fonts.small, MUTED, DT_CENTER);
     }
 }
+// Keep the source-matching drawing parameters explicit; grouping them would churn geometry call sites.
+#[allow(clippy::too_many_arguments)]
 unsafe fn wrapped(
     p: &Painter,
     text: &str,

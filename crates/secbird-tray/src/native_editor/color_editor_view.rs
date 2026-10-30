@@ -244,6 +244,7 @@ impl Editor {
             self.picked(self.value_pixel(self.base(), sample as usize, 1));
         }
     }
+    #[cfg(test)]
     pub fn eyedropper(&mut self, color: u32) {
         self.picked(source::Rgb {
             r: (color >> 16) as u8,

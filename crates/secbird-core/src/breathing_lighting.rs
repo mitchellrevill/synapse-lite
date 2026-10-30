@@ -305,7 +305,7 @@ mod tests {
         .unwrap();
         for case in reference["cases"].as_array().unwrap() {
             let seconds = case["unix_seconds"].as_u64().unwrap();
-            let mut state = ((seconds / 1_800_000) * 1_800_000 | 31) as u32;
+            let mut state = (((seconds / 1_800_000) * 1_800_000) | 31) as u32;
             let mut cycle = BreathingCycle::random(Some(6000), seconds).unwrap();
             for sample in case["samples"].as_array().unwrap() {
                 let bgr = sample["bgr"].as_array().unwrap();

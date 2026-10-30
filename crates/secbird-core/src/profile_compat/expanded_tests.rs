@@ -65,7 +65,7 @@ fn ornata_snap_tap_preserves_source_shape_and_pair_edits_without_claiming_replay
     let native=import_document(&imported.store.native_bytes().unwrap()).unwrap();
     assert_eq!(payload(&native.store,"025D","Fixture"),source);
     let settings=imported.store.devices.get_mut("025D").unwrap().profiles.get_mut("Fixture").unwrap().snap_tap.as_mut().unwrap();
-    assert!(!settings.plan().is_ok(),"unknown extensions must not silently run");
+    assert!(settings.plan().is_err(),"unknown extensions must not silently run");
     settings.is_enabled=false;
     settings.key_list.clear();
     let changed=payload(&imported.store,"025D","Fixture");

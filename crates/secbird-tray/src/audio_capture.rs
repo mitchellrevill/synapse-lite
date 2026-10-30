@@ -13,6 +13,9 @@ use std::{
 #[derive(Clone)]
 pub(crate) enum Choice {
     Default(Role),
+    // TODO: retain explicit endpoint selection until the desktop exposes an opt-in selector.
+    // The backend contract is exercised by capture fixtures; no integrated selector is claimed.
+    #[allow(dead_code)]
     Exact(String),
 }
 #[derive(Clone)]
@@ -125,6 +128,9 @@ impl Capture {
             *latest = None;
         }
     }
+    // TODO: connect a consented meter consumer; preserve bounded, stale-frame-filtered readback.
+    // Keeping this API does not claim a production audio-to-lighting runtime.
+    #[allow(dead_code)]
     pub fn latest(&self) -> Option<MeterFrame> {
         if self.cancel.load(Ordering::Acquire) {
             return None;

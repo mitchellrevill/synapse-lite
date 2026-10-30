@@ -1,8 +1,10 @@
 //! Source Customize control geometry from ordered CSS and inert font/DOM replay.
 //! Mouse label bounds are actual source DOM controls, not guessed button boxes.
 //! Evidence: assignment-details-replay.json and mouse-customize source index.
-use super::assignment_layout::{self as shell, Rect, Shell};
+use super::assignment_layout::{Rect, Shell};
 use super::assignment_model::Category;
+#[cfg(test)]
+use super::assignment_layout as shell;
 fn r(x: f64, y: f64, width: f64, height: f64) -> Rect {
     Rect {
         x,
@@ -98,6 +100,7 @@ pub(super) fn options(dropdown: Rect, viewport_bottom: f64) -> Rect {
     };
     r(dropdown.x, top, 210.0, height)
 }
+#[cfg(test)]
 pub(super) fn option_rows(panel: Rect, scroll: f64) -> Vec<Rect> {
     option_rows_count(panel, scroll, 10)
 }
