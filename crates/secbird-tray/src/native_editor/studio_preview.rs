@@ -49,6 +49,9 @@ pub(super) unsafe fn stop(state: &mut State) {
     InvalidateRect(state.hwnd, null(), 0);
 }
 pub(super) unsafe fn toggle(state: &mut State) {
+    // Explicit preview intent may acknowledge an earlier error. Background
+    // compile progress/completion must not acknowledge a newer rejected edit.
+    state.studio.failed = false;
     if state.studio.playback.requested {
         stop(state);
         state.studio.status = "Local preview stopped".into();
@@ -108,7 +111,9 @@ pub(super) unsafe fn tick(state: &mut State) {
         view.playback.clear_frame();
         view.playback.pending = true;
         view.playback.pending_synthetic = view.playback.synthetic_started.is_some();
-        view.status = "Preparing local preview…".into();
+        if !view.failed {
+            view.status = "Preparing local preview…".into();
+        }
         let request = Request::Preview {
             synthetic_ambient: view.playback.synthetic_started.is_some(),
             epoch: view.epoch,
@@ -155,11 +160,7 @@ pub(super) unsafe fn receive(
     }
     match result {
         Ok(plan) => {
-            state.studio.playback.random_state = plan.final_random_state();
-            state.studio.playback.plan = Some(plan);
-            state.studio.playback.snapshot = Some(snapshot);
-            state.studio.status = if state.studio.playback.synthetic_started.is_some() {"Synthetic Ambient diagnostic - reconstructed projection - 10s - no capture/output"} else {"Local canvas preview - no device output"}.into();
-            state.studio.failed = false;
+            accept_plan(&mut state.studio, snapshot, plan);
         }
         Err(message) => {
             stop(state);
@@ -168,6 +169,15 @@ pub(super) unsafe fn receive(
     }
     redraw(state);
 }
+fn accept_plan(view: &mut View, snapshot: ReadSnapshot, plan: Box<Preview>) {
+    view.playback.random_state = plan.final_random_state();
+    view.playback.plan = Some(plan);
+    view.playback.snapshot = Some(snapshot);
+    if !view.failed {
+        view.status = if view.playback.synthetic_started.is_some() {"Synthetic Ambient diagnostic - reconstructed projection - 10s - no capture/output"} else {"Local canvas preview - no device output"}.into();
+    }
+}
+
 pub(super) fn color(state: &State, device: &str, key: &str) -> Option<u32> {
     let plan = state.studio.playback.plan.as_ref()?;
     if plan.device_id() != device {
@@ -191,6 +201,25 @@ pub(super) fn diagnostics(state: &State) -> Value {
 #[cfg(test)]
 mod ambient_lifecycle_tests {
     use super::*;
+    #[test]
+    fn completed_preview_preserves_newer_validation_error_and_exact_draft() {
+        let raw = include_str!("../../../secbird-core/tests/fixtures/studio-preview-profile.json");
+        let draft = Draft::open(raw).unwrap();
+        let snapshot = draft.read_snapshot();
+        let plan = Box::new(Preview::from_snapshot(&snapshot, 1).unwrap());
+        let mut view = View { draft: Some(draft), failed: true,
+            status: "Enter speed0..50, width100..400 and pause0..60000ms".into(), ..View::default() };
+        let before = view.draft.as_ref().unwrap().json().to_owned();
+        let history = view.draft.as_ref().unwrap().undo_len();
+        let error = view.status.clone();
+        accept_plan(&mut view, snapshot, plan);
+        assert!(view.failed, "background success erased the validation error");
+        assert_eq!(view.status, error);
+        assert_eq!(view.draft.as_ref().unwrap().json(), before);
+        assert_eq!(view.draft.as_ref().unwrap().undo_len(), history);
+        assert!(view.playback.snapshot.as_ref().is_some_and(|s| view.draft.as_ref().unwrap().matches_snapshot(s)));
+        assert!(view.playback.plan.is_some(), "valid canvas frames should still be accepted");
+    }
     #[test]
     fn pending_synthetic_completion_cannot_escape_its_deadline_after_mode_restart() {
         let mut playback=Playback::default();

@@ -164,7 +164,7 @@ fn native_studio_wave_direction_presets_motion_preview_save_and_undo_preserve_so
             let field=GetDlgItem(hwnd,2104);
             SendMessageW(field,WM_SETTEXT,0,wide("NaN,0,0").as_ptr() as isize);
             lighting_click(hwnd,right+70.,493.,scale);
-            if query()["failed"] != true || query()["undo"] != before_shared+2 {return Err("Invalid HSV changed history".into());}
+            if query()["failed"] != true || query()["undo"] != before_shared+2 {return Err(format!("Invalid HSV changed history or lost its error: {}",query()));}
             lighting_click(hwnd,right+40.,565.,scale); // HEX
             let at=|percent:f64|position(right+15.+percent*209./100.,399.,scale);
             SendMessageW(hwnd,WM_LBUTTONDOWN,1,at(100.));
@@ -210,7 +210,7 @@ fn native_studio_wave_direction_presets_motion_preview_save_and_undo_preserve_so
             lighting_click(hwnd,520.,100.,scale);if query()["dirty"]!=false {return Err("Wave speed redo did not return to saved state".into());}
             let field=GetDlgItem(hwnd,2106);SendMessageW(field,WM_SETTEXT,0,wide("99").as_ptr() as isize);
             lighting_click(hwnd,right+100.,500.,scale);
-            if query()["dirty"]!=false || query()["failed"]!=true {return Err("Invalid motion did not refuse atomically".into());}
+            if query()["dirty"]!=false || query()["failed"]!=true {return Err(format!("Invalid motion did not refuse atomically: {}",query()));}
             SendMessageW(hwnd,READ_ONLY_TEST_SET,1,0);lighting_click(hwnd,right+10.,290.,scale);
             if query()["dirty"]!=false {return Err("Read-only Wave direction mutated the saved draft".into());}
             SendMessageW(hwnd,READ_ONLY_TEST_SET,0,0);
@@ -1526,7 +1526,7 @@ fn native_studio_spectrum_controls_drag_save_and_scroll() {
                 lighting_click(
                     hwnd,
                     width / 2.0 + (67.0 - 480.0) * fit,
-                    (168.0 + height) / 2.0 + (76.0 - 180.0) * fit,
+                    (118.0 + height) / 2.0 + (76.0 - 180.0) * fit,
                     scale,
                 );
                 if query()["selected_leds"] != 1 || query()["dirty"] != false {
@@ -1561,7 +1561,7 @@ fn native_studio_spectrum_controls_drag_save_and_scroll() {
                 lighting_click(
                     hwnd,
                     width / 2.0 + (67.0 - 480.0) * fit,
-                    (168.0 + height) / 2.0 + (76.0 - 180.0) * fit,
+                    (118.0 + height) / 2.0 + (76.0 - 180.0) * fit,
                     scale,
                 );
                 SendMessageW(hwnd, READ_ONLY_TEST_SET, 1, 0);

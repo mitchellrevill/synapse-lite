@@ -1,0 +1,53 @@
+{
+  "date": "2026-10-30",
+  "base": "ec38ed4f84b2b80912dc501b731f6a0e63a3de54",
+  "branch": "fix/studio-final-native-regressions",
+  "worktree": "C:/Users/mitch/Documents/Codex/synapse-fix-studio-final",
+  "causes": {
+    "viewport": "Restricted-context artifact; host test passes with original input implementation. No viewport production change.",
+    "spectrum": "Two copied fixture clicks used obsolete center (168+height)/2 instead of current (118+height)/2.",
+    "wave": "A valid background preview completion unconditionally cleared a newer validation error, producing intermittent invalid HSV/motion failures."
+  },
+  "changes": [
+    "Correct only the two Spectrum fixture coordinates",
+    "Accept valid preview plans while preserving newer failed/status validation state",
+    "Preserve error status during background compilation progress",
+    "Explicit preview toggles can acknowledge the old error",
+    "Keep all invalid-value, exact history/save and read-only assertions; improve their failure diagnostics"
+  ],
+  "validation": {
+    "native_test_package_build_passed": true,
+    "regression_before_fix": "completed_preview_preserves_newer_validation_error_and_exact_draft failed: background success erased the validation error",
+    "preview_lifecycle_unit_passed": 2,
+    "native_combined_host_passed": 9,
+    "native_combined_host_failed": 0,
+    "pre_fix_same_process_sequence": "8 passed, Wave failed at Invalid HSV changed history",
+    "post_fix_native_seconds": 18.08,
+    "separate_target": "C:/Users/mitch/Documents/Codex/studio-final-target",
+    "compile_jobs": 1
+  },
+  "scope": {
+    "new_threads": 0,
+    "pushed": false,
+    "root_checkout_edited": false,
+    "release_build_repeated": false,
+    "wheel_tidal_modules_changed": false,
+    "physical_hardware_used": false
+  },
+  "remaining": [
+    "Root should rerun final combined suite after merging this and the separate Wheel/Tidal fix",
+    "Root release build must include the merged fix before final acceptance",
+    "No new pixel-parity, physical lighting or complete memory acceptance claim"
+  ],
+  "logs": {
+    "combined-studio-before.log": {
+      "sha256": "d138458f5eb068b543ba21226abecab944ed2aae8c77b726ecc9878d6d138f76"
+    },
+    "combined-studio-after.log": {
+      "sha256": "e4f7db06f621e18e9cceb0eceed7ee2e6d2279f12a4dc0bddb9a7a5d55c7e4e0"
+    },
+    "preview-unit-after.log": {
+      "sha256": "0a95ac3ed00aed5c16be53f40322619d20a42a260baf11fb9d15359aadc0a4b4"
+    }
+  }
+}
