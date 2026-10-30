@@ -132,7 +132,7 @@ impl BreathingCycle {
     pub fn random(duration: Option<u32>, unix_seconds: u64) -> Result<Self> {
         let stops = random_stops(0xffffff);
         let mut cycle = Self::studio(None, None, Some(&stops), duration)?;
-        cycle.random = Some(((unix_seconds / 1_800_000) * 1_800_000 | 31) as u32);
+        cycle.random = Some((((unix_seconds / 1_800_000) * 1_800_000) | 31) as u32);
         Ok(cycle)
     }
     pub fn set_cycles(&mut self, cycles: i64) -> Result<()> {
