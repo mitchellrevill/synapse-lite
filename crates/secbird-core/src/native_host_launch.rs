@@ -104,6 +104,7 @@ impl Control {
             Err(_) => CancelOutcome::RequestedDuringDispatch,
         }
     }
+    #[cfg(any(windows, test))]
     fn check(&self) -> Result<(), Error> {
         if self.stop.load(Ordering::Acquire) {
             Err(Error::Cancelled)
@@ -111,6 +112,7 @@ impl Control {
             Ok(())
         }
     }
+    #[cfg(any(windows, test))]
     fn begin(&self) -> Result<Finish<'_>, Error> {
         match self
             .state
@@ -122,13 +124,16 @@ impl Control {
         }
     }
 }
+#[cfg(any(windows, test))]
 struct Finish<'a>(&'a Control);
+#[cfg(any(windows, test))]
 impl Drop for Finish<'_> {
     fn drop(&mut self) {
         self.0.state.store(3, Ordering::Release);
     }
 }
 
+#[cfg(any(windows, test))]
 trait Backend {
     fn path_exists(&mut self, path: &str) -> bool;
     fn create(&mut self, command: &str, hidden: bool) -> Result<u32, u32>;
@@ -139,10 +144,12 @@ trait Backend {
         hidden: bool,
     ) -> Result<Option<u32>, ShellError>;
 }
+#[cfg(any(windows, test))]
 enum ShellError {
     Win32(u32),
     Com(i32),
 }
+#[cfg(any(windows, test))]
 fn execute(
     request: &Request,
     control: &Control,
@@ -199,6 +206,7 @@ fn execute(
 // Native helper's first-token split, not CommandLineToArgvW or shell parsing.
 // Only ASCII space/tab separate tokens. Quoted token ends at the next quote;
 // the remainder is retained literally and is never reconstructed as argv.
+#[cfg(any(windows, test))]
 fn split_command(command: &str) -> (&str, Option<&str>) {
     let command = command.trim_start_matches([' ', '\t']);
     let (file, tail) = if let Some(quoted) = command.strip_prefix('"') {
