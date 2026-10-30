@@ -35,6 +35,9 @@ mod preview;
 mod tree;
 #[path = "devices.rs"]
 mod devices;
+#[path = "remap.rs"]
+mod remap;
+pub use remap::RemapPreview;
 pub use tree::NewEffect;
 pub use preview::Preview;
 
@@ -249,6 +252,7 @@ struct Change {
 }
 enum Edit {
     Fields(Vec<Change>),
+    Composition { before: Box<RawValue>, after: Box<RawValue> },
     Layers { before: Box<RawValue>, after: Box<RawValue> },
     Devices { before: Box<RawValue>, after: Box<RawValue> },
 }
@@ -257,7 +261,7 @@ impl Edit {
         match self {
             Self::Fields(changes) => changes.iter().map(|change|change.id.len() + change.after.get().len()
                 + change.before.as_ref().map_or(0, |raw|raw.get().len())).sum(),
-            Self::Layers {before, after} | Self::Devices {before, after} => before.get().len() + after.get().len(),
+            Self::Composition {before, after} | Self::Layers {before, after} | Self::Devices {before, after} => before.get().len() + after.get().len(),
         }
     }
 }
@@ -341,6 +345,7 @@ fn item(raw: &RawValue, id: &str) -> Result<Option<Object>> {
 
 fn rewrite(raw: &RawValue, edit: &Edit, inverse: bool) -> Result<Box<RawValue>> {
     let changes = match edit {
+        Edit::Composition {before, after} => return Ok(if inverse {before.clone()} else {after.clone()}),
         Edit::Devices {before, after} => {
             let mut root = Object::parse(raw)?;
             root.set("devices", Some(if inverse {before} else {after}));

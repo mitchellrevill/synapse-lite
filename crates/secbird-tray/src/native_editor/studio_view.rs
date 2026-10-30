@@ -27,6 +27,8 @@ mod wave;
 mod layer_tools;
 #[path = "studio_preset_picker.rs"]
 mod preset_picker;
+#[path = "studio_remap.rs"]
+mod remap;
 #[path = "studio_output.rs"]
 mod output;
 pub(super) use output::Request as OutputRequest;
@@ -80,6 +82,7 @@ pub(super) enum Control {
     Ambient(ambient::Control),
     Layers(layer_tools::Control),
     AddPreset,
+    Remap,
     Preview,
     ApplyDevice,
     StopDevice,
@@ -656,6 +659,9 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
             layer_tools::action(state, control);
             ReleaseCapture();
         }
+        Control::Remap => {
+            if state.studio.editable() && !state.read_only_smoke && !state.restricted_actions {PostMessageW(state.hwnd,DIALOG,4,0);}
+        }
         Control::AddPreset => {
             if state.studio.editable() && !state.read_only_smoke && !state.restricted_actions {
                 PostMessageW(state.hwnd, DIALOG, 3, 0);
@@ -902,6 +908,7 @@ unsafe fn choose(hwnd: HWND, save: bool, initial: &str) -> Result<Option<PathBuf
 }
 
 pub(super) unsafe fn dialog(hwnd: HWND, pointer: *mut RefCell<State>, kind: usize) {
+    if kind == 4 {remap::dialog(hwnd,pointer);return;}
     if kind == 3 { preset_picker::dialog(hwnd, pointer); return; }
     let epoch = {
         let Ok(mut state) = (*pointer).try_borrow_mut() else {
@@ -1548,6 +1555,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         if view.failed { 0xfd4949 } else { MUTED },
     );
     layer_tools::paint(state, p);
+    button(p,"REMAP",390,172,90,Control::Remap,view.editable());
     button(p,"ADD DEVICE",270,172,110,Control::AddPreset,
         view.editable() && !state.read_only_smoke && !state.restricted_actions);
     output::paint(state, p);
@@ -1650,3 +1658,6 @@ pub(super) fn reset_test(state: &mut State) {
     state.studio.test_decision = Some(IDNO);
     state.exit_tray = None;
 }
+
+#[cfg(test)]
+pub(super) unsafe fn remap_fixture_test(state:&mut State){remap::fixture(state);}

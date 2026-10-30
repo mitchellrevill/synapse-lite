@@ -85,3 +85,29 @@ fn exercise_preset(filename:&str,pid:u16,edition:u16,layout:u16,expected_leds:us
     });
     let run=run_standalone(Arc::new(Mutex::new(engine)),Some(Duration::from_secs(30)));let result=controller.join().unwrap();assert!(run.is_ok(),"{run:?}");assert!(result.is_ok(),"{result:?}");assert_eq!(std::fs::read(source).unwrap(),source_bytes);assert_eq!(std::fs::read(folder.join("profiles.json")).unwrap(),baseline);eprintln!("Generic Studio preset native evidence: {}",folder.display());
 }
+#[test]
+#[ignore="opens owned simulated native remap fixture window"]
+fn native_studio_remap_cancel_commit_save_history() {
+    let folder=std::env::temp_dir().join(format!("studio-remap-native-{}",std::process::id()));std::fs::create_dir_all(&folder).unwrap();
+    let source=folder.join("source.ChromaEffects");let original=format!("{{\"version\":1,\"profiles\":[{}]}}",include_str!("../../../secbird-core/tests/fixtures/remap-source.json"));std::fs::write(&source,&original).unwrap();
+    let frame=folder.join("frame.json");
+    let _environment=Environment::set(&[("SYNAPSE_LITE_CONFIG_DIR",&folder),("SYNAPSE_LITE_SMOKE_REPORT",&frame),("SYNAPSE_LITE_SMOKE_VIEW",Path::new("studio"))]);
+    let sim=Sim::mouse();let engine=Engine::with_simulated_mouse(&sim).unwrap();let monitor=sim.clone();let output=folder.clone();
+    let controller=std::thread::spawn(move||{let result=(||->Result<(),String>{unsafe{
+        wait_for(||frame.exists(),"remap fixture window")?;let hwnd=WINDOW.load(Ordering::Acquire) as HWND;
+        let query=||{let mut value=Value::Null;SendMessageW(hwnd,STUDIO_TEST,2,&mut value as *mut Value as isize);value};
+        wait_for(||query()["pending"]==0,"initial reads")?;monitor.state().log.clear();
+        let path=json!(source.to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,1,&path as *const Value as isize);wait_for(||query()["profiles"]==1&&query()["pending"]==0,"fixture import")?;
+        let scale=f64::from(GetDpiForWindow(hwnd).max(96))/96.;
+        let capture=json!(output.join("remap-before.png").to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize);
+        lighting_click(hwnd,430.,184.,scale);wait_for(||query()["dialog"]==true,"source choices")?;
+        SendMessageW(hwnd,STUDIO_TEST,9,0);wait_for(||query()["dialog"]==false,"cancel remap")?;if query()["dirty"]!=false{return Err("Cancel changed draft".into());}
+        SendMessageW(hwnd,STUDIO_TEST,10,0);if query()["dirty"]!=true{return Err(format!("Commit did not dirty draft: {}",query()));}
+        let saved=output.join("saved.ChromaEffects");let path=json!(saved.to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,3,&path as *const Value as isize);wait_for(||query()["pending"]==0&&query()["dirty"]==false,"save remapped fixture")?;
+        let data=std::fs::read(&saved).map_err(|e|e.to_string())?;let archive=secbird_core::studio::Archive::parse(&data).map_err(|e|e.to_string())?;let raw=archive.profile_json(0).unwrap();if !raw.contains("\"row\":3")||!raw.contains("9007199254740993123456789"){return Err("Saved mapping or opaque metadata missing".into());}
+        lighting_click(hwnd,450.,100.,scale);if query()["dirty"]!=true{return Err("Undo failed".into());}lighting_click(hwnd,520.,100.,scale);if query()["dirty"]!=false{return Err("Redo failed".into());}
+        let capture=json!(output.join("remap-after.png").to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize);
+        if !monitor.state().log.is_empty(){return Err("Remap made device requests".into());}Ok(())
+    }})();unsafe{let hwnd=WINDOW.load(Ordering::Acquire) as HWND;SendMessageW(hwnd,STUDIO_TEST,5,0);PostMessageW(hwnd,WM_CLOSE,0,0);}result});
+    let run=run_standalone(Arc::new(Mutex::new(engine)),Some(Duration::from_secs(30)));let result=controller.join().unwrap();assert!(run.is_ok(),"{run:?}");assert!(result.is_ok(),"{result:?}");assert_eq!(std::fs::read_to_string(folder.join("source.ChromaEffects")).unwrap(),original);eprintln!("Remap evidence: {}",folder.display());
+}
