@@ -1,0 +1,10 @@
+{
+  "scope": "Cached Tidal JSX and CSS executed with inert React/Redux hooks; popups, tooltip body, dispatch and host bridge stubbed; no vendor runtime observation",
+  "nodes": 105,
+  "geometry": {
+    "x": 0,
+    "y": 0,
+    "width": 250,
+    "height": 464.46875
+  }
+}

@@ -3873,6 +3873,7 @@ unsafe extern "system" fn window_proc(
                 7=>studio_view::output_test_dirty_apply(&mut state),
                 8=>{let value=&*(lparam as *const Value);studio_view::add_preset_test(&mut state,(value[0].as_u64().unwrap() as u16,value[1].as_u64().unwrap() as u16,value[2].as_u64().unwrap() as u16));},
                 9=>{EndMenu();},
+                10=>{let value=&mut *(lparam as *mut Value);let name=value.as_str().unwrap_or("").to_string();*value=studio_view::add_effect_position_test(&state,&name);},
                 _=>{},
             }
         }

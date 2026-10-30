@@ -1,0 +1,87 @@
+{
+  "provenance": "Independent static-instruction reference; no vendor execution",
+  "native_sha256": "cd9fc2a61ff920b9b73e1f5e27632020e2f8586f443e426a875ad3b042b714fa",
+  "tables_sha256": "b934af3b78dc8c015ec1883484554bfe3ba1db8d263734f0b29ae088340b9281",
+  "cases": [
+    {
+      "rate": 0,
+      "seed": 0,
+      "initial_random_state": 1,
+      "frames": 100,
+      "final_random_state": 2862518159,
+      "grayscale_md5": "fa59a6aac1b6ba99003049d9a5bde833"
+    },
+    {
+      "rate": 39,
+      "seed": 1,
+      "initial_random_state": 0,
+      "frames": 2,
+      "final_random_state": 3566711417,
+      "grayscale_md5": "124ebad7a4589213a7625b46270c5905"
+    },
+    {
+      "rate": 40,
+      "seed": 2,
+      "initial_random_state": 1,
+      "frames": 4,
+      "final_random_state": 2453175039,
+      "grayscale_md5": "fa34e95f032d4be19bc6f2d03fb93002"
+    },
+    {
+      "rate": 79,
+      "seed": 7,
+      "initial_random_state": 12345,
+      "frames": 14,
+      "final_random_state": 241966008,
+      "grayscale_md5": "d4df644823df62141c9832d8f01dcd09"
+    },
+    {
+      "rate": 80,
+      "seed": 3,
+      "initial_random_state": 4294967295,
+      "frames": 9,
+      "final_random_state": 3766255018,
+      "grayscale_md5": "0b4bdab5a0ebae8e5f335c1242e84b98"
+    },
+    {
+      "rate": 119,
+      "seed": 11,
+      "initial_random_state": 77,
+      "frames": 33,
+      "final_random_state": 2414893720,
+      "grayscale_md5": "1b81ef6b33e215aabf3b9bd1c0bd9c12"
+    },
+    {
+      "rate": 120,
+      "seed": 5,
+      "initial_random_state": 1,
+      "frames": 20,
+      "final_random_state": 410959018,
+      "grayscale_md5": "3bd831fa2edacfe5683d4a71d4975788"
+    },
+    {
+      "rate": 200,
+      "seed": 9,
+      "initial_random_state": 998,
+      "frames": 54,
+      "final_random_state": 1533434543,
+      "grayscale_md5": "f4499fc40e7aada22924568a16608d3a"
+    },
+    {
+      "rate": 10200,
+      "seed": 1,
+      "initial_random_state": 1,
+      "frames": 256,
+      "final_random_state": 255755822,
+      "grayscale_md5": "a57b29970f78f97eef4b9350a26253e6"
+    },
+    {
+      "rate": 40,
+      "seed": 2048,
+      "initial_random_state": 1,
+      "frames": 4096,
+      "final_random_state": 549050369,
+      "grayscale_md5": "805a61e1b4f1e48c36387d90a6585242"
+    }
+  ]
+}

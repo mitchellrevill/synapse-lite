@@ -244,6 +244,7 @@ impl Canvas {
         if !state.studio.open {
             return false;
         }
+        if studio_view::wheel_pointer(state,message,lparam) {return true;}
         if state.restricted_actions && !matches!(message, WM_CANCELMODE | WM_CAPTURECHANGED) {
             return false;
         }
@@ -253,6 +254,27 @@ impl Canvas {
         };
         let width = f64::from(state.width) / f64::from(state.scale);
         let height = f64::from(state.height) / f64::from(state.scale);
+        if studio_view::wheel_picking(state) && matches!(message,WM_LBUTTONDOWN|WM_LBUTTONUP) && point.x>250.0 && point.x<width-250.0 && point.y>=168.0 && point.y<height-50.0 {
+            if message==WM_LBUTTONUP {
+            if let Some(world)=state.studio.canvas.screen_to_world(point,width,height) {
+                if (0.0..=10000.0).contains(&world.x) && (0.0..=10000.0).contains(&world.y) {
+                    studio_view::wheel_center(state,world.x.round() as u16,world.y.round() as u16);
+                    studio_view::selection_changed(state);state.rebuild_fields();InvalidateRect(state.hwnd,null(),0);
+                }
+            }
+            }
+            return true;
+        }
+        if studio_view::tidal_center_active(state) && point.x>250.0 && point.x<width-250.0 && point.y>=168.0 && point.y<height-50.0 {
+            if message==WM_LBUTTONUP {
+                if let Some(world)=state.studio.canvas.screen_to_world(point,width,height) {
+                    studio_view::place_tidal_center(state,world.x,world.y);
+                    state.rebuild_fields(); InvalidateRect(state.hwnd,null(),0);
+                }
+                return true;
+            }
+            if message==WM_LBUTTONDOWN {return true;}
+        }
         let canvas = &mut state.studio.canvas;
         if message == WM_CANCELMODE || message == WM_CAPTURECHANGED {
             if let Some(gesture) = canvas.gesture.take() {
@@ -498,6 +520,19 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         }
     }
     RestoreDC(p.dc, saved);
+    if let Some(g)=studio_view::wheel_geometry(state) {
+        let x=(screen.x+(f64::from(g.x)-center.x)*zoom) as i32;
+        let y=(screen.y+(f64::from(g.y)-center.y)*zoom) as i32;
+        if x>260 && x<width-260 && y>178 && y<height-60 {
+            p.fill(x-9,y,19,1,GREEN);p.fill(x,y-9,1,19,GREEN);
+        }
+    }
+    if let Some((x,y))=studio_view::tidal_center(state) {
+        let x=(screen.x+(f64::from(x)-center.x)*zoom).round() as i32;
+        let y=(screen.y+(f64::from(y)-center.y)*zoom).round() as i32;
+        if x>260 && x<width-260 && y>178 && y<height-60 {p.fill(x-8,y-1,17,3,GREEN);p.fill(x-1,y-8,3,17,GREEN);}
+    }
+
     if let Some(gesture) = &canvas.gesture {
         let a = Point {
             x: screen.x + (gesture.start.x - center.x) * zoom,

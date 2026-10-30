@@ -1,0 +1,59 @@
+{
+  "checkpoint": "studio-ripple-core-authoring",
+  "scope": "Pure regional Draft API, not UI or runtime parity",
+  "base": "6149f7a9422ae93322365ed12df46ab681dc40a8",
+  "source_main_sha256": "109b483f129044e1c7c17b9fcae0e30fa775885667976807cf2c94bd1c696d19",
+  "source_fixture": "crates/secbird-core/tests/fixtures/studio-ripple-contract.json",
+  "fixture_regeneration": "byte-identical",
+  "rea": {
+    "summary": "ev_af625da5c7e3e9440a4cafef9bef7afd3bce6478faf8a4ade4472d81d63268de",
+    "parent": "ev_36d880b858f18e00cc52b16a25436f762fdbecca11b1a2bb8a73bc4587f824fd",
+    "files": 3,
+    "bytes": 50885,
+    "ast_nodes": 10677,
+    "parse_failures": 0,
+    "semantic_unknowns": 1397,
+    "execution": false
+  },
+  "implemented": [
+    "Regional speed/width scalar and atomic motion edits",
+    "Five independently extracted patterns and seven-stop gradient authoring",
+    "RGB24/None stops with raw metadata preservation",
+    "Atomic playback start/end/repeat tuples",
+    "Explicit empty/uniform/mixed selection projections",
+    "Undo/Redo, partition, inheritance, archive export/reopen"
+  ],
+  "tests": {
+    "ripple_tests": 9,
+    "playback_combinations_exercised": 63,
+    "core_passed": 523,
+    "core_failed": 0,
+    "core_ignored": 6,
+    "doc_passed": 1,
+    "optimized_ripple": "9 passed, 0 failed, release test build",
+    "initial_core_attempt": "489 passed, 32 failures, 6 ignored; temporary-profile access denied in system temp",
+    "resolved_core_attempt": "Passed with task-owned TEMP/TMP and one test thread",
+    "initial_optimized_attempt": "Compiler archive rename denied in system temp; rerun uses task-owned TEMP/TMP",
+    "preexisting_warning": "source_macro.rs RETAINED_DATA_BUDGET_BYTES unused"
+  },
+  "visual": {
+    "ui_changed": false,
+    "screenshot_required_for_this_unit": false,
+    "pixel_parity_claimed": false
+  },
+  "admission": {
+    "ordinary_ripple_preview": "still refused, tested",
+    "physical_input_or_output_started": false,
+    "reactive_or_input_gates_changed": false,
+    "canonical_or_shared_profiles_changed": false,
+    "complete_build_memory_acceptance": false
+  },
+  "remaining": [
+    "Native Ripple propagation, speed/width mapping, palette orientation and overlap/retrigger evidence",
+    "Playback execution, random timing, toggle/repeat behavior and event lifecycle",
+    "Native authoring panel and source mode-transition count memory",
+    "Matched-state source/UI screenshots and pixel verification",
+    "Input ownership/recovery, physical/optical acceptance and complete-build RAM gates"
+  ],
+  "native_analysis_blocker": "REA Ghidra provider unconfigured: GHIDRA_INSTALL_DIR is unset"
+}

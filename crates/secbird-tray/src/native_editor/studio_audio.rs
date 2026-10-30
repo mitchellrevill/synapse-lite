@@ -160,6 +160,7 @@ pub(super) unsafe fn fields(state: &mut State) {
     }
 }
 pub(super) fn command(state: &mut State, id: u16, notification: u16) -> bool {
+    if !state.studio.open || state.studio.effect()!=Some("audio") {return false;}
     if !matches!(id, BOOST | DECAY) || notification != EN_CHANGE as u16 {
         return false;
     }

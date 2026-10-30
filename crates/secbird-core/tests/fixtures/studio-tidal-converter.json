@@ -1,0 +1,425 @@
+{
+  "ui_defaults": {
+    "color": 65280,
+    "color2": 255,
+    "randomColor": false,
+    "speed": 10,
+    "angle": 160,
+    "split": true,
+    "playbackStart": "random",
+    "playbackEnd": "never",
+    "cycles": -1
+  },
+  "ui_layout": {
+    "centerPointX": 125,
+    "centerPointX2": 5000,
+    "centerPointY": 123,
+    "centerPointY2": 5000,
+    "counterclockwise": false
+  },
+  "ui_speed_range": [
+    0,
+    50
+  ],
+  "studio_sha256": "109b483f129044e1c7c17b9fcae0e30fa775885667976807cf2c94bd1c696d19",
+  "scope": "Actual cached JS converter, stubbed AddEffect; no DLL, application, network, account, profile or hardware access",
+  "source_sha256": "c82c7074e5da8abcffbff95f23a6b962c1e14b04586715b9d4b7a6f11fe9e6d2",
+  "cases": [
+    {
+      "input": {},
+      "output": {
+        "effect": 19,
+        "params": {
+          "Mode": 0,
+          "ColorStops": [
+            {
+              "Stop": 0,
+              "Color": 0
+            },
+            {
+              "Stop": 10,
+              "Color": 0
+            },
+            {
+              "Stop": 25,
+              "Color": 1677721600
+            },
+            {
+              "Stop": 40,
+              "Color": 0
+            },
+            {
+              "Stop": 60,
+              "Color": 0
+            },
+            {
+              "Stop": 75
+            },
+            {
+              "Stop": 90,
+              "Color": 0
+            },
+            {
+              "Stop": 100,
+              "Color": 0
+            }
+          ],
+          "Duration": 0,
+          "Width": 100,
+          "Pause": 0,
+          "Direction": 1
+        }
+      }
+    },
+    {
+      "input": {
+        "color": 65280,
+        "color2": 255,
+        "speed": 10,
+        "angle": 160,
+        "split": true,
+        "randomColor": false,
+        "cycles": -1,
+        "playbackStart": "random",
+        "playbackEnd": "never",
+        "centerPointX": 125,
+        "centerPointY": 123,
+        "counterclockwise": false
+      },
+      "output": {
+        "effect": 19,
+        "params": {
+          "Mode": 2,
+          "ColorStops": [
+            {
+              "Stop": 0,
+              "Color": 0
+            },
+            {
+              "Stop": 10,
+              "Color": 0
+            },
+            {
+              "Stop": 25,
+              "Color": 65280
+            },
+            {
+              "Stop": 40,
+              "Color": 0
+            },
+            {
+              "Stop": 60,
+              "Color": 0
+            },
+            {
+              "Stop": 75,
+              "Color": 255
+            },
+            {
+              "Stop": 90,
+              "Color": 0
+            },
+            {
+              "Stop": 100,
+              "Color": 0
+            }
+          ],
+          "Duration": 0,
+          "Width": 100,
+          "Speed": 10,
+          "Pause": 0,
+          "Angle": 160,
+          "Direction": 1,
+          "Cycles": -1,
+          "CenterCol": 125,
+          "CenterRow": 123
+        }
+      }
+    },
+    {
+      "input": {
+        "color": 1122867,
+        "color2": 11259375,
+        "randomColor": true,
+        "split": true,
+        "counterclockwise": true,
+        "speed": 50,
+        "cycles": 7,
+        "playbackStart": "onSelectedKeys",
+        "playbackEnd": "toggle"
+      },
+      "output": {
+        "effect": 19,
+        "params": {
+          "Mode": 12295,
+          "ColorStops": [
+            {
+              "Stop": 0,
+              "Color": 0
+            },
+            {
+              "Stop": 15,
+              "Color": 0
+            },
+            {
+              "Stop": 30,
+              "Color": 1
+            },
+            {
+              "Stop": 40,
+              "Color": 0
+            },
+            {
+              "Stop": 65,
+              "Color": 0
+            },
+            {
+              "Stop": 70,
+              "Color": 2
+            },
+            {
+              "Stop": 90,
+              "Color": 0
+            },
+            {
+              "Stop": 100,
+              "Color": 0
+            }
+          ],
+          "Duration": 0,
+          "Width": 100,
+          "Speed": 50,
+          "Pause": 0,
+          "Direction": 0,
+          "Cycles": 7
+        }
+      }
+    },
+    {
+      "input": {
+        "color2": 1193046
+      },
+      "output": {
+        "effect": 19,
+        "params": {
+          "Mode": 0,
+          "ColorStops": [
+            {
+              "Stop": 0,
+              "Color": 0
+            },
+            {
+              "Stop": 10,
+              "Color": 0
+            },
+            {
+              "Stop": 25,
+              "Color": 1193046
+            },
+            {
+              "Stop": 40,
+              "Color": 0
+            },
+            {
+              "Stop": 60,
+              "Color": 0
+            },
+            {
+              "Stop": 75,
+              "Color": 1193046
+            },
+            {
+              "Stop": 90,
+              "Color": 0
+            },
+            {
+              "Stop": 100,
+              "Color": 0
+            }
+          ],
+          "Duration": 0,
+          "Width": 100,
+          "Pause": 0,
+          "Direction": 1
+        }
+      }
+    },
+    {
+      "input": {
+        "color": 1677721600,
+        "color2": 0,
+        "split": false,
+        "speed": 0
+      },
+      "output": {
+        "effect": 19,
+        "params": {
+          "Mode": 0,
+          "ColorStops": [
+            {
+              "Stop": 0,
+              "Color": 0
+            },
+            {
+              "Stop": 10,
+              "Color": 0
+            },
+            {
+              "Stop": 25,
+              "Color": 1677721600
+            },
+            {
+              "Stop": 40,
+              "Color": 0
+            },
+            {
+              "Stop": 60,
+              "Color": 0
+            },
+            {
+              "Stop": 75,
+              "Color": 0
+            },
+            {
+              "Stop": 90,
+              "Color": 0
+            },
+            {
+              "Stop": 100,
+              "Color": 0
+            }
+          ],
+          "Duration": 0,
+          "Width": 100,
+          "Speed": 0,
+          "Pause": 0,
+          "Direction": 1
+        }
+      }
+    },
+    {
+      "input": {
+        "randomColor": true,
+        "colorStops": []
+      },
+      "output": {
+        "effect": 19,
+        "params": {
+          "Mode": 0,
+          "ColorStops": [],
+          "Duration": 0,
+          "Width": 100,
+          "Pause": 0,
+          "Direction": 1
+        }
+      }
+    },
+    {
+      "input": {
+        "randomColor": true,
+        "colorStops": [
+          {
+            "Stop": 80,
+            "Color": 1,
+            "future": 9
+          },
+          {
+            "Stop": 20
+          }
+        ],
+        "width": 400,
+        "pause": 60000,
+        "angle": 360,
+        "cycles": 100,
+        "playbackStart": "onPress",
+        "playbackEnd": "after"
+      },
+      "output": {
+        "effect": 19,
+        "params": {
+          "Mode": 4096,
+          "ColorStops": [
+            {
+              "Stop": 0,
+              "Color": 1
+            },
+            {
+              "Stop": 80,
+              "Color": 1,
+              "future": 9
+            },
+            {
+              "Stop": 20,
+              "Color": 1677721600
+            },
+            {
+              "Stop": 100,
+              "Color": 1677721600
+            }
+          ],
+          "Duration": 0,
+          "Width": 400,
+          "Pause": 60000,
+          "Angle": 360,
+          "Direction": 1,
+          "Cycles": 100
+        }
+      }
+    },
+    {
+      "input": {
+        "colorStops": [
+          {
+            "Stop": 0
+          },
+          {
+            "Stop": 50,
+            "Color": 0
+          },
+          {
+            "Stop": 50,
+            "Color": 11259375
+          },
+          {
+            "Stop": 100,
+            "Color": 1677721600
+          }
+        ],
+        "width": 10,
+        "pause": 1,
+        "centerPointX": 0,
+        "centerPointY": -2
+      },
+      "output": {
+        "effect": 19,
+        "params": {
+          "Mode": 0,
+          "ColorStops": [
+            {
+              "Stop": 0,
+              "Color": 1677721600
+            },
+            {
+              "Stop": 50,
+              "Color": 0
+            },
+            {
+              "Stop": 50,
+              "Color": 11259375
+            },
+            {
+              "Stop": 100,
+              "Color": 1677721600
+            }
+          ],
+          "Duration": 0,
+          "Width": 10,
+          "Pause": 1,
+          "Direction": 1,
+          "CenterCol": 0,
+          "CenterRow": -2
+        }
+      }
+    }
+  ]
+}

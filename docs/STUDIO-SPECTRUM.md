@@ -11,11 +11,9 @@ Changing layers clears LED selection, as the source does.
 These controls author local files. [Local Preview](STUDIO-PREVIEW.md) now renders
 the admitted Static/Spectrum/Fire composition on the canvas, without hardware
 frames or physical-colour acceptance. This is not complete Studio parity. Duration
-buttons, numbered preset buttons and percent/hex fields are interim controls;
-the stock slider, gradient popup/drag handles, colour picker, remembered custom
-tile and complete panel scrolling remain to implement. The current native test
-checks the ordinary 1280×720 CSS viewport; smaller property-panel layouts remain
-unverified. Captured production paint excludes native child EDIT controls;
+track, numbered preset buttons and percent/hex fields use native presentation.
+The follow-up below adds direct stop gestures and panel scrolling; exact stock
+gradient popup geometry, colour picker and remembered custom tile remain open. Captured production paint excludes native child EDIT controls;
 the tests separately exercise those controls and verify their saved values.
 
 ## Stored semantics and preservation
@@ -81,3 +79,39 @@ Original export and device profiles remain unchanged and no device SET is sent.
 See [native evidence](validation/native-studio-actual-file.json). Stock acceptance
 of edited files, effect playback/compositing, optical output, full recovery and
 complete-build memory acceptance remain unverified. The full goal stays active.
+
+## Native control follow-up (2026-10-30)
+
+The duration track now selects the source's three discrete values on release.
+The stop track below the fields selects/drags existing stops and inserts the
+entered colour at an empty track position. Crossing neighbours retains the
+selected stop under stable sorting; insertion selects the inserted record.
+Delete remains available down to the two-stop source minimum. Dragging commits
+one edit on release; capture loss cancels the pending gesture. These changes
+reuse the existing atomic regional operations and never start device output.
+
+The Spectrum property body supports wheel scrolling, clips painted controls and
+click targets, moves native edit fields, and shows a scroll thumb at short
+heights. Shared gradient panels for other effects retain their existing layout.
+
+Source: cached chunk 820 `j` uses a discrete duration slider with Q9 index mapping
+and dispatches onAfterChange; the existing module6257 fixture supplies durations.
+Cached chunks 820/606 and the earlier evidence above remain the basis for stop
+limits, percent positions, stable sorting and None preservation. This follow-up
+is a native interaction implementation, not a claim of pixel equivalence: stock
+popup geometry, colour picker, remembered custom tile, exact insertion colour
+sampling and drag-away deletion still need source/runtime visual acceptance.
+Full application parity and total RAM acceptance remain open.
+
+Verification: seven core Spectrum preservation regressions, three focused native
+unit tests, and the opt-in Spectrum-only real-window regression passed. The
+latter uses a private stock export with simulated transport, verifies read-only
+admission, crossing/None persistence, one drag undo entry, click-without-edit,
+cancellation, add/delete undo and unchanged input/store. Production captures
+were visually inspected at normal size and the native minimum 650 CSS pixel
+height with the property body scrolled to its end. The window enforces that
+minimum; smaller unsupported sizes are not claimed. Child EDIT windows are
+excluded by the existing capture function and verified through saved values.
+The broader existing stock-file test timed out in its preview-hide stage; it is
+not counted as passing this checkpoint. One focused run also timed out during
+window presentation; the final repeated focused run passed in 3.30 seconds.

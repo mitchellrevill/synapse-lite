@@ -20,13 +20,17 @@ use std::{
 #[path = "regions.rs"]
 mod regions;
 pub use regions::{
+    BreathingEdit, BreathingSettings, SelectedBreathing,
     ColorProperty, GradientStop, LedSelection, SelectedColor, SelectedDuration, SelectedGradient,
     StopEdit, SPECTRUM_DURATIONS,
     WaveProperty, SelectedWaveValue, wave_preset,
     StarlightDescriptor, StarlightProperty, SelectedStarlightValue, STARLIGHT_DURATIONS,
+    WheelProperty, SelectedWheelValue, wheel_preset, WheelGeometry,
+    RippleProperty, SelectedRippleValue, RippleStart, RippleEnd, RipplePlayback, SelectedRipplePlayback, ripple_preset,
     ReactiveProperty, SelectedReactiveValue, REACTIVE_DURATIONS,
     AudioProperty, SelectedAudioValue, audio_preset,
     AmbientEdit, AmbientProperty, AmbientValue, SelectedAmbientValue, AmbientRect, AMBIENT_PRESETS, AMBIENT_SCALE,
+    TidalDescriptor, TidalProperty, SelectedTidalValue, TidalLayout, TIDAL_NONE,
 };
 
 #[path = "preview.rs"]
@@ -274,6 +278,8 @@ fn regions_equal(left: &RawValue, right: &RawValue) -> Result<bool> {
         #[serde(borrow)]
         regions: Option<&'a RawValue>,
         #[serde(borrow)]
+        params: Option<&'a RawValue>,
+        #[serde(borrow)]
         layers: Option<&'a RawValue>,
     }
     fn compare(left: &RawValue, right: &RawValue, root: bool) -> Result<bool> {
@@ -294,7 +300,8 @@ fn regions_equal(left: &RawValue, right: &RawValue) -> Result<bool> {
             }
             match kind_a.as_deref() {
                 Some("layer") => {
-                    return Ok(a.regions.map(RawValue::get) == b.regions.map(RawValue::get))
+                    return Ok(a.regions.map(RawValue::get) == b.regions.map(RawValue::get)
+                        && a.params.map(RawValue::get) == b.params.map(RawValue::get))
                 }
                 Some("group") => {}
                 _ => return Ok(true),

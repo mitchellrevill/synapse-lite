@@ -1,7 +1,7 @@
 # Studio layer authoring
 
 Open a local composition, then choose **Layer Actions**. The native editor now
-offers Add Static, Add Spectrum, Add Fire, Add Breathing, Add Wave, Add Starlight, Add Reactive,
+offers Add Static, Add Spectrum, Add Fire, Add Breathing, Add Wave, Add Starlight, Add Reactive, Add Tidal,
 New Group, Duplicate, Move Up/Down
 and Delete. Ctrl+D duplicates and Delete removes the selected item when an edit
 field is not focused. Escape dismisses the menu. All changes participate in the
@@ -29,6 +29,9 @@ the stock UI guard rather than reproducing the source core's stale-selection edg
 Move Up/Down changes adjacent sibling order; groups move with their children.
 Undo reconciles selection if the selected item no longer exists. Hidden groups
 do not contribute visible children to local preview.
+
+[Tidal authoring](STUDIO-TIDAL.md) now supports its source properties, layout and
+playback serialization. Tidal radial preview/output remain explicitly gated.
 
 ## Contracts and bounds
 

@@ -16,6 +16,7 @@ enum Generator {
     Fire(FireCycle),
     Breathing(crate::breathing_lighting::BreathingCycle),
     Wave(crate::studio_wave_lighting::StudioWaveCycle),
+    Wheel(crate::studio_wheel_lighting::StudioWheelCycle),
 }
 struct Effect {
     generator: Generator,
@@ -28,8 +29,10 @@ pub struct Preview {
     output: Box<[Rgb]>,
     listed: [bool; CELLS],
     random_state: u32,
+    breathing_seconds: u64,
     frames: u64,
     synthetic_ambient: bool,
+    origin: [i32;2],
 }
 
 #[derive(Deserialize)]
@@ -102,19 +105,25 @@ impl Generator {
             Self::Fire(cycle) => cycle.storage_bytes(),
             Self::Breathing(cycle) => cycle.storage_bytes(),
             Self::Wave(cycle) => cycle.storage_bytes(),
+            Self::Wheel(cycle) => cycle.storage_bytes(),
         }
     }
 }
 impl Preview {
     pub fn from_snapshot(snapshot: &ReadSnapshot, random_state: u32) -> Result<Self> {
-        Self::build(snapshot, random_state, false)
+        let seconds=std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_err(invalid)?.as_secs();
+        Self::from_snapshot_at(snapshot,random_state,seconds)
     }
-    /// Diagnostic only: deterministic colour bars, no desktop capture. This
-    /// explicit constructor is intentionally never used by physical output.
-    pub fn from_snapshot_synthetic_ambient(snapshot: &ReadSnapshot, random_state:u32) -> Result<Self> {
-        Self::build(snapshot,random_state,true)
+    /// Explicit clock for reproducible Breathing. Physical Ambient remains gated.
+    pub fn from_snapshot_at(snapshot:&ReadSnapshot,random_state:u32,unix_seconds:u64)->Result<Self> {
+        Self::build(snapshot,random_state,unix_seconds,false)
     }
-    fn build(snapshot:&ReadSnapshot,random_state:u32,synthetic_ambient:bool) -> Result<Self> {
+    /// Diagnostic only: synthetic colour bars, never desktop capture or output.
+    pub fn from_snapshot_synthetic_ambient(snapshot:&ReadSnapshot,random_state:u32)->Result<Self> {
+        let seconds=std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_err(invalid)?.as_secs();
+        Self::build(snapshot,random_state,seconds,true)
+    }
+    fn build(snapshot:&ReadSnapshot,random_state:u32,unix_seconds:u64,synthetic_ambient:bool)->Result<Self> {
         let root = Object::parse(&snapshot.raw)?;
         let devices = array_field(&root, "devices")?;
         if devices.len() != 1 {
@@ -183,8 +192,10 @@ impl Preview {
             output: vec![Rgb(0, 0, 0); CELLS].into_boxed_slice(),
             listed,
             random_state,
+            breathing_seconds: unix_seconds,
             frames: 0,
             synthetic_ambient,
+            origin: [(placement.y/40.0) as i32,(placement.x/40.0) as i32],
         };
         // Match backend applyLayersEffect: reversed roots and reversed children;
         // each layer's own visibility controls generation.
@@ -218,6 +229,8 @@ impl Preview {
             "wave" => 2,
             "ambient" if self.synthetic_ambient => 11,
             "ambient" => return Err(invalid("Ambient native screen sampling and projection are unverified; only the explicit synthetic diagnostic is available")),
+            "wheel" => 13,
+            "tidal" => return Err(invalid("Tidal radial renderer is unverified; composition retained without substituting Wave")),
             _ => return Err(invalid(format!("preview does not yet implement {name}"))),
         };
         if let Some(value) = item.get("value") {
@@ -282,6 +295,18 @@ impl Preview {
                     let bottom=points.iter().map(|p|p.1).max().unwrap()+1;
                     Generator::Ambient{rect,blur,bounds:[left,top,right,bottom]}
                 }
+                13 => {
+                    let read=|key:&str| -> Result<u32> {serde_json::from_str(params.get(key).ok_or_else(||invalid(format!("Wheel needs explicit {key}")))?.get()).map_err(invalid)};
+                    let cycles=params.get("cycles").map(|v|serde_json::from_str::<i64>(v.get()).map_err(invalid)).transpose()?;
+                    let start=params.get("playbackStart").map(|v|serde_json::from_str::<String>(v.get()).map_err(invalid)).transpose()?;
+                    let end=params.get("playbackEnd").map(|v|serde_json::from_str::<String>(v.get()).map_err(invalid)).transpose()?;
+                    if cycles!=Some(-1)||start.as_deref().is_some_and(|s|s!="random")||end.as_deref().is_some_and(|s|s!="never") {return Err(invalid("Wheel finite and input-triggered playback is unverified; continuous cycles must be explicit"));}
+                    let geometry=Object::parse(item.get("params").ok_or_else(||invalid("Wheel needs layer geometry"))?)?;
+                    let center=|key:&str| -> Result<i32> {let value:i32=serde_json::from_str(geometry.get(key).ok_or_else(||invalid(format!("Wheel needs {key}")))?.get()).map_err(invalid)?;Ok(if (0..=255).contains(&value){value}else{0})};
+                    let counterclockwise:bool=serde_json::from_str(geometry.get("counterclockwise").ok_or_else(||invalid("Wheel needs layer direction"))?.get()).map_err(invalid)?;
+                    let stops=gradient(&params)?;
+                    Generator::Wheel(crate::studio_wheel_lighting::StudioWheelCycle::new(7,23,self.origin,[center("centerPointY")?,center("centerPointX")?],read("speed")?,counterclockwise,stops.as_deref())?)
+                }
                 2 => {
                     let value = |key: &str| -> Result<u32> {
                         serde_json::from_str(params.get(key).ok_or_else(||invalid(format!("Wave needs explicit {key}")))?.get()).map_err(invalid)
@@ -309,12 +334,18 @@ impl Preview {
                     let start=params.get("playbackStart").map(|raw|serde_json::from_str::<String>(raw.get()).map_err(invalid)).transpose()?;
                     let end=params.get("playbackEnd").map(|raw|serde_json::from_str::<String>(raw.get()).map_err(invalid)).transpose()?;
                     let cycles=params.get("cycles").map(|raw|serde_json::from_str::<i64>(raw.get()).map_err(invalid)).transpose()?.unwrap_or(0);
-                    if random || start.as_deref().is_some_and(|mode|mode!="random") || end.as_deref().is_some_and(|mode|mode!="never") || ![0,-1].contains(&cycles) {
-                        return Err(invalid("Breathing random, finite-cycle and input-triggered modes are not implemented"));
+                    if start.as_deref().is_some_and(|mode|mode!="random") || end.as_deref().is_some_and(|mode|!["never","after"].contains(&mode)) {
+                        return Err(invalid("Breathing input-triggered/toggle playback requires verified input ownership"));
                     }
-                    let stops=gradient(&params)?;
                     let duration=params.get("duration").map(|raw|serde_json::from_str(raw.get()).map_err(invalid)).transpose()?;
-                    Generator::Breathing(crate::breathing_lighting::BreathingCycle::studio(color(&params,"color")?,color(&params,"color2")?,stops.as_deref(),duration)?)
+                    let mut cycle = if random {
+                        crate::breathing_lighting::BreathingCycle::random(duration, self.breathing_seconds)?
+                    } else {
+                        let stops=if params.get("colorStops").is_some_and(|raw|raw.get()=="null") {None} else {gradient(&params)?};
+                        crate::breathing_lighting::BreathingCycle::studio(color(&params,"color")?,color(&params,"color2")?,stops.as_deref(),duration)?
+                    };
+                    cycle.set_cycles(cycles)?;
+                    Generator::Breathing(cycle)
                 }
                 6 => Generator::Static(Pixel::from_studio_color(color(&params, "color")?)?),
                 4 => {
@@ -331,14 +362,12 @@ impl Preview {
                     // AddEffect initializes a whole-canvas build; SetMask then
                     // rebuilds from the nonzero bounding box, consuming another
                     // native CRT sequence even when the bounds are unchanged.
-                    let initial = FireCycle::studio(
+                    let mut cycle = FireCycle::studio(
                         FireRegion::new(7, 23, 0, 0, 23, 7)?,
                         hot,
                         cold,
                         self.random_state,
                     )?;
-                    self.random_state = initial.final_random_state();
-                    drop(initial);
                     let points: Vec<_> = mask
                         .iter()
                         .enumerate()
@@ -349,11 +378,10 @@ impl Preview {
                     let bottom = points.iter().map(|p| p.0).max().unwrap() as u16 + 1;
                     let left = points.iter().map(|p| p.1).min().unwrap() as u16;
                     let right = points.iter().map(|p| p.1).max().unwrap() as u16 + 1;
-                    let cycle = FireCycle::studio(
+                    cycle.rebuild(
                         FireRegion::new(7, 23, left, top, right, bottom)?,
                         hot,
                         cold,
-                        self.random_state,
                     )?;
                     self.random_state = cycle.final_random_state();
                     Generator::Fire(cycle)
@@ -413,6 +441,7 @@ impl Preview {
                 Generator::Fire(cycle) => cycle.next_frame(&mut self.scratch)?,
                 Generator::Breathing(cycle) => self.scratch.fill(cycle.next_pixel()),
                 Generator::Wave(cycle) => {self.scratch.fill(Pixel::EMPTY);cycle.next_frame(&mut self.scratch)?;},
+                Generator::Wheel(cycle) => cycle.next_frame(&mut self.scratch)?,
             }
             Layer {
                 pixels: &self.scratch,
@@ -462,12 +491,48 @@ impl Preview {
 #[path="breathing_tests.rs"]
 mod breathing_tests;
 #[cfg(test)]
+#[path="wheel_tests.rs"]
+mod wheel_tests;
+#[cfg(test)]
+#[path="effects_integration_tests.rs"]
+mod effects_integration_tests;
+#[cfg(test)]
 #[path="wave_tests.rs"]
 mod wave_tests;
 #[cfg(test)]
 mod tests {
     use super::*;
     const PROFILE: &str = include_str!("../../tests/fixtures/studio-preview-profile.json");
+    #[test]
+    fn studio_fire_codec_keeps_native_parameters_fixed_and_preserves_unknown_fields() {
+        let original = Draft::open(PROFILE).unwrap();
+        let mut raw: serde_json::Value = serde_json::from_str(PROFILE).unwrap();
+        let fire = raw["layers"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|layer| layer["name"] == "fire")
+            .unwrap();
+        // The shipped case8 codec never reads these extension fields. They
+        // remain raw file data; only native API callers can configure them.
+        let params = &mut fire["regions"][0]["params"];
+        params["rate"] = 40.into();
+        params["seed"] = 2.into();
+        params["cycles"] = 1.into();
+        params["mode"] = 999.into();
+        let json = raw.to_string();
+        let extended = Draft::open(&json).unwrap();
+        let mut expected = Preview::from_snapshot(&original.read_snapshot(), 1).unwrap();
+        let mut actual = Preview::from_snapshot(&extended.read_snapshot(), 1).unwrap();
+        assert_eq!(expected.final_random_state(), actual.final_random_state());
+        for _ in 0..501 {
+            assert_eq!(expected.frame(), actual.frame());
+            expected.advance().unwrap();
+            actual.advance().unwrap();
+        }
+        assert_eq!(extended.json(), json);
+        assert!(!extended.is_dirty());
+    }
     #[test]
     fn complete_fire_spectrum_composition_matches_independent500_frame_reference() {
         let reference: serde_json::Value = serde_json::from_str(include_str!(
