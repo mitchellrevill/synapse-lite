@@ -14,8 +14,9 @@ jobs:
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
-      - run: cargo clippy --release --all-targets -- -D warnings
-      - run: cargo test --release
+      - run: cargo clippy --release --all-targets -j 1 -- -D warnings
+      # Shared worker/session tests require serial execution. No tests are skipped.
+      - run: cargo test --release -j 1 -- --test-threads=1
 
   linux:
     runs-on: ubuntu-latest
@@ -26,5 +27,5 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@v2
       # The CLI only; the tray is Windows-only for now.
-      - run: cargo clippy --release -p secbird-core -p secbird --all-targets -- -D warnings
-      - run: cargo test --release -p secbird-core -p secbird
+      - run: cargo clippy --release -p secbird-core -p secbird --all-targets -j 1 -- -D warnings
+      - run: cargo test --release -p secbird-core -p secbird -j 1 -- --test-threads=1
