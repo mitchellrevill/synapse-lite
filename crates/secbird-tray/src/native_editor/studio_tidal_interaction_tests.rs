@@ -70,9 +70,12 @@ fn native_studio_tidal_authoring_save_history_center_and_runtime_gate() {
                 lighting_click(
                     hwnd,
                     width / 2. + (67. - 480.) * fit,
-                    (168. + height) / 2. + (76. - 180.) * fit,
+                    (118. + height) / 2. + (76. - 180.) * fit,
                     scale,
                 );
+                if query()["selected_leds"] != 1 {
+                    return Err(format!("LED selection missed the canvas: {}", query()));
+                }
                 let set = |id, text: &str| -> Result<(), String> {
                     let f = GetDlgItem(hwnd, id);
                     if f.is_null() {
@@ -106,7 +109,7 @@ fn native_studio_tidal_authoring_save_history_center_and_runtime_gate() {
                 lighting_click(hwnd, right + 155., 413., scale);
                 lighting_click(hwnd, right + 40., 487., scale); // active Outward toggles inward, source behavior
                 lighting_click(hwnd, right + 100., 450., scale);
-                lighting_click(hwnd, width / 2., (168. + height) / 2., scale);
+                lighting_click(hwnd, width / 2., (118. + height) / 2., scale);
                 lighting_click(hwnd, right + 197., 548., scale);
                 set(2143, "7")?;
                 lighting_click(hwnd, right + 155., 633., scale);

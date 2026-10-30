@@ -76,9 +76,12 @@ fn native_studio_wheel_authoring_save_history_and_no_device_output() {
                 lighting_click(
                     hwnd,
                     width / 2. + (67. - 480.) * fit,
-                    (168. + height) / 2. + (76. - 180.) * fit,
+                    (118. + height) / 2. + (76. - 180.) * fit,
                     scale,
                 );
+                if query()["selected_leds"] != 1 {
+                    return Err(format!("LED selection missed the canvas: {}", query()));
+                }
                 let speed = GetDlgItem(hwnd, 2130);
                 SendMessageW(speed, WM_SETTEXT, 0, wide("120").as_ptr() as isize);
                 lighting_click(hwnd, right + 170., 298., scale);
@@ -156,7 +159,7 @@ fn native_studio_wheel_authoring_save_history_and_no_device_output() {
                 lighting_click(hwnd, right + 100., 290., scale);
                 let selection = query()["selected_leds"].clone();
                 lighting_click(hwnd, right + 100., 485., scale);
-                lighting_click(hwnd, width / 2., (168. + height) / 2., scale);
+                lighting_click(hwnd, width / 2., (118. + height) / 2., scale);
                 if query()["dirty"] != true || query()["selected_leds"] != selection {
                     return Err(
                         "Center picker changed LED membership or did not edit geometry".into(),
