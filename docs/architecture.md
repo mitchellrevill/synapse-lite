@@ -8,7 +8,7 @@ The workspace has three crates:
 | `secbird` | Existing command-line entry points and explicit local-file inspection tools. |
 | `secbird-tray` | Windows tray, native editor, engine workers, output ownership and optional legacy browser editor. |
 
-The native editor uses Win32 GDI/GDI+ and a bounded DirectWrite bridge. The UI thread owns view state, drafts, hit testing and painting. `native_editor/device_worker.rs` owns the background request/reply protocol and serialized device jobs. Accepted setting updates are bounded and only adjacent compatible updates coalesce. File jobs release the engine lock before doing composition I/O.
+The native editor uses Win32 GDI/GDI+ and a bounded DirectWrite bridge. Restored windows request small DWM corners and draw a one-pixel muted outline. The default system border remains suppressed in both focus states; maximized windows keep square edges without the outline. The UI thread owns view state, drafts, hit testing and painting. `native_editor/device_worker.rs` owns the background request/reply protocol and serialized device jobs. Accepted setting updates are bounded and only adjacent compatible updates coalesce. File jobs release the engine lock before doing composition I/O.
 
 `engine.rs` owns connected devices and configuration. Host lighting and macro sessions retain explicit ownership and connection identity. A disconnect invalidates a live session; reconnecting does not silently resume a prior output stream.
 

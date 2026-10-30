@@ -3261,6 +3261,7 @@ unsafe fn paint(state: &mut State, dc: HDC) {
             DrawFocusRect(dc, &hit.rect);
         }
     }
+    window_frame::outline(dc, state.width, state.height, IsZoomed(state.hwnd) != 0);
     state.hits = p.hits;
 }
 
@@ -5044,6 +5045,7 @@ fn run_window(
             style: CS_HREDRAW | CS_VREDRAW,
             lpfnWndProc: Some(window_proc),
             hInstance: instance,
+            hIcon: LoadIconW(instance, std::ptr::without_provenance(1)),
             hCursor: LoadCursorW(null_mut(), IDC_ARROW),
             lpszClassName: class.as_ptr(),
             ..std::mem::zeroed()
@@ -5078,7 +5080,7 @@ fn run_window(
             }
             return Err(error);
         }
-        window_frame::suppress_system_border(hwnd);
+        window_frame::apply_style(hwnd);
         {
             let mut state = state.borrow_mut();
             let actual_scale = GetDpiForWindow(hwnd).max(96) as f32 / 96.0;

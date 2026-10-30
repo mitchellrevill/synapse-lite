@@ -4,8 +4,11 @@
 //! synchronous resize callbacks. They perform no device or profile operations.
 use super::*;
 
-pub(super) unsafe fn suppress_system_border(hwnd: HWND) {
-    use windows_sys::Win32::Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_BORDER_COLOR};
+pub(super) unsafe fn apply_style(hwnd: HWND) {
+    use windows_sys::Win32::Graphics::Dwm::{
+        DwmSetWindowAttribute, DWMWA_BORDER_COLOR, DWMWA_WINDOW_CORNER_PREFERENCE,
+        DWMWCP_ROUNDSMALL,
+    };
     // Windows 11's explicit "no border" color; older versions may reject it.
     // Custom WM_NCPAINT/WM_NCACTIVATE handling also suppresses classic painting.
     let color: u32 = 0xffff_fffe;
@@ -15,6 +18,30 @@ pub(super) unsafe fn suppress_system_border(hwnd: HWND) {
         (&color as *const u32).cast(),
         std::mem::size_of_val(&color) as u32,
     );
+    // DWM rounds restored windows and keeps maximized windows square. Older
+    // Windows versions may reject this preference without affecting resizing.
+    let corners = DWMWCP_ROUNDSMALL;
+    DwmSetWindowAttribute(
+        hwnd,
+        DWMWA_WINDOW_CORNER_PREFERENCE as u32,
+        (&corners as *const i32).cast(),
+        std::mem::size_of_val(&corners) as u32,
+    );
+}
+
+pub(super) unsafe fn outline(dc: HDC, width: i32, height: i32, maximized: bool) {
+    if maximized || width <= 0 || height <= 0 {
+        return;
+    }
+    // Own the one-physical-pixel edge in both focus states; the system's
+    // inactive white border remains suppressed. DWM clips the small corners.
+    let previous = SetDCBrushColor(dc, rgb(0x3b443b));
+    FrameRect(
+        dc,
+        &RECT { left: 0, top: 0, right: width, bottom: height },
+        GetStockObject(DC_BRUSH).cast(),
+    );
+    SetDCBrushColor(dc, previous);
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
