@@ -992,7 +992,7 @@ impl App {
             let battery = match self.batteries.iter().find(|b| b.key == dev.key()) {
                 Some(b) if b.charging == Some(true) => format!(" · {}% charging", b.percent),
                 Some(b) => format!(" · {}%", b.percent),
-                None if dev.spec.as_ref().is_some_and(|s|s.wireless) => " � battery unknown / unavailable".into(),
+                None if dev.spec.as_ref().is_some_and(|s|s.wireless) => " · battery unknown / unavailable".into(),
                 None => String::new(),
             };
             text.push_str(&format!("\n{}: {active}{battery}", engine.label(dev)));
