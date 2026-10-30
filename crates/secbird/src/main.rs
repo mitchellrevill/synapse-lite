@@ -19,6 +19,8 @@ LOCAL FILES (does not open hardware or apply device settings):
   source-macro plan PROFILE_DOCUMENT BINDING_JSON NEW_OUTPUT
                             Prepare saved GUI macro events for inspection;
                             does not open hardware, run input or install profiles
+  profiles inspect-archive FILE  Inspect stored ZIP members; no conversion or activation
+
   profiles recover-macros NATIVE_BACKUP SOURCE_EXPORT EXACT_DEVICE_KEY NEW_OUTPUT
                             Attach verified referenced macro definitions to a new backup;
                             does not activate profiles, run macros or install the store
