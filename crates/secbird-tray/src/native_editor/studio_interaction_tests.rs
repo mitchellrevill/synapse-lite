@@ -1212,3 +1212,299 @@ fn native_studio_layer_authoring_preview_undo_and_save_preserve_source() {
     assert_eq!(std::fs::read(&input).unwrap(),original);assert_eq!(std::fs::read(directory.join("profiles.json")).unwrap(),store_before);
     eprintln!("Studio authoring evidence: {}",directory.display());
 }
+
+#[test]
+#[ignore = "requires an explicitly selected private stock Ornata export; opens isolated simulated window"]
+fn native_studio_spectrum_controls_drag_save_and_scroll() {
+    let input = PathBuf::from(
+        std::env::var_os("SYNAPSE_LITE_STOCK_STUDIO_FILE").expect("select private stock export"),
+    );
+    let original = std::fs::read(&input).unwrap();
+    let source = secbird_core::studio::Archive::parse(&original).unwrap();
+    assert_eq!(source.profile_count(), 1);
+    let directory = std::env::temp_dir().join(format!(
+        "native-stock-studio-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(&directory).unwrap();
+    let frame = directory.join("frame.json");
+    let _environment = Environment::set(&[
+        ("SYNAPSE_LITE_CONFIG_DIR", &directory),
+        ("SYNAPSE_LITE_SMOKE_REPORT", &frame),
+        ("SYNAPSE_LITE_SMOKE_VIEW", Path::new("studio")),
+    ]);
+    let sim = Sim::wireless_mouse();
+    let engine = Engine::with_simulated_mouse(&sim).unwrap();
+    let mut store = Store::load(&directory.join("profiles.json")).unwrap();
+    store.for_device(&engine.devices()[0]);
+    store.save().unwrap();
+    let store_before = std::fs::read(directory.join("profiles.json")).unwrap();
+    let folder = directory.clone();
+    let controller_sim = sim.clone();
+    let controller = std::thread::spawn(move || {
+        let result = (|| -> Result<Value, String> {
+            unsafe {
+                wait_for(
+                    || {
+                        std::fs::read(&frame)
+                            .ok()
+                            .and_then(|b| serde_json::from_slice::<Value>(&b).ok())
+                            .is_some_and(|v| v["presented"] == true)
+                    },
+                    "actual export window presented",
+                )?;
+                let hwnd = WINDOW.load(Ordering::Acquire) as HWND;
+                let query = || {
+                    let mut value = Value::Null;
+                    SendMessageW(hwnd, STUDIO_TEST, 2, &mut value as *mut Value as isize);
+                    value
+                };
+                wait_for(|| query()["pending"] == 0, "initial simulated reads")?;
+                controller_sim.state().log.clear();
+                let path = json!(input.to_string_lossy());
+                SendMessageW(hwnd, STUDIO_TEST, 1, &path as *const Value as isize);
+                wait_for(
+                    || query()["profiles"] == 1 && query()["busy"] == false,
+                    "actual export load",
+                )?;
+                let state = query();
+                if state["dirty"] != false
+                    || state["canvas_devices"] != 1
+                    || state["canvas_selectable_leds"] != 109
+                    || state["rows"].as_array().map(Vec::len) != Some(2)
+                    || state["canvas_notes"]
+                        .as_array()
+                        .is_none_or(|n| !n.is_empty())
+                {
+                    return Err(format!("Actual export not fully admitted: {state}"));
+                }
+                redraw(hwnd);
+                let scale = f64::from(GetDpiForWindow(hwnd).max(96)) / 96.0;
+                let mut client: RECT = std::mem::zeroed();
+                GetClientRect(hwnd, &mut client);
+                let width = f64::from(client.right) / scale;
+                let height = f64::from(client.bottom) / scale;
+                let fit = ((width - 540.0) / 960.0)
+                    .min((height - 250.0) / 360.0)
+                    .clamp(0.05, 4.0);
+                lighting_click(
+                    hwnd,
+                    width / 2.0 + (67.0 - 480.0) * fit,
+                    (168.0 + height) / 2.0 + (76.0 - 180.0) * fit,
+                    scale,
+                );
+                if query()["selected_leds"] != 1 || query()["dirty"] != false {
+                    return Err("Actual export Esc hit failed or changed the document".into());
+                }
+                let output = folder.join("actual-roundtrip.ChromaEffects");
+                let path = json!(output.to_string_lossy());
+                SendMessageW(hwnd, STUDIO_TEST, 3, &path as *const Value as isize);
+                wait_for(|| query()["busy"] == false, "actual export save")?;
+                if query()["failed"] != false {
+                    return Err(format!("Actual export save failed: {}", query()));
+                }
+                let bytes = std::fs::read(&output).map_err(|e| e.to_string())?;
+                let saved =
+                    secbird_core::studio::Archive::parse(&bytes).map_err(|e| e.to_string())?;
+                if saved.profile_json(0) != source.profile_json(0) {
+                    return Err("Actual raw profile changed during roundtrip".into());
+                }
+                use secbird_core::studio::document::{Draft,LedSelection};
+                let baseline=Draft::open(source.profile_json(0).unwrap()).map_err(|e|e.to_string())?;
+                let device:Value=serde_json::from_str(source.profile_json(0).unwrap()).unwrap();
+                let selection=[LedSelection{device:device["devices"][0]["id"].as_str().unwrap().into(),row:0,col:1}];
+                let right=width-250.;
+                let spectrum_id = device["layers"][1]["id"].as_str().unwrap();
+                let original_gradient = baseline
+                    .spectrum_selection_gradient(spectrum_id, &selection)
+                    .map_err(|e| e.to_string())?;
+                lighting_click(hwnd, 60.0, 228.0, scale);
+                if query()["selected_leds"] != 0 {
+                    return Err("Spectrum switch retained Fire selection".into());
+                }
+                lighting_click(
+                    hwnd,
+                    width / 2.0 + (67.0 - 480.0) * fit,
+                    (168.0 + height) / 2.0 + (76.0 - 180.0) * fit,
+                    scale,
+                );
+                SendMessageW(hwnd, READ_ONLY_TEST_SET, 1, 0);
+                lighting_click(hwnd, right + 195.0, 291.0, scale);
+                if query()["dirty"] != false {
+                    return Err("Read-only Spectrum duration mutated profile".into());
+                }
+                SendMessageW(hwnd, READ_ONLY_TEST_SET, 0, 0);
+                lighting_click(hwnd, right + 195.0, 291.0, scale);
+                let edited_path=folder.join("spectrum-edited.ChromaEffects");
+                let save_path=json!(edited_path.to_string_lossy());
+                let save_spectrum = || -> Result<Draft, String> {
+                    SendMessageW(hwnd, STUDIO_TEST, 3, &save_path as *const Value as isize);
+                    wait_for(|| query()["busy"] == false, "Spectrum save")?;
+                    if query()["failed"] != false {
+                        return Err("Spectrum save failed".into());
+                    }
+                    let bytes = std::fs::read(&edited_path).map_err(|e| e.to_string())?;
+                    let archive =
+                        secbird_core::studio::Archive::parse(&bytes).map_err(|e| e.to_string())?;
+                    Draft::open(archive.profile_json(0).unwrap()).map_err(|e| e.to_string())
+                };
+                use secbird_core::studio::document::{
+                    GradientStop, SelectedDuration, SelectedGradient,
+                };
+                let saved_spectrum = save_spectrum()?;
+                if saved_spectrum
+                    .spectrum_selection_duration(spectrum_id, &selection)
+                    .map_err(|e| e.to_string())?
+                    != SelectedDuration::Uniform(18870)
+                    || saved_spectrum
+                        .spectrum_selection_gradient(spectrum_id, &selection)
+                        .map_err(|e| e.to_string())?
+                        != original_gradient
+                {
+                    return Err(
+                        "Duration-only Spectrum edit changed gradient or stored wrong milliseconds"
+                            .into(),
+                    );
+                }
+                // Fifth source preset has three stops. Edit a real native field,
+                // clear its colour, then exercise add/delete and exact history.
+                lighting_click(hwnd, right + 210.0, 360.0, scale);
+                let position = GetDlgItem(hwnd, i32::from(studio_view::POSITION));
+                let color = GetDlgItem(hwnd, i32::from(studio_view::STOP_COLOR));
+                if position.is_null() || color.is_null() {
+                    return Err("Spectrum stop fields missing".into());
+                }
+                SendMessageW(position, WM_SETTEXT, 0, wide("101").as_ptr() as isize);
+                lighting_click(hwnd, right + 180.0, 493.0, scale);
+                if query()["failed"] != true {
+                    return Err("Invalid gradient percentage accepted".into());
+                }
+                let position = GetDlgItem(hwnd, i32::from(studio_view::POSITION));
+                SendMessageW(position, WM_SETTEXT, 0, wide("25").as_ptr() as isize);
+                lighting_click(hwnd, right + 180.0, 493.0, scale);
+                lighting_click(hwnd, right + 60.0, 529.0, scale);
+                lighting_click(hwnd, right + 180.0, 529.0, scale);
+                lighting_click(hwnd, 440.0, 100.0, scale);
+                lighting_click(hwnd, 440.0, 100.0, scale);
+                let saved_spectrum = save_spectrum()?;
+                let expected = SelectedGradient::Uniform(Some(vec![
+                    GradientStop {
+                        position: 25,
+                        color: None,
+                    },
+                    GradientStop {
+                        position: 50,
+                        color: Some(0xefff00),
+                    },
+                    GradientStop {
+                        position: 100,
+                        color: Some(0xff0000),
+                    },
+                ]));
+                if saved_spectrum
+                    .spectrum_selection_gradient(spectrum_id, &selection)
+                    .map_err(|e| e.to_string())?
+                    != expected
+                    || saved_spectrum
+                        .spectrum_selection_duration(spectrum_id, &selection)
+                        .map_err(|e| e.to_string())?
+                        != SelectedDuration::Uniform(18870)
+                {
+                    return Err("Spectrum preset/None/add/delete/history did not preserve expected gradient and duration".into());
+                }
+                let saved_json: Value = serde_json::from_str(saved_spectrum.json()).unwrap();
+                let assigned = saved_json["layers"][1]["regions"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .find(|region| {
+                        region["devices"][0]["leds"].as_array().is_some_and(|leds| {
+                            leds.iter().any(|led| led["row"] == 0 && led["col"] == 1)
+                        })
+                    })
+                    .ok_or("Edited Spectrum region absent")?;
+                if assigned["params"]["colorStopsCustom"] != true
+                    || assigned["params"]["colorStops"][0].get("Color").is_some()
+                {
+                    return Err("Spectrum custom flag or omitted None encoding incorrect".into());
+                }
+                if std::fs::read(&input).unwrap() != original
+                    || std::fs::read(folder.join("profiles.json")).unwrap() != store_before
+                {
+                    return Err("Source export or device-profile store changed".into());
+                }
+                if controller_sim
+                    .state()
+                    .log
+                    .iter()
+                    .any(|command| command.id & 0x80 == 0)
+                {
+                    return Err("Actual file operation submitted device SETs".into());
+                }
+                // Drive the new track through native messages, then verify the
+                // persisted regional data and single undo checkpoint.
+                let history = query()["undo"].as_u64().unwrap();
+                let point = |x:f64,y:f64| ((x*scale) as i32 & 65535) as isize | ((((y*scale) as i32 & 65535) as isize) << 16);
+                SendMessageW(hwnd,WM_LBUTTONDOWN,1,point(right+65.,620.));
+                SendMessageW(hwnd,WM_MOUSEMOVE,1,point(right+210.,620.));
+                SendMessageW(hwnd,WM_LBUTTONUP,0,point(right+210.,620.));
+                if query()["undo"].as_u64()!=Some(history+1) { return Err("Stop drag must commit exactly once".into()); }
+                let settled=query()["undo"].clone();
+                SendMessageW(hwnd,WM_LBUTTONDOWN,1,point(right+210.,620.));
+                SendMessageW(hwnd,WM_LBUTTONUP,0,point(right+210.,620.));
+                if query()["undo"]!=settled {return Err("Selecting a stop created an edit".into());}
+                SendMessageW(hwnd,WM_LBUTTONDOWN,1,point(right+210.,620.));
+                SendMessageW(hwnd,WM_MOUSEMOVE,1,point(right+30.,620.));
+                SendMessageW(hwnd,WM_CANCELMODE,0,0); ReleaseCapture();
+                if query()["undo"]!=settled {return Err("Cancelled drag created an edit".into());}
+                let dragged = save_spectrum()?;
+                let secbird_core::studio::document::SelectedGradient::Uniform(Some(stops)) = dragged.spectrum_selection_gradient(spectrum_id,&selection).unwrap() else {return Err("Dragged gradient missing".into());};
+                if !stops.iter().any(|s| s.position==90 && s.color.is_none()) { return Err("Dragged None stop did not cross neighbours".into()); }
+                let capture = json!(folder.join("spectrum-drag.png").to_string_lossy());
+                SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize);
+                SetWindowPos(hwnd,null_mut(),0,0,(width*scale) as i32,(560.*scale) as i32,SWP_NOMOVE|SWP_NOZORDER);
+                let mut wheel_point=POINT{x:((right+100.)*scale) as i32,y:(400.*scale) as i32};
+                ClientToScreen(hwnd,&mut wheel_point);
+                let packed=(wheel_point.x & 65535) as isize | (((wheel_point.y & 65535) as isize)<<16);
+                for _ in 0..4 { SendMessageW(hwnd,WM_MOUSEWHEEL,((-120i16) as u16 as usize)<<16,packed); }
+                let capture=json!(folder.join("spectrum-small-scrolled.png").to_string_lossy());
+                SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize);
+                let capture = json!(folder.join("actual-studio-frame.png").to_string_lossy());
+                if SendMessageW(hwnd, STUDIO_TEST, 6, &capture as *const Value as isize) != 1 {
+                    return Err("Actual export paint capture failed".into());
+                }
+                Ok(
+                    json!({"spectrum_drag_single_undo":true,"crossing_none_stop_saved":true,"duration_preserves_gradient":true,"insert_delete_undo":true,"small_scrolled_capture":true,"source_file_unchanged":true,"no_device_sets":true}),
+                )
+            }
+        })();
+        unsafe {
+            let hwnd = WINDOW.load(Ordering::Acquire) as HWND;
+            if !hwnd.is_null() {
+                SendMessageW(hwnd, STUDIO_TEST, 5, 0);
+                PostMessageW(hwnd, WM_CLOSE, 0, 0);
+            }
+        }
+        result
+    });
+    run_window(
+        Arc::new(Mutex::new(engine)),
+        Some(Duration::from_secs(20)),
+        None,
+    )
+    .unwrap();
+    let evidence = controller.join().unwrap().unwrap();
+    std::fs::write(
+        directory.join("actual-interaction.json"),
+        serde_json::to_vec_pretty(&evidence).unwrap(),
+    )
+    .unwrap();
+    eprintln!(
+        "Actual stock Studio interaction evidence: {}",
+        directory.display()
+    );
+}

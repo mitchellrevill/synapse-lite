@@ -31,7 +31,7 @@ pub(super) fn output_control(state: &mut State, control: crate::host_studio::ses
 pub(super) unsafe fn output_receive(state: &mut State, result: Result<Value,String>) { output::receive(state,result); }
 pub(super) unsafe fn output_tick(state: &mut State) { output::tick(state); }
 pub(super) unsafe fn layer_pointer(state: &mut State, message: u32, lparam: isize) -> bool {
-    layer_tools::pointer(state, message, lparam)
+    spectrum::pointer(state, message, lparam) || layer_tools::pointer(state, message, lparam)
 }
 pub(super) const PREVIEW_TIMER: usize = 79;
 pub(super) unsafe fn preview_tick(state: &mut State) {
@@ -1086,6 +1086,8 @@ pub(super) unsafe fn wheel(state: &mut State, delta: i32, mut point: POINT) -> b
         state.studio.profile_scroll = (state.studio.profile_scroll as i32
             - if delta > 0 { 1 } else { -1 })
         .clamp(0, count.saturating_sub(7) as i32) as usize;
+    } else if spectrum::wheel(state, delta, (point.x as f32 / state.scale) as i32) {
+        // Rebuild child fields at their scrolled positions.
     } else if (point.x as f32 / state.scale) < 250.0 {
         let count = state.studio.visible_ids().len();
         let visible = ((state.content_bottom_css() - 168.0) / 40.0).max(1.0) as usize;
@@ -1454,7 +1456,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
             view.editable() && view.canvas.count() > 0,
         );
     } else if view.effect() == Some("spectrum") {
-        spectrum::paint(p, view, right);
+        spectrum::paint_scrolled(p, view, right, height-40);
     } else if view.effect() == Some("reactive") {
         reactive::paint(p,view,right);
     } else if view.effect() == Some("starlight") {
@@ -1495,6 +1497,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
     } else {
         &view.status
     };
+    if view.effect()!=Some("spectrum") {
     paragraph(
         p,
         message,
@@ -1510,6 +1513,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         130,
         if view.failed { 0xfd4949 } else { MUTED },
     );
+    }
     layer_tools::paint(state, p);
     button(p,"ADD DEVICE",270,172,110,Control::AddPreset,
         view.editable() && !state.read_only_smoke && !state.restricted_actions);
