@@ -121,3 +121,4 @@ pub mod global_shortcuts;
 
 pub mod device_information;
 pub mod support_bundle;
+pub mod lighting_identify;

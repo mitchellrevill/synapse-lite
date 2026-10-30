@@ -391,6 +391,10 @@ pub(super) fn selection_changed(state: &mut State) {
         }
     }
 }
+pub(super) fn identify_unavailable(state: &mut State) {
+    state.studio.status = secbird_core::lighting_identify::DISABLED_REASON.into();
+}
+
 fn error(state: &mut State, message: impl Into<String>) {
     state.studio.status = message.into();
     state.studio.failed = true;
