@@ -6,6 +6,7 @@ struct Fake {
     exists: bool,
     create: Result<u32, u32>,
     shells: VecDeque<Result<Option<u32>, u32>>,
+    com_error: Option<i32>,
     stop_at: Option<(&'static str, Arc<Control>)>,
 }
 impl Default for Fake {
@@ -15,6 +16,7 @@ impl Default for Fake {
             exists: true,
             create: Ok(42),
             shells: VecDeque::new(),
+            com_error: None,
             stop_at: None,
         }
     }
@@ -45,6 +47,9 @@ impl Backend for Fake {
         hidden: bool,
     ) -> Result<Option<u32>, ShellError> {
         self.call("shell", format!("shell:{hidden}:{file}:{args:?}"));
+        if let Some(error) = self.com_error.take() {
+            return Err(ShellError::Com(error));
+        }
         self.shells
             .pop_front()
             .expect("unexpected retry")
@@ -58,6 +63,28 @@ fn request(command: &str) -> Request {
         path_to_check: None,
     })
     .unwrap()
+}
+
+#[test]
+fn launch_com_failure_is_terminal_without_retry_or_replay() {
+    let control = Control::new();
+    let mut backend = Fake {
+        create: Err(193),
+        com_error: Some(-2147417850),
+        ..Default::default()
+    };
+    let request = request("\"C:/Own Fixture.exe\" --list");
+    assert_eq!(
+        execute(&request, &control, &mut backend),
+        Err(Error::Com(-2147417850))
+    );
+    assert_eq!(backend.calls.len(), 2);
+    assert_eq!(control.cancel(), CancelOutcome::AlreadyFinished);
+    assert_eq!(
+        execute(&request, &control, &mut backend),
+        Err(Error::AlreadyUsed)
+    );
+    assert_eq!(backend.calls.len(), 2);
 }
 
 #[test]
