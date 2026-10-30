@@ -83,6 +83,21 @@ impl Drop for Environment {
     }
 }
 
+#[test]
+fn empty_asset_override_uses_packaged_assets_and_explicit_paths_remain_supported() {
+    let packaged = std::env::current_exe().unwrap().parent().unwrap().join("assets");
+    {
+        let _environment = Environment::set(&[("SYNAPSE_LITE_ASSETS", Path::new(""))]);
+        assert_eq!(std::env::var_os("SYNAPSE_LITE_ASSETS"), Some(std::ffi::OsString::new()));
+        assert_eq!(assets_dir(), packaged);
+    }
+    {
+        let explicit = Path::new("explicit-private-assets");
+        let _environment = Environment::set(&[("SYNAPSE_LITE_ASSETS", explicit)]);
+        assert_eq!(assets_dir(), explicit);
+    }
+}
+
 fn wait_for(mut predicate: impl FnMut() -> bool, reason: &str) -> Result<(), String> {
     let started = Instant::now();
     while started.elapsed() < Duration::from_secs(4) {

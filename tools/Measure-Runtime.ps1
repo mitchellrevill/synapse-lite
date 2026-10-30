@@ -100,7 +100,13 @@ try {
         }
     }
 } finally {
-    foreach ($key in $original.Keys) { [Environment]::SetEnvironmentVariable($key, $original[$key], 'Process') }
+    foreach ($key in $original.Keys) {
+        if ($null -eq $original[$key]) {
+            Remove-Item -LiteralPath "Env:$key" -ErrorAction SilentlyContinue
+        } else {
+            [Environment]::SetEnvironmentVariable($key, $original[$key], 'Process')
+        }
+    }
 }
 $intrinsicAllRuns = @($results | Where-Object { -not $_.IntrinsicReadOnlyReported }).Count -eq 0
 [pscustomobject]@{

@@ -4665,6 +4665,7 @@ unsafe extern "system" fn window_proc(
 
 pub(crate) fn assets_dir() -> PathBuf {
     std::env::var_os("SYNAPSE_LITE_ASSETS")
+        .filter(|path| !path.is_empty())
         .map(PathBuf::from)
         .unwrap_or_else(|| {
             std::env::current_exe()
