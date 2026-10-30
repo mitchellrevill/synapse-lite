@@ -13,6 +13,8 @@ mod session;
 mod playback;
 #[path = "studio_spectrum.rs"]
 mod spectrum;
+#[path = "studio_breathing.rs"]
+mod breathing;
 #[path = "studio_reactive.rs"]
 mod reactive;
 #[path = "studio_starlight.rs"]
@@ -79,6 +81,7 @@ pub(super) enum Control {
     StopDevice,
     BreathingDuration(usize),
     BreathingGradient,
+    Breathing(breathing::Control),
     Erase,
 }
 #[derive(Clone, Copy)]
@@ -111,6 +114,8 @@ pub(super) struct View {
     starlight: starlight::Properties,
     reactive: reactive::Properties,
     breathing_gradient: bool,
+    breathing_playback: bool,
+    breathing: breathing::Properties,
     playback: playback::Playback,
     output: output::View,
     dropdown: bool,
@@ -255,6 +260,8 @@ impl View {
         self.dropdown = false;
         self.layer_menu = false;
         self.breathing_gradient = false;
+        self.breathing_playback = false;
+        self.breathing = breathing::Properties::default();
         self.renaming = false;
         self.canvas = studio_canvas::Canvas::load(raw, &assets_dir());
         match Draft::open(raw) {
@@ -306,7 +313,7 @@ impl View {
         self.effect() == Some("fire")
     }
     fn is_breathing(&self) -> bool { self.effect()==Some("breathing") }
-    fn has_two_colors(&self) -> bool { self.is_fire() || (self.is_breathing() && !self.breathing_gradient) }
+    fn has_two_colors(&self) -> bool { self.is_fire() || (self.is_breathing() && !self.breathing_gradient && !self.breathing_playback) }
     fn effect(&self) -> Option<&str> {
         self.draft
             .as_ref()?
@@ -317,7 +324,7 @@ impl View {
             .as_deref()
     }
     fn color_property(&self, cold: bool) -> Option<ColorProperty> {
-        if self.is_breathing() && self.breathing_gradient {return None;}
+        if self.is_breathing() && (self.breathing_gradient || self.breathing_playback) {return None;}
         match (self.effect()?, cold) {
             ("static", false) => Some(ColorProperty::Static),
             ("fire", false) => Some(ColorProperty::FireHot),
@@ -331,6 +338,7 @@ impl View {
 
 pub(super) fn selection_changed(state: &mut State) {
     let view = &mut state.studio;
+    breathing::refresh(view);
     spectrum::refresh(view);
     wave::refresh(view);
     starlight::refresh(view);
@@ -610,6 +618,7 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
         Control::Wave(control) => wave::action(state, control),
         Control::Starlight(control) => starlight::action(state, control),
         Control::Reactive(control) => reactive::action(state, control),
+        Control::Breathing(control) => breathing::action(state, control),
         Control::BreathingDuration(index) => {
             let result=(|| -> Result<(),String> {
                 let view=&mut state.studio;
@@ -1403,6 +1412,8 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
             Control::Erase,
             enabled,
         );
+    } else if view.is_breathing() && view.breathing_playback {
+        breathing::paint(p,view,right);
     } else if view.is_breathing() && view.breathing_gradient {
         spectrum::paint(p,view,right);
     } else if view.has_two_colors() {
@@ -1473,9 +1484,10 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         );
     }
     if view.is_breathing() && !view.breathing_gradient && !view.renaming {
-        button(p,"CUSTOM GRADIENT",right+10,220,220,Control::BreathingGradient,view.editable());
+        if !view.breathing_playback {button(p,"GRADIENT",right+10,220,106,Control::BreathingGradient,view.editable());}
+        button(p,if view.breathing_playback {"BACK TO COLOURS"}else{"PLAYBACK"},right+if view.breathing_playback{10}else{124},220,if view.breathing_playback{220}else{106},Control::Breathing(breathing::Control::Page),view.editable());
     }
-    if view.is_breathing() && !view.breathing_gradient {
+    if view.is_breathing() && !view.breathing_gradient && !view.breathing_playback {
         p.text("SPEED · SELECT LEDS",right+10,500,230,25,p.fonts.small,TEXT,DT_LEFT);
         for (index,title) in ["SLOW","NORMAL","FAST"].iter().enumerate() {
             button(p,title,right+10+index as i32*77,530,72,Control::BreathingDuration(index),view.editable() && view.canvas.count()>0);
@@ -1499,7 +1511,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
         p,
         message,
         right + 10,
-        if view.is_breathing() && !view.breathing_gradient { 566 } else if matches!(view.effect(),Some("breathing"|"spectrum"|"wave"|"starlight"|"reactive")) {
+        if view.is_breathing() && view.breathing_playback {592} else if view.is_breathing() && !view.breathing_gradient { 566 } else if matches!(view.effect(),Some("breathing"|"spectrum"|"wave"|"starlight"|"reactive")) {
             590
         } else if view.is_fire() {
             506
@@ -1507,7 +1519,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter, width: i32, height: i
             400
         },
         230,
-        130,
+        if view.is_breathing() && view.breathing_playback {80} else {130},
         if view.failed { 0xfd4949 } else { MUTED },
     );
     layer_tools::paint(state, p);

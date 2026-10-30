@@ -1,0 +1,101 @@
+{
+  "date": "2026-10-30",
+  "base": "6149f7a9422ae93322365ed12df46ab681dc40a8",
+  "canonical_integration_left_untouched": "7b99930",
+  "scope": "Breathing-only checkpoint; not overall feature parity or memory acceptance",
+  "checks": {
+    "core": {
+      "passed": 521,
+      "ignored": 6,
+      "failed": 0
+    },
+    "core_doctests": {
+      "passed": 1,
+      "failed": 0
+    },
+    "tray_studio": {
+      "passed": 53,
+      "ignored": 17,
+      "failed": 0
+    },
+    "native_isolated_hwnd": {
+      "passed": 1,
+      "failed": 0
+    },
+    "release_workspace_build": {
+      "succeeded": true,
+      "jobs": 1,
+      "offline": true,
+      "existing_tray_warnings": 24
+    }
+  },
+  "native_assertions": {
+    "custom_gradient_preview_rgb": [
+      171,
+      205,
+      239
+    ],
+    "custom_stop_history": true,
+    "custom_stops_saved": 9,
+    "finite_repeats_saved": 2,
+    "input_playback_refused": true,
+    "invalid_stop_atomic": true,
+    "new_breathing_layer": true,
+    "none_omits_colour": true,
+    "peak_rgb": [
+      17,
+      34,
+      51
+    ],
+    "physical_discovery_disabled": true,
+    "random_preserves_gradient": true,
+    "read_only_inert": true,
+    "reset_colors_preserves_duration_and_repeat": true,
+    "save_undo_redo": true,
+    "sim_device_requests": 0,
+    "source_fast_ms": 6000,
+    "two_color_fields": true
+  },
+  "independent_references": {
+    "random_colors_and_post_call_states": 160,
+    "fixed_palette_pixels": 1952,
+    "fixed_composition_logical_frames": 150,
+    "mock_output_packets": 1050
+  },
+  "clock": "Unix seconds; per-effect bucket(seconds/1800000)*1800000 OR31",
+  "source_scope": "Retained hashed native REA records, recovered cached UI/converter, isolated converter stub replay. No vendor execution.",
+  "images_sha256": {
+    "studio-breathing-input-gated-window.png": "333787b683e3de31e04a20131d661da34f63e9f12d98266dc6fc250f1a5dbb46",
+    "studio-breathing-playback-window.png": "c33b59409f100f9a74b7d1a616965ec30ea895aae9a9b752a6f464d02dfe9a12",
+    "studio-breathing-stock-context.jpg": "76fd17ded8798d2568ecb7a2065d5a2c1310c7cfe8c1cab7ba8a097f9b3cd571"
+  },
+  "optimized_programs": {
+    "secbird-tray.exe": {
+      "bytes": 3265024,
+      "sha256": "ae035a59cc5b5b569be1fd89d388e842070cf77bf08b6f374143b1ca307ae929"
+    },
+    "secbird.exe": {
+      "bytes": 1378816,
+      "sha256": "18cc1ef2521ed6cc85e37bd98a53cb6356030321ecde11e0adfc312589fe5c8b"
+    }
+  },
+  "visual_review": {
+    "native_capture": "Owned HWND via PrintWindow; final two pages inspected",
+    "error_text_fits_above_save": true,
+    "stock_context_effect": "Spectrum Cycling; not a matching Breathing screenshot",
+    "pixel_parity": false
+  },
+  "earlier_native_attempt": {
+    "custom_save_idle_wait_timed_out": true,
+    "saved_file_contained_expected_stops": true,
+    "cause": "Not established",
+    "subsequent_native_passes": 3
+  },
+  "remaining": [
+    "Live input ownership and terminal completion; synthetic input only",
+    "Malformed-gradient native random fallback remains refused",
+    "Stock dropdown/stepper placement and matching Breathing screenshot/pixel acceptance",
+    "Physical optical/timing and wider-device acceptance",
+    "Complete-build below100MB acceptance"
+  ]
+}

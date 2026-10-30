@@ -27,6 +27,7 @@ pub struct Preview {
     output: Box<[Rgb]>,
     listed: [bool; CELLS],
     random_state: u32,
+    breathing_seconds: u64,
     frames: u64,
 }
 
@@ -102,6 +103,12 @@ impl Generator {
 }
 impl Preview {
     pub fn from_snapshot(snapshot: &ReadSnapshot, random_state: u32) -> Result<Self> {
+        let seconds = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)
+            .map_err(invalid)?.as_secs();
+        Self::from_snapshot_at(snapshot, random_state, seconds)
+    }
+    /// Explicit clock for reproducible random Breathing diagnostics, no device I/O.
+    pub fn from_snapshot_at(snapshot: &ReadSnapshot, random_state: u32, unix_seconds: u64) -> Result<Self> {
         let root = Object::parse(&snapshot.raw)?;
         let devices = array_field(&root, "devices")?;
         if devices.len() != 1 {
@@ -170,6 +177,7 @@ impl Preview {
             output: vec![Rgb(0, 0, 0); CELLS].into_boxed_slice(),
             listed,
             random_state,
+            breathing_seconds: unix_seconds,
             frames: 0,
         };
         // Match backend applyLayersEffect: reversed roots and reversed children;
@@ -276,12 +284,18 @@ impl Preview {
                     let start=params.get("playbackStart").map(|raw|serde_json::from_str::<String>(raw.get()).map_err(invalid)).transpose()?;
                     let end=params.get("playbackEnd").map(|raw|serde_json::from_str::<String>(raw.get()).map_err(invalid)).transpose()?;
                     let cycles=params.get("cycles").map(|raw|serde_json::from_str::<i64>(raw.get()).map_err(invalid)).transpose()?.unwrap_or(0);
-                    if random || start.as_deref().is_some_and(|mode|mode!="random") || end.as_deref().is_some_and(|mode|mode!="never") || ![0,-1].contains(&cycles) {
-                        return Err(invalid("Breathing random, finite-cycle and input-triggered modes are not implemented"));
+                    if start.as_deref().is_some_and(|mode|mode!="random") || end.as_deref().is_some_and(|mode|!["never","after"].contains(&mode)) {
+                        return Err(invalid("Breathing input-triggered/toggle playback requires verified input ownership"));
                     }
-                    let stops=gradient(&params)?;
                     let duration=params.get("duration").map(|raw|serde_json::from_str(raw.get()).map_err(invalid)).transpose()?;
-                    Generator::Breathing(crate::breathing_lighting::BreathingCycle::studio(color(&params,"color")?,color(&params,"color2")?,stops.as_deref(),duration)?)
+                    let mut cycle = if random {
+                        crate::breathing_lighting::BreathingCycle::random(duration, self.breathing_seconds)?
+                    } else {
+                        let stops=if params.get("colorStops").is_some_and(|raw|raw.get()=="null") {None} else {gradient(&params)?};
+                        crate::breathing_lighting::BreathingCycle::studio(color(&params,"color")?,color(&params,"color2")?,stops.as_deref(),duration)?
+                    };
+                    cycle.set_cycles(cycles)?;
+                    Generator::Breathing(cycle)
                 }
                 6 => Generator::Static(Pixel::from_studio_color(color(&params, "color")?)?),
                 4 => {

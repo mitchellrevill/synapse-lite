@@ -49,6 +49,10 @@ impl Properties {
     }
 }
 pub(super) fn refresh(view: &mut View) {
+    if view.is_breathing() && !view.breathing_gradient {
+        view.spectrum = Properties::default();
+        return;
+    }
     if !matches!(view.effect(), Some("spectrum" | "wave" | "starlight" | "breathing")) {
         view.spectrum = Properties::default();
         return;
