@@ -1,0 +1,154 @@
+{
+  "schema_version": 1,
+  "scope": "Passive ambient desktop, same existing stock process lifetime; three sequential observation windows, not independent launches or replacement acceptance",
+  "version": "4.0.896.29",
+  "windows": [
+    {
+      "source_file": "window-1.json",
+      "source_sha256": "b4e909faf0d6a71d7e36be7f098273755d9d3881e2f370c8c44b178708ce99e1",
+      "samples": 21,
+      "first_utc": "2026-10-30T04:21:22.4862768Z",
+      "last_utc": "2026-10-30T04:21:47.0515800Z",
+      "elapsed_seconds": 24.4909906,
+      "process_counts": [
+        26
+      ],
+      "peak_working_set": 942141440,
+      "peak_private_bytes": 964415488,
+      "mean_working_set": 941101056,
+      "mean_private_bytes": 963154310,
+      "mean_cpu_percent_machine": 0.28710297747886954,
+      "mean_cpu_percent_single_core": 4.593647639661914,
+      "scope_counts_first_sample": {
+        "0": 12,
+        "1": 1,
+        "2": 10,
+        "3": 2,
+        "4": 1
+      },
+      "inaccessible_unrelated_images": 3,
+      "stable_identity_roster": true
+    },
+    {
+      "source_file": "window-2.json",
+      "source_sha256": "eca6e588948ee7e5a8ea6680206e2266b37b65822b01b5859ea4a6743b715369",
+      "samples": 21,
+      "first_utc": "2026-10-30T04:21:47.7748854Z",
+      "last_utc": "2026-10-30T04:22:12.2126417Z",
+      "elapsed_seconds": 24.4359775,
+      "process_counts": [
+        26
+      ],
+      "peak_working_set": 941854720,
+      "peak_private_bytes": 963899392,
+      "mean_working_set": 940634892,
+      "mean_private_bytes": 962479055,
+      "mean_cpu_percent_machine": 0.3158506600914491,
+      "mean_cpu_percent_single_core": 5.053610561463184,
+      "scope_counts_first_sample": {
+        "0": 12,
+        "1": 1,
+        "2": 10,
+        "3": 2,
+        "4": 1
+      },
+      "inaccessible_unrelated_images": 3,
+      "stable_identity_roster": true
+    },
+    {
+      "source_file": "window-3.json",
+      "source_sha256": "064c2e5f91e797837f5380905f4baa09cef8ad29f900ba7a27619f20bb078e04",
+      "samples": 21,
+      "first_utc": "2026-10-30T04:26:32.7912581Z",
+      "last_utc": "2026-10-30T04:26:58.4305607Z",
+      "elapsed_seconds": 25.5496572,
+      "process_counts": [
+        26
+      ],
+      "peak_working_set": 934088704,
+      "peak_private_bytes": 956071936,
+      "mean_working_set": 927698164,
+      "mean_private_bytes": 949643752,
+      "mean_cpu_percent_machine": 0.3119927458544836,
+      "mean_cpu_percent_single_core": 4.991883933671738,
+      "scope_counts_first_sample": {
+        "0": 12,
+        "1": 1,
+        "2": 10,
+        "3": 2,
+        "4": 1
+      },
+      "inaccessible_unrelated_images": 3,
+      "stable_identity_roster": true
+    }
+  ],
+  "executable_sha256": "a66a5e3755f4d2520f03e1a63753796cc57f07bacd129e5bec3bec261ae2e447",
+  "logical_processors": 16,
+  "counter_backend": "psutil 7.2.1",
+  "service_census_unchanged": true,
+  "services": [
+    {
+      "Name": "Razer Chroma SDK Diagnostic Service",
+      "DisplayName": "Razer Chroma SDK Diagnostic Service",
+      "State": "Running",
+      "StartMode": "Auto"
+    },
+    {
+      "Name": "Razer Chroma SDK Server",
+      "DisplayName": "Razer Chroma SDK Server",
+      "State": "Running",
+      "StartMode": "Auto"
+    },
+    {
+      "Name": "Razer Chroma SDK Service",
+      "DisplayName": "Razer Chroma SDK Service",
+      "State": "Running",
+      "StartMode": "Auto"
+    },
+    {
+      "Name": "Razer Chroma Stream Server",
+      "DisplayName": "Razer Chroma Stream Server",
+      "State": "Stopped",
+      "StartMode": "Manual"
+    },
+    {
+      "Name": "Razer Elevation Service",
+      "DisplayName": "Razer Elevation Service",
+      "State": "Running",
+      "StartMode": "Manual"
+    },
+    {
+      "Name": "Razer Game Manager Service 3",
+      "DisplayName": "Razer Game Manager Service 3",
+      "State": "Running",
+      "StartMode": "Auto"
+    },
+    {
+      "Name": "RazerExperienceService",
+      "DisplayName": "Razer Experience Service",
+      "State": "Running",
+      "StartMode": "Auto"
+    },
+    {
+      "Name": "RGS",
+      "DisplayName": "Razer Gaming Services Updater",
+      "State": "Running",
+      "StartMode": "Auto"
+    }
+  ],
+  "roots": [
+    "Program Files/Razer",
+    "Program Files (x86)/Razer",
+    "Program Files (x86)/Razer Chroma SDK",
+    "Program Files (x86)/RazerExperienceService",
+    "LocalAppData/Razer/RazerAppEngine/User Data/Apps/Common/LampArray"
+  ],
+  "limitations": [
+    "Sampled census, not full installed-component inventory; three inaccessible unrelated images per census remain unknown",
+    "Shared working-set pages may be counted repeatedly; private bytes are committed memory",
+    "Exited-process tail CPU, processes between samples, kernel allocations and hardware workloads unmeasured",
+    "No apps launched or closed, no scripted interaction; desktop and analysis activity uncontrolled",
+    "Previous collector terminated before third report; third window retried after confirmed terminal process",
+    "Not a like-for-like replacement comparison or three-run sub-100MB acceptance"
+  ]
+}
