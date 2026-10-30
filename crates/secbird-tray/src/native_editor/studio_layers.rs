@@ -187,7 +187,7 @@ pub(super) unsafe fn pointer(state: &mut State, message: u32, lparam: isize, wpa
 fn drop_target(state: &State, point: POINT) -> Option<(String, DropPosition, i32)> {
     let x = point.x as f32 / state.scale;
     let y = point.y as f32 / state.scale;
-    if !(0.0..250.0).contains(&x) || y < 168.0 || point.y >= state.height { return None; }
+    if !(0.0..250.0).contains(&x) || y < 168.0 || y >= super::workspace::palette_top((state.height as f32 / state.scale) as i32) as f32 { return None; }
     let slot = ((y - 168.0) / 40.0) as usize;
     let ids = state.studio.visible_ids();
     let target = ids.get(state.studio.scroll + slot)?;

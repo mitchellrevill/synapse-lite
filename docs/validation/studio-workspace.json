@@ -1,0 +1,43 @@
+{
+  "checkpoint": "Studio persistent palette and layer presentation",
+  "regular_app_tests": {
+    "passed": 375,
+    "ignored": 78
+  },
+  "native_pointer_check": {
+    "passed": true,
+    "effects": 13,
+    "visibility_undo": true,
+    "lighting_entry": true,
+    "configuration": "isolated simulated keyboard"
+  },
+  "clippy": "strict pass",
+  "release_build": "pass",
+  "full_pixel_parity": false,
+  "fresh_stock_capture": false,
+  "remaining": [
+    "compact toolbar",
+    "chassis and key legends",
+    "properties",
+    "bottom-right viewport controls",
+    "full menu and state comparison",
+    "hardware verification",
+    "complete-build RAM acceptance"
+  ],
+  "source_sha256": {
+    "crates/secbird-tray/src/native_editor.rs": "0ce05d8c1a7e1f5c1a47e296b505af6a41b8227e890fdb6a28a2df5a25cba846",
+    "crates/secbird-tray/src/native_editor/studio_view.rs": "4f1f9ae2aa53cef106b708eb8149a8b8ee638e5aa36c0026d2976659de07cb4f",
+    "crates/secbird-tray/src/native_editor/studio_workspace.rs": "b4c9ad9b609220c4261136038730d4052021d5855b9fec6562724fd5ff41f131",
+    "crates/secbird-tray/src/native_editor/studio_layers.rs": "95c0e1e47aff94e13fe3ffcc61e09e138a5a275ffad4c61ac61a5ccaa07c1341",
+    "crates/secbird-tray/src/native_editor/linked_games_interaction_tests.rs": "14d0f7dc2a5967ff483118fbf36d155fdf659dad655b69383f4b6db43cfee1cc",
+    "tools/provision-studio-chrome.cjs": "bf429814d300739d2080fa3d05245b8b67a9b44877f9c15288594b512b59a5e2"
+  },
+  "logs_sha256": {
+    "studio-palette-tests.log": "ffe856b42700ffb05f6683e7aaf05f57c2c8efc1046856abd3b2ed22eff0a52a",
+    "studio-palette-native.log": "3eb39da72c96eaf434d4aeba050581bb483d876ee6399ad8386b7eace7b0b138",
+    "studio-palette-clippy.log": "389cc8a1c1cb37300a687d889a807cb48bcec55a1dc4c36886673684a6d571ff",
+    "studio-palette-build.log": "d1cfe64be93add3b5d09cbb9dffc024a263cfa161228bd3044b86286b1cebe33"
+  },
+  "recovered_css_sha256": "9163eac79b917bdbf3814ae84e0765515f21076ba5d6bf43fe4009fa19e83e9d",
+  "evidence_directory": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-27\\what-i-want-you-to-do\\outputs\\studio-workspace-2026-10-30"
+}

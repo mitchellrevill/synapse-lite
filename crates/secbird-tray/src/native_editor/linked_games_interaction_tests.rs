@@ -55,7 +55,36 @@ fn native_lighting_advanced_opens_existing_studio() {
             wait_for(||query()["dialog"]==false,"Studio preset menu cancelled")?;
             let preset=json!([605,0,6]);SendMessageW(hwnd,STUDIO_TEST,8,&preset as *const Value as isize);redraw(hwnd);
             if query()["canvas_devices"].as_u64().unwrap_or(0)==0{return Err("Studio could not add the Ornata preset".into());}
-            let capture=json!(output.join("studio-from-lighting.png").to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize);Ok(())
+            let capture=json!(output.join("studio-from-lighting.png").to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize);
+            if query()["workspace"]["icons"]!=46 {return Err("Recovered Studio masks were not loaded".into());}
+            let height=f64::from(client.bottom)/scale;
+            let top=(height as i32-410).max(208) as f64;
+            let effects=["ambient","audio","breathing","chroma-generate","fire","reactive","ripple","spectrum","starlight","static","tidal","wave","wheel"];
+            for (index,effect) in effects.iter().enumerate() {
+                let before=query();let count=before["rows"].as_array().unwrap().len();
+                // Persistent palette: no command port or popup used to add the effect.
+                let x=11.+(index%3) as f64*76.+38.;let y=top+40.+(index/3) as f64*72.+36.;
+                if y>=height {return Err("Fixture palette needs a larger viewport".into());}
+                lighting_click(hwnd,x,y,scale);let after=query();
+                let selected=after["selected"].as_str().ok_or("Palette did not select a new layer")?;
+                if after["rows"].as_array().unwrap().len()!=count+1 ||
+                    !after["rows"].as_array().unwrap().iter().any(|row|row["id"]==selected && row["effect"]==*effect) {
+                    return Err(format!("Palette tile {effect} did not author its corresponding effect: {after}"));
+                }
+                // Exercise the visible undo control so the next tile starts from the same draft.
+                lighting_click(hwnd,440.,100.,scale);
+                if query()["rows"]!=before["rows"] {return Err(format!("Undo did not restore {effect}"));}
+            }
+            // Hover paints the eye control, then its real hit target toggles visibility.
+            let rows=query()["rows"].as_array().unwrap().clone();
+            SendMessageW(hwnd,WM_MOUSEMOVE,0,position(232.,188.,scale));redraw(hwnd);
+            lighting_click(hwnd,232.,188.,scale);
+            if query()["rows"][0]["visible"]==rows[0]["visible"] {return Err("Layer eye control did not toggle visibility".into());}
+            lighting_click(hwnd,440.,100.,scale);
+            if query()["rows"]!=json!(rows) {return Err("Undo did not restore eye toggle".into());}
+            let capture=json!(output.join("studio-palette-verified.png").to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize);
+            std::fs::write(output.join("studio-palette.json"),serde_json::to_vec_pretty(&json!({"snapshot":query(),"palette_pointer_checks":effects,"eye_toggle_and_undo":true,"fixture":"private simulated keyboard; no hardware certification"})).unwrap()).map_err(|e|e.to_string())?;
+            Ok(())
         }})();unsafe{let hwnd=WINDOW.load(Ordering::Acquire) as HWND;SendMessageW(hwnd,STUDIO_TEST,9,0);SendMessageW(hwnd,STUDIO_TEST,5,0);PostMessageW(hwnd,WM_CLOSE,0,0);}result
     });
     let run=run_standalone(Arc::new(Mutex::new(engine)),Some(Duration::from_secs(30)));let result=controller.join().unwrap();assert!(run.is_ok(),"{run:?}");assert!(result.is_ok(),"{result:?}");eprintln!("Lighting to Studio HWND: {}",folder.display());
