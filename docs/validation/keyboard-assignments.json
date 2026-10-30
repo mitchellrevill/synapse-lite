@@ -1,0 +1,122 @@
+{
+  "schema": "synapse-lite-keyboard-assignment-validation-v1",
+  "base_commit": "6149f7a9422ae93322365ed12df46ab681dc40a8",
+  "branch": "feat/native-keyboard-assignments-batch4-review",
+  "scope": "Native Customize Keyboard Function local desired-profile workflow only",
+  "tests": {
+    "workspace_core": {
+      "passed": 519,
+      "failed": 0,
+      "ignored": 6,
+      "filtered": 1
+    },
+    "final_tray": {
+      "passed": 307,
+      "failed": 0,
+      "ignored": 48
+    },
+    "cli_passed": 4,
+    "doc_passed": 1,
+    "new_core_checks_passed": 6,
+    "new_model_regression_passed": 1,
+    "native_owned_hwnd": {
+      "passed": 1,
+      "failed": 0,
+      "seconds": 1.43,
+      "save_cancel_reopen_conflict_layers_opaque_readonly": true,
+      "added_simulated_device_sets": 0
+    }
+  },
+  "excluded_test": "dynamic_sensitivity::tests::presets_custom_chunk_readback_rollback_and_profile_scope",
+  "excluded_reason": "Stalled in initial integration-base broad run; owned test process terminated, log retained. Public-base run explicitly skips it. No unrelated test edited.",
+  "initial_native_attempts": [
+    "Four-second initial asset/font wait timed out; final wait is 30 seconds.",
+    "Expected stale-profile error dialog not acknowledged in initial harness; corrected with existing owner-checked acknowledgement helper."
+  ],
+  "source_serializer_replay": {
+    "authority": "controlled replay of recovered pure serializer only",
+    "source_sha256": "b016b7eb1802e5c8996aab1924e432efb1519fabde610a08dbb0e3de9df365bc",
+    "serializer_sha256": "6ae5cb7d00d22aba41946da4cc571d32c72519940074c4999e5401bd56638c10",
+    "utf8_offset": 22216,
+    "cases": 500,
+    "empty_key_refused": true,
+    "matched": true,
+    "context_constructor_stubbed": true,
+    "getMappingData_stubbed": true,
+    "vendor_bootstrap_executed": false,
+    "input_listeners_or_hardware_used": false,
+    "limitation": "Tests ID serialization, layer propagation and opaque/turbo retention only; does not establish chooser descriptor membership, native delivery, or full vendor form execution."
+  },
+  "release_build": {
+    "passed": true,
+    "cargo_jobs": 1,
+    "target_directory": "target-keyboard",
+    "executables": {
+      "secbird-tray.exe": {
+        "bytes": 3275776,
+        "sha256": "479662d5b64f6dbc5099c2e0486ac90e4ab5844e5bdd4315411b1d7f1aff55ab"
+      },
+      "secbird.exe": {
+        "bytes": 1376768,
+        "sha256": "368b65b1c3ee14062159e933d51f53f1f9794b6ca68935e1b358ab8e15aac30d"
+      }
+    },
+    "warnings": {
+      "core": 1,
+      "tray": 25
+    }
+  },
+  "visual": {
+    "kind": "offscreen fixture render from native paint function; not a desktop screenshot",
+    "reads_desktop_or_window_pixels": false,
+    "artifact_dimensions": [
+      2048,
+      1104
+    ],
+    "native_scale": 1.25,
+    "native_css_dimensions": [
+      1638.4,
+      883.2
+    ],
+    "stock_image_dimensions": [
+      2048,
+      1104
+    ],
+    "stock_dpi_recorded": false,
+    "same_selected_input_and_scroll_state": false,
+    "full_pixel_parity_proven": false,
+    "desktop_capture": "App access approval timed out; no desktop capture obtained",
+    "native_png_sha256": "9ebf48bf8f87c0e925ee8422b7fdfc20a29748a2df7451f8ac3825687be4524f",
+    "stock_jpg_sha256": "1a72d5df853178aebe26efed05547f9b9126a77d5b95256e33b40c8320563b43"
+  },
+  "source_sha256": {
+    "crates/secbird-core/src/profile_compat.rs": "9585223c4cbad24dcb7526f45c1080a8702c0f079e2160a66078b03674f5bbb0",
+    "crates/secbird-core/src/profile_compat/mappings.rs": "a1830091c447a6ad3f6d77cb66954b1d7bcc44309e29241266bc031addd47755",
+    "crates/secbird-tray/src/native_editor.rs": "d06c634d1622ffa0d031f3528fae4536033df0e0a22201f21331043cef1f353a",
+    "crates/secbird-tray/src/native_editor/assignment_geometry.rs": "06d52f1d77212a7eb16f7ba7fa2db68994f18b1e2a624b273e45bde5c844f670",
+    "crates/secbird-tray/src/native_editor/assignment_model.rs": "dffe861b4cbc3c51c0d12742339b65b78a3a3e24b090e2f3d382c8bb12a35570",
+    "crates/secbird-tray/src/native_editor/assignment_view.rs": "f9525cb51e62cc4b1b8091bf29f7034a4e2440218e7cb078571529734b5d0fbc",
+    "crates/secbird-tray/src/native_editor/interaction_tests.rs": "f1fb634cf8974eb03a3354d6e94173ee88396d712a2ab9c33e7184ad675c45de",
+    "crates/secbird-tray/src/server.rs": "bca9a1bf25a78b760c22b7f692a589e38e9ca8575f41cea3ad06f0e1dd1d4056",
+    "crates/secbird-core/src/profile_compat/keyboard_assignments.rs": "a26a3811452f8b41513acce9ba20cebb826e0430e01e334b182ee1309d20c85c",
+    "crates/secbird-tray/src/native_editor/keyboard_assignment_interaction_tests.rs": "980fbce1dc10ac264150bc40e69ede8a77504ceeb68a29cf83035cc6367d7c80"
+  },
+  "native_test_binary_sha256": "7f63037395e7634d289edf91ecd34967edde65ea8f74f7a1dc19f85632010c86",
+  "physical_input_or_discovery": false,
+  "clipboard_access": false,
+  "device_writes": false,
+  "driver_or_service_changes": false,
+  "normal_profile_store_modified": false,
+  "other_lite_instances_stopped": false,
+  "full_product_goal_complete": false,
+  "complete_build_memory_gate_measured": false,
+  "todos": [
+    "Installed assignment readback, delivery, ownership and release recovery remain unproved and gated.",
+    "Source descriptor-less variants and symbol aliases require recovery.",
+    "Exact Include Modifier reveal, source button styling, focus/keyboard navigation, tooltip and animation parity remain.",
+    "Mouse form visual verification remains.",
+    "Recover desktop capture approval for a true live matched-DPI screenshot comparison.",
+    "Resolve inherited excluded Dynamic Sensitivity test independently.",
+    "Complete full-product below-100-MB memory acceptance."
+  ]
+}

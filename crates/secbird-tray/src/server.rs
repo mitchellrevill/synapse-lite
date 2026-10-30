@@ -17,6 +17,7 @@ use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 mod lighting;
+mod mouse_assignment;
 #[cfg(test)]
 mod application_paths_tests;
 #[cfg(test)]
@@ -362,6 +363,10 @@ struct Body {
     #[serde(default)]
     tracking_distance_mm: Option<u8>,
     #[serde(default)]
+    sensitivity_draft: Option<secbird_core::sensitivity_assignment::Intent>,
+    #[serde(default)]
+    expected_profile_data: Option<Value>,
+    #[serde(default)]
     dynamic_sensitivity: Option<secbird_core::dynamic_sensitivity::DynamicSensitivity>,
     #[serde(default)]
     rotation: Option<secbird_core::dynamic_sensitivity::Rotation>,
@@ -442,11 +447,64 @@ fn buttons_json(dev: &Device, store: &mut Store) -> Value {
 }
 
 fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
+    if path == "/api/keyboard-assignment-local" {
+        return keyboard_assignment_local(engine, body);
+    }
+    if path == "/api/assignment-windows-local" {
+        let value: Value = serde_json::from_slice(body).map_err(|e|Error::InvalidArg(e.to_string()))?;
+        let text = |key: &str| value[key].as_str().filter(|s|!s.is_empty()).ok_or_else(||Error::InvalidArg(format!("Missing {key}")));
+        let id = text("id")?;
+        let dev = engine.devices().iter().find(|d|d.key()==id).ok_or_else(||Error::InvalidArg("Selected device disconnected".into()))?;
+        let mut store = Store::load(&config_dir().join("profiles.json"))?;
+        let profiles = store.devices.get_mut(id).ok_or_else(||Error::InvalidArg("Stored device unavailable".into()))?;
+        if profiles.active != text("expected_profile")? {return Err(Error::InvalidArg("Active profile changed; reopen assignment".into()));}
+        let profile = profiles.profiles.get_mut(&profiles.active).ok_or_else(||Error::InvalidArg("Stored profile unavailable".into()))?;
+        if serde_json::to_value(&*profile).map_err(|e|Error::Db(e.to_string()))? != value["original_profile"] {
+            return Err(Error::InvalidArg("Profile changed; reopen assignment".into()));
+        }
+        let hyper = value["hyper"].as_bool().ok_or_else(||Error::InvalidArg("Missing assignment layer".into()))?;
+        let prepared=secbird_core::profile_compat::assignment_state::prepare_layer(profile,dev.pid,text("expected_profile")?,text("input")?,hyper)?;
+        *profile = secbird_core::profile_compat::windows_shortcuts::edit(&prepared,dev.pid,text("input")?,text("input_type")?,hyper,text("choice")?)?;
+        secbird_core::profile_compat::assignment_state::mark_local(profile,dev.pid,text("input")?,hyper)?;
+        store.save()?;
+        return Ok(json!({"ok":true,"local_only":true}));
+    }
     let b: Body = serde_json::from_slice(body).map_err(|e| Error::InvalidArg(e.to_string()))?;
     if matches!(path, "/api/device-sleep" | "/api/critical-threshold" | "/api/calibration-tracking" | "/api/dynamic-sensitivity" | "/api/sensor-rotation") {
         validate_mouse_connection(engine, &b)?;
     }
+    if path == "/api/sensitivity-draft" {
+        if b.id.is_empty() || b.expected_device.as_deref() != Some(&b.id) {
+            return Err(Error::InvalidArg("Sensitivity draft requires the selected device identity".into()));
+        }
+        let dev = engine.devices().iter().find(|d| d.key() == b.id)
+            .ok_or_else(|| Error::InvalidArg("Selected mouse disconnected".into()))?;
+        let range = dev.spec.as_ref().and_then(|s| s.dpi.as_ref())
+            .ok_or_else(|| Error::Unsupported("Device DPI capability unavailable".into()))?;
+        let profile = b.expected_profile.as_deref().ok_or_else(|| Error::InvalidArg("Profile identity missing".into()))?;
+        let expected = b.expected_profile_data.as_ref().ok_or_else(|| Error::InvalidArg("Profile snapshot missing".into()))?;
+        let intent = b.sensitivity_draft.as_ref().ok_or_else(|| Error::InvalidArg("Sensitivity draft missing".into()))?;
+        let mut store = Store::load(&config_dir().join("profiles.json"))?;
+        secbird_core::sensitivity_assignment::save_draft(&mut store, &b.id, profile, dev.pid, range, expected, intent)?;
+        return Ok(json!({"ok":true,"delivery":"local draft only; no device assignment applied","state":state(engine)}));
+    }
     if path=="/api/profile" && b.action=="paths" && (b.id.is_empty() || b.expected_device.as_deref()!=Some(&b.id) || !engine.devices().iter().any(|dev|dev.key()==b.id)) {return Err(Error::InvalidArg("Executable links require the selected device identity".into()));}
+    if path == "/api/customize-multimedia" {
+        let dev = engine.devices().iter().find(|d| d.key() == b.id).ok_or_else(|| Error::InvalidArg("Selected device disconnected".into()))?;
+        let profile = b.expected_profile.as_deref().filter(|p| !p.is_empty()).ok_or_else(|| Error::InvalidArg("Selected profile identity required".into()))?;
+        let mut edit:secbird_core::profile_compat::multimedia::Edit = serde_json::from_value(b.data).map_err(|e| Error::InvalidArg(format!("Invalid multimedia assignment: {e}")))?;
+        let mut store = Store::load(&config_dir().join("profiles.json"))?;
+        {
+            let profiles=store.devices.get_mut(&b.id).ok_or_else(||Error::InvalidArg("Stored device unavailable".into()))?;
+            if profiles.active!=profile || serde_json::to_value(profiles.active()).map_err(|e|Error::Db(e.to_string()))? != edit.expected {return Err(Error::InvalidArg("Profile changed; reopen assignment".into()));}
+            *profiles.active_mut()=secbird_core::profile_compat::assignment_state::prepare_layer(profiles.active(),dev.pid,profile,&edit.input_id,edit.hyper)?;
+            edit.expected=serde_json::to_value(profiles.active()).map_err(|e|Error::Db(e.to_string()))?;
+        }
+        secbird_core::profile_compat::multimedia::update(&mut store,&b.id,profile,dev.pid,&edit)?;
+        secbird_core::profile_compat::assignment_state::mark_local(store.devices.get_mut(&b.id).unwrap().active_mut(),dev.pid,&edit.input_id,edit.hyper)?;
+        store.save()?;
+        return Ok(json!({"ok":true,"status":"Saved locally. Multimedia device/host output is unavailable.","state":state(engine)}));
+    }
     if path=="/api/sensor-rotation" {
         if b.id.is_empty() || b.expected_device.as_deref()!=Some(&b.id){return Err(Error::InvalidArg("Rotation requires the selected device identity".into()));}
         let profile=b.expected_profile.as_deref().filter(|p|!p.is_empty()).ok_or_else(||Error::InvalidArg("Rotation requires the selected profile identity".into()))?;
@@ -809,6 +867,34 @@ fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
         }
         other => other,
     }
+}
+
+/// Save desired source intent only. Deliberately bypasses every device setter.
+fn keyboard_assignment_local(engine: &Engine, body: &[u8]) -> Result<Value, Error> {
+    #[derive(Deserialize)]
+    struct Edit {
+        id: String,
+        profile: String,
+        expected: Value,
+        input: String,
+        input_type: String,
+        hyper: bool,
+        setting: secbird_core::profile_compat::keyboard_assignments::Setting,
+    }
+    let edit: Edit = serde_json::from_slice(body).map_err(|e|Error::InvalidArg(e.to_string()))?;
+    let device = engine.devices().iter().find(|d|d.key() == edit.id).ok_or_else(||Error::InvalidArg("Selected device disconnected".into()))?;
+    let mut store = Store::load(&config_dir().join("profiles.json"))?;
+    let profiles = store.for_device(device);
+    if profiles.active != edit.profile || serde_json::to_value(profiles.active()).map_err(|e|Error::Db(e.to_string()))? != edit.expected {
+        return Err(Error::InvalidArg("Profile changed; reopen the assignment before saving".into()));
+    }
+    let prepared=secbird_core::profile_compat::assignment_state::prepare_layer(profiles.active(),device.pid,&edit.profile,&edit.input,edit.hyper)?;
+    let mut next = secbird_core::profile_compat::keyboard_assignments::update(&prepared, device.pid, &edit.input, &edit.input_type, edit.hyper, &edit.setting)?;
+    secbird_core::profile_compat::assignment_state::mark_local(&mut next,device.pid,&edit.input,edit.hyper)?;
+    *profiles.active_mut() = next;
+    secbird_core::profile_compat::validate_store_budget(&store)?;
+    store.save()?;
+    Ok(json!({"ok":true,"local_only":true}))
 }
 
 /// One color, or one effect started together, on every zone of every connected device.
@@ -1281,6 +1367,7 @@ fn device_json(dev: &Device) -> Value {
         "id": dev.key(),
         "connection_id": dev.connection_id(),
         "power_status": power_status,
+        "sensitivity_assignment": dpi_range.filter(|_| matches!(dev.pid,196|197)).map(|r| json!({"min":r.min,"max":r.max,"step":r.step,"xy":true,"delivery":"draft-only"})),
         "pid": format!("{:04X}", dev.pid),
         "name": dev.name(),
         "kind": kind,
