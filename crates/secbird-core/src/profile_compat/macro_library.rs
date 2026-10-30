@@ -6,6 +6,7 @@ use std::collections::BTreeSet;
 pub mod input_events;
 pub mod nested;
 pub mod host_actions;
+pub mod planning;
 use input_events::{Input,Gesture};
 
 const KEY:&str="_synapseLiteMacroLibrary";

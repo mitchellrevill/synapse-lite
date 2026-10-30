@@ -1,5 +1,10 @@
 # Source macro parsing and symbolic planning
 
+The separate [saved GUI definition bridge](MACRO-DEFINITION-PLANNING.md) now
+projects supported editor records into this native planner, verifies matching
+source caches, and provides local file inspection. This module's parser and
+runtime gaps remain unchanged; no live input adapter is enabled.
+
 **29 October addition:** a separate bounded scheduler now joins admitted one-pass
 keyboard plans with packet planning and the output ledger under simulated
 completion/clock control. See [MACRO-SCHEDULER.md](MACRO-SCHEDULER.md). It has no

@@ -6,13 +6,19 @@ mod control_probe;
 mod studio_files;
 mod catalog_files;
 mod profile_files;
+mod macro_files;
 
 const USAGE: &str = "\
 Synapse Lite - device controls based on Secretarybird beta
 
 USAGE: secbird [-d PID] <command> [args]
 
-STUDIO FILES (local interchange only; does not apply lighting):
+LOCAL FILES (does not open hardware or apply device settings):
+  source-macro list PROFILE_DOCUMENT
+                            List saved macro names, GUIDs and references
+  source-macro plan PROFILE_DOCUMENT BINDING_JSON NEW_OUTPUT
+                            Prepare saved GUI macro events for inspection;
+                            does not open hardware, run input or install profiles
   profiles recover-macros NATIVE_BACKUP SOURCE_EXPORT EXACT_DEVICE_KEY NEW_OUTPUT
                             Attach verified referenced macro definitions to a new backup;
                             does not activate profiles, run macros or install the store
@@ -179,6 +185,10 @@ fn run(mut args: Vec<String>) -> Result<(), Error> {
     if command == "profiles" {
         if selector.is_some(){return Err(Error::InvalidArg("profiles file commands require an exact stored key, without -d".into()));}
         return profile_files::run(&args[1..]);
+    }
+    if command == "source-macro" {
+        if selector.is_some() { return Err(Error::InvalidArg("source-macro file commands do not use -d".into())); }
+        return macro_files::run(&args[1..]);
     }
     if command == "update" {
         match secbird_core::update::check()? {

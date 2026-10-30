@@ -100,6 +100,13 @@ one-shot wheels. Late or uncertain completion stops later actions and preserves
 unconfirmed holds. Refused cleanup still permits other releases. Live dispatch,
 physical input recovery and the remaining playback modes remain unfinished.
 
+The [saved GUI macro bridge](docs/MACRO-DEFINITION-PLANNING.md) now verifies
+definitions/caches and prepares supported keyboard, mouse and fixed-delay plans.
+`source-macro list` and `source-macro plan` inspect explicit backup/export files
+before hardware discovery and preserve the originals. Live activation and the
+remaining macro event/mode support remain unfinished.
+
 ## Attribution
+
 
 Secretarybird is by [infinityInfinite and contributors](https://github.com/infinityInfinite/secbird). Its MIT/Apache-2.0 license files and [NOTICE](NOTICE) are preserved. Razer device protocol facts also draw on [OpenRazer](https://github.com/openrazer/openrazer). This is an independent project.
