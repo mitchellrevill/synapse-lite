@@ -11,6 +11,8 @@ mod linked_games;
 mod macros;
 #[path="studio_interaction_tests.rs"]
 mod studio;
+#[path="keyboard_assignment_interaction_tests.rs"]
+mod keyboard_assignments;
 use super::*;
 use secbird_core::{commands as cmd, sim::Sim, Store};
 use std::time::Instant;

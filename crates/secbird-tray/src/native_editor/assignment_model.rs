@@ -1,7 +1,8 @@
-//! Source Customize draft state. No transport, profile save or mapping translation.
+//! Owner-bound Customize drafts and local desired-profile validation; no I/O.
 //! Source:605 key popup1270/MapMouse and196 groupList; see source spec hashes.
 use serde_json::{json, Value};
 use std::sync::Arc;
+pub(super) use secbird_core::profile_compat::keyboard_assignments as keyboard;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct Owner {
@@ -260,7 +261,7 @@ impl Context {
         let original_profile = device["profile"].clone();
         let mappings = original_profile["_synapseLiteSynapse4"]["decoded"]["mappings"]
             .as_array()
-            .cloned();
+            .cloned().or_else(|| (original_profile.is_object() && original_profile.get("_synapseLiteSynapse4").is_none()).then(Vec::new));
         Some(Self {
             owner: Owner {
                 device: device["id"].as_str()?.into(),
@@ -294,6 +295,9 @@ pub(super) enum Anchor {
 }
 #[derive(Clone, Debug)]
 pub(super) struct Draft {
+    pub keyboard: keyboard::Setting,
+    pub keyboard_group_menu: bool,
+    pub keyboard_error: Option<String>,
     pub context: Arc<Context>,
     pub input: Input,
     pub anchor: Anchor,
@@ -362,7 +366,14 @@ impl Draft {
             .and_then(|v| v["turboMode"]["keysPerSecond"].as_u64())
             .filter(|n| (1..=20).contains(n))
             .unwrap_or(7) as u8;
+        let keyboard_result = original_records.first().filter(|r|r["outputType"] == "keyboardGroup").map(keyboard::Setting::from_record);
+        let keyboard_error = keyboard_result.as_ref().and_then(|r|r.as_ref().err()).map(ToString::to_string);
+        let keyboard = keyboard_result.and_then(Result::ok).unwrap_or_default();
+        let (turbo, speed) = if category == Some(Category::Keyboard) {(keyboard.turbo, keyboard.speed)} else {(turbo,speed)};
         Self {
+            keyboard,
+            keyboard_group_menu: false,
+            keyboard_error,
             context,
             input,
             anchor,
@@ -411,6 +422,58 @@ impl Draft {
             self.speed = 7;
         }
         self.speed_draft = self.speed.to_string();
+        self.keyboard = initial.keyboard;
+        self.keyboard_error = initial.keyboard_error;
+        if category == Category::Keyboard {
+            self.turbo = self.keyboard.turbo;
+            self.speed = self.keyboard.speed;
+            self.speed_draft = self.speed.to_string();
+        }
+    }
+    pub fn option_labels(&self) -> Vec<String> {
+        if self.category == Some(Category::Keyboard) {
+            if self.keyboard_group_menu { keyboard::GROUPS.iter().map(|s|s.to_string()).collect() }
+            else {keyboard::keys(self.keyboard.key_group).iter().map(|k|format!("{} ({})",k.name,k.id.trim_start_matches("KEY_"))).collect()}
+        } else {MOUSE_ACTIONS.iter().map(|(_,label)|label.to_string()).collect()}
+    }
+    pub fn keyboard_setting(&self) -> keyboard::Setting {
+        let mut setting = self.keyboard.clone();
+        setting.turbo = self.turbo && self.turbo_available();
+        setting.speed = self.speed;
+        setting
+    }
+    pub fn keyboard_profile(&self) -> Result<(), String> {
+        if self.category != Some(Category::Keyboard) || !self.dirty {return Err("Choose a keyboard assignment first".into());}
+        if let Some(error) = &self.keyboard_error {return Err(error.clone());}
+        let profile = serde_json::from_value(self.context.original_profile.clone()).map_err(|e|format!("Invalid retained profile: {e}"))?;
+        keyboard::validate_update(&profile,self.context.owner.pid,&self.input.input_id,&self.input.input_type,self.hyper,&self.keyboard_setting()).map_err(|e|e.to_string())
+    }
+    pub fn select_keyboard_option(&mut self, index: usize) {
+        if self.keyboard_group_menu {
+            if index < keyboard::GROUPS.len() {
+                self.keyboard.key_group = index;
+                self.keyboard.key.clear();
+                self.keyboard.modifiers.clear();
+                self.dirty = true;
+            }
+        } else if let Some(key) = keyboard::keys(self.keyboard.key_group).get(index) {
+            self.keyboard.key = key.id.clone();
+            self.keyboard_error = None;
+            self.dirty = true;
+        }
+        self.options_open = false;
+        self.options_scroll = 0.0;
+    }
+    pub fn modifier(&mut self,index:usize) {
+        if self.keyboard.key_group == 5 {return;}
+        if let Some(id) = keyboard::MODIFIERS.get(index) {
+            if self.keyboard.modifiers.iter().any(|v|v == id) {self.keyboard.modifiers.retain(|v|v != id);}
+            else {
+                if self.keyboard.key_group != 0 && index < 6 {self.keyboard.modifiers.retain(|v|v != keyboard::MODIFIERS[index ^ 1]);}
+                self.keyboard.modifiers.push(id.to_string());
+            }
+            self.dirty = true;
+        }
     }
     pub fn select_mouse(&mut self, index: usize) {
         if index < MOUSE_ACTIONS.len() {
@@ -474,6 +537,7 @@ impl Draft {
         self.set_speed(n);
     }
     pub fn save_reason(&self) -> &'static str {
+        if self.category == Some(Category::Keyboard) {return "Saves the local desired profile only. Hardware delivery and readback are unavailable.";}
         if self.context.owner.pid == 605 {
             "Saving assignments is unavailable: Ornata mapping readback is unsupported. No command will be sent."
         } else {
@@ -498,6 +562,7 @@ pub(super) enum Transition {
 }
 #[derive(Default)]
 pub(super) struct View {
+    pub saving: bool,
     pub draft: Option<Draft>,
     pub drawer: bool,
     pub drawer_scroll: f64,
@@ -671,4 +736,20 @@ mod tests {
         current["profile"]["opaque"] = json!({"changed":true});
         assert!(!ctx.still_current(&current));
     }
+    #[test]
+    fn explicit_keyboard_choice_repairs_unknown_key_but_not_combined_context() {
+        for combined in [false,true] {
+            let mut record=json!({"inputID":"KEY_A","inputType":"KeyInput","isHyperShift":false,"outputType":"keyboardGroup","keyboardGroup":{"key":"FUTURE_KEY","keyGroup":0,"modifiers":[],"opaque":{"keep":true}}});
+            if combined {record["keyboardGroup"]["mouseGroup"]=json!({"mouseAssignment":"Click"});}
+            let ctx=context(json!([record]));let before=ctx.original_profile.clone();
+            let mut input=input();input.functions.push("KEYBOARD_FUNCTION".into());
+            let mut draft=Draft::new(ctx.clone(),input,Anchor::Key("KEY_A".into()),false);
+            assert!(draft.keyboard_error.is_some());
+            draft.select_keyboard_option(2);
+            assert_eq!(draft.keyboard.key,"KEY_C");
+            assert_eq!(draft.keyboard_profile().is_ok(),!combined);
+            assert_eq!(ctx.original_profile,before);
+        }
+    }
+
 }

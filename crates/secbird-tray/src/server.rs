@@ -438,6 +438,9 @@ fn buttons_json(dev: &Device, store: &mut Store) -> Value {
 }
 
 fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
+    if path == "/api/keyboard-assignment-local" {
+        return keyboard_assignment_local(engine, body);
+    }
     let b: Body = serde_json::from_slice(body).map_err(|e| Error::InvalidArg(e.to_string()))?;
     if path=="/api/profile" && b.action=="paths" && (b.id.is_empty() || b.expected_device.as_deref()!=Some(&b.id) || !engine.devices().iter().any(|dev|dev.key()==b.id)) {return Err(Error::InvalidArg("Executable links require the selected device identity".into()));}
     if path=="/api/sensor-rotation" {
@@ -784,6 +787,32 @@ fn post(engine: &mut Engine, path: &str, body: &[u8]) -> Result<Value, Error> {
         }
         other => other,
     }
+}
+
+/// Save desired source intent only. Deliberately bypasses every device setter.
+fn keyboard_assignment_local(engine: &Engine, body: &[u8]) -> Result<Value, Error> {
+    #[derive(Deserialize)]
+    struct Edit {
+        id: String,
+        profile: String,
+        expected: Value,
+        input: String,
+        input_type: String,
+        hyper: bool,
+        setting: secbird_core::profile_compat::keyboard_assignments::Setting,
+    }
+    let edit: Edit = serde_json::from_slice(body).map_err(|e|Error::InvalidArg(e.to_string()))?;
+    let device = engine.devices().iter().find(|d|d.key() == edit.id).ok_or_else(||Error::InvalidArg("Selected device disconnected".into()))?;
+    let mut store = Store::load(&config_dir().join("profiles.json"))?;
+    let profiles = store.for_device(device);
+    if profiles.active != edit.profile || serde_json::to_value(profiles.active()).map_err(|e|Error::Db(e.to_string()))? != edit.expected {
+        return Err(Error::InvalidArg("Profile changed; reopen the assignment before saving".into()));
+    }
+    let next = secbird_core::profile_compat::keyboard_assignments::update(profiles.active(), device.pid, &edit.input, &edit.input_type, edit.hyper, &edit.setting)?;
+    *profiles.active_mut() = next;
+    secbird_core::profile_compat::validate_store_budget(&store)?;
+    store.save()?;
+    Ok(json!({"ok":true,"local_only":true}))
 }
 
 /// One color, or one effect started together, on every zone of every connected device.

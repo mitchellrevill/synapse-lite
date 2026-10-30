@@ -1,4 +1,4 @@
-//! Installed Customize popup projection. This module never submits a device job.
+//! Customize projection and local desired-profile jobs; no input delivery.
 //! Positions come from assignment_layout + inert shipped CSS/font replay.
 use super::assignment_fonts::Role;
 use super::assignment_geometry as geo;
@@ -12,6 +12,9 @@ pub(super) enum Control {
     Open(Input, Anchor),
     Close,
     Cancel,
+    Save,
+    KeyboardGroup,
+    Modifier(usize),
     Category(Category),
     Options,
     Option(usize),
@@ -838,11 +841,28 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
             );
         }
         Some(Category::Disable) => {}
-        Some(Category::Mouse) => {
+        Some(Category::Mouse | Category::Keyboard) => {
+            if d.category == Some(Category::Keyboard) {
+                border(p,f.display,0x515151);
+                baseline_text(p, model::keyboard::GROUPS[d.keyboard.key_group.min(6)], r(f.display.x+10.0,f.display.y,180.0,27.0),p.fonts.normal,0xcccccc,DT_SINGLELINE | DT_VCENTER,Role::Dropdown);
+                image(s,p,"expand",r(f.display.x+190.0,f.display.y+8.0,10.0,10.0));
+                hit(p,f.display,Control::KeyboardGroup);
+                for (index,id) in model::keyboard::MODIFIERS.iter().enumerate() {
+                    let row = r(f.display.x + (index % 2) as f64 * 110.0, f.display.y + 80.0 + (index / 2) as f64 * 27.0, 100.0, 23.0);
+                    let selected = d.keyboard.modifiers.iter().any(|v|v == id);
+
+                    button(p, id.trim_start_matches("KEY_").replace('_'," ").as_str(), row,
+                        (d.keyboard.key_group != 5).then_some(Control::Modifier(index)));
+                    if selected {border(p,row,GREEN);}
+                }
+                let description = d.keyboard.transitions().map(|(scan,down,up)|format!("Scan {scan} · Down {down} / Up {up}")).unwrap_or_else(||"Choose a key; input follows down/up".into());
+                text(p,&description,r(f.display.x,f.display.y+190.0,210.0,28.0),p.fonts.small,0x999999,DT_WORDBREAK);
+            }
             border(p, f.dropdown, 0x515151);
+            let keyboard_label = model::keyboard::keys(0).iter().find(|key|key.id == d.keyboard.key).map(|key|key.name.as_str()).unwrap_or("Choose a key...");
             baseline_text(
                 p,
-                model::MOUSE_ACTIONS[d.mouse_option].1,
+                if d.category == Some(Category::Keyboard) {keyboard_label} else {model::MOUSE_ACTIONS[d.mouse_option].1},
                 r(f.dropdown.x + 10.0, f.dropdown.y, 180.0, 27.0),
                 p.fonts.normal,
                 0xcccccc,
@@ -947,10 +967,11 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
         }
     }
     button(p, "CANCEL", f.cancel, Some(Control::Cancel));
-    button(p, "SAVE", f.save, None);
+    button(p, "SAVE", f.save, (d.keyboard_profile().is_ok() && s.pending == 0 && !s.read_only_smoke).then_some(Control::Save));
+    let validation = if d.category == Some(Category::Keyboard) && d.dirty { d.keyboard_profile().err() } else {d.keyboard_error.clone()};
     text(
         p,
-        d.save_reason(),
+        validation.as_deref().unwrap_or(d.save_reason()),
         r(f.cancel.x, f.cancel.y + 39.0, 210.0, 85.0),
         p.fonts.small,
         0x999999,
@@ -1009,13 +1030,14 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
         hit(p, bar.thumb, Control::FormThumb(bar.thumb.y));
     }
     if d.options_open {
+        let labels = d.option_labels();
         let panel = geo::options(f.dropdown, dimensions(s).1);
         fill(p, panel, 0);
         border(p, panel, 0x515151);
         let saved = SaveDC(p.dc);
         let b = box_px(p, panel);
         IntersectClipRect(p.dc, b.left + 1, b.top + 1, b.right - 1, b.bottom - 1);
-        for (i, row) in geo::option_rows(panel, d.options_scroll)
+        for (i, row) in geo::option_rows_count(panel, d.options_scroll, labels.len())
             .into_iter()
             .enumerate()
         {
@@ -1024,14 +1046,19 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
             }
             baseline_text(
                 p,
-                model::MOUSE_ACTIONS[i].1,
+                &labels[i],
                 r(row.x + 10.0, row.y, row.width - 20.0, row.height),
                 p.fonts.normal,
-                if i == d.mouse_option { GREEN } else { 0xcccccc },
+                if if d.category == Some(Category::Keyboard) {
+                    if d.keyboard_group_menu {i == d.keyboard.key_group}
+                    else {model::keyboard::keys(d.keyboard.key_group).get(i).is_some_and(|key|key.id == d.keyboard.key)}
+                } else {i == d.mouse_option} { GREEN } else { 0xcccccc },
                 DT_SINGLELINE | DT_VCENTER,
                 Role::Options,
             );
-            hit(p, row, Control::Option(i));
+            let top = row.y.max(panel.y + 1.0);
+            let bottom = (row.y + row.height).min(panel.y + panel.height - 1.0);
+            if bottom > top {hit(p, r(row.x,top,row.width,bottom-top), Control::Option(i));}
         }
         RestoreDC(p.dc, saved);
         if let Some(bar) = geo::scrollbar(
@@ -1041,7 +1068,7 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
                 panel.width - 2.0,
                 panel.height - 2.0,
             ),
-            250.0,
+            labels.len() as f64 * 25.0,
             d.options_scroll,
             8.0,
         ) {
@@ -1112,7 +1139,7 @@ pub(super) unsafe fn paint_popup(s: &State, p: &mut Painter) {
             DT_WORDBREAK | DT_CENTER,
         );
         button(p, "DON'T SAVE", g.discard, Some(Control::Discard));
-        button(p, "SAVE", g.save, None);
+        button(p, "SAVE", g.save, (d.keyboard_profile().is_ok() && s.pending == 0 && !s.read_only_smoke).then_some(Control::Save));
         image(s, p, "assignment-dialog-close", g.close);
         hit(p, g.close, Control::Dismiss);
     }
@@ -1174,7 +1201,7 @@ fn transition(s: &mut State, next: Transition) {
     }
 }
 pub(super) unsafe fn action(s: &mut State, c: Control) {
-    if s.restricted_actions {
+    if s.restricted_actions || s.assignment.saving {
         return;
     }
     match c {
@@ -1197,6 +1224,20 @@ pub(super) unsafe fn action(s: &mut State, c: Control) {
             }
         }
         Control::Cancel => s.assignment.cancel(),
+        Control::Save => {
+            if s.pending != 0 || s.read_only_smoke {return;}
+            if let Some(d) = &s.assignment.draft {
+                if let Err(error) = d.keyboard_profile() {s.error(&error);return;}
+                if s.device().is_none_or(|v|!d.context.still_current(v)) {s.error("Profile changed; reopen this assignment");return;}
+                let body = json!({"id":d.context.owner.device,"profile":d.context.owner.profile,"expected":d.context.original_profile,"input":d.input.input_id,"input_type":d.input.input_type,"hyper":d.hyper,"setting":d.keyboard_setting()});
+                s.assignment.saving = true;
+                s.queue(Job::Action("/api/keyboard-assignment-local",body));
+            }
+        }
+        Control::KeyboardGroup => {
+            if let Some(d) = &mut s.assignment.draft {let same = d.keyboard_group_menu && d.options_open;d.keyboard_group_menu = true;d.options_open = !same;d.options_scroll = 0.0;}
+        }
+        Control::Modifier(index) => {if let Some(d) = &mut s.assignment.draft {d.modifier(index);}}
         Control::Drawer => {
             if let Some(t) = s
                 .assignment
@@ -1237,12 +1278,21 @@ pub(super) unsafe fn action(s: &mut State, c: Control) {
         }
         Control::Options => {
             if let Some(d) = &mut s.assignment.draft {
-                d.options_open = !d.options_open;
+                let same = !d.keyboard_group_menu && d.options_open;
+                d.keyboard_group_menu = false;
+                d.options_scroll = 0.0;
+                d.options_open = !same;
+                if d.category == Some(Category::Keyboard) {
+                    let keys = model::keyboard::keys(d.keyboard.key_group);
+                    if let Some(index) = keys.iter().position(|key|key.id == d.keyboard.key) {
+                        d.options_scroll = (index as f64 * 25.0 - 75.0).clamp(0.0,(keys.len() as f64 * 25.0 - 178.0).max(0.0));
+                    }
+                }
             }
         }
         Control::Option(i) => {
             if let Some(d) = &mut s.assignment.draft {
-                d.select_mouse(i);
+                if d.category == Some(Category::Keyboard) {d.select_keyboard_option(i);} else {d.select_mouse(i);}
             }
         }
         Control::Turbo => {
@@ -1316,7 +1366,7 @@ pub(super) unsafe fn pointer(s: &mut State, p: POINT) {
                     panel.width - 2.0,
                     panel.height - 2.0,
                 ),
-                250.0,
+                d.option_labels().len() as f64 * 25.0,
                 d.options_scroll,
                 8.0,
             ) {
@@ -1417,7 +1467,7 @@ pub(super) unsafe fn wheel(s: &mut State, delta: f64) {
                 y,
             )
         {
-            d.options_scroll = (d.options_scroll - delta * 25.0).clamp(0.0, 72.0);
+            d.options_scroll = (d.options_scroll - delta * 25.0).clamp(0.0, (d.option_labels().len() as f64 * 25.0 - 178.0).max(0.0));
         } else if geo::contains(g.rail, x, y) {
             d.rail_scroll = (d.rail_scroll - delta * 40.0).clamp(
                 0.0,
@@ -1456,7 +1506,7 @@ pub(super) unsafe fn rebuild_fields(s: &mut State) -> bool {
     }
     if let Some(g) = shell(s) {
         if let Some(d) = &s.assignment.draft {
-            if d.category == Some(Category::Mouse) && d.turbo && d.turbo_available() {
+            if matches!(d.category, Some(Category::Mouse | Category::Keyboard)) && d.turbo && d.turbo_available() {
                 let f = geo::form(
                     g,
                     d.context.owner.pid,
@@ -1510,11 +1560,25 @@ pub(super) unsafe fn change(s: &mut State, blur: bool) {
     InvalidateRect(s.hwnd, null(), 0);
 }
 pub(super) fn sync(s: &mut State) {
-    if s.assignment
-        .draft
-        .as_ref()
-        .is_some_and(|d| s.device().is_none_or(|v| !d.context.still_current(v)))
-    {
+    if s.assignment.saving && s.pending == 0 {
+        s.assignment.saving = false;
+        if s.failed {return;}
+        let saved = s.assignment.draft.as_ref().is_some_and(|draft| s.device().is_some_and(|device| {
+            device["id"] == draft.context.owner.device && device["active"] == draft.context.owner.profile
+                && device["profile"]["_synapseLiteSynapse4"]["decoded"]["mappings"].as_array().is_some_and(|rows|rows.iter().any(|row|
+                    row["inputID"] == draft.input.input_id && row["isHyperShift"].as_bool().unwrap_or(false) == draft.hyper
+                    && model::keyboard::Setting::from_record(row).is_ok_and(|setting|setting == draft.keyboard_setting())))
+        }));
+        if saved {
+            let next = s.assignment.pending.take();
+            let external = s.assignment_next.take();
+            s.assignment.cancel();
+            if let Some(next) = next {transition(s,next);}
+            if let Some(next) = external {unsafe {s.action(*next);}}
+            return;
+        }
+    }
+    if s.assignment.draft.as_ref().is_some_and(|d| s.device().is_none_or(|v| !d.context.still_current(v))) {
         s.assignment.cancel();
         s.assignment_next = None;
     }
@@ -1534,7 +1598,42 @@ pub(super) unsafe fn repeat(s: &mut State) {
 
 #[cfg(test)]
 pub(super) fn diagnostics(s: &State) -> Value {
-    json!({"background_ready":s.customize_background.borrow().ready(),"drawer":s.assignment.drawer,"drawer_scroll":s.assignment.drawer_scroll,"drawer_count":visible_inputs(s).len(),"customized_only":s.assignment.customized_only,"filter_open":s.assignment.filter_open,"rail_expanded":s.assignment.draft.as_ref().is_some_and(|d|d.rail_expanded),"rail_scroll":s.assignment.draft.as_ref().map(|d|d.rail_scroll),"source_icons":s.icons.keys().filter(|key|key.starts_with("assignment-")).count()})
+    json!({"keyboard":s.assignment.draft.as_ref().map(|d|json!({"setting":d.keyboard_setting(),"can_save":d.keyboard_profile().is_ok(),"error":d.keyboard_profile().err()})),"background_ready":s.customize_background.borrow().ready(),"drawer":s.assignment.drawer,"drawer_scroll":s.assignment.drawer_scroll,"drawer_count":visible_inputs(s).len(),"customized_only":s.assignment.customized_only,"filter_open":s.assignment.filter_open,"rail_expanded":s.assignment.draft.as_ref().is_some_and(|d|d.rail_expanded),"rail_scroll":s.assignment.draft.as_ref().map(|d|d.rail_scroll),"source_icons":s.icons.keys().filter(|key|key.starts_with("assignment-")).count()})
+}
+/// Test artifact from the renderer's own memory. Reads no desktop/window pixels.
+#[cfg(test)]
+pub(super) unsafe fn render_fixture(s: &mut State) -> Value {
+    let Some(path) = std::env::var_os("SYNAPSE_LITE_KEYBOARD_RENDER_PATH") else {return json!({"ok":false});};
+    if s.width <= 0 || s.height <= 0 || s.width > 4096 || s.height > 2160 {return json!({"ok":false,"error":"Invalid fixture geometry"});}
+    let dc=CreateCompatibleDC(null_mut());
+    if dc.is_null() {return json!({"ok":false,"error":"No memory DC"});}
+    let mut info:BITMAPINFO=std::mem::zeroed();
+    info.bmiHeader.biSize=std::mem::size_of::<BITMAPINFOHEADER>() as u32;
+    info.bmiHeader.biWidth=s.width;
+    info.bmiHeader.biHeight=-s.height;
+    info.bmiHeader.biPlanes=1;
+    info.bmiHeader.biBitCount=32;
+    info.bmiHeader.biCompression=BI_RGB;
+    let mut pixels=null_mut();
+    let bitmap=CreateDIBSection(dc,&info,DIB_RGB_COLORS,&mut pixels,null_mut(),0);
+    if bitmap.is_null() {DeleteDC(dc);return json!({"ok":false,"error":"No fixture bitmap"});}
+    let old=SelectObject(dc,bitmap);
+    super::paint(s,dc);
+    GdiFlush();
+    let length=s.width as usize*s.height as usize*4;
+    let mut bytes=vec![0u8;54];
+    bytes[0..2].copy_from_slice(b"BM");
+    bytes[2..6].copy_from_slice(&((54+length) as u32).to_le_bytes());
+    bytes[10..14].copy_from_slice(&54u32.to_le_bytes());
+    bytes[14..18].copy_from_slice(&40u32.to_le_bytes());
+    bytes[18..22].copy_from_slice(&s.width.to_le_bytes());
+    bytes[22..26].copy_from_slice(&(-s.height).to_le_bytes());
+    bytes[26..28].copy_from_slice(&1u16.to_le_bytes());
+    bytes[28..30].copy_from_slice(&32u16.to_le_bytes());
+    bytes.extend_from_slice(std::slice::from_raw_parts(pixels.cast::<u8>(),length));
+    let result=(|| {use std::io::Write;let mut file=std::fs::OpenOptions::new().write(true).create_new(true).open(path)?;file.write_all(&bytes)})();
+    SelectObject(dc,old);DeleteObject(bitmap);DeleteDC(dc);
+    match result {Ok(())=>json!({"ok":true,"kind":"offscreen fixture render","width":s.width,"height":s.height,"scale":s.scale}),Err(error)=>json!({"ok":false,"error":error.to_string()})}
 }
 #[cfg(test)]
 pub(super) unsafe fn font_diagnostics(s: &State) -> Value {

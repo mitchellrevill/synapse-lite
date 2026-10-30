@@ -709,7 +709,9 @@ fn worker(
                         buttons = Some(answer);
                     }
                     if !failed {
-                        status = "Settings applied".into();
+                        status = if path == "/api/keyboard-assignment-local" {
+                            "Keyboard assignment saved locally. Hardware delivery is unavailable.".into()
+                        } else { "Settings applied".into() };
                     }
                     server::dispatch(&mut engine, "GET", "/api/state", &[])
                 }
@@ -3923,6 +3925,10 @@ unsafe extern "system" fn window_proc(
             }
             if wparam == 3 {
                 *(lparam as *mut Value) = json!({"width":state.width,"height":state.height,"scale":state.scale,"hit_count":state.hits.len()});
+                return 0;
+            }
+            if wparam == 4 {
+                *(lparam as *mut Value) = assignment_view::render_fixture(&mut state);
                 return 0;
             }
             if wparam == 1 {
