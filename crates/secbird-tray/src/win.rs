@@ -118,7 +118,7 @@ struct App {
     /// Warned about Synapse since it last started.
     synapse_warned: bool,
     /// Devices already warned about low battery (cleared once charging or recovered).
-    low_battery: HashSet<String>,
+    low_battery: crate::battery_notifications::Monitor,
     batteries: Vec<Battery>,
     /// When each mouse last got its lost remaps back (device key -> unix seconds).
     buttons_restored: HashMap<String, u64>,
@@ -399,7 +399,7 @@ pub fn run() {
                 apply_all_pending: true,
                 retry_step: 0,
                 synapse_warned: false,
-                low_battery: HashSet::new(),
+                low_battery: Default::default(),
                 buttons_restored: HashMap::new(),
                 batteries: Vec::new(),
                 listening: Arc::new(Mutex::new(HashSet::new())),
@@ -955,17 +955,14 @@ impl App {
         self.engine().refresh_battery_lights();
         let batteries = self.engine().batteries();
         let settings = TraySettings::load();
-        let low = settings.low_battery();
+        self.low_battery.begin();
         for b in &batteries {
-            if b.charging != Some(false) || b.percent >= low.saturating_add(10) {
-                self.low_battery.remove(&b.key);
-            } else if b.percent <= low && self.low_battery.insert(b.key.clone()) {
-                log::append(&format!("low battery: {} {}%", b.name, b.percent));
-                if !settings.battery_warning_off {
-                    self.balloon("Battery low", &format!("{}: {}%", b.name, b.percent));
-                }
+            let prefs = crate::battery_notifications::preferences(&settings, &b.key);
+            for title in self.low_battery.observe(&b.key, b.percent, b.charging, &prefs) {
+                self.balloon(title, &format!("{}: {}%", b.name, b.percent));
             }
         }
+        self.low_battery.end();
         self.batteries = batteries;
         self.update_tooltip();
     }
@@ -994,6 +991,7 @@ impl App {
             let battery = match self.batteries.iter().find(|b| b.key == dev.key()) {
                 Some(b) if b.charging == Some(true) => format!(" · {}% charging", b.percent),
                 Some(b) => format!(" · {}%", b.percent),
+                None if dev.spec.as_ref().is_some_and(|s|s.wireless) => " � battery unknown / unavailable".into(),
                 None => String::new(),
             };
             text.push_str(&format!("\n{}: {active}{battery}", engine.label(dev)));

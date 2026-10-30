@@ -36,6 +36,8 @@ mod server;
 #[cfg(windows)]
 mod settings;
 #[cfg(windows)]
+mod battery_notifications;
+#[cfg(windows)]
 mod runtime_probe;
 #[cfg(windows)]
 mod win;

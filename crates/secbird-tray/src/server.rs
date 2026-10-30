@@ -859,6 +859,7 @@ pub(crate) fn settings_json(engine: &Engine) -> Value {
         "popups": !s.popups_off,
         "battery_warning": !s.battery_warning_off,
         "battery_warning_at": s.low_battery(),
+        "battery_devices": engine.devices().iter().filter(|d|d.spec.as_ref().is_some_and(|s|s.wireless)).map(|d|json!({"id":d.key(),"name":d.name(),"preferences":crate::battery_notifications::preferences(&s,&d.key())})).collect::<Vec<_>>(),
         "auto_switch": !s.auto_switch_off,
         "away_lights": s.away_lights.as_deref().unwrap_or(""),
         "synapse": engine.synapse(),

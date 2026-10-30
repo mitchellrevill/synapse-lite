@@ -15,6 +15,8 @@ pub enum Control {
     Toggle(&'static str, bool),
     Away(&'static str),
     Battery(u8),
+    DeviceBattery(String, bool, u8),
+    Charging(String, bool),
     Lighting(String, String, bool),
     Help,
     License,
@@ -111,6 +113,8 @@ pub(super) unsafe fn action(state: &mut State, control: Control) {
                 Control::Lighting(id, profile, enabled) => {
                     json!({"key":"lighting_control","id":id,"expected_profile":profile,"enabled":enabled})
                 }
+                Control::DeviceBattery(id,on,value) => json!({"key":"battery_device","data":id,"on":on,"value":value}),
+                Control::Charging(id,on) => json!({"key":"battery_charging","data":id,"on":on}),
                 Control::Battery(value) => json!({"key":"battery_warning_at","value":value}),
                 _ => return,
             };
@@ -236,6 +240,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, width: i32, heigh
         .as_array()
         .map(Vec::as_slice)
         .unwrap_or(&[]);
+    let battery_devices = a["battery_devices"].as_array().map(Vec::as_slice).unwrap_or(&[]);
     let lighting_height = 250 + devices.len() as i32 * 34;
     let columns = width >= 1100;
     let bottom = if v.general {
@@ -245,9 +250,9 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, width: i32, heigh
             814
         }
     } else if columns {
-        150 + 529.max(lighting_height + 339)
+        150 + (620 + battery_devices.len() as i32 * 120).max(lighting_height + 339)
     } else {
-        1038 + lighting_height
+        1108 + lighting_height + battery_devices.len() as i32 * 120
     };
     v.maximum.set((bottom - (height - 45)).max(0));
     let scroll = v.scroll.min(v.maximum.get());
@@ -263,7 +268,7 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, width: i32, heigh
         (width - w) / 2
     };
     let right = if columns { x + w + 20 } else { x };
-    let second = if columns { top } else { top + 549 };
+    let second = if columns { top } else { top + 639 + battery_devices.len() as i32 * 120 };
     let clip = SaveDC(p.dc);
     let r = p.rect(0, 137, width, height - 182);
     IntersectClipRect(p.dc, r.left, r.top, r.right, r.bottom);
@@ -348,6 +353,21 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter<'_>, width: i32, heigh
             enabled,
             Control::Toggle("auto_switch", a["auto_switch"] != true),
         );
+        card(p,x,top+549,w,70+battery_devices.len() as i32*120,"DEVICE BATTERY ALERTS");
+        for (i,d) in battery_devices.iter().enumerate() {
+            let y=top+604+i as i32*120;
+            let id=d["id"].as_str().unwrap_or_default();
+            let prefs=&d["preferences"];
+            let on=prefs["enabled"]==true;
+            let threshold=prefs["threshold"].as_u64().unwrap_or(15) as u8;
+            check(p,(x+30,y,w-60),d["name"].as_str().unwrap_or("Device"),on,enabled,Control::DeviceBattery(id.into(),!on,threshold));
+            p.text(&format!("Warn at {threshold}%"),x+30,y+35,w-150,28,p.fonts.normal,TEXT,DT_LEFT);
+            if enabled {
+                p.button("−",x+w-112,y+33,30,Action::Settings(Control::DeviceBattery(id.into(),on,threshold.saturating_sub(1).max(1))),false);
+                p.button("+",x+w-72,y+33,30,Action::Settings(Control::DeviceBattery(id.into(),on,threshold.saturating_add(1).min(95))),false);
+            }
+            check(p,(x+30,y+72,w-60),"Notify when charging starts or stops",prefs["charging"]==true,enabled,Control::Charging(id.into(),prefs["charging"]!=true));
+        }
         card(p, right, second, w, lighting_height, "DEVICE LIGHTING");
         note(p,right+30,second+63,w-60,"Allow Synapse Lite to control lighting for checked devices. Uncheck a device to leave its RGB to other applications.");
         for (i, device) in devices.iter().enumerate() {
