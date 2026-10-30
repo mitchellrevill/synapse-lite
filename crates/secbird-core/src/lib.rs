@@ -65,6 +65,7 @@ pub mod rzcontrol_packet;
 pub mod sim;
 pub mod source_macro;
 pub mod native_host_launch;
+pub mod native_paste_plan;
 pub mod macro_scheduler;
 pub mod snap_tap;
 pub mod studio;

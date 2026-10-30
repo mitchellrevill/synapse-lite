@@ -1,4 +1,5 @@
 //! Saved source macro inspection, routed before device discovery in main.
+mod paste_contract;
 use secbird_core::{
     profile_compat::{
         self,
@@ -90,6 +91,7 @@ fn plan(input: &Path, binding: &Path, output: &Path) -> Result<usize, Error> {
         "source_row_count":prepared.source_row_count(),"source_rows_zero_based":prepared.source_rows(),"native_events":events,
         "repeats":prepared.plan().repeats(),"explicit_delay_ms":prepared.plan().explicit_delay_ms(),
         "runtime_gaps":prepared.plan().runtime_gaps().iter().map(|gap|format!("{gap:?}")).collect::<Vec<_>>(),
+        "clipboard_paste_contract":paste_contract::describe(prepared.plan().events()),
         "hardware_discovery_performed":false,"input_sent":false,"commands_executed":false,
         "clipboard_changed":false,"normal_store_changed":false,"live_playback_available":false});
     let bytes = serde_json::to_vec_pretty(&report).map_err(invalid)?;
@@ -253,6 +255,66 @@ mod tests {
             .contains(&json!("HostLaunchExecution")));
         assert!(plan(&input, &binding, &output).is_err());
         assert_eq!(std::fs::read(&output).unwrap(), bytes);
+        assert_eq!(std::fs::read(&input).unwrap(), before);
+    }
+    #[test]
+    fn text_plan_reports_protocol_without_fabricating_a_physical_snapshot() {
+        let folder = Folder::new();
+        let (input, binding) = folder.inputs();
+        let store = read_store(&input).unwrap();
+        let store = macro_library::edit(
+            &store,
+            Change::InsertAction {
+                guid: "test".into(),
+                index: 1,
+                action: macro_library::host_actions::Action::Text("retained\n😀".into()),
+            },
+        )
+        .unwrap();
+        std::fs::write(&input, store.native_bytes().unwrap()).unwrap();
+        let before = std::fs::read(&input).unwrap();
+        let output = folder.path("text-plan.json");
+        super::super::run(vec![
+            "source-macro".into(),
+            "plan".into(),
+            input.to_string_lossy().into(),
+            binding.to_string_lossy().into(),
+            output.to_string_lossy().into(),
+        ])
+        .unwrap();
+        let report: Value = serde_json::from_slice(&std::fs::read(&output).unwrap()).unwrap();
+        let contract = &report["clipboard_paste_contract"];
+        assert_eq!(contract["native_text_event_indexes_zero_based"], json!([0]));
+        assert_eq!(contract["source_key_state_snapshot"], Value::Null);
+        assert_eq!(
+            contract["sampled_virtual_keys_in_source_order"],
+            json!([164, 162, 160, 91, 165, 163, 161, 92])
+        );
+        assert_eq!(
+            contract["paste_chord_execution_order"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|s| s["source_delay_argument"].as_u64().unwrap())
+                .collect::<Vec<_>>(),
+            vec![30, 20, 0, 10]
+        );
+        for flag in [
+            "snapshot_read",
+            "clipboard_read",
+            "clipboard_changed",
+            "input_sent",
+            "delivery_observed",
+            "live_dispatch_available",
+            "runner_duration_unit_verified",
+        ] {
+            assert_eq!(contract[flag], false);
+        }
+        assert_eq!(
+            report["native_events"][0],
+            json!({"type":"clipboard","id":"text","text":"retained\n😀"})
+        );
+        assert_eq!(report["hardware_discovery_performed"], false);
         assert_eq!(std::fs::read(&input).unwrap(), before);
     }
     #[test]
