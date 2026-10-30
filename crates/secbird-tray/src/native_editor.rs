@@ -44,6 +44,8 @@ mod interaction_tests;
 mod lighting_layout;
 mod lighting_view;
 mod image_render;
+mod bitmap;
+use bitmap::Bitmap;
 mod host_tabs;
 mod linked_games;
 mod shortcuts;
@@ -959,114 +961,6 @@ impl Drop for Fonts {
     }
 }
 
-struct Bitmap {
-    handle: HBITMAP,
-    width: i32,
-    height: i32,
-    alpha: bool,
-    smooth: *mut windows_sys::Win32::Graphics::GdiPlus::GpBitmap,
-}
-
-impl Bitmap {
-    unsafe fn load(path: &Path) -> Option<Self> {
-        let alpha_path = path.with_extension("bgra");
-        if alpha_path.exists() {
-            return Self::load_alpha(&alpha_path);
-        }
-        let handle = LoadImageW(
-            null_mut(),
-            wide(&path.to_string_lossy()).as_ptr(),
-            IMAGE_BITMAP,
-            0,
-            0,
-            LR_LOADFROMFILE | LR_CREATEDIBSECTION,
-        );
-        if handle.is_null() {
-            return None;
-        }
-        let mut info: BITMAP = std::mem::zeroed();
-        if GetObjectW(
-            handle,
-            std::mem::size_of::<BITMAP>() as i32,
-            (&mut info as *mut BITMAP).cast(),
-        ) == 0
-        {
-            DeleteObject(handle);
-            return None;
-        }
-        Some(Self {
-            handle,
-            width: info.bmWidth,
-            height: info.bmHeight,
-            alpha: false,
-            smooth: null_mut(),
-        })
-    }
-
-    // Provisioned files contain top-down, premultiplied BGRA pixels. Keeping
-    // alpha separate from LoadImage avoids its legacy BMP alpha conversion.
-    unsafe fn load_alpha(path: &Path) -> Option<Self> {
-        use std::io::Read;
-        let mut file = std::fs::File::open(path).ok()?;
-        let mut header = [0u8; 16];
-        file.read_exact(&mut header).ok()?;
-        if &header[..8] != b"SLBGRA1\0" {
-            return None;
-        }
-        let width = u32::from_le_bytes(header[8..12].try_into().ok()?);
-        let height = u32::from_le_bytes(header[12..16].try_into().ok()?);
-        if width == 0 || height == 0 || width > 4096 || height > 4096 {
-            return None;
-        }
-        let length = width as usize * height as usize * 4;
-        if file.metadata().ok()?.len() != (16 + length) as u64 {
-            return None;
-        }
-        let mut info: BITMAPINFO = std::mem::zeroed();
-        info.bmiHeader.biSize = std::mem::size_of::<BITMAPINFOHEADER>() as u32;
-        info.bmiHeader.biWidth = width as i32;
-        info.bmiHeader.biHeight = -(height as i32);
-        info.bmiHeader.biPlanes = 1;
-        info.bmiHeader.biBitCount = 32;
-        info.bmiHeader.biCompression = BI_RGB;
-        let mut pixels = null_mut();
-        let handle = CreateDIBSection(null_mut(), &info, DIB_RGB_COLORS, &mut pixels, null_mut(), 0);
-        if handle.is_null() {
-            return None;
-        }
-        let mut bitmap = Self {
-            handle,
-            width: width as i32,
-            height: height as i32,
-            alpha: true,
-            smooth: null_mut(),
-        };
-        let buffer = std::slice::from_raw_parts_mut(pixels.cast::<u8>(), length);
-        file.read_exact(buffer).ok()?;
-        // Refuse straight-alpha or malformed generated data rather than
-        // producing bright fringes around semitransparent edges.
-        if buffer
-            .chunks_exact(4)
-            .any(|p| p[..3].iter().any(|c| *c > p[3]))
-        {
-            return None;
-        }
-        bitmap.smooth = image_render::from_pixels(width as i32, height as i32, buffer.as_ptr());
-        if bitmap.smooth.is_null() {
-            return None;
-        }
-        Some(bitmap)
-    }
-}
-
-impl Drop for Bitmap {
-    fn drop(&mut self) {
-        unsafe {
-            image_render::dispose(self.smooth);
-            DeleteObject(self.handle);
-        }
-    }
-}
 
 struct State {
     information_cache: HashMap<String, String>,
