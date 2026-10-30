@@ -6,6 +6,7 @@ pub(super) unsafe fn start(state: &mut State) -> Result<(), String> {
     if !active(state)
         || state.macros.busy
         || state.macros.playing()
+        || state.macros.recording.is_some()
         || state.read_only_smoke
         || state.restricted_actions
     {

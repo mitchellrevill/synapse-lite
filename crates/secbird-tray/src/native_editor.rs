@@ -134,6 +134,8 @@ fn editor_private_messages_have_distinct_ids() {
         ("test linked games", linked_games::TEST),
         ("macro browse", macro_view::BROWSE),
         ("macro input menu", macro_view::INPUT_MENU),
+        ("macro host browse", macro_view::HOST_BROWSE),
+        ("macro XML export", macro_view::EXPORT_BROWSE),
         ("test macro", macro_view::TEST),
         ("test chroma", chroma_view::TEST),
         ("test settings", settings_view::TEST),

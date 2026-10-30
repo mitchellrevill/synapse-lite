@@ -200,7 +200,7 @@ pub(super) unsafe fn action(state:&mut State,control:Control) {
             Control::Record=>{commit_fields(state)?;let d=state.macros.draft.as_ref().ok_or("Select a macro first")?;
                 // Probe the ordinary authoring guard before accepting any input.
                 library::edit_definition(&d.entry.encoded_record,Change::InsertInput{guid:d.entry.guid.clone(),index:d.entry.events.len(),input:Input::Keyboard("KEY_A".into()),gesture:Gesture::Tap}).map_err(|e|e.to_string())?;
-                state.macros.recording=Some((Default::default(),std::time::Instant::now()));SetFocus(state.hwnd);SetTimer(state.hwnd,RECORD_TIMER,100,None);state.macros.status="RECORDING · type here / click timeline · Stop to keep · Esc cancels".into();},
+                if SetTimer(state.hwnd,RECORD_TIMER,100,None)==0{return Err("Could not monitor focused recording".into());}state.macros.recording=Some((Default::default(),std::time::Instant::now()));SetFocus(state.hwnd);state.macros.status="RECORDING · type here / click timeline · Stop to keep · Esc cancels".into();},
             Control::StopRecording=>stop_recording(state,false),
             Control::CancelRecording=>stop_recording(state,true),
             Control::Open=>{},Control::List=>state.macros.picker=!state.macros.picker,
@@ -361,7 +361,7 @@ pub(super) unsafe fn browse(hwnd:HWND)->Result<Option<PathBuf>,String> {
     let end=file.iter().position(|v|*v==0).ok_or("Import path is not terminated")?;Ok(Some(PathBuf::from(String::from_utf16(&file[..end]).map_err(|e|e.to_string())?)))
 }
 fn export_identity(state:&State)->Result<(String,String,String),String>{
-    if !active(state)||state.macros.busy||state.macros.playing()||state.read_only_smoke||state.restricted_actions{return Err("Macro export is unavailable in this editor state".into());}
+    if !active(state)||state.macros.busy||state.macros.playing()||state.macros.recording.is_some()||state.read_only_smoke||state.restricted_actions{return Err("Macro export is unavailable in this editor state".into());}
     if state.macros.dirty()||state.macros.form.is_some(){return Err("Save or discard the current macro draft before exporting".into());}
     let entry=&state.macros.draft.as_ref().ok_or("Select a macro")?.entry;
     Ok((entry.guid.clone(),entry.revision.clone(),entry.name.clone()))

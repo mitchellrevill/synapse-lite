@@ -88,7 +88,7 @@ fn native_random_delay_edit_save_history_invalid_readonly_and_conflict() {
                     );
                 };
                 redraw(hwnd);
-                click(timeline + 100., 220.);
+                click(timeline + 100., 258.);
                 if query()["range_min"] != "100"
                     || query()["range_max"] != "900"
                     || query()["dirty"] != false
@@ -152,7 +152,7 @@ fn native_random_delay_edit_save_history_invalid_readonly_and_conflict() {
                 SendMessageW(hwnd, super::super::macro_view::TEST, 1, 0);
                 wait_for(|| query()["busy"] == false, "range reopen")?;
                 redraw(hwnd);
-                click(timeline + 100., 220.);
+                click(timeline + 100., 258.);
                 if query()["range_min"] != "250" || query()["range_max"] != "1250" {
                     return Err("Reopened range differs".into());
                 }
@@ -174,8 +174,8 @@ fn native_random_delay_edit_save_history_invalid_readonly_and_conflict() {
                 SendMessageW(hwnd, READ_ONLY_TEST_SET, 0, 0);
                 redraw(hwnd);
                 // Refresh actual fields after the test-only read-only HWND mutation.
+                click(timeline + 100., 296.);
                 click(timeline + 100., 258.);
-                click(timeline + 100., 220.);
                 let retained = json!("retained");
                 SendMessageW(
                     hwnd,
@@ -184,7 +184,7 @@ fn native_random_delay_edit_save_history_invalid_readonly_and_conflict() {
                     &retained as *const Value as isize,
                 );
                 redraw(hwnd);
-                click(timeline + 100., 220.);
+                click(timeline + 100., 258.);
                 if query()["range_min"] != ""
                     || GetWindowLongPtrW(GetDlgItem(hwnd, 2320), GWL_STYLE) & ES_READONLY as isize
                         == 0
@@ -204,7 +204,7 @@ fn native_random_delay_edit_save_history_invalid_readonly_and_conflict() {
                     &supported as *const Value as isize,
                 );
                 redraw(hwnd);
-                click(timeline + 100., 220.);
+                click(timeline + 100., 258.);
                 edit(2320, "300");
                 click(left + 90., 404.);
                 let current = Store::load(&path).unwrap();

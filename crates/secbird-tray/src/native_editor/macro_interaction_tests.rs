@@ -77,6 +77,10 @@ fn native_macro_library_drafts_save_history_conflicts_and_lifecycle() {
             click(left+90.,528.);wait_for(||query()["menu_open"]==true,"input chooser open")?;SendMessageW(hwnd,STUDIO_TEST,9,0);wait_for(||query()["menu_open"]==false,"input chooser cancel")?;if query()["dirty"]!=false||std::fs::read(&path).unwrap()!=baseline{return Err("Cancelled input menu changed draft or disk".into());}
             // Explicit initiation, synthetic window messages only: never physical input.
             click(timeline+610.,212.);redraw(hwnd);
+            if query()["recording"]!=true||query()["playback"]["active"]!=false{return Err("Record did not enter exclusive focused capture".into());}
+            // The merged Play toolbar must not shadow Record or admit playback during capture.
+            click(timeline+250.,174.);
+            if query()["recording"]!=true||query()["playback"]["active"]!=false{return Err("Playback overlapped focused capture".into());}
             let capture=json!(output.join("macro-recording.png").to_string_lossy());SendMessageW(hwnd,STUDIO_TEST,6,&capture as *const Value as isize);
             SendMessageW(hwnd,WM_KEYDOWN,65,30<<16);SendMessageW(hwnd,WM_KEYDOWN,65,(30<<16)|(1<<30));SendMessageW(hwnd,WM_KEYUP,65,30<<16);
             click(timeline+610.,212.);

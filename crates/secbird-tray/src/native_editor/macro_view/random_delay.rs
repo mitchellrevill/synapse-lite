@@ -62,6 +62,7 @@ pub(super) unsafe fn fields(state: &mut State, left: i32) -> bool {
         || state.restricted_actions
         || state.macros.busy
         || state.macros.playing()
+        || state.macros.recording.is_some()
         || !editable(&state.macros);
     for (id, text, x) in [
         (MIN, state.macros.range_min.clone(), left + 10),
@@ -84,6 +85,7 @@ pub(super) fn command(state: &mut State, id: u16, notification: u16) -> bool {
         || state.restricted_actions
         || state.macros.busy
         || state.macros.playing()
+        || state.macros.recording.is_some()
         || !editable(&state.macros)
     {
         return true;
