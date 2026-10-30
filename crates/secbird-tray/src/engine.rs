@@ -614,7 +614,7 @@ impl Engine {
         if let Some(path)=&self.runtime_store_path {return path.clone();}
         config_dir().join("profiles.json")
     }
-    fn load_store(&self) -> Result<Store> {
+    pub(crate) fn load_store(&self) -> Result<Store> {
         Store::load(&self.profile_store_path())
     }
     fn lighting_config(&self, dev: &Device, store: &mut Store) -> LightingConfig {

@@ -1,0 +1,383 @@
+{
+  "schema": 1,
+  "checkout": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments",
+  "branch": "integration/customize-categories-2026-10-30",
+  "base": "41b6c8519a165bcf399336c83420f6d2aa693b89",
+  "source_units": {
+    "keyboard": "4aefd7c68610ca583de7fa68b7ce8b8186c585e7",
+    "mouse": "0c810a50e7b55b7ed35c2430ad75fd1dcb03048f",
+    "multimedia": "c196b00bcf1bc07aec38093cc03e63caa11020c6",
+    "windows": "e725e29bf7f3924bdc241a3e11e904684f187d36",
+    "launch": "545659f2b5986cbbdcfc6c2eb2d2c32bc2fd0a6b",
+    "default_disable": "851b633f00cec340f7014c10d8144ad2fc98514f",
+    "profile_navigation_validation_only": "459132cc2225e118b3a4a678ad87173ef01023bb",
+    "sensitivity_inert_drafts": "7b5906a51075a246d142901bed64f405583f4a9c"
+  },
+  "workspace": {
+    "command": "cargo test --workspace --offline -j 1 -- --test-threads=1 --skip dynamic_sensitivity::tests::presets_custom_chunk_readback_rollback_and_profile_scope",
+    "passed": {
+      "core": 680,
+      "tray": 351,
+      "cli": 11,
+      "doc": 1
+    },
+    "ignored": {
+      "core": 9,
+      "tray": 66
+    },
+    "excluded": [
+      "dynamic_sensitivity::tests::presets_custom_chunk_readback_rollback_and_profile_scope"
+    ],
+    "exclusion_reason": "Inherited stalled test, retained as explicitly unresolved; no claim of unqualified full-suite pass.",
+    "evidence": {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-all-categories-workspace.log",
+      "bytes": 125718,
+      "sha256": "a48d2ff34872d21f8feedc1c6228b2f363d621df55e3ce535ad0af643f5c016e"
+    }
+  },
+  "focused_composition": {
+    "passed": 3,
+    "command": "cargo test --offline -p secbird-tray -j 1 assignment_backend -- --test-threads=1",
+    "evidence": {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-sensitivity-focused.log",
+      "bytes": 2238,
+      "sha256": "7b9864eb238a6678bd52c241bc9940f479aa0c5b48694fe3554cbbf6e29706f3"
+    }
+  },
+  "native": {
+    "passed": 8,
+    "parallelism": 1,
+    "per_fixture_timeout_seconds": 110,
+    "results": [
+      {
+        "test": "native_keyboard_assignment_save_cancel_layers_roundtrip_and_conflict",
+        "exit_code": 0,
+        "timeout": false,
+        "stdout": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_keyboard_assignment_save_cancel_layers_roundtrip_and_conflict.out.log",
+        "stderr": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_keyboard_assignment_save_cancel_layers_roundtrip_and_conflict.err.log",
+        "stdout_evidence": {
+          "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_keyboard_assignment_save_cancel_layers_roundtrip_and_conflict.out.log",
+          "bytes": 251,
+          "sha256": "25a226b3546969570601cf36a63fd986129fa19f1032c448520a92753ddec812"
+        },
+        "stderr_evidence": {
+          "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_keyboard_assignment_save_cancel_layers_roundtrip_and_conflict.err.log",
+          "bytes": 183,
+          "sha256": "15cab62d503bccdfa287b649c95e7a42ca5eef1ae485786930fa079c6a827d5c"
+        },
+        "seconds": 1.4
+      },
+      {
+        "test": "native_mouse_function_save_cancel_reopen_and_dirty_transition",
+        "exit_code": 0,
+        "timeout": false,
+        "stdout": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_mouse_function_save_cancel_reopen_and_dirty_transition.out.log",
+        "stderr": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_mouse_function_save_cancel_reopen_and_dirty_transition.err.log",
+        "stdout_evidence": {
+          "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_mouse_function_save_cancel_reopen_and_dirty_transition.out.log",
+          "bytes": 240,
+          "sha256": "67c98aba22bdd64e20f476c144cf29c90972dcc8266053a39c7d7e7a598bc97f"
+        },
+        "stderr_evidence": {
+          "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_mouse_function_save_cancel_reopen_and_dirty_transition.err.log",
+          "bytes": 166,
+          "sha256": "b15e9af409ffe3bb9418286d61297906e7905ac7eb04094e60b5c5659ad2ddb9"
+        },
+        "seconds": 1.84
+      },
+      {
+        "test": "native_multimedia_save_cancel_and_readonly",
+        "exit_code": 0,
+        "timeout": false,
+        "stdout": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_multimedia_save_cancel_and_readonly.out.log",
+        "stderr": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_multimedia_save_cancel_and_readonly.err.log",
+        "stdout_evidence": {
+          "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_multimedia_save_cancel_and_readonly.out.log",
+          "bytes": 215,
+          "sha256": "ff0f21b20768d3328b601cebdbb0b4ad788f610c5ee8182320d315e2c32781a3"
+        },
+        "stderr_evidence": {
+          "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_multimedia_save_cancel_and_readonly.err.log",
+          "bytes": 153,
+          "sha256": "01f7430157b6a9779b710d043885ad78e6ba8e971152d3e964b8d57baac23c05"
+        },
+        "seconds": 1.14
+      },
+      {
+        "test": "native_windows_assignment_saves_reopens_and_refuses_stale_and_readonly",
+        "exit_code": 0,
+        "timeout": false,
+        "stdout": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_windows_assignment_saves_reopens_and_refuses_stale_and_readonly.out.log",
+        "stderr": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_windows_assignment_saves_reopens_and_refuses_stale_and_readonly.err.log",
+        "stdout_evidence": {
+          "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_windows_assignment_saves_reopens_and_refuses_stale_and_readonly.out.log",
+          "bytes": 251,
+          "sha256": "c9220f0b8ec5bc6cc25f1b2215d662990106b0f83ca823448728bc4f12edfc24"
+        },
+        "stderr_evidence": {
+          "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_windows_assignment_saves_reopens_and_refuses_stale_and_readonly.err.log",
+          "bytes": 158,
+          "sha256": "d74890a07862f71ce68e67eb3429cc6dc90580ea3cfc8b66f82d072a8578ade3"
+        },
+        "seconds": 1.45
+      },
+      {
+        "test": "native_launch_assignment_saves_without_device_delivery",
+        "exit_code": 0,
+        "timeout": false,
+        "stdout": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_launch_assignment_saves_without_device_delivery.out.log",
+        "stderr": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_launch_assignment_saves_without_device_delivery.err.log",
+        "stdout_evidence": {
+          "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_launch_assignment_saves_without_device_delivery.out.log",
+          "bytes": 215,
+          "sha256": "c515a488d3f56612adf3bc23c536ae695284634b78256561dec1e20aea971c5b"
+        },
+        "stderr_evidence": {
+          "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_launch_assignment_saves_without_device_delivery.err.log",
+          "bytes": 180,
+          "sha256": "adf464204f575ab34e793ea3eb8ba8905a989a970e334ff622a470d8ae15e880"
+        },
+        "seconds": 0.73
+      },
+      {
+        "test": "native_assignment_source_draft_has_no_device_or_store_writes",
+        "exit_code": 0,
+        "timeout": false,
+        "stdout": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_assignment_source_draft_has_no_device_or_store_writes.out.log",
+        "stderr": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_assignment_source_draft_has_no_device_or_store_writes.err.log",
+        "stdout_evidence": {
+          "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_assignment_source_draft_has_no_device_or_store_writes.out.log",
+          "bytes": 221,
+          "sha256": "3eea42f17ebf91a75ed65884d518317f9fd0f34f4b156cf90154b9f157a963f2"
+        },
+        "stderr_evidence": {
+          "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_assignment_source_draft_has_no_device_or_store_writes.err.log",
+          "bytes": 180,
+          "sha256": "41c558f41caadb66e32139535fa8583de85cd4ab454347abcf9d68c8c236214e"
+        },
+        "seconds": 1.34
+      },
+      {
+        "test": "native_assignment_mouse_labels_and_drawer_have_source_hit_targets",
+        "exit_code": 0,
+        "timeout": false,
+        "stdout": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_assignment_mouse_labels_and_drawer_have_source_hit_targets.out.log",
+        "stderr": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_assignment_mouse_labels_and_drawer_have_source_hit_targets.err.log",
+        "stdout_evidence": {
+          "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_assignment_mouse_labels_and_drawer_have_source_hit_targets.out.log",
+          "bytes": 226,
+          "sha256": "6351173759f9850a553a4ee6b62630f42bb684b98a62490c9b76a7f33ca38274"
+        },
+        "stderr_evidence": {
+          "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_assignment_mouse_labels_and_drawer_have_source_hit_targets.err.log",
+          "bytes": 192,
+          "sha256": "44d360ffc6ba9427ef8fe4c3705b4e703d38ea5af44d8cf8c862a5271cb4d914"
+        },
+        "seconds": 1.41
+      },
+      {
+        "test": "native_sensitivity_clutch_save_reopen_and_filters",
+        "exit_code": 0,
+        "timeout": false,
+        "stdout": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_sensitivity_clutch_save_reopen_and_filters.out.log",
+        "stderr": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_sensitivity_clutch_save_reopen_and_filters.err.log",
+        "stdout_evidence": {
+          "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_sensitivity_clutch_save_reopen_and_filters.out.log",
+          "bytes": 223,
+          "sha256": "7a8b162841be46cb59e9b7c24d3f0ddf2bc6b8e2e5b1b98a985f75708360b5ea"
+        },
+        "stderr_evidence": {
+          "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-native_sensitivity_clutch_save_reopen_and_filters.err.log",
+          "bytes": 147,
+          "sha256": "20a744ecdd724dd59de988c79de7772be2c22b51335d95c1410b2c3c6de510f7"
+        },
+        "seconds": 1.43
+      }
+    ],
+    "test_binary": {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments-target\\debug\\deps\\secbird_tray-e510dc526165bd6d.exe",
+      "bytes": 23448576,
+      "sha256": "cadb8ac8ef1d898b00481c5ff5d0ec33adca1f1d38bed93e7cebb3a10618ddd8"
+    }
+  },
+  "release": {
+    "command": "cargo build --release --offline --workspace -j 1",
+    "exit_code": 0,
+    "evidence": {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\outputs\\integration-all-categories-release.log",
+      "bytes": 10000,
+      "sha256": "b83b55a396de0550bfda3644e7fbadd0f33b49ffef95f17cccc2649a741202c2"
+    },
+    "executables": [
+      {
+        "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments-target\\release\\secbird-tray.exe",
+        "bytes": 3790848,
+        "sha256": "1fb7404401457f5acfb17cb9da0958ec7ca5b6c7a8514e6bcd0c76edfec07a46"
+      },
+      {
+        "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments-target\\release\\secbird.exe",
+        "bytes": 1572864,
+        "sha256": "782266b02db43b6fb4690008a1167c5c6875c9c96684e783bf7a60f525bb6a99"
+      }
+    ]
+  },
+  "changed_rust_source_evidence": [
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments\\crates\\secbird-core\\src\\lib.rs",
+      "bytes": 3384,
+      "sha256": "5b1f420d9e3ccd85a098f927a01de53c2901fd79f0b62fbe5a60f5589cda3ac1"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments\\crates\\secbird-core\\src\\profile.rs",
+      "bytes": 48807,
+      "sha256": "bb9065735231c0e6a98121490380525ed5499c08a366ebc4aeae2932589f2e99"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments\\crates\\secbird-core\\src\\profile\\navigation.rs",
+      "bytes": 6771,
+      "sha256": "ace93fbc127ef8983b3ab69966c98c07ebce93f1157e7a71defe0a06575e1e37"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments\\crates\\secbird-core\\src\\profile_compat.rs",
+      "bytes": 51769,
+      "sha256": "689a7d0ae8d2f98c33e427eb39b840d3dd9e8b56cec02349d36a81d7ac675c16"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments\\crates\\secbird-core\\src\\profile_compat\\assignment_state.rs",
+      "bytes": 17955,
+      "sha256": "a77d1b884ea698180002d0fc3e04f58c3b79b5716fcbda1f3b237b87d923a52c"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments\\crates\\secbird-core\\src\\profile_compat\\keyboard_assignments.rs",
+      "bytes": 17949,
+      "sha256": "a26a3811452f8b41513acce9ba20cebb826e0430e01e334b182ee1309d20c85c"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments\\crates\\secbird-core\\src\\profile_compat\\mappings.rs",
+      "bytes": 16087,
+      "sha256": "ecf9c1f08850fd420b59cb92b1e0f39ebf85e7d78573b7af862c120a0e0eb039"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments\\crates\\secbird-core\\src\\profile_compat\\mouse_assignment.rs",
+      "bytes": 12175,
+      "sha256": "e2b4bc650ed3c07805d3b7af1f97953273b066e857bd3f01cea9d0a4556d0f1e"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments\\crates\\secbird-core\\src\\profile_compat\\mouse_assignment\\tests.rs",
+      "bytes": 9514,
+      "sha256": "0ab70547dc1c4dfc1bbc371cc98817a94045e1b0112eb1a38819a9c18f8ac538"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments\\crates\\secbird-core\\src\\profile_compat\\multimedia.rs",
+      "bytes": 12281,
+      "sha256": "5c3213af7df90c0cc04ebc364965fe650de259b8c926352d490efa9e55c06dae"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments\\crates\\secbird-core\\src\\profile_compat\\windows_shortcuts.rs",
+      "bytes": 11022,
+      "sha256": "77b5265d7a9bfe48b13fe3b06da61dfadc84f325f1d11f7b0af442601b90592c"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments\\crates\\secbird-core\\src\\sensitivity_assignment.rs",
+      "bytes": 8450,
+      "sha256": "5b3e72d488f1d7515b46a8a9a955c817159d1d0ce1efbf06ee91bb1a840e666f"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments\\crates\\secbird-tray\\src\\engine.rs",
+      "bytes": 59688,
+      "sha256": "9bb280181790853638013f4aa71907689ab8ac94b66b7e1e9f3ab9a038cccbd5"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments\\crates\\secbird-tray\\src\\native_editor.rs",
+      "bytes": 240329,
+      "sha256": "bbe05a0c6ed1f0f732e822a4e9ea990b54c4b9b2afbe161603c9ff345d98bfee"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments\\crates\\secbird-tray\\src\\native_editor\\assignment_backend.rs",
+      "bytes": 15995,
+      "sha256": "bf754a58aa09989f23eeb2aa380486edf0916a0e6c176d9406d40d9236eff880"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments\\crates\\secbird-tray\\src\\native_editor\\assignment_geometry.rs",
+      "bytes": 10640,
+      "sha256": "caec4a8cf82c889adf066c4000436ecf09f3854187641c04c79690c80c330092"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments\\crates\\secbird-tray\\src\\native_editor\\assignment_model.rs",
+      "bytes": 56286,
+      "sha256": "0400a0dadfcbd578b79f89db215336f44054c8e06ba726da5fd190d8e624186f"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments\\crates\\secbird-tray\\src\\native_editor\\assignment_view.rs",
+      "bytes": 86898,
+      "sha256": "6762dc5cceb13fec57ef06c1b5ed51b4249ad1c155fb74befe75fd234eba4dc9"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments\\crates\\secbird-tray\\src\\native_editor\\interaction_tests.rs",
+      "bytes": 119933,
+      "sha256": "740d724f9f391e0806e7e8d354e2c83e9deaa1deb5bcdfb3f7c5f90ef1ede86b"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments\\crates\\secbird-tray\\src\\native_editor\\keyboard_assignment_interaction_tests.rs",
+      "bytes": 12540,
+      "sha256": "2bd555f9e998d815322a77c481f3b02cb31f53a58ba87743ffb6c761e13060d5"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments\\crates\\secbird-tray\\src\\native_editor\\mouse_assignment_interaction_tests.rs",
+      "bytes": 11761,
+      "sha256": "c2a7ff3a2939b9d195317b21e0330eabd94883d9345accd4c4f9dfb4b1211791"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments\\crates\\secbird-tray\\src\\native_editor\\multimedia_interaction_tests.rs",
+      "bytes": 9691,
+      "sha256": "375175f439e99e563ce99e7a95646470b8c11a482e7b43a44e6ee230908c2e8d"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments\\crates\\secbird-tray\\src\\native_editor\\sensitivity_interaction_tests.rs",
+      "bytes": 10682,
+      "sha256": "a2919d858aff52d7cdc3c91cac3e0b27d38d01509e92bea28fb5c4b719f58375"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments\\crates\\secbird-tray\\src\\native_editor\\studio_view.rs",
+      "bytes": 59296,
+      "sha256": "5ea99173ae0c2abec991b724f47e1c69979ba70be9cc1d47134b98ad8666d9df"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments\\crates\\secbird-tray\\src\\native_editor\\windows_assignment_interaction_tests.rs",
+      "bytes": 11154,
+      "sha256": "9087237b8388e38c3264e0cff9ddb9ed21287c09b13b6217def04cd310d2781e"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments\\crates\\secbird-tray\\src\\server.rs",
+      "bytes": 85219,
+      "sha256": "2f910450be12a708210a20c409d15aa25103b28eef1d0aac9ef01a024071ee87"
+    },
+    {
+      "path": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments\\crates\\secbird-tray\\src\\server\\mouse_assignment.rs",
+      "bytes": 4931,
+      "sha256": "b1c037e8db3fedf0fd9de14daad394a469df54e28dad2b3e6cee90be1faee584"
+    }
+  ],
+  "isolation": {
+    "cargo_target": "C:\\Users\\mitch\\Documents\\Codex\\synapse-integrate-assignments-target",
+    "temp": "C:\\Users\\mitch\\Documents\\Codex\\2026-10-30\\synapse-batch4-keyboard-assignments\\work\\integration-temp",
+    "assets": "C:/Users/mitch/Documents/Codex/2026-10-27/what-i-want-you-to-do/outputs/native-preview-3451fdb/assets",
+    "physical_device_discovery_or_set": false,
+    "physical_input_or_injection": false,
+    "clipboard_access": false,
+    "driver_or_service_changes": false,
+    "other_lite_stopped": false,
+    "canonical_or_other_feature_checkout_edited": false,
+    "push": false,
+    "main_merge": false
+  },
+  "remaining_acceptance": [
+    "Profile Switch native form/save/delivery is unimplemented; included unit is read-only core reference validation.",
+    "Sensitivity is an inert draft only; installed mapping, readback, clutch release, and source export of active drafts are unclaimed.",
+    "Physical delivery/readback, release and reconnect recovery remain gated.",
+    "Exact visual parity and fresh desktop screenshot acceptance remain open; native fixtures use simulated devices.",
+    "Inherited excluded Dynamic Sensitivity test remains unresolved.",
+    "Final combined privacy/functionality and complete-build memory below 100 MB acceptance remain open."
+  ],
+  "prior_attempts": "Earlier failed native attempt logs are retained in the task outputs; final evidence supersedes their results."
+}

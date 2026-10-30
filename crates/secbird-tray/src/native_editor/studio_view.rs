@@ -1799,13 +1799,16 @@ pub(super) unsafe fn capture_frame(state: &mut State, path: &Path) -> bool {
     }
     let old = SelectObject(dc, bitmap);
     super::paint(state, dc);
-    // The offscreen parent paint omits child edit windows. Include our zoom field.
-    if let Some(&edit) = state.fields.get(&ZOOM) {
+    // Native EDIT children are separate windows and are absent from paint().
+    for child in state.fields.values() {
+        if IsWindowVisible(*child)==0 {continue;}
+        let mut bounds: RECT = std::mem::zeroed();
+        GetWindowRect(*child, &mut bounds);
+        let mut point = POINT { x: bounds.left, y: bounds.top };
+        ScreenToClient(state.hwnd, &mut point);
         let saved = SaveDC(dc);
-        let x = state.width - (390.0 * state.scale).round() as i32;
-        let y = state.height - (40.0 * state.scale).round() as i32;
-        SetViewportOrgEx(dc, x, y, null_mut());
-        SendMessageW(edit, WM_PRINTCLIENT, dc as usize, PRF_CLIENT as isize);
+        SetViewportOrgEx(dc, point.x, point.y, null_mut());
+        SendMessageW(*child, WM_PRINTCLIENT, dc as usize, (PRF_CLIENT | PRF_ERASEBKGND) as isize);
         RestoreDC(dc, saved);
     }
     SelectObject(dc, old);
