@@ -102,7 +102,7 @@ pub(super) fn action(state: &mut State, control: Control) {
     selection_changed(state);
 }
 const MENU_WIDTH: i32 = 256;
-const MENU_HEIGHT: i32 = 119;
+const MENU_HEIGHT: i32 = 183;
 fn row_offset(index: usize) -> i32 {
     1 + index as i32 * 27 + if index >= 2 { 9 } else { 0 }
 }
@@ -244,13 +244,20 @@ pub(super) unsafe fn paint(state: &State, p: &mut Painter) {
             });
         }
     }
+    // The property popup owns the canvas right-click. Retain the existing
+    // Identify affordances here; neither receives a hit target until ownership
+    // and exact lighting restoration are verified.
+    p.fill(x + 7, y + 123, MENU_WIDTH - 14, 1, 0x333333);
+    for (label, row_y) in [("Identify Device", y + 128), ("Identify LED", y + 155)] {
+        p.text(label, x + 7, row_y, MENU_WIDTH - 14, 27, p.fonts.normal, 0x454545, DT_LEFT);
+    }
 }
 #[cfg(test)]
 mod tests {
     use super::*;
     #[test]
     fn context_menu_clamps_inside_client() {
-        assert_eq!(menu_position(1000, 650, 1100, 700), (844, 581));
+        assert_eq!(menu_position(1000, 650, 1100, 700), (844, 517));
         assert_eq!(menu_position(400, 200, 1280, 720), (400, 200));
     }
 }
