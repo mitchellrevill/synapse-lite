@@ -65,8 +65,9 @@ No normal app, imported command, clipboard or input action was run.
 
 The [native process-launch backend](NATIVE-HOST-LAUNCH.md) now implements explicit
 launch attempts and scoped cancellation/handle cleanup with owned fixtures.
-It is not connected to macro activation. Complete host-action sequencing, cancel
-before dispatch, process-handle cleanup, clipboard ownership and paste/recovery.
+The [manual playback worker](MACRO-HOST-PLAYBACK.md) now adds one-pass host-action
+sequencing and explicit Play/Stop. Complete software/device binding activation,
+shared input sequencing, clipboard ownership and paste/recovery.
 Do not kill a launched user's application on macro Stop merely to claim rollback.
 Verify only owned benign process fixtures before user-command playback. Mixed
 live input still requires actual driver routing, physical-held arbitration and

@@ -3,8 +3,10 @@
 The Rust core now provides `native_host_launch::Request`, single-use `Control`
 and Windows `launch`. A caller constructs a request from a compiled
 `HostAction::Launch` and dispatches it explicitly on an owned worker thread.
-The API is not connected to profile activation, import or the macro Play UI.
-The mixed input scheduler continues to reject host actions during admission.
+The API is now used by [manual editor playback](MACRO-HOST-PLAYBACK.md), with
+explicit Play/Stop and whole-plan admission. It is not connected to automatic
+profile activation or import. The mixed input scheduler continues to reject host
+actions during admission until its broader execution/recovery path is integrated.
 
 The backend checks a nonempty `pathToCheck` through GetFileAttributesW, preserving
 the source's existence check, including directories. This is a preflight read,
@@ -104,6 +106,6 @@ These checks do not run imported commands, websites or personal programs, change
 stock apps/services, send input or exercise device drivers. Arbitrary shell/file
 associations, visible-window behavior and UAC/security-context variations remain
 unverified. Imported launch metadata never executes automatically. Shared
-host/input sequencing, worker admission/drain, profile Play controls, clipboard
+host/input sequencing, device-bound playback integration, clipboard
 ownership/paste recovery, full driver/API/hardware coverage and three complete
 replacement runs below100,000,000 bytes remain required by the active goal.

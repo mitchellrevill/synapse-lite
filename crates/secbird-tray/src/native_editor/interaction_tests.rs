@@ -11,6 +11,8 @@ mod linked_games;
 mod macros;
 #[path="macro_xml_interaction_tests.rs"]
 mod macro_xml;
+#[path="macro_playback_interaction_tests.rs"]
+mod macro_playback;
 #[path="studio_interaction_tests.rs"]
 mod studio;
 use super::*;
