@@ -150,6 +150,11 @@ fn verify_cache(body: &Value, generated: &Value) -> Result<CacheStatus> {
     let Some(cache) = body.get("appEngine") else {
         return Ok(CacheStatus::Generated);
     };
+    // The standalone XML importer creates a movement hint without an event
+    // cache. It is not a cache whose hash or events can be bypassed.
+    if super::movement_only_hint(cache) && cache["mouseMoveType"] == "none" {
+        return Ok(CacheStatus::Generated);
+    }
     let object = cache
         .as_object()
         .ok_or_else(|| invalid("Native macro cache is not an object"))?;

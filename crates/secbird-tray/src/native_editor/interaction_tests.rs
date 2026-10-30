@@ -9,6 +9,8 @@ mod advanced;
 mod linked_games;
 #[path="macro_interaction_tests.rs"]
 mod macros;
+#[path="macro_xml_interaction_tests.rs"]
+mod macro_xml;
 #[path="studio_interaction_tests.rs"]
 mod studio;
 use super::*;

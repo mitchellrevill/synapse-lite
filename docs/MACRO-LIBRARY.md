@@ -25,6 +25,10 @@ then recalculate the existing source stable-JSON MD5. MD5 is compatibility data,
 not authentication. Duplicate assigns a fresh random UUID while retaining other
 payload fields. Source macro hashes and existing store budgets are checked.
 
+Import also accepts standalone version4 XML, and Export writes the selected
+saved definition to a new XML file. See [standalone files](STANDALONE-MACRO-XML.md)
+for the source format, provenance, bounds and remaining compatibility limits.
+
 Import accepts definitions from a Synapse4-shaped profile export; it does not
 reimport its profiles. Referenced missing definitions are attached to the
 retained source envelope. Edits propagate to retained records of the same GUID,

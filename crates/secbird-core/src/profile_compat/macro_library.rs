@@ -7,6 +7,7 @@ pub mod input_events;
 pub mod nested;
 pub mod host_actions;
 pub mod planning;
+pub mod xml;
 use input_events::{Input,Gesture};
 
 const KEY:&str="_synapseLiteMacroLibrary";
@@ -143,10 +144,16 @@ fn patch(record:&Value,field:&str,value:Box<RawValue>)->Result<Value> {
 fn raw(value:&impl Serialize)->Result<Box<RawValue>> {RawValue::from_string(serde_json::to_string(value).map_err(|e|invalid(e.to_string()))?).map_err(|e|invalid(e.to_string()))}
 fn event_rows(record:&Value)->Result<Vec<Box<RawValue>>> {
     let body=payload(record)?;
-    if body.0.iter().any(|(key,_)|key=="appEngine"){return Err(invalid("Macro contains a native event cache; source cache invalidation needs verification before event edits"));}
+    if let Some((_,engine))=body.0.iter().find(|(key,_)|key=="appEngine"){
+        let hint:Value=serde_json::from_str(engine.get()).map_err(|e|invalid(e.to_string()))?;
+        if !movement_only_hint(&hint){return Err(invalid("Macro contains a native event cache; source cache invalidation needs verification before event edits"));}
+    }
     let events=body.0.iter().find(|(key,_)|key=="macroEvents").ok_or_else(||invalid("Macro has no event array"))?;
     let rows:Vec<Box<RawValue>>=serde_json::from_str(events.1.get()).map_err(|e|invalid(e.to_string()))?;
     if rows.len()>MAX_EVENTS{return Err(invalid("Macro exceeds512 event rows"));}Ok(rows)
+}
+fn movement_only_hint(value:&Value)->bool {
+    value.as_object().is_some_and(|object|object.len()==1&&object.get("mouseMoveType").and_then(Value::as_str).is_some_and(|s|["none","absolute","foreground","relative"].contains(&s)))
 }
 fn delay(milliseconds:u32)->Result<Box<RawValue>> {
     if milliseconds>3_600_000{return Err(invalid("Delay exceeds one hour"));}
@@ -198,8 +205,9 @@ pub fn edit(current:&Store,change:Change)->Result<Store> {
             for device in candidate.devices.values_mut(){for (key,envelope) in &mut device.extra {if key==SOURCE||key.starts_with(&format!("_synapseLiteImported:{SOURCE}")){if let Some(rows)=envelope.get_mut("macros").and_then(Value::as_array_mut){let mut kept=vec![];for row in rows.drain(..){if guid(&row)?!=id{kept.push(row);}}*rows=kept;}}}}
         }
         Change::Import(bytes)=>{
-            if bytes.len()>MAX_DECODED_BYTES*2{return Err(invalid("Macro import exceeds2MiB"));}check_json_complexity(&bytes)?;
-            let source:Value=serde_json::from_slice(&bytes).map_err(|e|invalid(e.to_string()))?;
+            if bytes.len()>MAX_DECODED_BYTES*2{return Err(invalid("Macro import exceeds2MiB"));}
+            let text=std::str::from_utf8(&bytes).map_err(|_|invalid("Macro import must be UTF-8"))?.trim_start_matches('\u{feff}').trim_start();
+            let source:Value=if text.starts_with('<'){json!({"macros":[xml::import(&bytes)?]})}else{check_json_complexity(&bytes)?;serde_json::from_slice(&bytes).map_err(|e|invalid(e.to_string()))?};
             let incoming=source["macros"].as_array().ok_or_else(||invalid("Choose a Synapse4 profile export containing macro records"))?;
             if incoming.len()>MAX_MACROS{return Err(invalid("Too many imported macros"));}
             for r in incoming {let id=guid(r)?;if let Some(old)=records.get(&id){if old!=r{return Err(invalid("Import conflicts with an existing macro GUID"));}}else{records.insert(id,r.clone());}propagate(&mut candidate,r)?;}

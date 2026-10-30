@@ -3727,6 +3727,7 @@ unsafe extern "system" fn window_proc(
             7=>{let value=&*(lparam as *const Value);state.action(Action::MacroLibrary(macro_view::Control::Select(value.as_str().unwrap().into())));},
             8=>{*(lparam as *mut Value)=match macro_view::menu_targets(&state){Ok(targets)=>json!(targets.into_iter().map(|target|json!({"guid":target.guid,"name":target.name,"disabled":target.reason.is_some()})).collect::<Vec<_>>()),Err(error)=>json!({"error":error})};},
             9=>{use secbird_core::profile_compat::macro_library::host_actions::Kind;let value=&*(lparam as *const Value);let kind=match value.as_str(){Some("command")=>Kind::Command,Some("program")=>Kind::Program,Some("website")=>Kind::Website,_=>Kind::Text};state.action(Action::MacroLibrary(macro_view::Control::OpenHost(kind)));},
+            10=>{let value=&*(lparam as *const Value);macro_view::export_selected(&mut state,PathBuf::from(value.as_str().unwrap()));},
             _=>{},
         }}return 0;
     }
@@ -3756,6 +3757,7 @@ unsafe extern "system" fn window_proc(
         return 0;
     }
     if message==macro_view::HOST_BROWSE {macro_view::browse_host(hwnd,pointer);return 0;}
+    if message==macro_view::EXPORT_BROWSE {macro_view::browse_export(hwnd,pointer);return 0;}
     if message==studio_view::EXIT_REQUEST {
         let tray=lparam as HWND;
         let mut process=0;

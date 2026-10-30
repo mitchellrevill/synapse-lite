@@ -7,11 +7,13 @@ use windows_sys::Win32::UI::Controls::EM_SETREADONLY;
 use library::input_events::{self,Input,Gesture};
 use library::host_actions;
 mod form;
+mod xml_files;
 pub(super) use form::Control as FormControl;
 pub(super) const ID:&str="module:macro";
 pub(super) const BROWSE:u32=WM_APP+172;
 pub(super) const INPUT_MENU:u32=WM_APP+174;
 pub(super) const HOST_BROWSE:u32=WM_APP+175;
+pub(super) const EXPORT_BROWSE:u32=WM_APP+176;
 #[cfg(test)] pub(super) const TEST:u32=WM_APP+173;
 const NAME:u16=2300;const DELAY:u16=2301;
 
@@ -45,11 +47,11 @@ impl Draft {
     }
 }
 #[derive(Clone)]
-pub enum Request {Read,Change(Change),Import(PathBuf)}
+pub enum Request {Read,Change(Change),Import(PathBuf),Export{guid:String,revision:String,path:PathBuf}}
 impl Request {pub fn mutates(&self)->bool {!matches!(self,Self::Read)}}
-pub struct Data {library:Library}
+pub struct Data {library:Library,notice:Option<String>}
 #[derive(Clone)]
-pub enum Control {Open,List,Select(String),New,Duplicate,Delete,Import,Save,Discard,Undo,Redo,Event(usize),AddDelay,ApplyDelay,DeleteEvent,Move(i8),InputMenu,GestureMenu,ChooseInput(Input),ChooseGesture(Gesture),ChooseNested(String),AddInput,RebindInput,OpenHost(host_actions::Kind),Host(FormControl)}
+pub enum Control {Open,List,Select(String),New,Duplicate,Delete,Import,Export,Save,Discard,Undo,Redo,Event(usize),AddDelay,ApplyDelay,DeleteEvent,Move(i8),InputMenu,GestureMenu,ChooseInput(Input),ChooseGesture(Gesture),ChooseNested(String),AddInput,RebindInput,OpenHost(host_actions::Kind),Host(FormControl)}
 #[derive(Default)]
 pub(super) struct View {
     pub used:bool,
@@ -83,14 +85,23 @@ fn identity()->Result<String,String> {
 pub(super) fn work(request:Request,read_only:bool)->Result<Data,String> {
     if read_only&&request.mutates(){return Err("Read-only mode refuses macro changes".into());}
     let mut store=Store::load(&secbird_core::config_dir().join("profiles.json")).map_err(|e|e.to_string())?;
+    let mut notice=None;
     let change=match request {
         Request::Read=>None,Request::Change(change)=>Some(change),Request::Import(path)=>{
-            let file=std::fs::File::open(path).map_err(|e|e.to_string())?;if !file.metadata().map_err(|e|e.to_string())?.is_file(){return Err("Choose a regular profile export file".into());}
+            let file=std::fs::File::open(path).map_err(|e|e.to_string())?;if !file.metadata().map_err(|e|e.to_string())?.is_file(){return Err("Choose a regular macro XML or profile export file".into());}
             let mut bytes=vec![];file.take(2*1024*1024+1).read_to_end(&mut bytes).map_err(|e|e.to_string())?;if bytes.len()>2*1024*1024{return Err("Macro import exceeds2MiB".into());}Some(Change::Import(bytes))
+        },
+        Request::Export{guid,revision,path}=>{
+            let library=library::read(&store).map_err(|e|e.to_string())?;
+            let entry=library.entries.iter().find(|entry|entry.guid==guid).ok_or("The selected macro no longer exists")?;
+            if entry.revision!=revision{return Err("The macro changed outside this editor; refresh before exporting".into());}
+            let bytes=library::xml::export(&entry.encoded_record).map_err(|e|e.to_string())?;
+            xml_files::write_new(&path,&bytes)?;
+            notice=Some("Macro XML exported. Profiles and active device settings were unchanged.".into());None
         }
     };
     if let Some(change)=change {store=library::edit(&store,change).map_err(|e|e.to_string())?;store.save().map_err(|e|e.to_string())?;}
-    Ok(Data{library:library::read(&store).map_err(|e|e.to_string())?})
+    Ok(Data{library:library::read(&store).map_err(|e|e.to_string())?,notice})
 }
 fn fixed_delay(entry:&Entry,index:usize)->Option<u32> {
     let event=entry.events.get(index)?;if event["Type"]!=0||event["Number"].is_object(){return None;}
@@ -118,11 +129,12 @@ pub(super) unsafe fn receive(state:&mut State,result:Result<Data,String>) {
     state.macros.busy=false;
     match result {
         Ok(data)=>{
+            let notice=data.notice.clone();
             let selected=state.macros.pending_selection.take().or_else(||state.macros.selected.clone()).filter(|id|data.library.entries.iter().any(|e|e.guid==*id)).or_else(||data.library.entries.first().map(|e|e.guid.clone()));
             let saved=data.library.entries.iter().find(|entry|Some(&entry.guid)==selected.as_ref());
             let keep_history=state.macros.draft.as_ref().is_some_and(|d|saved.is_some_and(|entry|entry.guid==d.entry.guid&&entry.revision==d.entry.revision));
             if keep_history {let d=state.macros.draft.as_mut().unwrap();let saved=saved.unwrap();d.base_revision=saved.revision.clone();d.entry.referenced=saved.referenced;state.macros.selected=selected;state.macros.data=Some(data);}else{state.macros.data=Some(data);state.macros.select(selected);}
-            state.macros.status="Library ready. Macro playback integration is still in progress.".into();state.macros.failed=false;
+            state.macros.status=notice.unwrap_or_else(||"Library ready. Macro playback integration is still in progress.".into());state.macros.failed=false;
         }
         Err(message)=>{state.macros.pending_selection=None;state.macros.status=message;state.macros.failed=true;}
     }
@@ -168,6 +180,7 @@ pub(super) unsafe fn action(state:&mut State,control:Control) {
             Control::Duplicate=>{if state.macros.dirty(){return Err("Save or discard the current draft first".into());}let d=state.macros.draft.as_ref().ok_or("Select a macro")?;let original=d.entry.guid.clone();let title=format!("{} Copy",d.entry.name);let id=identity()?;state.macros.pending_selection=Some(id.clone());request(state,Request::Change(Change::Duplicate{guid:original,new_guid:id,name:title}));},
             Control::Delete=>{if state.macros.dirty(){return Err("Save or discard the current draft first".into());}let id=state.macros.selected.clone().ok_or("Select a macro")?;request(state,Request::Change(Change::Delete(id)));},
             Control::Import=>{if state.macros.dirty(){return Err("Save or discard the current draft first".into());}PostMessageW(state.hwnd,BROWSE,0,0);},
+            Control::Export=>{if state.macros.dirty(){return Err("Save or discard the current draft before exporting".into());}if state.macros.draft.is_none(){return Err("Select a macro".into());}PostMessageW(state.hwnd,EXPORT_BROWSE,0,0);},
             Control::InputMenu=>{PostMessageW(state.hwnd,INPUT_MENU,0,0);},
             Control::GestureMenu=>{PostMessageW(state.hwnd,INPUT_MENU,1,0);},
             Control::ChooseInput(input)=>{state.macros.input=Some(input);state.macros.gesture=Some(Gesture::Tap);state.macros.nested_mode=false;state.macros.nested=None;},
@@ -222,6 +235,7 @@ pub(super) unsafe fn paint(state:&State,p:&mut Painter,width:i32,height:i32) {
     let title=draft.map_or("Select a macro",|d|d.entry.name.as_str());p.text(&format!("{}{}",title,if view.dirty(){" *"}else{""}),46,87,224,28,p.fonts.normal,TEXT,DT_LEFT);
     p.hits.push(Hit{rect:p.rect(46,87,230,28),action:Action::MacroLibrary(Control::List)});
     button(p,"NEW MACRO",300,87,120,Control::New,can);button(p,"IMPORT",430,87,100,Control::Import,can);
+    button(p,"EXPORT",width-130,87,100,Control::Export,can&&draft.is_some());
     p.fill(left,148,200,(height-210).max(100),PANEL);p.fill(timeline,148,690,(height-210).max(100),PANEL);
     p.text("MY MACROS",width/2-55,87,110,28,p.fonts.normal,GREEN,DT_CENTER);
     p.text("NAME",left+10,162,180,28,p.fonts.small,TEXT,DT_LEFT);
@@ -247,7 +261,7 @@ pub(super) unsafe fn paint(state:&State,p:&mut Painter,width:i32,height:i32) {
     if let Some(d)=draft {
         let visible:Vec<_>=d.entry.events.iter().enumerate().filter(|(_,e)|e["Type"]!="actionBar").collect();
         for (offset,(index,value)) in visible.into_iter().skip(view.scroll).take(((height-285).max(0)/38) as usize).enumerate(){let y=204+offset as i32*38;let chosen=view.event==Some(index);p.fill(timeline+10,y,670,36,if chosen{0x343434}else{0x151515});p.text(&event_label(value,view.data.as_ref().map(|data|&data.library)),timeline+20,y,650,36,p.fonts.normal,if chosen{GREEN}else{TEXT},DT_LEFT);p.hits.push(Hit{rect:p.rect(timeline+10,y,670,36),action:Action::MacroLibrary(Control::Event(index))});}
-    } else {p.text("Create a macro or import definitions from a Synapse4 profile export.",timeline+20,220,650,70,p.fonts.normal,MUTED,DT_LEFT|DT_WORDBREAK);}
+    } else {p.text("Create a macro, import a standalone XML macro, or import definitions from a Synapse4 profile export.",timeline+20,220,650,70,p.fonts.normal,MUTED,DT_LEFT|DT_WORDBREAK);}
     let status=if view.status.is_empty(){"Macro playback integration is still in progress."}else{&view.status};p.text(status,30,height-50,width-60,40,p.fonts.normal,if view.failed{0xfd4949}else{MUTED},DT_LEFT|DT_WORDBREAK);
     if let Some(data)=&view.data {if !data.library.missing.is_empty()||data.library.dependency_issues>0{p.text(&format!("{} macro definition(s) missing · {} nested chain(s) need attention",data.library.missing.len(),data.library.dependency_issues),30,height-80,width-60,25,p.fonts.small,MUTED,DT_LEFT);}}
     if view.picker {if let Some(data)=&view.data {let count=data.library.entries.len().saturating_sub(view.picker_scroll).min(8);p.fill(46,116,290,count as i32*28,0);for (offset,entry) in data.library.entries.iter().skip(view.picker_scroll).take(8).enumerate(){let y=116+offset as i32*28;p.text(&entry.name,52,y,278,28,p.fonts.normal,TEXT,DT_LEFT);p.hits.push(Hit{rect:p.rect(46,y,290,28),action:Action::MacroLibrary(Control::Select(entry.guid.clone()))});}}}
@@ -282,9 +296,34 @@ pub(super) unsafe fn wheel(state:&mut State,delta:i16) {
     let view=&mut state.macros;if view.picker{let max=view.data.as_ref().map_or(0,|d|d.library.entries.len().saturating_sub(8));view.picker_scroll=if delta<0{view.picker_scroll.saturating_add(1).min(max)}else{view.picker_scroll.saturating_sub(1)};}else{view.scroll=if delta<0{view.scroll.saturating_add(3).min(count.saturating_sub(1))}else{view.scroll.saturating_sub(3)};}InvalidateRect(state.hwnd,null(),0);
 }
 pub(super) unsafe fn browse(hwnd:HWND)->Result<Option<PathBuf>,String> {
-    let mut file=vec![0u16;32768];let filter=wide("Synapse4 profile exports\0*.synapse4\0JSON files\0*.json\0\0");let title=wide("Import macro definitions from a profile export");let mut options:OPENFILENAMEW=std::mem::zeroed();options.lStructSize=std::mem::size_of::<OPENFILENAMEW>()as u32;options.hwndOwner=hwnd;options.lpstrFile=file.as_mut_ptr();options.nMaxFile=file.len()as u32;options.lpstrFilter=filter.as_ptr();options.lpstrTitle=title.as_ptr();options.Flags=OFN_FILEMUSTEXIST|OFN_PATHMUSTEXIST|OFN_NOCHANGEDIR;
+    let mut file=vec![0u16;32768];let filter=wide("Standalone macros\0*.xml\0Synapse4 profile exports\0*.synapse4\0JSON files\0*.json\0\0");let title=wide("Import macro XML or profile definitions");let mut options:OPENFILENAMEW=std::mem::zeroed();options.lStructSize=std::mem::size_of::<OPENFILENAMEW>()as u32;options.hwndOwner=hwnd;options.lpstrFile=file.as_mut_ptr();options.nMaxFile=file.len()as u32;options.lpstrFilter=filter.as_ptr();options.lpstrTitle=title.as_ptr();options.Flags=OFN_FILEMUSTEXIST|OFN_PATHMUSTEXIST|OFN_NOCHANGEDIR;
     if GetOpenFileNameW(&mut options)==0{let error=CommDlgExtendedError();return if error==0{Ok(None)}else{Err(format!("Import picker failed ({error})"))};}
     let end=file.iter().position(|v|*v==0).ok_or("Import path is not terminated")?;Ok(Some(PathBuf::from(String::from_utf16(&file[..end]).map_err(|e|e.to_string())?)))
+}
+fn export_identity(state:&State)->Result<(String,String,String),String>{
+    if !active(state)||state.macros.busy||state.read_only_smoke||state.restricted_actions{return Err("Macro export is unavailable in this editor state".into());}
+    if state.macros.dirty()||state.macros.form.is_some(){return Err("Save or discard the current macro draft before exporting".into());}
+    let entry=&state.macros.draft.as_ref().ok_or("Select a macro")?.entry;
+    Ok((entry.guid.clone(),entry.revision.clone(),entry.name.clone()))
+}
+pub(super) unsafe fn export_selected(state:&mut State,path:PathBuf){
+    match export_identity(state){
+        Ok((guid,revision,_))=>request(state,Request::Export{guid,revision,path}),
+        Err(error)=>{state.macros.status=error;state.macros.failed=true;}
+    }
+}
+pub(super) unsafe fn browse_export(hwnd:HWND,pointer:*mut RefCell<State>){
+    let original=match (*pointer).try_borrow().map_err(|_|"Macro editor is busy".to_string()).and_then(|s|export_identity(&s)){Ok(id)=>id,Err(_)=>return};
+    let title=wide("Export standalone macro · choose a new filename");let filter=wide("Standalone macro XML\0*.xml\0\0");let extension=wide("xml");
+    let filename=xml_files::suggested_name(&original.2);let initial=wide(&filename);let mut file=vec![0u16;32768];file[..initial.len()].copy_from_slice(&initial);
+    let mut options:OPENFILENAMEW=std::mem::zeroed();options.lStructSize=std::mem::size_of::<OPENFILENAMEW>()as u32;options.hwndOwner=hwnd;options.lpstrFile=file.as_mut_ptr();options.nMaxFile=file.len()as u32;options.lpstrFilter=filter.as_ptr();options.lpstrDefExt=extension.as_ptr();options.lpstrTitle=title.as_ptr();options.Flags=OFN_PATHMUSTEXIST|OFN_NOCHANGEDIR;
+    let success=GetSaveFileNameW(&mut options);let dialog_error=if success==0{CommDlgExtendedError()}else{0};
+    if let Ok(mut state)=(*pointer).try_borrow_mut(){
+        if success==0{if dialog_error!=0{state.macros.status=format!("Export picker failed ({dialog_error})");state.macros.failed=true;}}
+        else if export_identity(&state).as_ref()!=Ok(&original){state.macros.status="The editor changed while the export picker was open; choose Export again".into();state.macros.failed=true;}
+        else if let Some(end)=file.iter().position(|v|*v==0){match String::from_utf16(&file[..end]){Ok(path)=>export_selected(&mut state,PathBuf::from(path)),Err(error)=>{state.macros.status=error.to_string();state.macros.failed=true;}}}
+        InvalidateRect(hwnd,null(),0);
+    }
 }
 #[cfg(test)] pub(super) fn diagnostics(state:&State)->Value {
     let v=&state.macros;json!({"open":active(state),"busy":v.busy,"form":form::diagnostics(v),"menu_open":v.popup,"dirty":v.dirty(),"selected":v.selected,"name":v.name,"delay":v.delay,"event":v.event,"status":v.status,"failed":v.failed,"entries":v.data.as_ref().map(|d|d.library.entries.iter().map(|e|json!({"guid":e.guid,"name":e.name,"referenced":e.referenced})).collect::<Vec<_>>()).unwrap_or_default(),"events":v.draft.as_ref().map(|d|&d.entry.events),"undo":v.draft.as_ref().map_or(0,|d|d.undo.len()),"redo":v.draft.as_ref().map_or(0,|d|d.redo.len())})
